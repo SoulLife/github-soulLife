@@ -1,17 +1,23 @@
 window.onload = function()
 {
-    var canvas = document.getElementById("mycanvas");
-    var ctx = canvas.getContext("2d");
-    strokeRoundedRect(ctx,10,10,100,80,10);
-    strokeRoundedRect(ctx,150,10,100,80,30);
-    function strokeRoundedRect(ctx, x, y, width, height, radius)
+    document.getElementById("button").onclick = function()
     {
-        ctx.beginPath();
-        ctx.moveTo(x+radius,y);
-        ctx.arcTo(x+width,y, x+width,y+height,radius);
-        ctx.arcTo(x+width,y+height, x, y+height,radius);
-        ctx.arcTo(x, y+height, x,y,radius);
-        ctx.arcTo(x, y, x+width, y, radius);
-        ctx.stroke();
+        //수축기 혈압(최고혈압)을 구한다.
+        var hp = parseFloat(document.getElementById("highpressure").value);
+        var lp = parseFloat(document.getElementById("lowpressure").value);
+        //판정결과를 내보낼 HTML 요소
+        var judgement = document.getElementById("judgement");
+        //고혈압 여부를 판정하여 HTML요소에 출력한다
+        if (hp<120 && lp<80)
+        {
+            judgement.textContent = "당신의 혈압은 정상입니다.";
+        }else if(hp<139&& lp < 89)
+        {
+            judgement.textContent = "당신의 혈압은 다소 높습니다."
+        }else
+        {
+            judgement.textContent = "당신은 고혈압 입니다.";
+        }
+
     }
 }
