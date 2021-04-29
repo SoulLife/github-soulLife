@@ -1,23 +1,24 @@
 window.onload = function()
 {
-    document.getElementById("button").onclick = function()
-    {
-        //수축기 혈압(최고혈압)을 구한다.
-        var hp = parseFloat(document.getElementById("highpressure").value);
-        var lp = parseFloat(document.getElementById("lowpressure").value);
-        //판정결과를 내보낼 HTML 요소
-        var judgement = document.getElementById("judgement");
-        //고혈압 여부를 판정하여 HTML요소에 출력한다
-        if (hp<120 && lp<80)
+    function binarySearch(x, a)
+    {        
+        var left = 0, right = a.length-1;
+        while(left < right)
         {
-            judgement.textContent = "당신의 혈압은 정상입니다.";
-        }else if(hp<139&& lp < 89)
-        {
-            judgement.textContent = "당신의 혈압은 다소 높습니다."
-        }else
-        {
-            judgement.textContent = "당신은 고혈압 입니다.";
+            var middle = Math.floor((left + right)/2);
+            console.log("middle:" + middle);
+            if(x <= a[middle])
+            {
+                right = middle;                
+            }else
+            {
+                left = middle+1;                
+            }            
         }
-
+        console.log("left:%d, right:%d:",left,right);
+        if(x == a[right])return right;
+        return null;
     }
+    var a = [2,4,7,12,15,21,34,35,46,57,70,82,86,92,99];    
+    console.log(binarySearch(100,a));
 }
