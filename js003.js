@@ -1,12 +1,22 @@
 window.onload = function()
 {       
-    function hanoi(n, a,b,c)
+    var Module = Module || {};
+    (function(_Module)
     {
-        if(n < 1) { return; }
-        hanoi(n-1,a,b,c);
-        console.log("%d 번째 원반: %s -> %s",n,a,c);
-        hanoi(n-1,b,a,c);
-    }
-    hanoi(4,"A","B","C");
+         var name = "NoName";
+         function getName()
+         {
+             return name;
+         }   
+         _Module.showName = function()
+         {
+             console.log(getName());
+         };
+         _Module.setName = function()
+         {
+             name = x;
+         }
+    })(Module);
+    Module.setName("Tom");
+    Module.showName();
 }
-//
