@@ -1,12 +1,13 @@
 window.onload = function()
-{       
-    function hanoi(n, a,b,c)
+{   
+    var pow = function(exponent)
     {
-        if(n < 1) { return; }
-        hanoi(n-1,a,b,c);
-        console.log("%d 번째 원반: %s -> %s",n,a,c);
-        hanoi(n-1,b,a,c);
+        return function(base)
+        {
+            return Math.pow(base,exponent);
+        }
     }
-    hanoi(4,"A","B","C");
-}
-//
+    var square = pow(2);
+    var sqrt = pow(5);
+    var cubicroot = pow(1/3);
+};
