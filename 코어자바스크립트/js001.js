@@ -1,35 +1,19 @@
 window.onload = function()
 {   
-    var user = { 
-        name:"Jaenam",
-        urls:{
-            portfolio: "http://github.com/abc",
-            blog: "http://blog.com",
-            facebook: "http://facebook.com/abc"
-        }
-    };
-    var copyObject = function(target)
-    {
-        var result = {};
-        if(typeof target === 'object' && target !== null)
-        {
-            for(var prop in target)
-            {
-                result[prop] = copyObject(target[prop]);
-            }
-        }else
-        {
-            result = target;
-        }        
-        return result;
-    };
-    var user2 = copyObject(user);
-    user2.name = "Jung";
-    console.log(user.name === user2.name);
-    user.urls.portfolio = "http://portpolio.com";
-    console.log(user.urls.portfolio === user2.urls.portfolio);
+    var arr1 = [undefined,1];
+    var arr2 = [];
+    arr2[1] = 1;
 
-    user2.urls.blog = '';
-    console.log(user.urls.blog === user2.urls.blog);
+    arr1.forEach(function(v,i){ console.log(v,i);});
+    arr2.forEach(function(v,i){ console.log(v,i);});
+
+    arr1.map(function(v,i){ return v + i;});
+    arr2.map(function(v,i){ return v + i;});
+
+    arr1.filter(function(v){ return !v;});
+    arr2.filter(function(v){ return !v;});
+
+    arr1.reduce(function(p,c,i){ return p + c+ i;});
+    arr2.reduce(function(p,c,i){ return p + c+ i;});
 };
 
