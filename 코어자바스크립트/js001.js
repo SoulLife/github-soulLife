@@ -1,13 +1,18 @@
-
-    console.log(sum(1,2));    
-
-    function sum(a, b)
+window.onload = function()
+{
+    var a = 1;
+    var outer = function()
     {
-        return a + b;
-    }
-    var multiply = function (a, b){
-        return a * b;
-    }    
-    console.log(multiply(3,4));
+        var inner = function()
+        {
+            console.log(a);
+            var  a= 3;
+        }
+        inner();
+        console.log(a);
+    };
+    outer();
+    console.log(a);
+}
 
 
