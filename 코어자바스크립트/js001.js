@@ -1,14 +1,21 @@
 window.onload = function()
 {
-    var func = function(x)
-    {
-        console.log(this,x);
-    };
-    func(1);
     var obj = {
-        method: func
+        outer: function()
+        {
+            console.log(this); //windows
+            var innerFunc = function()
+            {
+                console.log(this);//outer
+            }
+            innerFunc();
+            var obj2 = {
+                innerMethod: innerFunc
+            };
+            obj2.innerMethod(); //outer
+        }
     };
-    obj.method(2);
+    obj.outer();
 }
 
 
