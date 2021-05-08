@@ -1,21 +1,25 @@
 window.onload = function()
 {
+    //콜메서드
+    var func = function(a, b, c)
+    {
+        console.log(this.x,a,b,c);        
+    };
+    func(1,2,3); //window
+    func.call({x:1},4,5,6);
+    //apply메서드
+    var func1 = function(a,b,c)
+    {
+        console.log(this,a,b,c);
+    };
+    func1.apply({x:1},[4,5,6]);
     var obj = {
-        outer: function()
-        {
-            console.log(this); //windows
-            var innerFunc = function()
-            {
-                console.log(this);//outer
-            }
-            innerFunc();
-            var obj2 = {
-                innerMethod: innerFunc
-            };
-            obj2.innerMethod(); //outer
+        a: 1,
+        method:function(x,y){
+            console.log(this,x,y);
         }
     };
-    obj.outer();
+    obj.method.apply({a:4},[5,6]);
 }
 
 
