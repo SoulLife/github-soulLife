@@ -1,25 +1,31 @@
 window.onload = function()
 {
-    //콜메서드
-    var func = function(a, b, c)
+    var str = "abc def";    
+    Array.prototype.concat.call(str,"string");
+    Array.prototype.every.call(str, function(char){ return char !== ' ';});
+    Array.prototype.some.call(str, function(char) { return char === ' ';});
+    var newArr = Array.prototype.map.call(str, function(char) { return char + '!';});
+    //console.log(newArr);
+    var newStr = Array.prototype.reduce.apply(str, [function(string, char, i){ return string + char + i;},'']);
+    //console.log(newStr);
+    
+    function Person(name, gender)
     {
-        console.log(this.x,a,b,c);        
-    };
-    func(1,2,3); //window
-    func.call({x:1},4,5,6);
-    //apply메서드
-    var func1 = function(a,b,c)
+        this.name = name;
+        this.gender = gender;
+    }
+    function Student(name, gender, school)
     {
-        console.log(this,a,b,c);
-    };
-    func1.apply({x:1},[4,5,6]);
-    var obj = {
-        a: 1,
-        method:function(x,y){
-            console.log(this,x,y);
-        }
-    };
-    obj.method.apply({a:4},[5,6]);
+        Person.call(this,name,gender);
+        this.school = school;
+    }
+    function Employee(name, gender, company)
+    {
+        Person.apply(this,[name,gender]);
+        this.company = company;
+    }
+    var by = new Student("보영","female","단국대");
+    var jn = new Employee("재난","male","구골");    
 }
 
 
