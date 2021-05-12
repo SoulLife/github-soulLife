@@ -24,11 +24,7 @@ window.onload = function()
             }
             return arr;
         }
-        static freezeObj  = (obj)=>{
-           const tempObj = {...obj};
-           Object.freeze(tempObj);
-           return tempObj;
-        }
+        static freezeObj  = obj=>{ return Object.freeze(obj);  }
     };
     
     const objA = {
@@ -49,6 +45,7 @@ window.onload = function()
     console.log(arrValueUser);
     const arrProperties = ObjectUtilities.getOnlyProperties(freezeUser);
     console.log(arrProperties);
-    
+    console.log(Object.isFrozen(freezeUser));
+    freezeUser.name = "hello";       
 }
 
