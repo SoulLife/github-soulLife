@@ -1,11 +1,17 @@
 window.onload = function()
 {
-    //문장블록 여러문장을 하나의 복합문으로 묶는다. 단순히 여러 문장을 중괄호로 감싸면 된다. 따라서 다음의 예제처럼
-    // 단일 문장이나 마찬가지이며 자바스크립트에서 단일 문장을 쓰는 곳이라면 어디든지 사용할수 있다.
-    {
-        var x = Math.PI;
-        var cx = Math.cos(x);
-        console.log("cos(파이) = " + cx);
-    }    
+    var i; //하나의 변수를 선언함
+    var j = 0; //하나의 var와 값을 선언함
+    var p, q; //두변수를 선언함
+    var greeting = "hello" + name;//복잡한 초기 값 표현식
+    var x = 2.34, y = Math.cos(0.75), r, theta; //많은 변수들이 선언됨
+    var x = 2, y = x*x;
+    var x = 2, f = function(x) { return x * x;}, y = f(x); //두번째 변수 y에서  첫번째 변수 x를 사용함
+    //여러변수를 선언할수 있음
+    //각 라인별로 변수를 선언함
+    console.log(x,y,f(2));
+    for(var i=0; i<10; i++)console.log(i);
+    for(var i = 0, j = 10; i< 10; i++,j--)console.log(i * j);
+    for(var i in o)console.log(i);
 }
 
