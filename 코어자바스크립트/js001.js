@@ -1,71 +1,51 @@
 window.onload = function () {    
-    var random = {
-        get octet() { return Math.floor(Math.random() * 256);},
-        get uint16() { return Math.floor(Math.random() * 65536);},
-        get int16() { return Math.floor(Math.random() * 65536)-32768;}
-    }  
-    //프로퍼티의 속성 writable과 enumerable, configurable가 있다 
-    //writable는 프로퍼티의 값변경 유무를 지정한다 
-    // enumerable는 프로퍼티가 열거될수있는 여부결정
-    //configurable는 configurable속성뿐아니라 writable속성과 enumerable속성값의 변경 가능여부를 설정한다. 
-    //{value:1, writable:true, enumerable:true, configurable:true}를 반환한다.
-    Object.getOwnPropertyDescriptor({x:1},"x");
-    //이전 절에서 정의한 random 객체의 octet 프로퍼티의 속성을 살펴보자
-    Object.getOwnPropertyDescriptor(random,"octet");
-    //상속받은 프로퍼티나 존재하지 않는 프로퍼티의 경우 undefined를 반환한다. 
-    Object.getOwnPropertyDescriptor({}, "x"); //프로퍼티가 없으므로 undefined를 반환한다. 
-    Object.getOwnPropertyDescriptor({},"toString"); //상속받은 프로퍼티이므로 undefined를 반환한다. 
-    var o = {}; //프로퍼티가 없는 빈 객체를 정의한다. 
-    //열거할 수 없는 데이터 프로퍼티 x를 정의하고, 프로퍼티의 값을 1로 설정한다.
-    Object.defineProperty(o,"x",{value:1,writable:true, enumerable:false, configurable: true});
-    //정의한 프로퍼티를 열거할 수 있는지 검사한다.
-    o.x; // 1
-    Object.keys(o); // []
-    //프로퍼티 값을 바꿔보자
-    Object.defineProperty(o, "x", {writable: false});
-    o.x = 2; //단순히 값을 변경하지 못하거나, 엄격모드에서는 TypeError 예외가 발생한다. 
-    o.x; //1
-    //여전히 configurable 프로퍼티이므로, 다음과 같이 기존 값을 변경할 수 있다. 
-    Object.defineProperty(o, "x", {value:2});
-    //프로퍼티 x를 데이터 프로퍼티에서 접근자 프로퍼티로 바꿧다. 
-    Object.defineProperty(o,"x",{get:function() {return 0;}});
-    o.x; // 0
-    var p = Object.defineProperties({}, {
-        x:{ value: 1, writable:true, enumerable:true, configurable:true},
-        y:{value:1, writable:true, enumerable:true, configurable:true},
-        r:{
-            get:function() { return Math.sqrt(this.x*this.x + this.y*this.y)},enumerable:true,configurable:true
-        }
-    });
-    /*
-    Object.prototype에 열거되지 않는 메서드 extend()를 추가한다.
-    이메서드는 호출시에 인자로 전달된 객체에서 프로퍼티들을 복사함으로써 객체를 확장한다
-    단순 프로퍼티의 값뿐 아니라 모든 프로퍼티 속성을 복사한다.
-    인자로 넘긴 객체가 소유한 모든 고유 프로퍼티는 대상 객체에 같은 이름의
-    프로퍼티가 존재하지 않는 한 대상 객체에 복사된다.
-    */
-   Object.defineProperty(Object.prototype, "extend", //Object.prototype.extend를 정의한다.
-   {
-       writable: true,
-       enumerable: false, //열거불가능하게 했다.
-       configurable: true,
-       value: function(o)
-       {
-            //Object.prototype.extend메서드의 값은 함수다.
-            //열거되지 않는 프로퍼티들을 포함한 모든 고유 프로퍼티에 대해
-            var names = Object.getOwnPropertyNames(o);
-            for(var i=0; i<names.length; i++)
-            {
-                //루프에서 살펴본다.
-                //this 객체에 이미 같은 이름의 프로퍼티가 존재하면 건너뛴다.
-                if(names[i] in this)continue;
-                //객체 o의 프로퍼티 디스크립트터를 가져온다.
-                var desc = Object.getOwnPropertyDescriptor(o,names[i]);
-                //this 객체에 프로퍼티를 생성할 때 앞에서 가져온 디스크립터 객체를 사용한다.
-                Object.defineProperty(this,names[i],desc);
-            }
-       }
-   }
-   )
+    //객체 리터럴을 통해 만든 객체는 Object.prototype을 객체의 프로토타입으로 설정
+    //new를 사용해 만든 객체는 생성자 함수의 prototype프로퍼티 값이 prototype 속성의 값이 되고 Object.create()메서드로 만든 객체는 메서드의 첫번째
+    //인자가 프로토타입 속성의 값이 된다. 
+    var p = {x:1}; //객체 p를 정의한다
+    var o = Object.create(p); //객체 p를 프로토타입으로 하는 객체를 만든다. 
+    p.isPrototypeOf(o); //true : 객체 o는 객체 p를 상속받는다. 
+    Object.prototype.isPrototypeOf(p); //true : 객체 p는 Object.prototype을 상속받는다. 
+
+    //class속성 객체의 타입에 대한 정보를 담고 있는 문자열이다. ECMAScript3과 ECMAScript5 모두 어떠한 방법으로도 이 속성을 변경할수없고 그 값을
+    //질의하는 것도 아주 간접적으로만 가능하다. 객체의 클래스 정보를 알아보기 위해서는 객체의 toString()메서드를 호출하면된다. 이때 반환되는 스트링의 아홉번째 
+    //문자부터 문자열 끝에서 두번째 문자까지 추출한다. 
+    function classOf(o)
+    {
+        if(o ===null)return "Null";
+        if(o === undefined) return "Undefined";
+        return Object.prototype.toString.call(o).slice(8,-1);
+    }
+    //위의 함수에는 어떠한 자바스크립트 값을 넣어도 동작한다. 숫자,문자열, 불리언 값은 toString()메서드를 호출할때 객체처럼 동작하고 
+    // 추가로 null과 undefined인 경우도 처리하고있다. (ECMAScript5에서는 null과 undefined를 따로 처리할 필요가없다. )
+    classOf(null); //Null
+    classOf(1); // Number
+    classOf(""); //String
+    classOf(false); //Boolean
+    classOf({}); //Object
+    classOf([]); //Array
+    classOf(/./); // Regexp
+    classOf(new Date()); //Date
+    classOf(window); // Window(클라이언트측 호스트 객체)
+    function f() {}; //생성자 함수를 생성한다.
+    classOf(new f()); // Object
+
+    //extensible 속성은 객체에 새 프로퍼티를 추가할수 있는지 여부를 결정한다. ECMAScript3에서는 모든 내장 객체와 사용자 정의 객체는 특별한 경우가 아니면 확장할수있고
+    //호스트 객체의 확장상언 구현체에 따라 다르다.
+    //확장할수있는 객체인지 알아보려면 Object.isExtensible() 함수에 해당 객체를 인자로 넘긴다. 객체를 확장할 수 없도록 하려면 
+    //Object.preventExtensions()에 해당 객체를 인자로 넘긴다. Object.preventExtensions()함수를 사용해 객체를 확장할수 없도록 설정하면, 설정하기 전 상태로
+    //돌아갈수 없음에 유의하라.
+    //Object.seal()은 Object.preventExtensions()와 동작이 유사하지만 객체를 확장할수 없게 만들뿐만아니라 객체가 가진 모든 고유 프로퍼티를 설정 불가능 하게
+    //만든다. 다시 말해 객체에 새로운 프로퍼티를 추가할수 없고 기존 프로퍼티의 설정을 바꾸거나 지울수도 없다는 뜻이다. 하지만 writable 속성이
+    //true인 기존 프로퍼티의 값은 변경할수 있다. Object.seal()메서드로 한번 봉인된 객체는 다시 해제할 수 없다. Object.isSealed()메서드를 사용해
+    //객체가 봉인되어 있는지 검사할수 있다. 
+    //Object.freeze()메서드는 객체를 좀더 단단히 잠근다. 객체를 확장할수 없게 만들고 프로퍼티 설정을 바꿀수 없게 바꾼다. 
+    //Object.seal()과 object.freeze()는 주어진 객체의 고유 프로퍼티에만 영향을 미치고, 객체가 가진 프로토타입 객체에는 영향을 미치지 않는다. 객체를 철저히
+    //잠그고싶다면 객체의 프로토타입 체인까지 잠궈야 한다. 
+    //Object.preventExtensions()와 Object.seal(), Object.freeze()메서드들은 인자로 넘겼던 객체를 다시 반환한다. 이점을 이용하면 다음 예시처럼 함수 호출을 한줄로
+    //중첩시킬 수 있다. 
+    //Object.freeze()로 프로토타입을 고정시키고
+    //열거할 수없는 프로퍼티y를 가진 객체를 Object.seal()로 봉인한다. 
+    var o = Object.seal(Object.create(Object.freeze({x:1}),{y: {value:2, writable: true}}));
 
 };
