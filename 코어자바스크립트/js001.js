@@ -1,100 +1,154 @@
 window.onload = function () {    
-   //커링함수 : 여러 개의 인자를 받는 함수를 하나의 인자만 받는 함수로 나눠서 순차적으로 호출될수 있게 체인 형태로 구성한 것을 말합니다. 앞서 살펴본 부분 적용 함수와
-   // 기본적인 맥락은 일치하지만 몇 가지 다른 점이 있습니다. 커링은 한번에 하나의 인자만 전달하는 것을 원칙으로 합니다. 또한 중간 과정상의 함수를 실행한 결과는 그다음 인자를
-   // 인자를 받기위해 대기만 할뿐으로 마지막 인자가 전달되기 전까지는 원본 함수가 실행되지 않습니다. (부분 적용 함수는 여러 개의 인자를 전달할 수 있고 실행 결과를 재실행 할때원본 함수가
-   //무조건 실행됩니다.)
-   var curry3 = function(func)
+   //함수 정의하기 : 함수는 function 키워드에 의해 정의되며, function 키워드는 함수 정의 표현식 또는 함수 선언문에서 사용된다. 두 경우 모두 함수 정의는function
+   //키워드로 시작하고 그 뒤에 다음과 같은 구성요소들이 따라온다.
+
+   //함수이름식별자: 함수 이름은 함수 선언문에서는 반드시 필요하다. 함수 이름은 곧변수의 이름이며, 새로 정의된 함수 객체는 그 변수에 할당된다. 함수 정의 표현식에는
+   //이름을 생략할 수 있다. 그러나 만일에 명시했다면, 그 이름은 해당 함수 몸체 안에서만 참조할수 있다. 
+
+   //쉼표로 구분된 0개 이상의 식별자들과, 이 식별자들을 둘러싼 한 쌍의 괄호: 이 식별자들은 함수의 매개변수, 즉 형식인자들의 이름이고, 함수 몸체 내에서 지역
+   //변수처럼 취급된다. 
+
+   //0개 이상의자바스크립트 문장을 포함하는 한쌍의 중괄호, 이 자바스크립트 문장들은 함수가 호출될 때마다 실행되는 함수의 본문이다. 
+
+   //표현식 형태로 함수를 정의하는 것은, 새로 정의한 함수가 더 큰 표현식(할당이나 호출)등의 일부로 이용될 때만 유용하다. 
+   
+   //o의 각 속성에 대해 이름과 값을 출력한다. undefined를 반환한다.
+   function printprops(o)
    {
-       return function (a)
+       for(var p in o)
        {
-           return function (b)
-           {
-               return func(a,b);
-           };
-       };
-   };
-   var getMaxWith10 = curry3(Math.max)(10);
-   console.log(getMaxWith10(8)); //10
-   console.log(getMaxWith10(25)); //25
-   var getMinWith10 = curry3(Math.min)(10);
-   console.log(getMinWith10(8)); //8
-   console.log(getMinWith10(25)); // 10
-   //부분 적용 함수와 달리 커링함수는 필요한 상황을 직접 만들어 쓰기 용이합니다. 필요한 인자개수만큼 함수를 만들어 계속 리턴해 주다가 마지막에 만 짠 하고 조합해서 
-   //리턴해주면 되기 때문이죠. 다만 인자가 많아질수록 가독성이 떨어진다는 단점이 있습니다. 
-   var curry5 = function(func)
+           console.log(p + ": " + o[p] + "\n");
+       }       
+   }
+   //데카르트 좌표(x1, y1)과 (x2, y2)의 거리를 계산한다. 
+   function distance(x1, y1, x2, y2)
    {
-       return function (a)
-       {
-           return function (b)
-           {
-               return function (c)
-               {
-                   return function (d)
-                   {
-                       return function (e)
-                       {
-                           return func(a,b,c,d,e);
-                       };
-                   };
-               };
-           };
-       };
-   };
-   //5개만 받아서 처리했음에도 이를 표현하기 위해 자그마치 13줄이나 소모했습니다. 다행히 ES6에서는 화살표 함수를 써서 같은 내용을 단한줄에 표기할수 있습니다.
-   var curry5 = func => a => b => c => d => e => func(a,b,c,d,e);
-   //화살표 함수로 구현하면 커링 함수를 이해하기에 훨씬 수월합니다. 화살표순서에 따라 함수에 값을 차례로 넘겨주면 마지막에 func가 호출될거라는 흐름이 한눈에 파악됩니다.
-   //각 단계에서 받은 인자들을 모두 마지막 단계에서 참조할 것이므로 GC되지 않고 메모리에 차곡차곡 쌓였다가 마지막 호출로 실행 컨텍스트가 종료된 후에야 비로소 한꺼번에 GC의 수거 대상이 됩니다.
-   //이 커링 함수가 유용한 경우가 있습니다. 당장 필요한 정보만 받아서 전달하고 또 필요한 정보가 들어오면 전달하는 식으로 하면 결국 마지막 인자가 넘어갈 때까지  함수실행을 
-   // 미루는 셈이 됩니다. 이를 함수형 프로그래밍 에서는 지연실행 이라고 칭합니다. 원하는 시점까지 지연시켰다가 실행하는 것이 요긴한 상황이라면 커링을 쓰기에 적합할 것입니다. 
-   // 혹은 프로젝트 내에서 자주 쓰이는 함수의 매개변수가 항상 비슷하고 일부만 바뀌는 경우에도 적절한 후보가 될 것입니다. 
-   var getInfomation = function(baseUrl){ //서버에 요청할 주소의 기본 URL
-        return function (path)//path 값
+       var dx = x2 - x1;
+       var dy = y2 - y1;
+       return Math.sqrt(dx*dx + dy*dy);
+   }
+   //팩터리얼을 계산하는 재귀 함수(자신이 자신을 호출하는 함수)
+   function factorial(x)
+   {
+       if(x <= 1)return 1;
+       return x * factorial(x-1);
+   }
+   //이 함수 표현식은 전달인자를 제곱하고 그 결과를 반환하는 함수를 정의한다. 
+   //정의된 함수를 변수에 할당하는 부분을 주목할것
+   var square = function(x) { return x * x;}
+   //함수 표현식은 이름을 포함할 수 있는데, 이러한 이름은 재귀 호출에 유용하게 사용된다. 
+   var f = function fact(x) { if(x <= 1) return 1; else return x*fact(x-1);};
+   //또한 함수 표현식은 다른 함수의 전달인자로 사용될수 있다.
+   data.sort(function(a,b) { return a - b;});
+   //때로 함수 표현식은 정의되는 즉시 호출된다. 
+   var tensquared = (function(x) { return x * x;}(10));
+   //함수이름 : 유효한 자바스크립트 식별자라면 어떤 것도 함수 이름이 될 수 있다. 함수 이름은 짧게 쓰기 보다는 함수를 잘 설명할수있는 이름을 선택해야 하는데, 이둘 사이에
+   //적절한 균형을 유지 하는 것은 경험에서비롯되는 일종의 예술이다. 잘 선택한 함수 이름은 코드의 가독성 측면에서(물론 유지보수성에서도) 큰 차이를 만들어 낼수 있다. 
+   //보통 함수 이름은 동사 또는 동사로 시작하는 구문이다. 소문자로 함수 이름을 시작하는 것은 공통적인 코딩 규약이다. 함수 이름이 여러 단어를 포함할 때 like_this();와
+   //같이 밑줄로 단어를 구분하기도 한다. lieThis()처럼 첫 단어 다음에 나오는 모든 단어를 대문자로 시작하여 구분하기도 한다. 내부적으로 사용하거나 또는 숨은(공용 API의
+   //일부가 아닌)함수의 이름은 때때로 밑줄로 시작하기도 한다. 특정한 몇몇 프로그래밍 스타일을 따르는 프로그래머들과 잘정의된 몇몇 프로그래밍 프레임워크들은 자주 쓰이는
+   //함수의 이름을 아주 짧게 줄이는 관습을 유용하게 써먹는다. 예를 들어 클라이언트 측 자바스크립트 프레임워크인 jQuery는 공용 API중 매우 자주 사용하는 함수를 $()(그렇다
+   //,달러 기호일 뿐이다)로 이름 지었다)
+
+   //함수 정의 표현식에서 함수 이름은 옵션이다. 함수 선언문이 실제로 하는 일은, 어떤 변수를 정의하고 함수 객체를 그 변수에 할당하는 것이다.반면에 함수 정의 표현식은 변수를
+   //정의하지 않는다. 앞 예제의 팩터리얼 함수와 같이 함수 자신을 참조할 필요가 있을때 함수에 이름을 붙일수는 있다. 함수 정의 표현식이 이름을 포함하면, 이 함수 몸체의
+   //유효 범위에 해당 함수 객체에 연결된 이름이 포함된다. 다시말해 사실상 그 함수 이름이 해당 함수의 지역변수가 되는것이다. 표현식 형태로 정의된 함수 대부분은 이름이 필요하지
+   //않고 따라서 함수를 더욱 단순하게 정의할 수 있다. 표현식 형태로 함수를 정의하는 것은 마지막 두 예제처럼 한번만 사용되는 함수에 특히 적합하다. 
+   //함수 선언문은 그 함수를 둘러싼 스크립트나 함수의 맨 위로 끌어올려(hoisted)진다. 따라서 해당 함수는 이 함수가정의된 위치보다 앞서 나오는 코드로부터 호출될 수 있다. 그러나
+   //표현식으로 정의된 함수는 다르다. 함수를 호출하려면 먼저 호출할 함수를 참조할 수 있어야 하는데, 표현식으로 정의된 함수는 변수에 할당되기 전까지는 참조할 수 없다. 변수
+   //선언은 끌어올려지지만 변수 할당은 그렇지 않다. 그래서 표현식으로 정의된 함수는 정의되는 지점 위에서는 호출할 수없다. 
+
+   //함수 대부분은 return문을 포함하고 있다. return문은 함수 실행을 중단하고 return 다음에 오는 표현식의 값을 호출자에게 반환 한다. 만약 return 다음에 표현식이 없다면 
+   //undefined 값을 반환한다. 만약 함수가 return문을 포함하지 않는다면 함수 몸체 내의 각 구문이 실행된 다음 호출자에게 undefined값이 반환된다. 
+   //위의 예제 대부분은 어떤 값을 계산하도록 작성되어 있고 함수는 return을 사용하여 그 값을 호출자에게 반환한다. printprops() 함수는 조금 다른데, 이 함수는 객체의
+   //각 속성의 이름과 값을 출력한다. 값을 반환할 필요가 없다면 함수는 return문을 포함할 필요가 없다. printprops()함수의 호출 결과값은 언제나 undefined다(리턴 값이
+   //없는 함수를 가끔 프로시져(procedure)라고 부르기도 한다. )
+
+   //중첩함수 : 자바스크립트에서 함수는 다른 함수와 중첩될 수 있다. 
+   function hypotenuse(a,b)
+   {
+       function square(x) { return x * x;}
+       return Math.sqrt(square(a) + square(b));
+   }
+   //중첩 함수의 흥미로운 점은 그 유효범위(scope)규칙이다. 중첩된 함수는 해당 함수가 속한 함수(혹은 함수들)의 매개변수와 변수에 접근할 수 있다. 앞의 코드를 예로 들자면
+   //안쪽 함수 square()는 바깥쪽 함수 hypotenuse()에 정의된 매개변수 a와 b를 읽고 쓸수 있다. 이러한 중첩 함수의 유효범위 규칙은 매우 중요하므로 다시 살펴볼 것이다.
+   //함수 선언문은 진짜 문장이 아니다. 그리고 ECMAScript는 함수 선언문을 취상위 레벨에만 두도록 규졍한다. 함수 선언문은 전역 코드 혹은 다른 함수 안에는 등장할 수 있지만
+   //반복문 내부, 조건문, try/catch/finally또는 with문 안에는 들어갈 수 없다. 이런 제한은 문장으로 선언되는 함수에만 적용된다. 함수 정의 표현식은 자바스크립트
+   //코드 어디에나 사용할수 있다. 
+
+   //함수 호출하기 : 함수를 정의했더라도 함수 몸체의 자바스크립트 코드는 함수를 호출하지 않으면 실행되지 않는다. 자바스크립트 함수는 네 가지 방법으로 호출할 수 있다.
+   //*일반적인 함수 형태, 메서드 형태, 생성자, call()과 apply()메서드를 통한 간접 호출
+
+   //함수호출 : 함수는 일반적인 함수 형태로 호출되거나 호출 표현식과 함께 메서드 형태로 호출된다. 호출 표현식은 함수 객체로 평가되는 함수 표현식과, 여는 괄호, 콤마로
+   //구분된 0개 이상의 전달인자 표현식, 그리고 닫는 괄호로 구성된다. 이때 함수 표현식이 프로퍼티 접근 표현식(함수가 어떤 객체의 프로퍼티이거나 어떤 배열의 요소인 경우)
+   //이면 이는 메서드 호출 표현식이다. 이 경우에 대해서는 나중에 설명하도록 하겠다. 우선 다음 코드는 일반적인 함수 호출 표현식 몇가지를 포함하고있다. 
+   printprops({x:1});
+   var total = distance(0,0,2,1) + distance(2,1,3,5);
+   var probability = factorial(5)/factorial(13);
+   //함수가 호출될 때는 먼저, 각각의 전달인자 표현식(괄호 사이에 있는 것)이 평가(evaluated)되고, 평가 결과 값이 해당 함수의 전달인자가 된다. 이 전달인자 값들은 함수
+   //정의에 등장하는 형식인자 각각에 대응된다. 함수 몸체에서 형식인자는 실인자의 값으로 평가된다. 
+   //일반적인 함수 호출에서 호출 표현식의 값은 그 함수의 반환 값이다. 만약 인터프리터가 return문을 만나지 못해 함수 끝에 다다르면, 그 반환값은 undefined가 된다.
+   //만약 인터프리터가 return문을 실행하여 함수가 반환되면 반환값은 return 다음에 나오는 표현식의 값이다. return 다음에 아무 표현식도 없다면 반환값은 undefined다
+   //ECMAScript3과 일반 모드(non-strict)ECMAScript5의 함수 호출에서 호출 컨텍스트(this 값)는 global객체다. 그러나 ECMAScript5의 엄격한 모드에서 호출 컨텍스트는
+   //undefined다. 일반적인 함수 형태로 호출하도록 작성된 함수는 보통 this키워드를 사용하지 않는다. 그러나 이 this키워드를 엄격모드(strict mode)가 적용되었는지를 판단
+   //하기 위해 사용할수는 잇다. 
+   //엄격 모드 여부를 알아내기 위한 함수를 정의하고 호출한다. 
+   var strict = (function() { return !this;})();
+
+   //메서드 호출 : 메서드는 객체의 속성으로 저장된 자바스크립트 함수일 뿐이다. 만약 함수 f와 객체o가 있다면, 이름이 m인 메서드를 다음과 같이 정의할 수 있다
+   o.m = f;
+   //객체 o에 메서드m()을 정의한 다음 다음과 같이 호출할 수있다.
+   o.m();
+   //또는 m()이 두개의 인자를 받는다면 다음과 같이 호출할 수도있다.
+   o.m(x,y);
+   //앞코드는 함수 표현식(o.m)과 두 전달인자에 대한 표현식(x,y)으로 구성된 호출표현식이다. 여기서 함수 표현식 자체는 프로퍼티 접근 표현식이고 이는 이 함수가
+   //일반 함수 형태가 아니라 메서드 형태로 호출됨을 뜻한다.  메서드 호출의 전달인자와 반환값에 관한 규칙은 앞에서 설명한 일반 함수 호출의 경우와 완전히 같다.
+   //그러나 메서드 호출은 함수 호출에 비해 한 가지 중요한 부분이 다른데 그것은 바로 호출 컨텍스트다. 프로퍼티 접근 표현식은 객체(이 경우에는 o)와 프로퍼티
+   //이름(m)으로 구성되어 있다. 메서드 호출 표현식에서는 객체 o가 호출 컨텍스트가 되므로, 함수 몸체에서 this키워드를 사용해서 객체 o를 참조할 수 있다. 
+   var calculator = {  //객체 리터럴
+        operand1: 1,
+        operand2: 1,
+        add: function()
         {
-            return function (id) //id값
-            {
-                return fetch(baseUrl + path + "/" + id); //실제 서버에 정보를 요청
-            };
-        };
+            //이 객체를 참조하기 위해 this 키워드를 사용하였다.
+            this.result = this.operand1 + this.operand2;
+        }
+
    };
-   //ES6
-   var getInfomation = baseUrl => path => id => fetch(baseUrl + path + "/" + id);
-   //HTML5의 fetch함수는 url을 받아 해당 url에 HTTP 요청을 합니다. 보통 REST API를 이용할 경우 baseUrl은 몇개로 고정되지만 나머지 path나 id값은 매우 많을수 있죠
-   // 이런 상황에서 서버에 정보를 요청할 필요가 있을 때마다 매번 baseUrl부터 전부 기입해 주기보다는 공통적인 요소는 먼저 기억시켜두고 특정한 값(id)만으로 서버 요청을
-   // 수행하는 함수를 만들어두는 편이 개발 효율성이나 가독성 측면에서 더 좋을 것입니다.
-
-   var imageUrl = "http://imageAddress.com/";
-   var productUrl = "http://productAddress.com";
-   //이미지 타입별 요청 함수 준비
-   var getImage = getInfomation(imageUrl); //http://imageAddress.com
-   var getEmotion = getImage("emotion"); //http://imageAddress.com/emotion
-   var getIcon = getImage("icon"); //http://imageAddress.com/icon
-
-   //제품 타입별 요청 함수 준비
-   var getProduct = getInfomation(productUrl); //http://productAddress.com
-   var getFruit = getProduct("fruit"); //http://productAddress.com/fruit
-   var getVegetable = getProduct("vegetable"); //http://productAddress.com/vegetable
-
-   //실제요청
-   var emotion1 = getEmotion(100); //http://imageAddress.com/emotion/100
-   var emotion2 = getEmotion(102);//http://imageAddress.com/emotion/102
-   var icon1 = getIcon(205);//http://imageAddress.com/icon/205
-   var icon2 = getIcon(234);http://imageAddress.com/icon/234
-   var fruit = getFruit(300);http://imageAddress.com/fruit/300
-   var fruit2 = getFruit(400); //http://imageAddress.com/fruit/400
-   var vegetable = getVegetable(456);//http://imageAddress.com/vegetable/456
-   var vegetable2 = getVegetable(789);//http://imageAddress.com/vegetable/789
-
-   const logger = store => next => action => {
-       console.log("dispatching",action);
-       console.log("next state",store.getState());
-       return next(action);
+   calculator.add(); //1+1을 계산하기 위해메서드를 호출
+   calculator.result; // 2
+   //대부분의 메서드 호출은 프로퍼티 접근 표현식에 점(.)을 사용하지만, 대괄호([])를 사용해도 메서드 호출을 할 수 있다. 
+   o["m"](x,y); //o.m(x,y)과 같은 방법
+   a[0](z); //이또한 메서드 호출이다. (a[0]은 함수라고 가정한다.)
+   //또한 메서드 호출은 더 복잡한 프로퍼티 접근 표현식을 포함할 수 있다. 
+   CustomElementRegistry.surname.toUpperCase(); //customer.surname의 메서드를 호출한다
+   f().m(); //f()가 반환한 객체에 있는 메서드 m()을 호출한다. 
+   //메서드와 this 키워드는 자바스크립트 객체 지향 프로그래밍 패러다임의 중심이다. 메서드로 사용되는 함수는 메서드의 호출 대상 객체를 암시적 인자로 전달받는다.
+   //보통 메서드는 해당 객체에 어떤 작업을 수행하기 때문에 메서드 호출 문법은 그 함수가 해당 객체에 무언가를 한다는 사실을 나타내는 세련된 방법이다. 
+   rect.setSize(width, height);
+   setRectSize(rect, width, height);
+   //메서드 체이닝(Method Chaining) : 메서드가 객체를 반환하면, 메서드의 반환값을 후속 호출의 일부로 사용할수 있다. 이는 단일 표현식만으로 일련의(또는 '체인
+   //, 혹은 "cascade")메서드를 호출할 수 있게끔 한다. 예를 들면 jQuery라이브러리를 사용할때 다음과 같은 코드를 흔히 보게 된다. 
+   //모든 header를 찾고,  찾은 헤더의 id에 대한 map 함수 결과를 배열로 얻고(get()) 정렬(sort())한다. 
+   //$(":header").map(function() { return this.id}).get().sort(); 어떤 메서드를 작성하고 있는데 특별한 반환 값이 없다면 this를 반환하하면 어떨지 고려해보라. 
+   //이러한 방식을 당신의 API전체에 일관성 있게 적용한다면 메서드 체이닝이라는 프로그래밍 스타일을 사용할수 있게된다. 메서드 체이닝은 객체 이름은 한 번만 사용하고
+   //메서드는 여러번 호출할 수 있는 방식이다. shape.setX(100).setY(100).setSize(50).setOutline("red").selfFill("blue").draw()
+   //앞서의 두 줄 코드에서 호출한 가상의 함수들은 rect에 대해 완전히 같은 작업을 수행할 것이다. 그러나 첫 줄에 사용된 문법이 해당 작업의 주요 초점이 객체 rect에 
+   //맞쳐져 있ㅇ므을 좀더 분명하게 드러낸다. this는 키우드이며 변수나 프로퍼티 이름이 아님에 유의하라. 자바스크립트 문법은 this에 값을 할당하는 것을 허용하지 않는다.
+   //변수와 달리 this키워드에는 유효범위(scope)가 없고 중첩 함수는 호출자의 this값을 상속하지 않는다. 만약 중첩 함수가 메서드 형태로 호출되면 그 함수의 this값은
+   //gobal객체(일반모드)또는 undefined(엄격모드)중 하나다. 흔히 보는 실수는 함수 형태로 호출된 중첩 함수가 바깥쪽(outer)함수의 호출 컨텍스트를 획득하기 위해 
+   //this값을 사용할수있다고 가정하는 것이다만약 바깥쪽 함수의 this값에 접근하고 싶다면 안쪽(inner)함수의 유효범위에 바깥쪽 함수의 this값을 별도의 변수로 저장해야한다.
+   // 이러한 용도로 보통 self 변수를 사용한다. 
+   var o = { //객체 o
+        m:function(){ //객체의 메서드m
+            var self = this; //this값을 변수에 저장한다. 
+            console.log(this === o); //true: this는 객체 o이다. 
+            f();//이제 헬퍼함수 f()를 호출한다 
+            function f() { //중첩함수f()
+                console.log(this === o); //false: this는 global객체 또는 undefined이다. 
+                console.log(self === o); //true self는 바깥쪽 함수의 this값이다. 
+            }
+        }
    };
-   //Redux Middleware "thunk"
-   const thunk = store => next => action => {
-       return typeof action === "function"? action(dispatch, store.getState):next(action);
-   };
-   //위두 미들웨어는 공통적으로 store, next, action순서로 인자를 받습니다. 이중 store는 프로젝트 내에서 한 번 생성된 이후로는 바뀌지 않는  속성이고 dispatch의 의미를 
-   //가지는 next역시 마찬가지지만 action의 경우는 매번 달라집니다. 그러니까 store와 next값이 결정되면 Redux 내부에서 logger또는 thunk에 store, next를 미리 넘겨서 반환된
-   // 함수를 저장시켜놓고 이후에는 action만 받아서 처리할 수 있게끔 한 것이죠
-
+   o.m(); //객체 o의 메서드 m을 호출한다. 
 };
