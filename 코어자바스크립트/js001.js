@@ -1,58 +1,31 @@
 window.onload = function () {    
-   //프로토 타입 체인  메서드 오버라이드 : 객체를 참조하는 __proto__를 생략하면 인스턴스는 prototype에 정의된 프로퍼티나 메서드를 마치 자신의 것처럼 사용할수 있다고 했습니다. 
-   //그런데 만약 인스턴스가 동일한 이름의 프로퍼티 또는 메서드를 가지고 있는 상황이라면 어떨까요?
-   var Person = function (name)
+   //자신만의 함수 프로퍼티 정의하기 : 자바스크립트에서 함수는 원시 값이 아니지만 특별한 종류의 객체이고 이는 함수가 프로퍼티를 가질 수 있음을 의미한다. 함수가
+   //여러번 호출되어도 그값이 유지되어야 하는 정적 변수가 필요할 때는 전역변수를 선언해서 네임스페이스를 난잡하게 하기보다 함수의 프로퍼티를 사용하는 것이 편리한
+   //경우가 많다. 예를 들어 호출될 때마다 유일한 정수 값을 반환하는 함수를 작성한다고 가정해보자. 이 함수는 같은 값을 두번 반환해서는 안된다. 이런 정보를 전역변수에
+   //저장할 수도 있지만 부적합한 면이 있는데 왜냐하면 그 정보는 오직 해당 함수만사용하기 때문이다. 이러한 정보는 함수 객체의 프로퍼티에 저장하는 편이 더 낫다. 
+   //다음은 호출될 때마다 유일한 값을 반환하는 예제다. 
+   //함수 객체의 카운터 프로퍼티를 초기화한다. uniqueInteger 함수 정의는 끌어올려져 해석되기 때문에(hoisted)
+   //실제 uniqueInteger 함수 정의문 앞에서 이렇게 먼저 할당을 할 수 있다. uniqueInteger.counter = 0;
+
+   //이 함수는 호출될 때마다 매번 다른 정수를 반환한다. 다음 반환 값을 기억하기 위해 자신의 프로퍼티를 사용한다.
+   function uniqueInteger()
    {
-      this.name = name;
-   };
-   Person.prototype.getName = function()
-   {
-      return this.name;
-   };
-   var iu = new Person("지금");
-   iu.getName = function()
-   {
-      return "바로 " + this.name;
+      return uniqueInteger.counter++; //카운터 프로퍼티를 반환하고 증가 시킨다. 
    }
-   console.log(iu.getName())//바로 지금
-   var arr = [1,2];
-   Array.prototype.toString.call(arr);
-   Object.prototype.toString.call(arr);
-   arr.toString();
-
-   arr.toString = function()
+   //앞서 계산한 결과를 캐시하도록 자신의 프로퍼티를 사용(함수 자신을 배열처럼 다룬다)다음 factorial()함수를 살펴보자.
+   //팩토리얼을 계산하고 계산 결과를 함수 자신의 프로퍼티에 캐시한다. 
+   function factorial(n)
    {
-      return this.join("_");
-   }
-   arr.toString(); //1_2
-
-   //객체 전용 메서드의 예외사항 : 어떤 생성자 함수이든 prototype은 반드시 객체이기 때문에 Object.prototype이 언제나 프로토타입 체인의 최상단에 존재하게 됩니다. 따라서 객체에서만 사용할
-   //메서드는 다른 여느 데이터 타입처럼 프로토타입 객체 안에 정의할 수가 없습니다. 객체에서만 사용할 메서드를 Object.prototype내부에 정의한다면 다른 데이터 타입도 해당 메서드를 사용할 수
-   //있게 되기 때문이죠
-
-   Object.prototype.getEntries = function()
-   {
-      var res = [];
-      for(var prop in this)
+      if(isFinite(n) && n > 0 && n ==Math.round(n)) //유한, 양의 정수만 받음
       {
-         if(this.hasOwnProperty(prop))
-         {
-            res.push([prop,this[prop]]);
-         }
-      }
-      return res;
+         if(!(n in factorial))
+         
+            factorial[n] = n * factorial(n-1); //팩터리얼을 계산하고 계산값 캐시
+         return factorial[n];
+         
+      }else return NaN; //잘못된 입력 값이 들어오면 NaN을 반환한다.
    }
-   var data = [ ["object",{a:1, b:2, c:3}],
-               ['number',345],
-               ["string","abc"],
-               ["boolean",false],
-               ["func",function(){}],
-               ["array",[1,2,3]
-               ]];
-   data.forEach(function (datum)
-   {
-      console.log(datum[1].getEntries());
-   })
+   factorial[1] = 1; //캐시를 기본 경우(1)에 대한 값으로 초기화 한다. 
 
 };
 
