@@ -1,64 +1,61 @@
 window.onload = function () {    
-   //함수 프로퍼티, 메서드 생성자 : 지금까지 살펴보았듯이 자바스크립트 프로그램에서 함수는 일종의 값이다. typeof 연산자를 함수에 사용하면 "function"문자열을 얻을수 있지만
-   //함수는 정말 독특한 자바스크립트 객체다. 함수는 객체이기 때문에 프로퍼티와 메서드를 가질수 있다. 또한 Function()이라는 생성자도 갖고 있다. 이어지는 세부 항목에서는
-   //함수의 프로퍼티와 메서드 ,Function()생성자에 대해 다룬다. 해당 내용은 레퍼런스에서도 읽을수 있다. 
+   //bind() 메서드 : bind()메서드는 ECMAScript5에 추가되었으나 ECMAScript3에서도 같은 기능을 쉽게 구현할수 있다. bind()라는 이름에서 알수 있듯이 bind()의 주요 목적은
+   //함수와 객체를 서로 묶는 것이다. 함수 f의 bind()메서드는 새로운 함수를 반환한다. 반환된 새 함수를 (함수로)호출하면 원래 함수 f가 o의 메서드로 호출된다. 새로운 함수에
+   //전달한 모든 인자는 원래 함수에도 전달된다. 
+   function f(y) { return this.x + y;} //바인드되어야 하는 함수
+   var o = {x:1}; //바인드될 객체
+   var g = f.bind(o); //g(x)를 호출하면  o.f(x)가 호출된다.
+   g(2); // 3
 
-   //length 프로퍼티 : 함수 몸체 내에서 arguments.length는 함수에 실제로 전달된 인자의 개수다. 그러나 함수 자체의 length 프로퍼티는 의미가 다르다. 이 읽기 전용 프로퍼티는
-   //함수를 정의할 때 명시한 인자 개수(arity)를 반환하는데, 이는 매개변수 목록에 정의된 매개변수, 즉 형식인자(parameter)의 개수로서 보통 해당 함수가 요구하는 전달인자의
-   //개수다. 다음 코드의 check()함수는 다른 함수의 arguments를 인자로 받는다. 그리고 arguments.length(실제로 전달된 인자의 개수)와 arguments.callee.length(요구 하는 
-   //인자의 개수)를 비교하여 해당 함수에 올바른 개수의 인자가 전달되었는지를 판단한다. 만약 그렇지 않으면 예외를 발생시킨다. check()함수 다음에 나오는 테스트 함수 f()는
-   //check()를 어떻게 사용하는지 보여준다. 
-
-   //이 함수는 arguments.callee를 사용하고 따라서 엄격 모드에서는 작동하지 않는다. 
-   function check(args)
+   //이런 식의 바인딩은 다음과 같은 코드를 통해서도 구현할수 있다. 
+   //o의 메서드로서 f를 호출하는 함수를 반환한다. 인자 또한 모두 전달된다. 
+   function bind(f, o)
    {
-      var actual = args.length; //인자의 실제 개수
-      var expected = args.callee.length; //인자의 요구 개수
-      if(actual !== expected) //두 값이 다르면 예외 발생
-         throw Error("Expected " + expected + "args; got " + actual);         
-   }
-   function f(x,y,z)
-   {
-      check(arguments); //실제 인자 개수가 요구 개수와 같은지 검사한다. 
-      return x + y+ z;//함수의 나머지를 수행한다. 
-   }
-
-   //prototype 프로퍼티 : 모든 함수에는 prototype프로퍼티가 있는데 이 프로퍼티는 프로토타입 객체를 참조한다. 모든 함수는 서로 다른 프로토타입 객체를 가지고 있다. 함수가 생성
-   //자로 사용될 때, 새로 생성된 객체는 함수의 프로토타입 객체로부터 프로퍼티들을 상속받는다. 
-
-   //call()과 apply()메서드 : call()과 apply()는 어떤 함수를 다른 객체의 메서드인 것처럼 간접적으로 호출할수 있도록 한다. call()과 apply()의 첫번째 인자는 호출 되는 함수와
-   //관련이 있는 객체다. 이 첫 번째 인자는 호출 컨텍스트고 함수 몸체에서 this키워드의 값이 된다. 함수 f()를 객체 o의 메서드로 호출(별도의 인자는 전달하지 않음)하려면 다음과
-   //같이 call()또는 apply()를 사용하면 된다. 
-   f.call(o);
-   f.apply(o);
-   //앞의 두 코드는 다음 코드와 비슷하다(o에는 이름이 m인 프로퍼티가 없다고 가정한다. )
-   o.m = f; //f를 o의 임시 메서드로 만든다. 
-   o.m(); //아무 인자 없이 호출
-   delete o.m; //임시 메서드를 제거한다. 
-
-   //ECMAScript5의 엄격모드에서 call()또는 apply()의 첫번째 인자는 함수 내에서 this의 값이 되는데 그 값이 원시 값이든 null이든 undefined든 상관없다. ECMAScript3이나 일반
-   //모드에서는 null이나 undefined 값은 전역 객체로 바뀌고 원시값은 이에 상응하는 레퍼 객체로 바뀐다. call()의 첫 번째 호출 컨텍스트 다음에 있는 모든 인자는 호출되는 함수로
-   //전달된다. 예를 들어 함수 f()로 두 숫자를 전달하고 이 함수를 객체 o의 메서드로 호출하려면 다음과같은 코드를 사용하면 된다. 
-   f.call(o,1,2);
-   //apply()메서드는 call()메서드와 비슷하지만 함수에 전달할 인자는 배열형태여야 한다. 
-   f.apply(o,[1,2]);
-   //만약 함수가 임의 개수의 인자를 받도록 정의되었다면 apply()메서드는 임의길이의 배열을 사용하여 해당 함수를 호출할수있다. 예를 들어 숫자들로 이루어진 배열에서 가장큰
-   //숫자를 찾으려면 apply()메서드를 사용하여 배열의 각 요소를 math.max()에 전달할수 있다. 
-   var biggest = Math.max.apply(Math,array_of_numbers);
-   //apply()는 실제 배열과 마찬가지로 유사 배열 객체와도 잘 작동한다. 특히 arguments 배열을 직접 apply()에 넘김으로써 다른 함수를 호출할 때 현자 함수에 전달된 인자와 같은 
-   //인자를 전달할수 있다 
-   //객체 o의 메서드 m을 원본 메서드 호출 전후에 로그 메시지를 남기는 버전으로 교체한다. 
-   function trace(o,m)
-   {
-      var original = o[m]; //원본 메서드를 클로저에 기억한다. 
-      o[m] = function(){//이제 새 메서드를 정의한다. 
-         console.log(new Date(), "Entering:", m); //메시지 로그
-         var result = original.apply(this,arguments); //원본 메서드 호출
-         console.log(new Date(), "Exiting:",m); //메시지 로그
-         return result; //result를 반환한다 
+      if (f.bind)return f.bind(o); //bind 메서드가 있으면 사용한다 
+      else return function() //그렇지 않으면 다음과 같은 식으로 바인딩한다. 
+      {
+         return f.apply(o, arguments);
       };
    }
-   //이 trace()함수는 객체와 메서드 이름을 인자로 받는다. trace()함수는 지정된 메서드를 새로운 메서드로 교체하는데 새로운 메서드는 원본 메서드를 추가 기능으로 둘러싼다(wrap)
-   //기존 메서드를 동적으로 수정하는 이런 방식은 보통 monkey-patching으로 알려져 있다. 
+   //ECMAScript5의 bind()메서드는 단지 함수를 객체에 바인딩하는 것보다 더 많은 일을 한다. bind()메서드는 파셜 애플리케이션(Partial Application)을 구현 하는데, bind()에
+   //전달하는 인자 중 첫 번째 이후의 모든 인자는 this값과 함께 해당 함수의 인자로 바인딩된다. 파셜 애플리케이션은 함수 프로그래밍에서 일반적인 기법이고 때로는 커링(currying)
+   //이라 부르기도 한다. 다음은 파셜 애플리케이션 구현을 위해 bind()메서드를 사용하는 예제다. 
+   var sum = function(x, y) { return x + y;}; //두 인자의 합을 반환한다. 
+   //sum과 비슷한 새 함수를 생성하지만 this값은 null로 바인딩되고 첫 번째 인자는 1로 바인딩된다. 새로운 함수는 단지 하나의 인자만 요구한다
+   var succ = sum.bind(null,1);
+   succ(2); //3 : x는 1에 바인딩되고  y인자로 2를 넘긴다. 
+   function f(y, z){ return this.x + y + z;};//합계를 구하는 다른 함수 
+   var g = f.bind({x:1},2); // this와 y를 바인딩한다. 
+   g(3); //6 : this.x 는 1에 바인딩되고 y는2에 z는 3에 바인딩된다. 
+   //ECMAScript3에서도 이렇게 this값을 바인딩할 수 있고 파셜 애플리케이션을 구현할수 있다. 
+
+   if(!Function.prototype.bind){
+      Function.prototype.bind = function(o /*, args */){
+         //this와 인자 값을 변수에 저장함으로써 다음의 중첩 함수에서 사용할 수 있다. 
+         var self = this, boundArgs = arguments;
+         //bind()메서드의 반환 값은 함수다.
+         return function(){
+            //인자 목록을 작성하는데 첫 번째 이후의 인자부터 나머지 모든 인자를 이 함수에 전달한다. 
+            var args = [], i;
+            for(i=1; i<boundArgs.length; i++)args.push(boundArgs[i]);
+            for(i=0; i<arguments.length; i++)args.push(arguments[i]);
+            //인자들을 포함하여 o의 메서드로 self를 호출한다. 
+            return self.apply(o, args);
+         };
+      };
+   }
+   //이 bind()메서드에 의해 반환되는 함수는 바깥쪽 함수에서 정의된 변수 self와 boundArgs를 사용하는 클로저이며 바깥쪽 함수가 안쪽 함수를 반환한 후 바깥 쪽 함수가 종료 되더라도
+   //안쪽 함수를 호출할 수 있게 한다. ECMAScript5에 정의된 bind()메서드에는 몇 가지 특징이 있는데 이 특징은 앞에 나온 ECMAScript3용 코드로는 시물레이션할수없다. 첫째  실제
+   //bind()메서드는 함수 객체를 length 프로퍼티와 함께 반환하는데 이 length프로퍼티는 바인딩된 함수에 정의되어 있는 인자 개수에서 바인딩된 인자의 수를 뺀 값이다(0보다 작지는
+    //않다) 둘째 ECMAScript5의 bind()메서드는 함수 생성자에 대한 파셜 애플리케이션으로 사용될 수 있다. 만약 bind()에 의해 반환된 함수가 생성자로 사용되면 bind()에 전달했던
+    //this는 무시되고 원본 함수가 생성자로 호출되며 이때 이미 바인딩된 인자들이 원본 함수 생성자에 전달된다. bind()메서드가 반환하는 함수에는 prototype프로퍼티가 없다( 일반
+    //함수에 있는 prototype프로퍼티는 삭제될 수 없다)그리고 바인딩된 함수를 생성자로 사용하여 만든 객체는 원본 함수의 prototype을 상속받는다. 또한 바인딩된 생성자에 instanceof
+    //연산자를 사용한 결과는 원본 함수에 instanceof연산자를 사용한 경우와 같다. 
+
+
+    //toString()메서드 : 모든 자바스크립트 객체와 마찬가지로 함수도 toString()메서드를 가지고 있다. ECMAScript명세는 이 메서드가 함수 선언문 다음에 나오는 문자열을 반환하라고
+    //요구한다. 실제로 대부분의(전부는 아니다)toString()메서드 구현체들은 함수의 전체 소스 코드를 반환한다. 내장 함수의 경우는 보통 함수 몸체로 [native code]와같은 내용의 문자열
+    //을 반환한다. 
+
    
 }
