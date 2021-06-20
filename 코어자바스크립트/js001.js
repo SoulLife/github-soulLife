@@ -1,37 +1,44 @@
 window.onload = function () {    
-   //클래스와 생성자 : 생성자는 새로 생성된 객체를 초기화하는 용도로 사용되는 함수다. 생성자는 new 키워드를 사용하여 호출된다. 생성자를 호출하면 자동으로 새로운 객체가
-   //생성되고 생성자 함수 내부에서 새로 생성된 객체를 사용하기 때문에, 생성자 함수는 새 객체의 상태를 초기화하는 데만 신경 쓰면 된다. 생성자 호출의 핵심적인 특징은 생성자의
-   //prototype프로퍼티가 새 객체의 프로토타입으로 사용된다는 것이다. 이는 한 생성자를 통해 생성된 모든 객체는 같은 객체를 상속하고 따라서 같은 클래스의 멤버임을 뜻한다.
-   //이 함수는 새 Range 객체를 초기화하는 생성자 함수다.
-   //이 함수는 어떤 객체도 내부에서 생성하고 반환하지 않는다 단지 this를 초기화할 뿐이다. 
-   function Range(from, to)
-   {
-      //이 Range 객체의 시작과 끝을 (객체의 상태로)저장한다. 이 프로퍼티들은 해당 객체의 고유한 값이고 상속되지 않는다. 
-      this.from = from;
-      this.to = to;
-   }
-   //모든 Range 객체는 이 객체를 상속한다. 모든 객체가 이 객체를 상속하려면 프로퍼티 이름은 반드시 prototype이어야 한다. 
-   Range.prototype = {
-      //x값이 범위 내에 있다면 true를 그렇지 않으면 false를 반환한다. 이 메서드는 텍스트 범위 및 날짜 범위에 대해서도 숫자 범위와 마찬가지로 작동한다. 
-      includes: function(x) { return this.from <= x && x <= this.to;},
-      //범위 내의 각 정수에 대해 f를 한번씩 호출한다. 이 메서드는 숫자 범위에 대해서만 작동한다. 
-      foreach:function(f){
-         for(var x=Math.ceil(this.from); x <= this.to; x++)f(x);
-      },
-      //범위를 표현하는 문자열을 반환한다. 
-      toString: function(){ return "(" + this.from + "..." + this.to + ")"}
-   };
-   //Range 객체를 사용하는 몇가지 예제
-   var r = new Range(1,3); //Range 객체를 생성한다
-   r.includes(2); // true : 2가 범위에 있다.
-   r.foreach(console.log); //1 2 3을 출력한다
-   console.log(r); // (1...3)을 출력
+   //생성자와 클래스 구별 : 프로토타입 객체는 클래스를 구별할때 핵심적인 역할을 한다. 두 객체는 같은 프로토타입 객체를 상속한 경우에만 같은 클래스의 인스턴스다.
+   //새로 생성된 객체의 상태를 초기화하는 생성자 함수는 클래스 구별의 핵심이 아니다. 서로 다른 두 생성자 함수라도 같은 프로토타입 객체를 가리키는 prototype 프로퍼티를
+   //가질수 있다. 그러면 두 생성자는 같은 클래스의 인스턴스를 만드는데 사용될 수 있다. 
+   //생성자가 prototype만큼 객체 구별에 핵심적인 역할을 하지는 않더라도 생성자는 클래스를 대표하는 역할을 맡는다. 당연하게도 대부분의 생성자 함수 이름은 클래스 이름과
+   //같다. 예를 들면 Range()생성자는 Range객체를 만든다는 식이다. 그러나 더 근본적으로 생성자는 객체가 어떤 클래스에 속한 것인지 검사할때 instanceof연산자와 같이 사용된다
+   //객체 r이 Range객체인지를 알고 싶다면 다음과같이 할수있다. 
+   r instanceof Range //r이 Rage.prototype을 상속했다면 true를 반환한다. 
+   //instanceof 연산자는 실제로 r이 Range 생성자에 의해 초기화되었는지를 검사하지는 않고 r이 Range.prototype를 상속하는지를 검사한다. 그럼에도 instanceof는 생성자를 사용하여
+   //클래스를 구별하도록 강제한다. instanceof 연산자에 대해서는 난중에 다시 살펴본다 
 
-   //먼저 range()팩터리 함수는 생성자로 변경되면서 이름이Range()로 바뀌었다. 클래스와 생성자 함수의 이름을 대문자로 시작하는 것은 매우 일반적인 코딩 규칙이다. 일반 함수와
-   //메서드는 소문자로 이름을 시작한다.  다음으로 range()팩터리 함수가 일반 함수처럼 호출되는 반면에 Range()생성자는 new 키워드를 사용하여 호출된다 Range()생성자는 new 
-   //키워드를 사용하여 호출되기 때문에 inherit()을 호출하거나 새 객체를 생성하기 위한 어떤 별도의 행동도 할 필요가 없다. 새 객체는 생성자 함수가 실행되기 전에 자동으로
-   //생성되고 생성자 함수 내에서 this값으로 접근할수 있다. Range()생성자는 그 저 새 객체를 초기화하기만 하면 되고 생성된 객체를 반환할 필요도없다. 생성자를 호출하면 새
-   //객체는 자동으로 생성되고 새 객체의 메서드로서 생성자 함수가 호출된 다음 초기화가 완료된 새 객체가 반환된다. 생성자 호출이 일반적 하나의 이유다. 생성자는 new 키워드를
-   //사용하여 호출된다고 가정하기 때문에 일반적인 함수 호출처럼 호출하면 보통 제대로 작동하지 않는다. 일반적인 함수와 구분되도록 작명 규칙을 지키는 것은 다른 프로그래머가
-   //언제 new 를 사용해야 하는지를 알게 하는데 도움이 된다. Range()생성자를 호출하면 자동으로 Range.prototype이 새로 생성된 Range객체의 프로토타입으로 지정된다. 
+
+   //constructor프로퍼티 : 메서드를 객체 리터럴의 프로퍼티로 정의하는 것이 편리하긴 하지만 그래야만 객체를 만들수 있는 것은 아니다. 모든 자바스크립트 함수는 생성자로 사용될
+   //수 있는데 함수가 생성자로 호출되려면 prototype프로퍼티가 있어야 한다. 따라서 모든 자바스크립트 함수에는 자동으로 prototype프로퍼티가 설정된다(ECMAScript 5에서 Function.
+   //bind()메서드가 반환하는 함수는 제외)이 prototype프로퍼티의 같은 constructor프로퍼티 하나만 가진 객체다. constructor프로퍼티는 열거되지 않으며 constructor프로퍼티의 값은
+   //해당 함수 객체다. 
+   var F = function() {}; //이것은 함수 객체다 
+   var p = F.prototype; // 이것은 F와 연관이 있는 프로토타입 객체다. 
+   var c = p.constrctor(); //이것은 프로토타입과 관련한 함수 객체다. 
+   c === F // true : 모든 함수에 대해 F.prototype.constrctor==F이다
+   //미리 정의된 프로토타입 객체가 있고 이 프로토타입 객체가 constrctor프로퍼티를 가지고 있다는 말은 일반적으로 어떤 객체가 자기자신의 생성자를 가리키는 constrctor프로퍼티
+   //또한 상속하고 있음을 뜻한다. 따라서 생성자는 클래스를 구별하는 데 사용될수 있고 constrctor프로퍼티를 통해 객체의 클래스를 얻을수 있다. 
+   var o = new F(); //클래스 F의 객체 o를 생성한다
+   o.constrctor === F //true : constructor 프로퍼티는 클래스를 가리킨다. 
+   //Range 클래스는 미리 정의되어 있던 Range.prototype을 별도로 정의한 객체로 덮어쓴다. 그리고 이 별도로 정의한 프로토타입 객체에는 constrctor프로퍼티가 없다. 따라서 Range
+   //클래스의 인스턴스에도 constrctor 프로퍼티는 없을 것이다. 이 문제는 명시적으로 프로토타입 객체에 constrctor프로퍼티를 추가함으로써 해결할 수 있다. 
+   Range.prototype = {
+      constrctor:Range, //역 참조를 위해 constrctor 프로퍼티를 명시적으로 설정한다. 
+      includes: function(x) { return this.from <= x && x <= this.to;},
+      foreach:function(f){
+         for(var x=Math.ceil(this.from); x <= this.to; x++)F(x);
+      },
+      toString: function() { return "(" + this.from + "..." + this.to + ")"}
+   };
+   //일반적으로 사용하는 또 다른 기법은 constrctor프로퍼티가 있는 미리 정의되어 있는 prototype객체를 사용하는 것이다. 거기에 하나씩 메서드를 추가해 가면 된다. 
+   //미리 정의되어 있는 Range.prototype객체를 확장하기 때문에 자동으로 생성된 Range.prototype.constructor프로퍼티를 덮어쓰지 않는다. 
+   Range.prototype.includes = function(x) { return this.from <= x && x<=this.to;};
+   Range.prototype.foreach = function(f){
+      for(var x=Math.ceil(this.from); x<=this.to; x++)F(x);
+   };
+   Range.prototype.toString = function(){
+      return "(" + this.from + "..." + this.to + ")";
+   };
 }
