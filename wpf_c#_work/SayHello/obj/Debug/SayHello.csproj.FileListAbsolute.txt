@@ -1,0 +1,13 @@
+P:\work\c#wpf\SayHello\bin\Debug\SayHello.exe.config
+P:\work\c#wpf\SayHello\bin\Debug\SayHello.exe
+P:\work\c#wpf\SayHello\bin\Debug\SayHello.pdb
+P:\work\c#wpf\SayHello\obj\Debug\SayHello.exe
+P:\work\c#wpf\SayHello\obj\Debug\SayHello.pdb
+P:\work\c#wpf\SayHello\obj\Debug\SayHello.csprojResolveAssemblyReference.cache
+P:\work\js_study\javascript\코어자바스크립트\wpf_c#_work\SayHello\obj\Debug\SayHello.csproj.AssemblyReference.cache
+P:\work\js_study\javascript\코어자바스크립트\wpf_c#_work\SayHello\obj\Debug\SayHello.csproj.CoreCompileInputs.cache
+P:\work\js_study\javascript\코어자바스크립트\wpf_c#_work\SayHello\obj\Debug\SayHello.exe
+P:\work\js_study\javascript\코어자바스크립트\wpf_c#_work\SayHello\obj\Debug\SayHello.pdb
+P:\work\js_study\javascript\코어자바스크립트\wpf_c#_work\SayHello\bin\Debug\SayHello.exe.config
+P:\work\js_study\javascript\코어자바스크립트\wpf_c#_work\SayHello\bin\Debug\SayHello.exe
+P:\work\js_study\javascript\코어자바스크립트\wpf_c#_work\SayHello\bin\Debug\SayHello.pdb
