@@ -14,7 +14,8 @@ namespace SayHello
         [STAThread]
         public static void Main(string[] args)
         {
-            ThrowWindowParty win = new ThrowWindowParty();
+            //ThrowWindowParty win = new ThrowWindowParty();
+            MyApplication myApp = new MyApplication();
             //Application app = new Application();
             //app.Run(new CircleTheRainbow());
 
