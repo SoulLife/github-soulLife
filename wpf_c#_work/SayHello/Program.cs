@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using SayHello.ex1;
+using SayHello.ex2;
 namespace SayHello
 {
     class Program
@@ -15,9 +16,11 @@ namespace SayHello
         public static void Main(string[] args)
         {
             //ThrowWindowParty win = new ThrowWindowParty();
-            MyApplication myApp = new MyApplication();
+            //MyApplication myApp = new MyApplication();
             //Application app = new Application();
             //app.Run(new CircleTheRainbow());
+            Application app = new Application();
+            app.Run(new VaryTheBackground());
 
         }
     }
