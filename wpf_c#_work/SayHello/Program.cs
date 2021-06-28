@@ -20,7 +20,8 @@ namespace SayHello
             //Application app = new Application();
             //app.Run(new CircleTheRainbow());
             Application app = new Application();
-            app.Run(new VaryTheBackground());
+            //app.Run(new VaryTheBackground());
+            app.Run(new FlipThroughTheBrushes());
 
         }
     }

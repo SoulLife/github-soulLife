@@ -50,6 +50,7 @@
     <Compile Include="ex1\MyApplication.cs" />
     <Compile Include="ex1\MyWindow.cs" />
     <Compile Include="ex1\TypeYourTitle.cs" />
+    <Compile Include="ex2\FlipThroughTheBrushes.cs" />
     <Compile Include="ex2\VaryTheBackground.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
