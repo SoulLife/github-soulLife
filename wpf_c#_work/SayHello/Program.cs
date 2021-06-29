@@ -21,7 +21,8 @@ namespace SayHello
             //app.Run(new CircleTheRainbow());
             Application app = new Application();
             //app.Run(new VaryTheBackground());
-            app.Run(new FlipThroughTheBrushes());
+            //app.Run(new FlipThroughTheBrushes());
+            app.Run(new GradiateTheBrush());
 
         }
     }
