@@ -22,7 +22,11 @@ namespace SayHello
             Application app = new Application();
             //app.Run(new VaryTheBackground());
             //app.Run(new FlipThroughTheBrushes());
-            app.Run(new GradiateTheBrush());
+            //app.Run(new GradiateTheBrush());
+            //app.Run(new AdjustTheGradient());
+            //app.Run(new FollowTheRainbow());
+            //app.Run(new CircleTheRainbow());
+            app.Run(new ClickTheGradientCenter());
 
         }
     }
