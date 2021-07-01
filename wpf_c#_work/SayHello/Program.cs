@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using SayHello.ex1;
 using SayHello.ex2;
+using SayHello.ex3;
 namespace SayHello
 {
     class Program
@@ -26,7 +27,8 @@ namespace SayHello
             //app.Run(new AdjustTheGradient());
             //app.Run(new FollowTheRainbow());
             //app.Run(new CircleTheRainbow());
-            app.Run(new ClickTheGradientCenter());
+            //app.Run(new ClickTheGradientCenter());
+            app.Run(new RotateTheGradientOrigin());
 
         }
     }

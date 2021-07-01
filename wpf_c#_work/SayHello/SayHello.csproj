@@ -58,6 +58,7 @@
     <Compile Include="ex2\GradiateTheBrush.cs" />
     <Compile Include="ex2\RotateTheGradientOrigin.cs" />
     <Compile Include="ex2\VaryTheBackground.cs" />
+    <Compile Include="ex3\DisplaySomeText.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ex1\ThrowWindowParty.cs" />
