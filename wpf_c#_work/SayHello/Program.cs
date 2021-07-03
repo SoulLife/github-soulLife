@@ -29,7 +29,8 @@ namespace SayHello
             //app.Run(new CircleTheRainbow());
             //app.Run(new ClickTheGradientCenter());
             //app.Run(new RotateTheGradientOrigin());
-            app.Run(new DisplaySomeText());
+            //app.Run(new DisplaySomeText());
+            app.Run(new RecordKeystrokes());
 
         }
     }
