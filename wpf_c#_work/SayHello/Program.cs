@@ -30,7 +30,9 @@ namespace SayHello
             //app.Run(new ClickTheGradientCenter());
             //app.Run(new RotateTheGradientOrigin());
             //app.Run(new DisplaySomeText());
-            app.Run(new RecordKeystrokes());
+            //app.Run(new RecordKeystrokes());
+            //app.Run(new ShowMyFace());
+            app.Run(new ShapeAnEllipse());
 
         }
     }
