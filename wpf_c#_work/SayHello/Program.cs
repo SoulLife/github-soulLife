@@ -13,6 +13,7 @@ namespace SayHello
 {
     class Program
     {
+        
         [STAThread]
         public static void Main(string[] args)
         {
@@ -32,7 +33,9 @@ namespace SayHello
             //app.Run(new DisplaySomeText());
             //app.Run(new RecordKeystrokes());
             //app.Run(new ShowMyFace());
-            app.Run(new ShapeAnEllipse());
+            //app.Run(new ShapeAnEllipse());
+            //app.Run(new FormatTheText());
+            app.Run(new ToggleBoldAndItalic());
 
         }
     }

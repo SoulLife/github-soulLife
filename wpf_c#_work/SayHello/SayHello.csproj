@@ -59,9 +59,11 @@
     <Compile Include="ex2\RotateTheGradientOrigin.cs" />
     <Compile Include="ex2\VaryTheBackground.cs" />
     <Compile Include="ex3\DisplaySomeText.cs" />
+    <Compile Include="ex3\FormatTheText.cs" />
     <Compile Include="ex3\RecordKeystrokes.cs" />
     <Compile Include="ex3\ShapeAnEllipse.cs" />
     <Compile Include="ex3\ShowMyFace.cs" />
+    <Compile Include="ex3\ToggleBoldAndItalic.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ex1\ThrowWindowParty.cs" />
