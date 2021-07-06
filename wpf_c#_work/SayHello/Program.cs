@@ -35,7 +35,8 @@ namespace SayHello
             //app.Run(new ShowMyFace());
             //app.Run(new ShapeAnEllipse());
             //app.Run(new FormatTheText());
-            app.Run(new ToggleBoldAndItalic());
+            //app.Run(new ToggleBoldAndItalic());
+            app.Run(new RenderTheGraphic());
 
         }
     }
