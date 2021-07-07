@@ -9,6 +9,7 @@ using System.Windows.Media;
 using SayHello.ex1;
 using SayHello.ex2;
 using SayHello.ex3;
+using SayHello.ex4;
 namespace SayHello
 {
     class Program
@@ -36,7 +37,8 @@ namespace SayHello
             //app.Run(new ShapeAnEllipse());
             //app.Run(new FormatTheText());
             //app.Run(new ToggleBoldAndItalic());
-            app.Run(new RenderTheGraphic());
+            //app.Run(new RenderTheGraphic());
+            app.Run(new ClickTheButton());
 
         }
     }
