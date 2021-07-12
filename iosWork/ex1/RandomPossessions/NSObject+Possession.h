@@ -9,8 +9,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface NSObject (Possession)
-	
+@interface NSObject ()
+
 @end
 
 NS_ASSUME_NONNULL_END
