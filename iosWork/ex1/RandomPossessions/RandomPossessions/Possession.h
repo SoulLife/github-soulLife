@@ -50,6 +50,7 @@ NS_ASSUME_NONNULL_BEGIN
     int valueInDollars;
     NSDate *dateCreated;
 }
+-(id) initWithPossesionName: (NSString *)name valueInDollars:(int)value serialNumber: (NSString *)sNumber;//초기화 메소드 선언
 -(void) setPossessionName: (NSString *)str;
 -(NSString *)possessionName;
 -(void)setSerialNumber: (NSString *)str;
