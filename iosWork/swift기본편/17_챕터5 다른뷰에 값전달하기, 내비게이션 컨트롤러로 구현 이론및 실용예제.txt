@@ -1,0 +1,244 @@
+※ 3단계 : VC1 - 값을 전달받을 뷰 컨트롤러의 인스턴스를 생성
+3단계는 다시 VC1에서 벌어지는 이야기입니다. 값을 전달받을 VC2 화면의 인스턴스를 생성하는 단계죠. 실습 과정을 바탕으로 설명한다면 ViewController 클래스 내에서 ResultViewController클래스의 인스턴스를 생성해야 합니다. 여기서 VC2의 인스턴스를 생성하는 시점은 화면을 전환하기 직전이 가장 적당합니다. 아직 필요도 없는데 너무 일찍 VC의 인스턴스를 생성하면 메모리 낭비니까요. 
+
+따라서 ViewController 클래스에서 Submit 버튼이 클릭되었을 때 처리해주는 것이 가장 적절할것 같습니다. Submit 버튼에 대한 액션 메소드를 추가하고 메소드 내부에서 ResultViewController 클래스의 인스턴스를 생성하겠습니다. 
+
+ViewController.swift
+
+import UIKit
+
+class ViewController: UIViewController
+{
+    
+    ...(중략)...
+    
+    @IBAction func onSubmit(_ sender: Any)
+    {
+        //VC2의 인스턴스 생성
+        guard let rvc = self.storyboard?.instantiateViewController(withIdentifier: "RVC") as? ResultViewController else
+        {
+            return
+        }
+        //값을 전달하는 과정을 여기에 작성
+    }
+    
+    
+} 
+
+앞장에서 화면 전환을 실습할 때 많이 보았던 구문입니다. 바로 스토리보드에서 입력된 아이디에 대한 뷰 컨트롤러의 인스턴스를 가져오는 구문이죠. 다만 여기에서 다른 점이라면 캐스팅입니다. 이전에는 메소드를 통해 생성된 인스턴스를 그대로 사용했던 것과는 달리 지금은 결과값에 as? ResultViewController 를 붙여 ResultViewController 타입으로 캐스팅하고 있습니다. 이것은 어떤 의미일까요?
+
+instantiateViewController(withIdentifier:)메소드를 호출하여 생성된 인스턴스는 기본 적으로 UIViewController타입입니다. 뷰 컨트롤러들 중 가장 상위에 있는 클래스죠. 화면 전환만을 목적으로 한다면 이 클래스 타입을 그대로 사용해도 됩니다. 커스텀 클래스에서 정의한 특정 메소드나 프로퍼티를 사용하지 않으므로 UIViewController타입이든 ResultViewController 타입이든 어느 쪽이라도 괜찮습니다. 
+
+하지만 지금은 다릅니다. 단순히 화면을 전환하는 것뿐만이 아니라 전환 대상의 프로퍼티를 참조하고 여기에 값을 대입하기까지 해야합니다. 그런데 우리가 참조할 paramEmail, paramUpdate, paramInterval 프로퍼티들은 ResultViewController 클래스에 모두 정의되어 있습니다. UIViewController 에는 이 프로퍼티가 정의되어 있지 않죠. 
+
+따라서 인스턴스를 UIViewController 타입으로 사용한다면 우리가 추가한 속성 변수를 참조할수 없습니다. 찾을수 없다는 오류가 발생하죠. 이런 문제 때문에 VC2의 인스턴스를 UIViewController 타입 그대로 사용하지 않고 ResultViewController 타입으로 캐스팅하는 것입니다. 
+
+한가지 더 알아야할 것이 있습니다. ResultViewController 클래스는 UIViewController 클래스를 상속받는 일종의 자식 클래스입니다. 따라서 UIViewController 타입의 객체를 ResultViewController 타입으로 캐스팅하는 과정은 상위 타입에서 하위 타입으로 캐스팅되는 다운 캐스팅입니다. 앞서 잠깐 학습한 것처럼 다운 캐스팅 과정에서는 오류가 발생할 가능성이 항상 존재하기 때문에 옵셔널 캐스팅을 할 것인지 강제 캐스팅을 할 것인지를 결정해서 캐스팅 연산자 as에 반영해야 합니다. 이반영의 결과는 as?와 as!구문의 차이로 나타납니다. nil이 발생할 가능성을 열어두는 옵셔널 캐스팅과 nil이 발생할 가능성을 무시하는 강제 캐스팅이죠. 
+
+위의 코드에서는 옵셔널 캐스팅을 선택했습니다. 이 캐스팅의 결과는 항상 옵셔널 타입이므로 일반 타입으로 전환하기 위해 guard 구문 내에서 옵셔널 바인딩 처리해야 합니다. 이 구문을 통하여 캐스팅된 인스턴스가 상수 rvc에 할당됩니다. rvc는 ResultViewController 클래스의 인스턴스이기 때문에 이제우리가 작성해둔 변수 paramEmail, paramUpdate, paramInterval을 모두 참조할수 있습니다
+
+
+※ 4단계 : VC1 - 값을 전달한 후 화면을 전환
+
+이제 드디어 값을 전달할 차례입니다. 3단계에서 추가한 onSubmit(_:) 메소드에 다음과같은 코드를 추가합니다. 굵게 표시된 부분이 새로 추가되는 코드입니다. 
+
+@IBAction func onSubmit(_ sender: Any)
+    {
+        //VC2의 인스턴스 생성
+        guard let rvc = self.storyboard?.instantiateViewController(withIdentifier: "RVC") as? ResultViewController else
+        {
+            return
+        }
+        //값전달
+        guard let optionalEmail = self.email.text else
+        {
+            return
+        }
+        rvc.paramEmail = optionalEmail //이메일
+        rvc.paramUpdate = self.isUpdate.isOn //자동갱신 여부
+        rvc.paramInterval = self.interval.value // 갱신주기
+        //화면 이동
+        self.present(rvc, animated: true)
+        
+    }
+
+작성된 내용은 VC2 인스턴스의 프로퍼티에 값을 대입하는 부분입니다. 수혈할 때 피를 주는 쪽과 받는 쪽의 혈액형이 일치해야 하듯 값을 전달할 때에도 주는 쪽과 받는 쪽의 값 타입이 서로 맞아야 합니다. 위 예제에서도 마찬가지입니다. 이메일 값은 ResultViewController 클래스에 선언된 프로퍼티가 String 타입으로 정의되어 있기 때문에 보낼 때에도 이에 맞추어 값을 전달하고 있으며 자동갱신 여부는 전달받는 프로퍼티 타입이 Bool 이므로 보내는 쪽에서도 isOn속성으로 Bool 타입으로 맞추어 전달하고 있음을 확인할수 있습니다. 
+
+특히 텍스트 필드인 email에서 입력값을 읽어 들일 떄 사용된 text 속성은 값이 비어 있을 경우를 대비하여 옵셔널 타입으로 선언되어 있지만 이 값을 받을 VC2쪽 paramEmail 속성은 옵셔널이 아닌 일반 문자열 타입입니다. 따라서 형태를 맞추기 위해 옵셔널 강제 해제 연산자 !를 사용하고 있습니다. 소스 코드가 복잡해지는 것을 피하고자 별도로 nil 을 체크하지 않았지만 여러분은 가급적 옵셔널 체크를 통해 값을 해제해 주기를 권합니다. 
+
+입력받은 여러 값을 rvc 상수의 속성 변수에 모두 대입한후 마지막으로 화면을 이동해 주는것이 소스 코드의 제일 아래에 작성된 내용입니다. 이번 실습은 프레젠테이션 방식의 화면 전환이므로 이 방식으로 화면을 이동하는 프레젠트 메소드가 호출되었습니다. 
+
+ViewController 클래스에서 처리해야 할 작업은 이것으로 모두 끝입니다. ViewController.swift 파일의 전체 소스는 다음과 같습니다. 
+
+ViewController.swift
+
+import UIKit
+
+class ViewController: UIViewController
+{
+    // 이메일 주소를 입력받는 텍스트필드
+    @IBOutlet var email: UITextField!
+    // 자동 갱신 여부를 설정하는 스위치
+    @IBOutlet var isUpdate: UISwitch!
+    // 갱신 주기를 설정하는 스테퍼
+    @IBOutlet var interval: UIStepper!
+    // 자동갱신 여부를 표시하는 레이블
+    @IBOutlet var isUpdateText: UILabel!
+    // 갱신 주기를 텍스트로 표시하는 레이블
+    @IBOutlet var isIntervalText: UILabel!
+    
+    // 자동 갱신 여부가 바뀔 때마다 호출되는 메소드
+    @IBAction func onSwitch(_ sender: UISwitch)
+    {
+        if (sender.isOn == true)
+        {
+            isUpdateText.text = "갱신함"
+        }else
+        {
+            isUpdateText.text = "갱신하지 않음"
+        }
+    }
+    // 갱신 주기가 바뀔 때마다 호출되는 메소드
+    @IBAction func onStepper(_ sender: UIStepper)
+    {
+        let value = Int(sender.value)
+        self.isIntervalText.text = "\(value)분 마다"
+    }
+    
+    @IBAction func onSubmit(_ sender: Any)
+    {
+        //VC2의 인스턴스 생성
+        guard let rvc = self.storyboard?.instantiateViewController(withIdentifier: "RVC") as? ResultViewController else
+        {
+            return
+        }
+        //값전달
+        guard let optionalEmail = self.email.text else
+        {
+            return
+        }
+        rvc.paramEmail = optionalEmail //이메일
+        rvc.paramUpdate = self.isUpdate.isOn //자동갱신 여부
+        rvc.paramInterval = self.interval.value // 갱신주기
+        //화면 이동
+        self.present(rvc, animated: true)
+        
+    }
+}
+
+값을 넘기고 값을 받는 과정은 모두 끝났습니다. 이것만으로도 충분하지만 넘겨받은 값이 VC2의 화면에 표시될수 있도록 추가 작업을 진행해 보겠습니다. 
+
+
+
+※ 추가작업 : VC2 - 전달받은 값을 화면에 표시
+다시 ResultViewController 클래스에 작업을 해 줍시다. 전달된 값을 화면의 레이블에 연결해서 표시해야 하는데 여기서 주의해야 할 것은 이 작업을 해줄 시점입니다. 화면의 레이블에 값을 표시하는 시점은 언제로 잡으면 좋을까요? 너무 일찍 처리하면 메모리에 화면 객체가 로드 되기전에 실행되어 버리고 너무 늦게 처리하면 사용자는 빈 화면을 잠깐이라도 보고있어야 할 겁니다. 그래서 화면에 표시하는 시점을 적절하게 선택해야 합니다. 
+
+일반적으로 전달받은 값을 화면에 표시하기 가장 적절한 시점은 화면이 메모리에 로드되고 난 직후입니다. 앞서 iOS 앱의 생명주기에서 확인했듯이 시스템에서는 특정 타이밍에 따라 메소드를 자동으로 호출해주는데 화면이 메모리에 로드되고 난 시점에는 viewDidLoad() 메소드를 호출합니다. viewDidLoad()메소드는 상위 클래스에서 이미 정의된 메소드이므로 우리는 이 메소드를 재정의해서 원하는 내용을 작성하면 됩니다.(이를 오버라이딩이라고 하는 거 알고 있죠?) 클래스 내부에 viewDidLoad() 메소드를 추가하고 레이블에 값을 표시하는 코드를 작성 합니다 
+
+
+ResultViewController.swift
+
+import UIKit
+
+class ResultViewController : UIViewController
+{
+   ...(중략)...
+    override func viewDidLoad()
+    {
+        self.resultEmail.text = paramEmail
+        self.resultUpdate.text = (self.paramUpdate == true ? "자동갱신" : "자동갱신안함")
+        self.resultInterval.text = "\(Int(paramInterval))분 마다 갱신"
+    }
+    
+}
+
+위 메소드에서는 화면에 추가된 세 레이블에 변수값을 대입하고 있습니다. 물론 레이블 객체에 직접 대입할수는 없으므로 레이블 객체와 연결된 @IBOutlet 변수를 통하여 값을 대입하고 있죠. 이메일은 입력받은 문자열을 그대로 출력하고 자동갱신 여부는 전달된 값의 타입이 Bool이 므로 조건에 따라 알맞은 문자열로 변환하여 출력합니다. 
+
+이때 if 구문 대신 3항 연산자가 사용된 점에 유의하기 바랍니다. 3항 연산자는 A ? B : C 라는 형식으로 이루어지는데 A가 참이면 B를 거짓이면 C를 반환합니다. 3항 연산자를 사용하면 if ~ else 구문을 한줄로 간단하게 줄일수 있으므로 많이 사용되지만 너무 남발하면 가독성이 떨어지는 원인이 되기도 하므로 주의해서 사용해야 합니다. 
+
+위와같이 viewDidLoad() 메소드에 내용을 작성해두면 화면이 메모리에 모두 로드되고 난후 시스템에 의하여 이 메소드가 호출되면서 메소드 내에 작성해둔 내용도 함께 실행됩니다. 전달 받은 값들이 뷰 컨트롤러 화면에 표시되겠죠. 앱이 화면에 처음 로드될 때 한 번만 호출되므로 중복해서 실행되지는 않습니다. 
+
+이것으로 값을 주고받는 실질적인 과정은 모두 완료되었습니다. 하지만 아직 두 번째 화면에서 우리가 기능을 부여해주지 않은 객체가 하나 있습니다. 바로 Back 버튼이죠. 지금 실습하고 있는 값의 전달과 직접 관계있지는 않아도 하나의 완결된 앱을 만들기 위해 Back 버튼의 처리까지 해주는 것이 좋습니다. Back 버튼을 보조 에디터의 ResultViewController 클래스로 드래그하여 액션 메소드 onBack()을 생성합니다. 
+
+@IBAction onBack(_:)메소드가 추가되었다면 메소드 안에 다음과 같이 내용을 작성합니다. 
+
+@IBAction func onBack(_ sender: Any)
+    {
+        self.presentingViewController?.dismiss(animated:true)
+    }
+
+화면 복귀를 위해서는 dismiss(animated:)메소드가 사용되었습니다. 이는 앞서 화면을 프레젠테이션 방식으로 전환했기 때문입니다. 추가된 메소드를 반영한 ResultViewController 클래스의 전체 소스는 다음과 같습니다. 
+
+ResultViewController.swift
+
+import UIKit
+
+class ResultViewController : UIViewController
+{
+    // 화면에 값을 표시하는데 사용될 레이블
+    @IBOutlet var resultEmail: UILabel!
+    
+    @IBOutlet var resultUpdate: UILabel!
+    
+    @IBOutlet var resultInterval: UILabel!
+    
+    //1 email 값을 받을 변수
+    var paramEmail : String = ""
+    //2 update 값을 받을 변수
+    var paramUpdate : Bool = false
+    //3 Interval 값을 받을 변수
+    var paramInterval : Double = 0
+    
+    override func viewDidLoad()
+    {
+        self.resultEmail.text = paramEmail
+        self.resultUpdate.text = (self.paramUpdate == true ? "자동갱신" : "자동갱신안함")
+        self.resultInterval.text = "\(Int(paramInterval))분 마다 갱신"
+    }
+    
+    @IBAction func onBack(_ sender: Any)
+    {
+        self.presentingViewController?.dismiss(animated: true)
+    }
+    
+    
+}
+
+이것으로 모든과정이 완료되었습니다. 앱을 실행하고 값이 제대로 전달되는지 테스트 해볼 차례입니다. 앱 시뮬레이터를 띄우고 값을 입력하여 Submit 버튼을 클릭합니다. 입력한 값들이 그다음 화면에서 표시되면 정상적으로 만들어진 것입니다. 화면이 표시되고 난 다음 Back 버튼을 눌러 제대로 되돌아가는지도 확인해봅시다. 
+
+
+참고! 위그림과 같이 가상 키보드가 나타나지 않는다면 ?
+간혹 텍스트 필드 입력 상태임에도 불구하고 앱 시뮬레이터상에서 가상 키보드가 나타나지 않을 경우가 있습니다. 이 때에는 시뮬레이터 메뉴에서 다음과 같이 [Hardware] > [Keyboard] > [Connect Hardware Keyboard]메뉴의 체크를 해제하면 됩니다. 
+
+앱 시뮬레이터는 테스트의 편의를 위해 iOS에서 제공하는 가상 키보드 대신 여러분의 컴퓨터 키보드를 통해 바로 값을 입력할수 있도록 하드웨어 키보드 연결을 제공합니다. 컴퓨터 키보드를 통해 직접 값을 입력할수 있어 테스트가 편리하지만 대신 가상 키보드는 화면에 나타나지 않으므로 가상 키보드가 표시되도록 하려면 위와같은 설정 변경이 필요합니다. 일단 위와 같이 하드웨어 키보드 설정을 제거하고 나면 더이상 키보드를 통해서는 입력이 지원되지 않습니다. 
+
+
+
+
+
+5.2.2 내비게이션 컨트롤러를 통해 화면 전환하면서 값을 전달하기
+내비게이션 컨트롤러를 통해 화면을 전환할 때 값을 전달하는 요령을 알아봅시다. 기본적으로 값을 전달하는 방식은 앞에서 다루어 본 프레젠테이션 방식과 동일합니다. 다른 점이라곤 화면 전환용 메소드뿐입니다. 실습을 위해 따로 프로젝트를 생성하지 않고 앞에서 사용했던 프로젝트를 그대로 사용하면서 내비게이션 컨트롤러만 추가하겠습니다. 
+
+스토리보드에서 첫 번째 뷰 컨트롤러를 선택하고 메뉴에 [Editor] > [Embed In] > [Navigation Controller]를 차례로 클릭하여 맨 앞에 내비게이션 컨트롤러를 추가합니다. 이에 따라 기존의 첫번째 뷰 컨트롤러는 루트 뷰 컨트롤러가 되어 상단에 내비게이션 바가 내장됩니다. 이제 내비게이션 바에 내비게이션 아이템을 추가한뒤 이를 더블클릭하여 타이틀을 Setting 으로 입력합니다. 
+
+혹시 입력 항목이 너무 위쪽에 작성되어 있다면 내비게이션 바에 가려질수 있습니다. 전체 항목을 모두 아래로 내려서 상단에 일정 공간을 두고 재배치한 다음에 내비게이션 컨트롤러를 연결하는 것이 좋습니다. 
+
+앱에서 내비게이션 컨트롤러를 사용한다는 것은 단순히 상단에 내비게이션 바만 추가하는 것만을 의미하지 않습니다. 내비게이션 바를 활용해 이동 버튼이나 검색 바 같은 항목을 배치하는 것까지를 의미합니다. 게다가 애플의 UI 지침에 따르면 내비게이션 바를 사용하는 경우 액션 처리 버튼은 가급적 내비게이션 바에 배치하는 것이 좋습니다. 
+
+실습 예제를 예로 든다면 Submit 버튼은 화면 하단보다는 내비게이션 바로 옮기는 것이 여러가지 면에서 유리합니다. 고려해야 할 대표적인 문제가 가상 키보드 때문인데요. 간혹 이같은 버튼이 화면의 아래쪽에 있을 경우 가상 키보드에 가려져서 버튼을 클릭할수 없는 상황이 발생하기도 합니다. 따라서 화면 아래에 있는 SUbmit 버튼을 내비게이션 바의 오른쪽으로 옮겨줍니다. 
+
+내비게이션 바에 추가된 버튼은 용도에 따라 몇 가지 아이콘 형태로 바꿀수 있다는 특징을 앞에서 설명한 적이 있습니다. 추가한 Submit 버튼을 용도에 맞게 형태를 바꿔 줍시다. 
+Submit 버튼이 선택된 상태에서 어트리뷰트 인스펙터 탭의 [Bar Button Item] > [Style]값을 Bordered로 [Bar Button Item] > [Identity]값을 Action으로 설정합니다. 속성의 설정에 따라 텍스트로 표시되어 있던 버튼이 Submit 을 의미하는 아래 그림과 같은 아이콘으로 변경됩니다. 
+
+다음으로 해줄 것은 Submit 버튼에 대한 액션메소드 재연결 입니다. 앞서의 실습에서 Submit 버튼을 이미 onSubmit 메소드와 연결했지만 내비게이션 바위로 위치를 옮기는 과정에서 연결이 끊어진 상태입니다. 일반 버튼이 Bar Button Item 객체로 변경되었기 때문이죠. 따라서 버튼과 메소드를 다시 연결해주어야 합니다. 
+
+보조 에디터를 열고 ViewController.swift 파일을 오픈하면 @IBAction onSubmit 메소드앞에 있는 원 아이콘이 비어있는 상태로 표시됩니다. Submit 버튼을 우클릭하여 onSubmit 메소드위로 드래그합니다. 그리고 onSubmit 메소드 전체가 블록으로 표시되면 마우스 드래그를 놓습니다. 이를 통해 끊어진 액션 메소드를 다시 연결할수 있습니다. 
+
+
+메소드 내용도 일부 수정이 필요합니다. 나머지 부분은 그대로 사용하면 되지만 화면 전환은 내비게이션 컨트롤러를 이용한 푸시 방식으로 변경해야 합니다. onSubmit메소드의 내용중에서 맨 마지막 화면 이동 구문을 다음과 같이 수정합니다.
+
+self.navigationController?.pushViewController(rvc, animated: true)
+
+이제 값을 입력하고 Submit 버튼을 클릭하여 값을 전달해 봅시다. 이전과 다름없이 값이 전달되는 것을 확인할수 있습니다. 
+
+이전 방식과 다른 점은 Submit 버튼이 상단 내비게이션 바로 이동했고 값을 받는 화면에서도 내비게이션 바가 추가되었다는 것뿐입니다. 간단하죠? 이처럼 내비게이션 컨트롤러를 이용한 화면 전환 과정은 값을 전달하는 방식이 프레젠테이션 방식과 거의 같습니다. 하지만 세 번째로 알아볼 방식인 세그웨이를 이용한 화면 전환은 약간 다릅니다. 이어서 학습해봅시다. 
