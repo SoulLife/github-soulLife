@@ -1,0 +1,211 @@
+5.3.1 직접 값을 주고 받기
+STEP1 : 먼저 실습해 볼 것은 뷰 컨트롤러끼리 직접 값을 주고받는 방법입니다. 단순히 값을 전달한다는 부분에 초점을 둔 방식이며 이때 주고받는 값은 휘발성임을 염두에 두어야 합니다. 
+
+[프로젝트 정보]
+※ Product Name : SubmitValue-Back
+※ Language : Swift
+※ Device : iPhone
+※ Use Core Data : 체크 해제
+※ Template : Single View Application
+
+STEP2 : 앞에서 만들었던 SubmitValue프로젝트를 참고하여 다음과 같은 화면을 구성합니다. 이미 한번 만들어보았던 화면과 거의 유사하므로 설명은 생략하겠습니다. 혹여 화면 구성에 어려움이 있을 경우 루비페이퍼 자료실에서 내려받은 프로젝트의 스토리보드 파일을 참고하기 바랍니다. 
+이메일(라벨)	입력되지 않았습니다.(라벨)
+자동갱신(라벨)	입력되지 않았습니다.(라벨)
+갱신주기(라벨)	입력되지 않았습니다(라벨)
+	Regist(버튼)
+
+STEP3 : 보조 에디터를 열어 ViewController 클래스에 다음과 같이 아울렛 변수를 생성합니다. (ViewController.swift)파일에 미리 작성되어 있는 메소드들은 사용하지 않으므로 제거하였습니다.)
+
+STEP4 : paramEmail, paramUpdate, paramInterval 변수들을 각각 클래스에 추가합니다. 조금 전 추가한 아울렛 변수들의 역할이 건네받은 값을 화면에 표시해주는 것이라면 지금 추가하는 변수들은 값을 직접 건네받는 역할이라고 할수 있습니다. 
+ViewController.swift
+
+import UIKit
+
+class ViewController: UIViewController
+{
+   //값을 화면에 표시하기 위한 아울렛 변수들
+    @IBOutlet var resultEmail: UILabel!
+    
+    @IBOutlet var resultUpdate: UILabel!
+    
+    @IBOutlet var resultInterval: UILabel!
+    
+    //값을 직접 전달받을 프로퍼티들
+    var paramEmail : String? //이메일 값을 전달받을 속성
+    var paramUpdate : Bool? // 자동 갱신 여부를 전달받을 속성
+    var paramInterval : Double? //갱신주기 값을 전달받을 속성
+    
+}
+
+STEP5 : 전달된 값을 이용하여 화면에 표시해주는 코드를 작성합니다. 이때 주의할 점은 코드를 작성하는 위치입니다. 
+
+조금전에도 설명해 드린 것과 같이 VC1 > VC2로 값을 전달할 때에는 해당 코드를 VC2의 viewDidLoad()메소드 내에 작성해 주면 됩니다. 이것은 VC1 > VC2로 값을 전달할 때에는 매번 VC2의 인스턴스가 새로 생성되기 때문입니다. viewDidLoad()메소드는 뷰 컨트롤러의 화면이 처음 만들어질 때 호출되므로 우리가 원하는 코드를 이 메소드 내에 작성해두기만 하면 항상 적절한 시점에 코드가 실행될수 있었습니다. 
+
+하지만 이번에는 조금 다릅니다. VC2에서 입력된 값을 VC1으로 전달할 때에는 VC1이 새로 생성되는 인스턴스가 아니라 이미 만들어져 있는 인스턴스입니다. 때문에 VC2에서 값을 입력하고 VC1으로 화면을 전환하더라도 viewDidLoad()메소드가 호출되지 않습니다. 이 메소드는 뷰 컨트롤러의 화면이 처음 만들어질 때 오직 한번만 호출되기 때문입니다. 하지만 낙담하지 맙시다. 이 경우에 사용할수 있는 viewWillAppear(_:)메소드가 있으니까요.
+
+viewWillAppear(_:)메소드는 뷰 컨트롤러의 뷰가 화면에 표시될 때마다 실행되는 메소드입니다. 즉 다른 화면으로 기존 화면을 가렸다가 다시 표시하면 이 메소드가 호출된다는 뜻입니다. 물론 처음 뷰 컨트롤러가 화면에 나타날 떄에도 호출됩니다. 이때에는 viewDidLoad()메소드와 viewWillAppeared(_:)메소드가 차례로 호출되죠. 어찌 되었던 뷰가 스크린에 나타날 때마다 호출되는 메소드로 이해하면 충분합니다. 그러니 화면을 갱신할 때마다 실행해야 하는 코드가 있다면 viewWillAppeared(_:)메소드 내에 작성하면 됩니다. 이 메소드도 상위 클래스에 정의되어 있기 때문에 오버라이드 한 다음 여기에 필요한 코드를 작성해 봅시다. 
+
+ViewController.swift
+
+import UIKit
+
+class ViewController: UIViewController
+{
+   ...(중략)...    
+    //화면이 표시될 때마다 실행되는 메소드
+    override func viewWillAppear(_ animated: Bool)
+    {
+        if let email = paramEmail
+        {
+            resultEmail.text = email
+        }
+        if let update = paramUpdate
+        {
+            resultUpdate.text = update == true ? "자동갱신" : "자동갱신안함"
+        }
+        if let interval = paramInterval
+        {
+            resultInterval.text = "\(Int(interval))분마다"
+        }
+    }
+}
+
+viewWillAppear(_:)에서 처리하는 일은 단순합니다. 값을 직접 전달받는 옵셔널 타입 변수인 paramEmail, paramUpdate, paramInterval의 nil 여부를 체크하여 값이 있을 경우에는 해당하는 레이블 객체에 표시해주는 것이 전부죠. 이전 화면에서 값이 누락될 경우를 대비해, 값이 비어 있을 경우에는 아무것도 변경하지 않습니다. ViewController에서 작성해주어야 할 코드는 이것으로 끝입니다. 
+
+
+STEP6 : 새로운 뷰 컨트롤러를 추가하여 아래와 같이 화면을 구성합니다. 
+VC1으로 전달할 값을 입력받는 화면입니다. VC2의 역할이 되겠네요. 이 화면 역시 우리가 앞에서 실습했던 SubmitValue 프로젝트에서 구현된 화면과 거의 동일합니다. 다만 스위치 컨트롤이나 스테퍼 컨트롤의 현재 상태값을 텍스트 형태로 보여주는 레이블만 제외된 상태인데 이 는 이미 다루어본 부분이기 때문에 생략된 것입니다. 여러분들이 실습할 때에는 함께 추가하여 작성해보면 좋을듯합니다. 복습이라 생각하고 해보세요. 
+
+이메일(라벨)	이메일입력(텍스트필드)
+자동갱신(라벨)	갱신여부(라벨)	스위치컨트롤
+갱신주기(라벨)	갱신값(라벨)	스테퍼
+	Submit(버튼)
+
+STEP7 : 스토리보드에 뷰 컨트롤러가 만들어졌다면 VC1 > VC2로 화면 전환할수 있도록 세그웨이를 만들어줍시다. 이를 위해 미리 만들어둔 버튼이 [Regist]입니다. VC1의 [Regist]버튼을 마우스 우클릭하여 VC2쪽으로 드래그해줍니다. 세그웨이 타입을 선택하는 팝업창이 나타나면 <Present Modally> 항목을 선택해서 세그웨이를 생성합니다. 
+
+
+STEP8 : 세그웨이까지 만들어졌다면 VC2에 대한 커스텀 클래스를 작성할 차례입니다. 프로젝트에 스위프트 파일을 추가하고 FormViewController.swift 라는 이름으로 저장합니다. 이 파일에 작성할 클래스의 이름으로는 어떤 것이 어울릴까요? 그렇습니다. 파일의 이름과 일치하는 FormViewController가 적당합니다. import UIKit
+
+FormViewController.swift
+
+class FormViewController : UIViewController
+{
+    
+}
+
+작성된 FormViewController 클래스와 스토리보드의 뷰 컨트롤러를 연결해준 다음 뷰 컨트롤러의 입력 항목 세 개를 각각 다음 그림과 같이 드래그하여 @IBOutlet 변수를 생성합니다. 이어서 화면 가장 아래에 있는 <Submit>버튼을 드래그하여 @IBAction 메소드 submit을 생성합니다. 
+
+이메일입력(텍스트필드) @IBOutlet var email : UITextField!
+갱신여부(라벨) @IBOutlet var txtIsUpdate : UILabel!
+스위치컨트롤 @IBOutlet var isUpdate : UISwitch!
+갱신값(라벨) @IBOutlet var txtInterval : UILabel!
+스테퍼 	@IBOutlet var interval : UIStepper!
+	Submit(버튼) @IBAction func onSubmit(_ sender: Any)
+
+STEP9 : 마지막으로 onSubmit 메소드에 값을 전달하는 코드를 작성합니다. submit 메소드의 내용은 다음과 같습니다. 
+
+submit 메소드 내용
+
+//Submit 버튼을 클릭했을 때 호출되는 메소드
+    @IBAction func onSubmit(_ sender: Any)
+    {
+        //presentingViewController 속성을 통해 이전 화면 객체를 읽어온 다음 ViewController 타입으로 캐스팅한다
+        let preVC = self.presentingViewController
+        guard let vc = preVC as? ViewController else
+        {
+            return
+        }
+        //값을 전달한다.
+        vc.paramEmail = self.email.text
+        vc.paramUpdate = self.isUpdate.isOn
+        vc.paramInterval = self.interval.value
+        //이전 화면으로 복귀한다
+        self.presentingViewController?.dismiss(animated: true)
+    }
+
+이 메소드에 작성된 코드 중에서 가장 중요한 부분은 첫 위치에 작성된 다음 코드입니다. 전달해줄 대상 뷰 컨트롤러의 인스턴스를 찾아오는 역할이죠. 
+
+let preVC = self.presentingViewController
+guard let vc = preVC as? ViewController else
+{
+	return
+}
+
+화면 전환에 대해 학습했던 부분을 떠올려 봅시다. VC1 > VC2로 화면 전환했을 때 self.presentingViewController 속성을 통해 VC1을 참조 할수 있었던 것을 기억하는지요? 이때의  presentingViewController 속성은 현재의 뷰 컨트롤러(VC2)를 화면에 표시해주고 있는 뷰 컨트롤러(VC1)를 가리키는 의미이며 동시에 되돌아가야할화면이기도 합니다. 
+
+어쨌든 우리는 self.presentingViewController 속성을 통해 이전 뷰 컨트롤러의 인스턴스를 참조할수 있습니다. 이 인스턴스에 값을 전달해준 다음 화면을 이전으로 복귀해버리면 값을 전달하는 모든 과정이 마무리됩니다. 
+
+하지만 여기서 가벼운(?)문제가 하나 있습니다. 앞에서도 겪어본 적있는 인스턴스의 타입에 관한 문제죠. self.presentingViewController 속성은 UIViewController 타입의 인스턴스를 리턴하므로 우리가 앞서 정의해놓은 프로퍼티인 returnEmail, returnUpdate, returnInterval등을 참조할수 없습니다. 이 변수들은 ViewController 클래스에 정의되어있기 때문입니다. UIViewController 클래스는 ViewController 클래스의 부모이므로 자식 클래스인 ViewController에 수많은 프로퍼티와 메소드가 추가되어 있다 한들 이를 결코 알수 없습니다. 
+
+홍 판서의 아들 홍길동이 부모로부터 물려받은 명석한 두뇌와 좋은 신체 조건으로 노력하여 분신술이나 축지법 같은 훌륭한 능력을 후천적으로 얻었다고 해봅시다. 자식이 노력해서 얻은 능력을 홍 판서에게 가서 홍길동 군이 축지법을 부릴줄 안다고 하니 당신도 축지법을 부려보라 라고 하면 황당스럽지 않을까요? 뭐 그런겁니다. 
+
+하지만 우리의 클래스에서는 다행스럽게도 이런 문제를 해결할수 있는 방안이 있습니다. 앞에 서도 동일한 방법으로 비슷한 문제를 해결한 적이 있죠. self.presentingViewController 속성을 통해 얻은 뷰 컨트롤러의 인스턴스는 비록 UIViewController 라는 껍데기를 뒤집어 쓰고 있지만 실상은 ViewController 타입입니다. 그러니 인스턴스 객체를 ViewController 타입으로 캐스팅하면 문제는 간단히 해결됩니다. ViewController 타입으로 캐스팅하고 나면 이제 부터는 우리가 앞에서 정의해둔 프로퍼티를 참조할수 있습니다. 이를 위해 코드의 윗부분에 as? ViewController 를 덧붙이고 있는 것까지가 위 구문의 내용입니다. 
+
+나머지 부분은 앞에서 이미 다루어본 내용들의 조합입니다. 인스턴스의 프로퍼티 각각에 값을 대입한 다음 dismiss(animated:)를 호출하면 현재의 화면을 버리고 이전 화면으로 복귀합니다. 이와 함께 ViewController 클래스의 viewWillAppear(_:)메소드가 호출되면서 여기에 작성해둔 코드가 실행되어 전달된 값들이 화면에 표시됩니다. 
+
+FormViewController 클래스의 전체 소스 코드는 다음과 같습니다. 
+
+FormViewController.swift
+
+import UIKit
+class FormViewController : UIViewController
+{
+    
+    @IBOutlet var email: UITextField!
+    
+    @IBOutlet var txtIsUpdate: UILabel!
+        
+    @IBOutlet var isUpdate: UISwitch!
+    
+    @IBOutlet var txtInterval: UILabel!
+    
+    @IBOutlet var interval: UIStepper!
+        
+    @IBAction func onUpdate(_ sender: Any)
+    {
+        txtIsUpdate.text = isUpdate.isOn ? "자동갱신" : "갱신하지 않음"
+    }
+    
+    @IBAction func onInterval(_ sender: Any)
+    {
+        txtInterval.text = "\(Int(interval.value))분마다"
+    }
+    //Submit 버튼을 클릭했을 때 호출되는 메소드
+    @IBAction func onSubmit(_ sender: Any)
+    {
+        //presentingViewController 속성을 통해 이전 화면 객체를 읽어온 다음 ViewController 타입으로 캐스팅한다
+        let preVC = self.presentingViewController
+        guard let vc = preVC as? ViewController else
+        {
+            return
+        }
+        //값을 전달한다.
+        vc.paramEmail = self.email.text
+        vc.paramUpdate = self.isUpdate.isOn
+        vc.paramInterval = self.interval.value
+        //이전 화면으로 복귀한다
+        self.presentingViewController?.dismiss(animated: true)
+    }
+    
+}
+
+앱을 빌드하고 실행해봅시다. VC2에서 입력한 값이 VC1의 화면에 표시되는 모습을 확인할수 있을 겁니다. 이것이 VC2 > VC1으로 값을 직접 전달하는 과정입니다. 
+
+
+
+5.3.2 저장소를 사용하여 값을 주고 받기
+이번에는 저장소를 이용하여 값을 주고받도록 변경해보겠습니다. 저장소를 이용하는 방식은 이번 장의 맨 처음에 설명했던 비동기 방식입니다. 뷰 컨트롤러들이 모두 접근할수 있는 공용의 저장소를 이용하여 값을 저장한후 이전 화면으로 복귀하면 이전 화면에서도 적절한 시점에 저장소에 저장된 값을 읽어오는 방식으로 구현됩니다. 물건을 직접 들고 건네주는 것이 아니라 공용 사물함의 지정된 위치에 저장해놓으면 새로운 사람이 와서 찾아가는 식이라고 생각하면 됩니다. 
+
+이전 화면이 스크린에 다시 등장하는 시점에서 값을 읽어와야 하므로 viewWillAppear(_:) 메소드 내부에 값을 읽고 표시해주는 코드를 작성하는 것 자체는 앞에서와 크게 다르지 않으며 화면상에서도 달라지는 부분은 없습니다. 내부적인 처리 방식만 달라질 뿐입니다. 따라서 스토리 보드의 수정 없이 소스 코드의 변경만으로 충분히 적용이 가능합니다. 
+
+뷰 컨트롤러들이 값을 저장하고 읽어오는저장소 역할을 담당할 객체는 데이터의 성격에 따라 다양한 선택이 가능합니다. 가장 쉽게 사용할수 있는 객체로는 AppDelegate.swift 파일에 정의된 AppDelegate 클래스를 들 수 있습니다. 
+
+사실 AppDelegate는 엄밀히 말해 저장소의 역할은 아닙니다. 단순히 UIApplication 객체로 부터 생명주기 관리를 위임받아 커스텀 코드를 처리하는 역할을 할 뿐입니다. 하지만 이 객체는 앱 전체를 통틀어 단 하나만 존재하므로 여러 뷰 컨트롤러에서 모두 접근할수 있고, 앱 프로세스의 생성/소멸과 운명을 함께 하므로 이 객체에 값을 저장하면 앱이 종료되지 않는 한 값을 계속 유지할수 있습니다. 
+
+AppDelegate 객체에 값을 저장한다니, 뭔가 조금 거창하게 들리죠? 사실 그리 거창한 작업은 아닙니다. AppDelegate 클래스에 변수를 추가하고 값을 저장하는 것이 전부인 비교적 단순한 작업입니다. 
+
+헷갈리지 말아야 할 것은 AppDelegate 객체에 저장한 값은 조금 전에 설명한 바와 같이 앱이 종료되기 전까지만 유지된다는 사실입니다. 다시 말해 앱이 종료되면 앱 델리게이트에 저장된 값도 사라져 버리게됩니다. 이는 AppDelegate 객체에 저장한 값이 단순히 메모리에만 저장되기 때문으로 앱이 종료된 후에도 값을 보존하려면 반영구적으로 값을 저장할수 있는 저장 객체를 사용해야 합니다.
+
+코코아 터치 프레임워크에서는 값을 반영구적으로 저장할수 있도록 UserDefaults 객체(구 NSUserDefaults 객체)와 코어  데이터(Core Data)객체를 제공합니다. UserDefaults 객체는 비교적 간단한 데이터를 저장해두는 데에 사용되고 코어 데이터 객체는 소규모 데이터베이스처럼 다소 복잡한 형태의 데이터를 저장하는 데에 사용됩니다. 이외에도 이미지나 미디어 파일등 큰 사이즈의 데이터인 경우 파일에 직접 저장하는 방법도 자주 사용됩니다. 네트워크를 통해 서버에 데이터를 전송하여 저장하는 방법도 있죠. 
+
+UserDefaults 와 코어데이터 그리고 파일 저장에 대한 상세한 설명은 실전편에서 다루어볼 예정이므로 이번 실습에서는 AppDelegate와 UserDefaults 객체에 간단히 값을 저장하는 방법만 다루어보겠습니다. 
