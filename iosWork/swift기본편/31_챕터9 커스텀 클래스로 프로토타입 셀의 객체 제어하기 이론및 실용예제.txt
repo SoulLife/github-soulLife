@@ -1,0 +1,195 @@
+STEP6 : 영화 제목을 제외한 나머지 레이블에 대해 어트리뷰트 인스펙터에서 태그값을 입력합니다. 태그값을 입력하는 방법은 STEP 4와 같으며 위 표와 아래 그림을 참고하면 됩니다. 
+
+
+STEP7 : ListViewController 클래스 파일을 에디터에서 열고 tableView(_:cellForRowAt:)메소드의 내용을 다음과 같이 수정합니다. 
+
+ListViewController.swift
+
+override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
+    {
+        //주어진 행에 맞는 데이터 소스를 읽어온다.
+        let row = self.list[indexPath.row]
+        //테이블 셀 객체를 직접 생성하는 대신 큐로부터 가져옴.
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
+        //let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "cell")
+        //--> 추가되는 부분 시작
+        //영화제목이 표시될 레이블을 title 변수로 받음
+        let title = cell.viewWithTag(101) as? UILabel
+        //영화 요약이 표시될 레이블을 desc 변수로 받음
+        let desc = cell.viewWithTag(102) as? UILabel
+        //영화 개봉일이 표시될 레이블을 opendate 변수로 받음
+        let opendate = cell.viewWithTag(103) as? UILabel
+        //영화 별점이 표시될 레이블을 rating 변수로 받음
+        let rating = cell.viewWithTag(104) as? UILabel
+        //데이터 소스에 저장된 값을 각 레이블 변수에 할당
+        title?.text = row.title
+        desc?.text = row.description
+        opendate?.text = row.opendate
+        rating?.text = "(row.rating!)"
+        // -->추가되는 부분끝
+        return cell
+    }
+
+앞서의 소스 코드와 비교해보면 달라진 점이 여기저기보입니다. 테이블 셀에 표현해야 할 항목이 기존 두 개에서 네 개로 늘어난 만큼 코드 작성량이 늘었습니다. 추가된 코드는 전체적으로 두 부분으로 나눌수 있습니다. 프로토타입 셀의 객체를 참조하는 부분과 참조된 객체에 콘텐츠를 표현하는 부분이죠. 먼저 프로토타입 셀의 객체를 참조하는 부분을 봅시다. 
+
+        //영화제목이 표시될 레이블을 title 변수로 받음
+        let title = cell.viewWithTag(101) as? UILabel
+        //영화 요약이 표시될 레이블을 desc 변수로 받음
+        let desc = cell.viewWithTag(102) as? UILabel
+        //영화 개봉일이 표시될 레이블을 opendate 변수로 받음
+        let opendate = cell.viewWithTag(103) as? UILabel
+        //영화 별점이 표시될 레이블을 rating 변수로 받음
+        let rating = cell.viewWithTag(104) as? UILabel
+
+
+어트리뷰트 인스펙터 탭에서 입력한 태그 속성을 이용하여 프로토타입 셀에 디자인된 레이블 객체를 읽어오고 있습니다. 커스텀 타입의 프로토타입 셀에 디자인된 객체를 소스 코드에서 읽어오기 위해서는 viewWithTag(_:)메소드를 사용하는데 이때 객체마다 각각의 태그값이 필요합니다. 
+
+viewWithTag(_:)메소드를 이용하여 참조할수 있는 객체의 종류는 단지 레이블에 국한되지 않습니다. 이미지나 버튼 스위치 버튼등 객체 대부분을 불러올수 있죠. 다양한 타입의 뷰 객체들을 모두 viewWithTag(_:)메소드 하나로 읽어오는 만큼 반환 타입은 UIView입니다. 뷰를 상속받은 모든 객체 타입을 포괄할수 있는 UIView 타입의 객체로 넘겨받은 다음 필요에 따라 적절한 구체적 타입으로 캐스팅하는 것이죠. 메소드의 뒤에 붙어있는 as? UILabel 부분은 메소드를 통해 UIView 타입으로 넘겨받은 객체를 UILabel 타입으로 다운캐스팅하는 것을 말합니다. 입력되지 않은 잘못된 태그값을 인자로 호출할 경우를 대비하여 viewWithTag(_:)메소드의 반환값은 옵셔널 타입으로 정의됩니다. 
+
+이것만 기억합시다. 커스텀 타입의 프로토타입 셀에 디자인된 객체들은 다음의 과정을 통해 소스코드에서 참조할수 있습니다. 
+
+1. 인터페이스 빌더에서 할일 : 객체에 Tag 속성값을 부여한다. 
+
+2. 스위프트 코드에서 할 일 : viewWithTag(_:)메소드를 이용하여 객체를 불러온다. 인자값은 불러올 객체의 태그(Tag)값이어야 한다. 
+
+3. 스위프트 코드에서 할일 : 반환된 객체를 적절한 타입(이를 테면 UILabel)으로 캐스팅해준다. 이때 반환되는 타입은 옵셔널이므로 적절히 처리해 주는 것이 좋다. 
+
+계속 해서 다음 구문을 살펴봅시다. 
+
+  //데이터 소스에 저장된 값을 각 레이블 변수에 할당
+        title?.text = row.title
+        desc?.text = row.description
+        opendate?.text = row.opendate
+        rating?.text = "(row.rating!)"
+
+레이블 객체의 text 속성에 데이터를 입력하는 부분입니다. 각 레이블에 맞는 데이터를 찾아 연결하기만 하면 되므로 비교적 간단한 구문이지만, 주의할점은 평가점수 부분인 rating 입니다. text 속성에 저장될수 있는 타입은 String이므로 row.rating 역시 같은 타입으로 변환해 주어야 합니다. 정수나 실수 등의 값은 문자열포맷팅을 거치면 간단히 문자열로 변환할수 있으므로 이를 이용하여 값을 변환하고 있는 것을 확인할수 있습니다. 레이블 객체는 옵셔널 타입으로 선언되었기 때문에, 옵셔널 체인 구문을 사용하고 있는 것도 눈여겨 볼 부분 중의 하나입니다. 
+
+작성이 끝났다면 이제 확인해 볼 시간입니다. 앱을 다시 실행해서 스토리보드에서 설계한형태 대로 테이블 뷰가 그려졌는지 점검합니다. 
+
+좋군요! 특별한 오류가 있지 않은 한 우리가 원하는 대로 목록이 만들어졌을 겁니다. 그런데 간혹 앱을 실행해보면 아래처럼 행 높이가 잘린 채로 표시되는 경우가 있습니다. 
+
+이는 Xcode 의 버그 때문으로 우리가 어트리뷰트 인스펙터 탭을 통해 지정한 높이가 실제 화면에 적용되지 않아서 생기는 문제입니다. 보통 스토리보드에 있는 프로토타입 셀의 높이를 핸들로 일절 조절하지 않고 어트리뷰트 인스펙터 탭의 속성만 사용해서 높이를 조절했을 때 발생합니다. 
+
+해결 방법은 간단합니다. 프로토타입 셀의 리사이징 핸들을 드래그하여 높이를 늘렸다가 줄여주기를 몇 번 정도 반복하면 됩니다. 
+
+
+
+
+
+8.4.2 커스텀 클래스로 프로토타입 셀의 객체 제어하기
+프로토타입 셀에 디자인된 객체를 제어하는 또다른 방법은 커스텀 클래스를 만들어 사용하는 것입니다. 프로토타입 셀 자체를 커스텀 클래스와 연결한 다음 셀 위에 올려진 객체를 아울렛 변수로 연결해서 참조하는 거죠. 아울렛 변수를 뷰 컨트롤러에 직접 정의하면 셀 내부 객체들이 정적인 객체가 되므로 사용하는 데에 문제가 생기지만 프로토타입 셀을 연결한 커스텀 클래스에 아울렛 변수를 정의하면 이는 동적으로 사용할수 있는 형태의 객체가 되기 때문에 아울렛 변수를 통해 객체를 관리할수 있습니다. 따라서 태그 속성 사용시 단점으로 꼽히는 객체 관리 문제나 잘못된 태그값을 호출하는 문제로부터 자유로워질수 있으며 유지보수도 무척 편리해집니다. 
+
+단 이 방식은 프로토타입 셀을 제어할 클래스를 직접 만들어야 하므로 초기 구현 과정이 다소 번거롭게 느껴질 수 있습니다. 언뜻 보기에 조금 더 복잡해 보이기도 하죠. 하지만 이 방식을 배우면 추가적인 이점이 있습니다. 특정 객체에 대한 커스텀 클래스를 구현하고 연결하는 방법을 배움으로써 프로토타입 셀뿐만 아니라 버튼, 레이블, 내비게이션 바등 다양한 객체의 커스텀 클래스를 구성하고 기능을 다루는 방식에 대해서도 이해할수 있게 됩니다. 
+
+프로토타입 셀을 제어하기 위한 커스텀 클래스를 만들어봅시다. 
+
+STEP1 : 스위프트 파일을 추가하고 이름을 TableViewCell.swift 로 작성합니다. 
+
+STEP2 : UITableViewCell을 상속받는 TableViewCell클래스를 정의합니다. 
+
+TableViewCell.swift
+
+import UIKit
+
+class TableViewCell : UITableViewCell
+{
+    
+}
+
+TableViewCell 클래스가 UITableViewCell을 서브클래싱하는 것에 주의합니다. 우리가 정의할 클래스는 테이블 뷰 셀을 위한 것이므로 이에 대한 기본 클래스인 UITableViewCell을 상속받아 야만 제대로 된 커스텀 클래스를 만들수 있습니다. 이는 뷰 컨트롤러와 연결할 목적으로 만들어진 커스텀 클래스는 모두 UIViewController 클래스를 상속받아야 하는 것과 같은 원리입니다. 
+
+나머지 객체들도 다르지 않습니다. iOS에서 모든 UI 객체는 각각의 타입을 정의하는 클래스가 UIKit 프레임워크에 구현되어 있습니다. 텍스트를 표현하는 레이블은 UILabel클래스, 버튼은 UIButton 클래스가 대표적인 예죠. 따라서 버튼에 대한 커스텀 클래스를 정의하려면 UIButton을 서브클래싱해야 하고 , 레이블에 대한 커스텀 클래스를 정의할 때에는 UILabel을 서브클래싱 해야 합니다. 
+
+
+STEP3 : 스토리보드에서 프로토타입 셀의 CLass 속성을 TableViewCell 클래스로 지정합니다. 
+
+이과정은 인터페이스 빌더에 선택된 객체에 커스텀 클래스를 연결해주는 과정입니다. 프로토타입 셀을 클릭하여 선택하고 아이덴티티 인스펙터 탭(세 번째 탭)에서 [Class] 항목에서 TableViewCell을 찾아 지정해주어야 하죠. 
+
+UI객체들을 커스터마이징할 경우 그에 맞는 클래스를 상속받아 커스텀 클래스를 만들고, 여기에 원하는 기능을 부여하거나 수정하면 된다고 했습니다. 하지만 단순히 새로운 클래스를 정의하는 것만으로는 iOS 시스템이 UI 객체와 커스텀 클래스 사이의 관계를 인정하지 않습니다. 커스텀 클래스를 인정하게 하려면 아이덴티티 스펙터 탭의 [Custom Class]설정을 통해 객체와 커스텀 클래스를 직접 연결해야 합니다. 
+
+
+STEP4 : 프로토타입 셀이 TableViewCell 클래스와 연결되었으므로 셀 위에 올려진 객체들도 TableViewCell클래스에 아울렛 변수로 연결할수 있습니다. 다음 그림처럼 각 레이블을 TableViewCell 클래스로 드래그하여 아울렛 변수를 생성합니다. 
+
+
+
+레이블과 연결할 아울렛 변수의 정보는 다음 표를 참조하기 바랍니다. 
+
+표8-2
+화면 객체			아울렛 변수명		변수타입
+영화제목			title			UILabel!
+개봉일			opendate			UILabel!
+영화에 대한 내용 설명	desc			UILabel!
+평점			rating			UILabel!
+
+보조 에디터에서 TableViewCell 클래스가 잘 열리지 않는다면 에디터 상단의 점프바를 이용합니다. Recent Files > TableViewCell.swift 순서로 찾으면 직접 파일을 열 수 있습니다.
+
+아울렛 변수가 추가된 TableViewCell 클래스의 모습은 다음과 같습니다. 
+
+
+TableViewCell.swift
+
+import UIKit
+
+class TableViewCell: UITableViewCell {
+
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        // Initialization code
+    }
+
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+
+        // Configure the view for the selected state
+    }
+    @IBOutlet var title: UILabel!
+    
+    @IBOutlet var desc: UILabel!
+    
+    @IBOutlet var opendate: UILabel!
+    
+    @IBOutlet var rating: UILabel!
+    
+    
+}
+
+
+STEP5 : ListViewController.swift 파일로 돌아가 다음과 같이 tableView(_:cellForRowAt:)함수의 내용을 수정합니다. 
+
+override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
+    {
+        //주어진 행에 맞는 데이터 소스를 읽어온다.
+        let row = self.list[indexPath.row]
+        //테이블 셀 객체를 직접 생성하는 대신 큐로부터 가져옴.
+        //==============여기서부터 내용 변경됨================
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") as! TableViewCell
+        // 데이터 소스에 저장된 값을 각 아울렛 변수에 할당
+        cell.title?.text = row.title
+        cell.desc?.text = row.description
+        cell.opendate?.text = row.opendate
+        cell.rating?.text = "\(row.rating!)"
+        //==============여기까지 내용 변경됨=================
+        return cell
+    }
+
+가장 먼저 눈에 띄는 곳은 재사용 큐로부터 셀 객체를 가져오는 부분입니다. 기존에는 그냥 반환해주는 객체를 그대로 사용했었는데 지금은 캐스팅 구문이 추가되었군요. 
+
+let cell = tableView.dequeueReusableCell(withIdentifier: "cell") as! TableViewCell
+
+dequeueReusableCell(withIdentifier:)메소드는 UITableViewCell 타입으로 셀을 반환합니다. 지금까지 우리는 UITableView 클래스에 정의된 내용만 사용했으므로 기본값 그대로를 받아 사용해도 충분했죠. 하지만 조금 전에 우리는 프로토타입 셀의 클래스를 TableViewCell 로 연결해 주었습니다. 이 클래스에 정의된 속성을 사용하려면 TableViewCell 타입으로 캐스팅해 주어야 합니다. 만약 지금까지의 예제처럼 UITableViewCell 타입으로 받게되면 cell 객체는 title, desc등 TableViewCell 클래스에 정의된 프로퍼티를 전혀 사용할수 없습니다. 
+
+        cell.desc?.text = row.description
+        cell.opendate?.text = row.opendate
+        cell.rating?.text = "\(row.rating!)"
+
+프로토타입 셀의 객체와 직접 연결된 아울렛 변수에 데이터를 할당하는 부분입니다. 아울렛 변수 하나하나가 각각의 객체와 직접 연결되어 있으므로 변수의 속성에 바로 값을 대입하거나 변경할수 있습니다. 객체를 찾기 위해 더 이상 viewWithTag(_:)메소드를 사용하지 않아도 된다는 뜻입니다. 
+
+이제 실행해 봅시다. 실행해보면 어라? 뭔가 이상하다라고 생각할 수도 있습니다. 왜냐하면 이전과 달라진 것이 아무것도 없기 때문입니다. 
+
+맞습니다. 아무것도 달라진 것이 없습니다. 그래야 정상이죠. 이는 앞에서 구성했던 프로토타입 셀을 커스텀 클래스 방식으로 변경만 했을 뿐 UI 구성이나 기능에는 전혀 손대지 않았기 때문입니다. 하지만 객체를 관리하는 과정은 매우 편해져서 프로토타입 셀에 새로운 객체를 추가하고자 할때에는 다음과 같은 순서로 처리하면 됩니다. 
+
+1. 원하는 객체를 프로토타입 셀에 추가한다. 
+
+2. TableViewCell 클래스에 아울렛 변수를 등록한다. 
+
+3. ListViewController 클래스에서 아울렛 변수를 제어한다. 
