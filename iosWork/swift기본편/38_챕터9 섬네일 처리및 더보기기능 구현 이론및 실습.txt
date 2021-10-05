@@ -1,0 +1,407 @@
+※ 섬네일 처리
+섬네일이 표시되지 않는 문제점을 처리해 봅시다. 결론부터 말하자면 아래에 표시된 것처럼 ListViewController 클래스의 tableView(_:cellForRowAt:)메소드 중에서 이미지를 처리하는 아래 표시된 부분을 수정해야 합니다. 
+
+우리가 사용한 이미지 처리 코드인 UIImage(named:)는 앱의 로컬 경로에 있는 이미지를 읽어오는 방식이기 때문에 프로젝트 내부에 이미지 파일이 있는 경우에만 사용할수 있습니다. 반면 API에서 전달받은 섬네일  데이터는 웹상에 존재하는 경로입니다. 따라서 우리는 웹에 있는 이미지를 읽어와서 화면에 출력할수 있도록 코드를 변경해 주면 됩니다. 
+
+iOS에서는 이를 위한 손쉬운 해결 방안을 제공합니다. [Xcode] > [Help] > [Documentation & API Reference]를 통해 UIImage 관련 레퍼런스를 검색해보면 Data 타입의 인자값을 사용하여 이미지 객체를 생성할수 있는 초기화 메소드 init(data:)가 정의되어 있는 것을 확인할수 있습니다. 
+
+우리는 웹상에 있는 경로에서 데이터를 읽어오는 Data(ContentsOf:)초기화 메소드에 대해 학습한 바 있습니다. REST API를 호출하기 위해 사용했었죠. 하지만 이 생성자는 REST API 뿐만 아니라 웹을 통해 접근 가능한 모든 데이터를 읽어올수 있습니다. 이미지도 마찬가지입니다. 그러니 Data(contentsOf:)를 이용하여 웹에 있는 섬네일 이미지를 데이터로 읽어온 다음, 이를 UIImage객체로 만들면 이 객체를 이용하여 화면에 이미지를 표시해 줄 수 있습니다. 
+
+//섬네일 경로를 인자값으로 하는 URL 객체를 생성
+let url: URL! = URL(string: row.thumbnail!)
+
+//이미지를 읽어와 Data 객체에 저장
+let imageData = try! Data(contentsOf: url)
+
+// UIImage 객체를 생성하여 아울렛 변수의 image 속성에 대입 
+cell.thumbnail.image = UIImage(data: imageData)
+
+참고로 실무에서는 위 코드를 좀 더 간결하게 작성하기 위해 가독성을 포기하기도 합니다. 비록 읽기에는 더 불편하지만 한 줄로 작성할수 있다는 장점 때문에 실무에서는 이렇게 코딩하는 경우도 많다는 점을 알아두면 좋겠습니다. 
+
+cell.thumbnail.image = UIImage(data: try! Data(contentsOf : URL(string: row.thumbnail!)!))
+
+이렇게 하여 웹상의 이미지를 출력하도록 수정된 tableView(_:cellForRowAt:)메소드의 전체 내용은 다음과 같습니다. 
+
+override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
+    {
+        
+        let vo = self.list[indexPath.row]
+        // 1. cell 아이디를 가진 셀을 읽어온다. 없으면 UITableViewCell인스턴스를 생성한다.
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") ?? UITableViewCell()
+        //추가된 부분) 셀의 기본 텍스트 레이블 행수 제한을 없앤다.
+        //cell.textLabel?.numberOfLines = 0
+        //셀의 기본 텍스트 레이블에 배열 변수의 값을 할당한다.
+        //cell.textLabel?.text = vo.title
+        //cell.detailTextLabel?.text = vo.description
+        //데이터 소스에 저장된 값을 각 아울렛 변수에 할당
+        cell.title?.text = vo.title
+        cell.desc?.text = vo.description
+        cell.opendate?.text = vo.opendate
+        cell.rating?.text = "\(vo.rating!)"
+        //섬네일 경로를 인자값으로 하는 URL 객체를 생성
+        let url : URL! = URL(string: vo.thumbnail!)
+        //이미지를 읽어와 Data 객체에 저장
+        let imageData = try! Data(contentsOf: url)
+        //UIImage 객체를 생성하여 아룰렛 변수의 image 속성에 대입
+        cell.thumbnail.image = UIImage(data: imageData)
+        //셀 객체를 반환
+        return cell
+    }
+
+앱을 실행해 봅시다. 이제 섬네일 이미지까지 테이블 뷰에 표현된 그럴듯한 결과 화면이 여러분을 기다리고 있을 겁니다. 이 화면이 출력된 모든 분들에게 축하를! 아래는 ListViewController 클래스에 작성된 전체 소스 코드입니다. 혹시 앱이 잘 작동하지 않는 분이 있다면 비교하여 어디가 잘못되었는지 확인 해보세요. 
+
+
+ListViewController.swift
+
+import UIKit
+
+class ListViewController1 : UITableViewController
+{
+    //테이블 뷰에 연결될 데이터를 저장하는 배열
+    var list = [MovieVO]()
+    
+
+    
+    
+    @IBAction func add(_ sender: Any)
+    {
+        //1. 알림창 객체의 인스턴스를 생성한다.
+        let alert = UIAlertController(title: "목록 입력", message: "추가될 글을 작성해주세요.", preferredStyle: .alert)
+        //2 알림창에 입력폼을 추가한다.
+        alert.addTextField(){ (tf) in
+            tf.placeholder = "내용을 입력하세요."
+        }
+        //OK 버튼 객체를 생성한다: 아직 알림창 객체에 버튼이 등록되지 않은 상태
+        let ok = UIAlertAction(title: "OK", style: .default){ (_) in
+            //4 알림창의 0번째 입력필드에 값이 있다면
+            if let title = alert.textFields?[0].text
+            {
+                //5 배열에 입력된 값을 추가하고 테이블을 갱신
+                //self.list.append(title)
+                //self.tableView.reloadData()
+            }
+        }
+        //취소 버튼 객체를 생성한다: 아직 알림창 객체에 버튼이 등록되지 않은 상태
+        let cancel = UIAlertAction(title: "취소", style: .cancel, handler: nil)
+        //6 알림창 객체에 버튼 객체를 등록한다
+        alert.addAction(ok)
+        alert.addAction(cancel)
+        //7알림창을 띄운다.
+        self.present(alert, animated: false)
+    }
+    override func viewDidLoad()
+    {
+        //1. 호핀 API 호출을 위한 URI를 생성
+        let url = "http://swiftapi.rubypaper.co.kr:2029/hoppin/movies?version=1&page=1&count=10&genreId=&order=releasedateasc"
+        let apiURI : URL! = URL(string: url)
+        
+        // 2. REST API를 호출
+        let apidata = try! Data(contentsOf: apiURI)
+        
+        //3. 데이터 전송 결과를 로그로 출력( 반드시 필요한 코드는 아님)
+        let log = NSString(data: apidata, encoding: String.Encoding.utf8.rawValue) ?? ""
+        NSLog("APi Result=\(log)")
+        
+        // 4. JSON 객체를 파싱하여 NSDictionary 객체로 받음
+        do
+        {
+            let apiDictionary = try JSONSerialization.jsonObject(with: apidata, options: []) as! NSDictionary
+            //5. 데이터 구조에 따라 차례대로 캐스팅하며 읽어온다
+            let hoppin = apiDictionary["hoppin"] as! NSDictionary
+            let movies = hoppin["movies"] as! NSDictionary
+            let movie = movies["movie"] as! NSArray
+            
+            //6 Iterator 처리를 하면서 API 데이터를 MovieVO 객체에 저장한다.
+            for row in movie
+            {
+                // 순회 상수를 NSDictionary 타입으로 캐스팅
+                let r = row as! NSDictionary
+                //테이블 뷰 리스트를 구성할 데이터 형식
+                let mvo = MovieVO()
+                //movie 배열의 각 데이터를 mvo 상수의 속성에 대입
+                mvo.title = r["title"] as? String
+                mvo.description = r["genreNames"] as? String
+                mvo.thumbnail = r["thumbnailImage"] as? String
+                mvo.detatil = r["linkUrl"] as? String
+                mvo.rating = ((r["ratingAverage"] as! NSString).doubleValue)
+                
+                //list 배열에 추가
+                self.list.append(mvo)
+            }
+        }catch { }
+    }
+    override func viewWillAppear(_ animated: Bool)
+    {
+        self.tableView.estimatedRowHeight = 50 //대충의 높이값
+        self.tableView.rowHeight = UITableView.automaticDimension
+    }
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int
+    {
+        return self.list.count
+    }
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
+    {
+        
+        let vo = self.list[indexPath.row]
+        // 1. cell 아이디를 가진 셀을 읽어온다. 없으면 UITableViewCell인스턴스를 생성한다.
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") ?? UITableViewCell()
+        //추가된 부분) 셀의 기본 텍스트 레이블 행수 제한을 없앤다.
+        //cell.textLabel?.numberOfLines = 0
+        //셀의 기본 텍스트 레이블에 배열 변수의 값을 할당한다.
+        //cell.textLabel?.text = vo.title
+        //cell.detailTextLabel?.text = vo.description
+        //데이터 소스에 저장된 값을 각 아울렛 변수에 할당
+        cell.title?.text = vo.title
+        cell.desc?.text = vo.description
+        cell.opendate?.text = vo.opendate
+        cell.rating?.text = "\(vo.rating!)"
+        //섬네일 경로를 인자값으로 하는 URL 객체를 생성
+        let url : URL! = URL(string: vo.thumbnail!)
+        //이미지를 읽어와 Data 객체에 저장
+        let imageData = try! Data(contentsOf: url)
+        //UIImage 객체를 생성하여 아룰렛 변수의 image 속성에 대입
+        cell.thumbnail.image = UIImage(data: imageData)
+        //셀 객체를 반환
+        return cell
+    }
+    /*
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat
+    {
+        let row = self.list[indexPath.row]
+        //높이를 조절해준다. 기본 높이 60 + 글의 길이가 30자를 넘어갈 때마다 20만큼씩 높이를 늘려준다.
+        let height = CGFloat(60 + (row.count / 30) * 20)
+        return height
+    }
+     */
+}
+
+
+
+9.3.4 더보기 기능 구현
+REST API를 통해 읽어온 데이터를 테이블 뷰에 출력하는 작업을 성공적으로 구현했지만 사실 이것은 절반만완성된 것이라고 할수 있습니다. API가 전달해주는 영화 차트 데이터 중에서 우리가 읽어온 부분은 일부에 불과하기 때문이죠. 사용자가 원할 경우 나머지 영화 목록도 더볼수 있도록 추가해주는 기능이 필요합니다. 이른바 더 보기 라는 기능입니다. 
+
+그런데 왜 한꺼번에 데이터를 주고받지 않는 것일까요? 처음부터 한꺼번에 데이터를 주고받는 다면 더보기 기능을 구현해주어야 하는 번거로운 일이 없을 텐데 말이죠. 하지만 10~20건 정도의 아주 적은 데이터가 아닌 이상 특수한 목적을 제외하면 전체 데이터를 한꺼번에 주고받도록 처리하지 않는 것이 좋습니다. 전체 데이터를 한꺼번에 주고받으면 서버와 클라이언트 양쪽 모두에 잠재적인 문제를 일으킬수 있기 때문입니다. 
+
+
+※ 서버측 문제점
+대체로 서버 측에서는 제공하는 데이터를 데이터베이스의 테이블에 나누어 저장하는데, 전체 데이터를 한꺼번에 제공하려면 관련된 테이블들 전체의 데이터를 읽어와야 합니다. 이를 풀 스캔(Full-Scan)이라고 하는데 우리가 생각하는 것보다 훨씬 많은 양의 데이터가 저장된 경우가 많으므로 전체를 한꺼번에 읽어오는 것은 서버측에서도 매우 부담되는 일입니다. 특히 처리 속도가 늦어지는 성능상의 문제를 일으킬수 있습니다. 
+
+
+※ 클라이언트 측 문제점
+클라이언트의 대표적인 문제는 데이터를 읽어오는 범위를 잘못 설계할 경우 대부분의 데이터가 낭비될수 있다는 점입니다. 방대한 정보를 제공한다 하더라도 사용자는 이 정보를 모두 필요로 한다는 보장이 없습니다. 특히 영화 차트 정보처럼 최신 정보에 대한 관심이 압도적으로 높은 데이터는 상대적으로 하위 순위 정보에 대한 요구가 매우 적습니다. 
+
+정보 이용에는 파레토의 법칙(Pareto's rules)이 적용되므로 상위 20%의 데이터가 전체 사용비율의 80%를 차지합니다. 반대로 나머지 80%의 데이터는 사용 비율이 고작 50%밖에 되지 않습니다. 사용 빈도가 낮은 80%의 데이터를 메모리에 저장하는 것은 메모리 사용의 효율성에 대한 심각한 문제입니다. 
+
+여기에 더해서 데이터를 대량으로 주고받으면 서버와 클라이언트 간 네트워크 통신 패킷의 크기가 커지므로 데이터를 받는 데에도 오래 걸리고, 받을 때도 네트워크 자원을 필요 이상으로 소모하게 됩니다. 무한 요금제를 주로 사용하는 우리나라 환경에서야 그다지 문제가 되지 않는다고 생각할 수도 있겠지만 용량 한정 요금제를 사용하는 사람들에게 이같은 문제는 치명적입니다. 
+
+이런 문제점들로 인해 일반적으로 서버와 클라이언트 간 데이터를 주고받을 때는 전체 데이터를 한꺼번에 주고받기보다 작은 크기로 나누어 받도록 설계하는 것이 좋습니다. 단 너무 작은 크기로 쪼개면 그만큼 통신 횟수가 늘어나야 하므로 이 또한 문제가 될 수 있습니다. 통신 횟수를 크게 늘리지 않으면서 너무 크지 않은 적절한 크기의 크기로데이터를 나누어 주고받도록 구성하는 것이 중요합니다. 주의할 점은 이렇게 데이터를 나누어 받으려면 서브 측에서도 나누어 받을 수 있도록 기능을 제공해야 한다는 점입니다. 다행히 우리가 사용하는 API에서는 page 인자값을 통해 데이터를 나누어 받을수 있도록 옵션을 지원하고 있습니다. 
+
+
+
+※ 더보기 버튼과 more(_:)메소드 추가
+더 보기 기능을 직접 구현해봅시다. 더보기 기능은 명시적으로 사용자가 더보기 버튼을 누르면 데이터를 더 읽어오거나 목록의 가장 아래쪽까지 스크롤이 도착하면 앱이 이를 인식하고 스스로 더 보기 기능을 수행하는 방식으로 구현하는 것이 일반적입니다. 여기서 일반적 이라는 단어는 사용자가 이미 다른 앱의 사용 경험으로 인해 자연스럽게 기능을 인지하고 있어서 사용자에게 설명이 필요 없는 경우를 의미합니다. 이번 실습에서는 더보기 버튼을 구현하여 데이터를 읽어오겠습니다. 
+
+STEP1 : 영화 목록 하단의 뷰에 버튼을 추가하고, 타이틀을 더보기로 수정합니다. 
+
+원래 처음 생성된 테이블 뷰 컨트롤러에서는 더보기 버튼을 추가할수 있는 뷰 영역이 제공되지 않지만 우리는 앞 장에서 빈목록이 반복되는 것을 막기 위해 테이블 뷰 아래에 뷰를 추가해준 적이 있습니다. 여기에 버튼을 추가하면 됩니다. 만약 버튼이 추가되지 않는다면 이는 뷰가 추가되지 않은 것이므로 테이블 뷰 아래에 뷰를 추가한 다음에 다시 시도하면 됩니다. 
+
+
+STEP2 : 더보기 버튼을 ListViewController 클래스로 드래그하여 더보기 버튼에 대한 액션 메소드 more()를 추가합니다. 
+
+
+STEP3 : ListViewController 클래스에 page 프로퍼티를 추가하고 초기값을 1로 설정합니다 
+
+ListViewController.swift
+
+class ListViewController : UITableViewController
+{
+   //현재까지이ㅣㄺ어온 데이터의 페이지 정보
+   var page = 1
+  ...(중략)...
+}
+
+클래스의 멤버 변수로 정의된 page 변수는 현재까지 읽어온 API 데이터의 페이지 정보를 저장하는데 사용됩니다. 변수를 메소드 내에서 선언할 경우 메소드의 실행이 종료되면 변수도 함께 제거되므로 반드시 프로퍼티로 선언해야 합니다. 프로퍼티로 선언되면 클래스 객체가 완전히 제거되지 않는 한 변수의 값은 유지되기 때문이죠. 최초에 화면을 실행할 때 이미 1페이지에 해당하는 데이터를 읽어왔으므로 page 변수의 초기값으로 1을 할당하는 것이 맞습니다. 
+
+
+
+STEP4 : more() 메소드에 다음과 같이 API를 호출하는 코드를 작성합니다. 
+
+@IBAction func more(_ sender: Any)
+{
+  // 0. 현재 페이지 값에 1을 추가한다. 
+  self.page += 1
+  // 1. 호핀 API 호출을 위한 URI를 생성
+  let url = "http://swiftapi.rubypaper.co.kr:2029/hoppin/movies?version=1&page=\(self.page)&count=10&genreId=&order=releasedateasc"
+  let apiURI : URL! = URL(string: url)
+  // 2. REST API를 호출
+  let apidata = try! Data(contentsOf: apiURI)
+  // 3 데이터 전송 결과를 로그로 출력 (반드시 필요한 코드는 아님)
+  let log = NSString(data: apidata, encoding: String.Encoding.utf8.rawvalue) ?? "데이터가 없습니다"
+  NSLog("API Result=\(log)")
+  // 4 JSON 객체를 파싱하여 NSDictionary 객체로 변환
+  do
+  {
+	let apiDictionary = try JSONSerialization.jsonObject(with: apidata, options: []) as! NSDictionary
+	// 5 데이터 구조에 따라 차례대로 캐스팅하며 읽어온다. 
+	let hoppin = apiDictionary["hoppin"] as! NSDictionary
+	let movies = hoppin["movies"] as! NSDictionary
+	let movie = movies["movie"] as! NSArray
+	// 6 Iterator 처리를 하면서 API 데이터를 MovieVO 객체에 저장한다. 
+	for row in movie
+	{
+		// 순회 상수를 NSDictionary 타입으로 캐스팅
+		let r = row as! NSDictionary
+		// 테이블 뷰 리스트를 구성할 데이터 형식
+		let mvo = MovieVO()
+		// movie 배열의 각 데이터를 mvo 상수의 속성에 대입
+		mvo.title = r["title"] as? String
+		mvo.description = r["genreNames"] as? String
+		mvo.thumbnail = r["thumbnailImage]  as? String
+		mvo.detail = r["linkUrl"] as? String
+		mvo.rating = ((r["ratingAverage"]) as! NSString).doubleValue)
+		// list 배열에 추가
+		self.list.append(mvo)
+	}
+  }catch { }
+}
+
+@IBAction 메소드인 more()는 더보기 버튼이 클릭될 때마다 실행되는 메소드입니다. 더보기 기능을 위해서는 다음 차례에 읽어와야 할 페이지를 API 호출시에 함께 전달해야 하는데 현재 페이지 1을 더하면 읽어올 페이지가 되므로 메소드가 호출될 때마다 page 변수를 증가시키는 방법을 사용하고 있습니다. (0으로 주석 표시된 코드) 이어서 page 변수에 증가된 값은 1번 구문에서 URI에 대입되어 API 호출시 함께 전달됩니다. 나머지 2~7과정은 모두 같습니다. 데이터를 파싱하여 self.list 배열에 추가하는 과정이 그대로 수행된다는 뜻입니다. 
+
+
+
+※ 테이블 뷰 갱신 처리
+자 이제 더 보기 기능에서 한 가지 작업만 남았습니다. 바로 추가한 데이터를 테이블 뷰가 다시 읽어올수 있도록 하는 부분입니다. 일단 화면 구현이 끝나면 테이블 뷰는 데이터 소스를 다시 읽어 들이지 않습니다. 정확하게는 tableView(_:numberOfRowsInSection:)를 다시 호출하지 않죠. 따라서 화면 구현이 완료된 후에 데이터가 추가되더라도 테이블 뷰는 기존에 있던 데이터 크기를 유지하게 됩니다. 이것을 갱신해서 데이터를 다시 읽어 들이도록 해주어야 합니다. 
+
+추가된 데이터를 테이블 뷰가 다시 읽어올수 있도록 갱신해주는 메소드는 reloadData() 입니다. 이를 more() 메소드 내부의 맨 아래에 추가합니다. 
+@IBAction func more(_ sender: Any)
+{
+  ...(중략)...
+  // 4 JSON 객체를 파싱하여 NSDictionary 객체로 변환
+  do
+  {
+	...(중략)...
+	// 데이터를 다시 읽어오도록 테이블 뷰를 갱신한다. 
+	self.tableView.reloadData()
+  }catch { }
+}
+
+이제 more() 메소드가 실행될 때마다 테이블 뷰는 추가된 데이터를 갱신하여 다시 읽어올 것입니다. 그런데 more()와 viewDidLoad() 메소드에 중복된 부분이 너무 많아 보입니다. page 변수나 테이블 뷰 갱신에 관련된 부분 정도만 다를 뿐 API를 호출하는 과정과 순서는 거의 동일하죠. 같은 파일 내에서 이 정도의 코드가 중복되는 것은 결코 바람직한 현상이 아니므로 중복된 내용을 뽑아 공통 메소드로 만들고 관리하는 것이 좋습니다. API 호출 규약이 변경되어 수정해야 할 때에도 공통 메소드로 만들어 관리하고 있다면 공통 코드만 수정해도 되는 등 관리 면에서도 이점이 많죠. 
+
+API를 호출해주는 공통 메소드 callMovieAPI()를 정의하고 more()메소드와 viewDidLoad()메소드가 이 메소드를 호출하도록 수정하겠습니다. 
+
+ListViewController.swift
+
+import UIKit
+
+class ListViewController : UITableViewController
+{
+  //현재까지 읽어온 데이터의 페이지 정보
+  var page = 1
+  //테이블 뷰를 구성할 리스트 데이터
+  lazy var list: [MovieVO] = {
+  var datalist = [MovieVO]()
+  return datalist
+  }()
+  //더보기 버튼을 눌렀을 때 호출되는 메소드
+  @IBAction func more(_ sender : Any)
+  {
+	//현재 페이지 값에 1을 추가한다. 
+	self.page += 1
+	//영화 차트 API를 호출한다.
+	self.callMovieAPI()
+	//데이터를 다시 읽어오도록 테이블 뷰를 갱신한다
+	self.tableView.reloadData()
+  }
+  //뷰가 처음 메모리에 로드될 때 호출되는 메소드
+  override func viewDidLoad()
+  {
+     //영화 차트 API를 호출한다
+     self.callMovieAPI()
+  }
+  //영화 차트 API를 호출해주는 메소드
+  func callMovieAPI()
+  {
+// 1. 호핀 API 호출을 위한 URI를 생성
+  let url = "http://swiftapi.rubypaper.co.kr:2029/hoppin/movies?version=1&page=\(self.page)&count=10&genreId=&order=releasedateasc"
+  let apiURI : URL! = URL(string: url)
+  // 2. REST API를 호출
+  let apidata = try! Data(contentsOf: apiURI)
+  // 3 데이터 전송 결과를 로그로 출력 (반드시 필요한 코드는 아님)
+  let log = NSString(data: apidata, encoding: String.Encoding.utf8.rawvalue) ?? "데이터가 없습니다"
+  NSLog("API Result=\(log)")
+  // 4 JSON 객체를 파싱하여 NSDictionary 객체로 변환
+  do
+  {
+	let apiDictionary = try JSONSerialization.jsonObject(with: apidata, options: []) as! NSDictionary
+	// 5 데이터 구조에 따라 차례대로 캐스팅하며 읽어온다. 
+	let hoppin = apiDictionary["hoppin"] as! NSDictionary
+	let movies = hoppin["movies"] as! NSDictionary
+	let movie = movies["movie"] as! NSArray
+	// 6 Iterator 처리를 하면서 API 데이터를 MovieVO 객체에 저장한다. 
+	for row in movie
+	{
+		// 순회 상수를 NSDictionary 타입으로 캐스팅
+		let r = row as! NSDictionary
+		// 테이블 뷰 리스트를 구성할 데이터 형식
+		let mvo = MovieVO()
+		// movie 배열의 각 데이터를 mvo 상수의 속성에 대입
+		mvo.title = r["title"] as? String
+		mvo.description = r["genreNames"] as? String
+		mvo.thumbnail = r["thumbnailImage]  as? String
+		mvo.detail = r["linkUrl"] as? String
+		mvo.rating = ((r["ratingAverage"]) as! NSString).doubleValue)
+		// list 배열에 추가
+		self.list.append(mvo)
+	}
+  }catch { 
+     NSLog("Parse Error!!")  
+  }
+  }
+  ...(중략)...
+}
+API 를 호출하는 코드가 모두 callMovieAPI()메소드에 포함되면서 기존의 more(_:)메소드와 viewDidLoad() 메소드는 매우 간결해졌습니다.  viewDidLoad()에서는 callMovieAPI() 만 호출해주면 되고 more() 에서는 self.page에 1을 더한 다음 callMovieAPI()만 호출해주면 됩니다. 끝나면 reloadData()를 호출하여 테이블 뷰를 다시 그려주고요. 이렇게 리팩토링한 코드는 앞에서 작성했던 코드와 같은 결과를 가져옵니다. 
+
+앱을 빌드하고 실행해봅시다. 더보기 버튼을 클릭할 때마다 화면 아래에 영화 정보가 계속 추가되는 것을 확인할수 있습니다. 
+
+
+※ 더보기 버튼 숨김 처리
+더보기 기능과 관련하여 놓치기 쉬운 부분이 있습니다. 바로 마지막 페이지를 읽어온 다음에는 이제 더보기 기능을 사용할수 없도록 적절히 막아주어야 한다는 점입니다. 더는 보여줄 데이터가 없음에도 계속 더보기 버튼을 클릭할수 있도록 허용한다면 사용자의 입장에서 앱이 이상하게 동작하는 것처럼 느껴질 것은 당연하고 API에 따라서는 오류가 발생하거나 심하게는 앱이 다운되는 경우가 생길 수도 있습니다. 
+
+우리가 호출하는 API는 다행히 응답 데이터에 총 데이터 건수를 포함하여 전달하고 있으므로 이를 이용하면 잔여 데이터 여부를 쉽게 계산할수 있습니다. 지금까지 읽어온데이터의 개수가 전체 데이터 개수와 같으면 더보기 버튼을 화면에서 사라지도록 처리해봅시다. 
+
+STEP1 : 더보기 버튼을 컨트롤하기 위해 아울렛 변수 moreBtn을 추가합니다. 
+
+지금까지는 버튼의 경우 대부분 클릭과 같은 이벤트를 처리하기 위해 액션 메소드만 추가했지만 지금은 버튼의 속성을 제어해야 하므로 아울렛 변수를 추가해야 합니다. 
+
+
+STEP2 : callMovieAPI() 메소드의 마지막 부분에 다음 내용을 추가합니다. 
+
+ListViewController.swift
+
+//영화 차트 API를 호출해주는 메소드
+func callMovieAPI()
+{
+  ..(중략)..
+  do
+  {
+	...(중략)...
+	// 7 전체 데이터 카운트를 얻는다. 
+	let totalCount = (hoppin["totalCount"] as? NSString)!.integerValue
+	// 8 totalCount 가 읽어온 데이터 크기와 같거나 클 경우 더보기 버튼을 막는다. 
+	if (self.list.count >= totalCount)
+	{
+		self.moreBtn.isHidden = true
+	}
+   }catch
+   {
+      NSLog("Parse Error!!")
+   }
+}
+
+7에서는 JSON 데이터를 파싱하여 전체 카운트인 totalCount를 읽어옵니다. 그다음 8에서 전체 데이터를 저장하고 있는 self.list의 count 속성을 이용하여 우리가 받은 전체 데이터 크기를 비교합니다. 전체 데이터 크기와 같거나 더 크다면 즉 마지막 페이지까지 읽어왔으면 더보기 버튼을 숨김 처리합니다. 좀 더 사용자에게 편의사항을 제공해 주려면 더보기 버튼을 숨기는 대신 마지막 목록입니다. 등과 같은 메시지를 출력해주는 것도 좋겠지만 그것은 숙제로 남기겠습니다. 각자 기능을 구현해 보세요. 
+
+이것으로 테이블 뷰와 네트워크에 관련된 학습이 어느 정도 마무리된 것 처럼 보입니다. 하지만 아직 끝난 것은 아닙니다. 아무 이상 없어 보이는 이 앱에는 사실 치명적인 문제점이 있는데, 스크롤을 위해 테이블 뷰 리스트를 화면 위아래로 드래그해보면 금세 알 수 있습니다. 아마도 화면 스크롤이 애플 기기 특유의 매끈한 움직임이 아니라 조금씩 버벅대는 것처럼 느껴질 겁니다. 이 앱을 실제 기기에서 실행해보면 이보다 더 버벅거리는 현상을 느낄수 있습니다. 심지어는섬네일 이미지가 엉뚱한 이미지로 표시되는 경우도 볼 수 있죠. 
+
+이런 현상이 생기는 것은 iSO 에서 테이블 뷰를 관리하는 방식 때문입니다. 다음 장에서 이에 대해 자세히 알아보겠습니다. 
+
+여기까지의 실습 내용은 루비페이퍼 자료실에서 MyMovieChart-API.zip을 통해 확인할수 있습니다. 학습에 참고하세요. 
