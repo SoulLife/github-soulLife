@@ -1,0 +1,95 @@
+ide툴에 그레이들이면 build.gradle에 
+
+
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    testCompile group: 'junit',name:'junit',version: '4.12'
+    compile 'org.apache.commons:commons-lang3:3.7'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+}
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile "org.jetbrains.kotlin:kotlin-reflect"
+}​
+​﻿
+추가해준후 하단 오른쪽에 import auto로나오면 클릭하면 자동 필요한파일을
+ 다운받는다
+import kotlin.reflect.KClass    << 클래스 정보분석하는 클래스 
+import kotlin.reflect.full.primaryConstructor    <<생성자분석 하는 클래스
+
+
+<pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">import kotlin.reflect.KProperty
+fun main(args:Array<String>)
+{
+   val obj:MyDelegate = MyDelegate()
+    MyDelegator(obj).print("hello song")
+}
+interface Print
+{
+    fun print(arg:String)
+}
+class MyDelegate:Print
+{
+    override fun print(arg: String)
+    {
+        println("i am delegate: $arg")
+    }
+}
+
+class MyDelegator(obj:MyDelegate) :Print by obj</pre>
+
+대행자(MyDelegate)부분은 이전 소스와 차이가 없습니다. 구체적인 업무를 구현하는 곳이므로 동일하게 작성했습니다
+﻿하지만 위임자(MyDelegator)부분과 위임자를 이용하는 main()함수에 차이가 있습니다. MyDelegator 에 {} 부분이 없습니다 
+즉 구현 내용을 작성하지 않습니다. 인터페이스를 구현하는데 인터에페이스의 추상함수를 재정의하지 않았는데도 에러가
+ 발생하지 않습니다
+그리고 MyDelegator의 print()함수를 호출했는데 실제 실행된 곳은 MyDelegate의 print()함수입니다. MyDelegate의 print()
+함수를 호출하는 구문을 MyDelegator에 작성하지도 않았는데 말입니다. 
+이모든것이 가능한 이유는 class MyDelegator(obj:MyDelegate):Print by obj로 작성했기 때문입니다. 
+이곳의 by부분이 핵심입니다. 인터페이스(Print)의 함수가 by 오른쪽에 작성한 객체(obj)의 함수를 호출하도록 작성해 자동으로 
+MyDelegator에 추가되게 합니다. 결국 일일이 위임자를 작성할 필요가 없다는 이야기입니다. 
+
+결국 위임자 클래스에서 대행자를 호출하는 구문이 by에 의해 자동으로 작성된다는 개념인대 이를 위해서는 약간의 규칙에 맞게
+인터페이스, 클래스들을 준비해 주어야 합니다. 
+by를 이용하여 위임 패턴을 구현하려면 위임자와 대행자가 같은 인터페이스를 구현하고 있어야 합니다. 
+MyDelegator에 print()함수는 개발자가 작성할 필요가 없습니다. 대행자를 호출하는 인터페이스의 함수가 자동으로 작성되어 
+위임자에 추가되기 때문입니다. 
+
+<pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">import kotlin.reflect.KProperty
+fun main(args:Array<String>)
+{
+    val obj:Test = Test()
+    obj.sum = 10
+    println(obj.sum)
+    obj.sum = 5
+    println(obj.sum)
+}
+class MySumDelegate
+{
+    var result:Int = 0
+    operator fun getValue(thisRef:Any?,property:KProperty<*>):Int
+    {
+        println("getValue call... ref $thisRef, property : ${property.name}")
+        return result
+    }
+    operator fun setValue(thisRef:Any?,property:KProperty<*>,value:Int)
+    {
+        result = 0
+        println("setValue call... value: $value, '${property.name}'")
+        for( i in 1..value)
+        {
+            result += i
+        }
+    }
+}
+class Test
+{
+    var sum:Int by MySumDelegate()
+}
+
+
+각 프로퍼티에 구현해야할 로직을 MySumDelegate 클래스에 위임하겠다는 의도입니다. 이 처럼 프로퍼티를 </pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">대행할 클래스를 만드는 규칙이 있는대 getValue()와 setValue()함수를 포함해야 합니다. 프로퍼티를 이용할때</pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">이 함수들이 자동 호출되며 프로퍼티의 get(), set() 함수와 매핑됩니다. 즉 프로퍼티의 get()에 의해</pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">getValue() 함수가 set()에 의해 setValue()함수가 호출됩니다. </pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">
+</pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">이처럼 get(),set() 함수의 내용을 대행할 클래스를 만들어 놓고 실제 위임 명령은 24번 줄처럼 by 예약어를 </pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">이용합니다. var sum:Int by MySumDelegate()로 작성했으므로 sum이라는 이름의 프로퍼티가 이용될때 get()</pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">함수는 MySumDelegate의 getValue()함수가 대행하며 get()함수는 MySumDelegate의 setValue()함수가 대행합니다.</pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">결국 obj.sum = 10은 프로퍼티에 값을 대입하는 것이므로 원래는 이 프로퍼티의 set()함수가 호출되어야 하는대 위임했으므로</pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">MySumDelegate의 setValue()함수가 호출됩니다. </pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">
+</pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">getValue(),setValue()함수는 operator 키워드를 추가해야 하며 두 번째 매개변수를 이용해 적용된 프로퍼티의 이름을 얻고</pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">setValue()함수는 세 번째 매개변수를 이용해 프로퍼티에 대입된 값을 얻습니다. </pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;">
+</pre><pre style="font-family: 나눔고딕코딩; font-size: 11.3pt;"> </pre>
