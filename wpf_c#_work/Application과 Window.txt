@@ -1,0 +1,42 @@
+마이크로소프트의 윈도우 프레젠테이션 파운데이션(WPF)으로 만든 애플리케이션은 보통 Application과 Window 타입의 객체를 생성하는 것으로 시작한다. 아래는 간단한 WPF 프로그램의 예제다.
+
+
+
+using System;
+using System.Windows;
+namespace Test1
+{
+    class SayHello
+    {
+        [STAThread]
+        public static void Main()
+        {
+            Window win = new Window();
+            win.Title = "SayHello";
+            win.Show();
+
+            Application app = new Application();
+            app.Run();
+        }
+    }
+}
+
+
+
+System 네임스페이스에는 익숙할 것이다.(그렇지 않다면 필자의 웹사이트인 www.charlespetzold.com에 있는 .NET Book Zero라는 온라인 서적을 먼저 읽어볼 것을 권한다) SayHello 프로그램에는 System.Windows에 대한 using문을 사용하고 있는데, 이 네임스페이스에는 Application과 Window를 비롯한 기본적인 WPF의 클래스, 구조체, 인터페이스, 위임자, 열거형을 포함하고 있다. 다른 WPF 네임스페이스들은 System.Windows.Controls, System.Windows.Input, System.Windows.Media와 같이 System.Windows로 시작된다. 예외적으로 System.Windows.Forms 네임스페이스는 윈도우 폼(Windows Forms)에 대한 네임스페이스이다. System.Windows.Forms로 시작하는 모든 네임스페이스이들 역시 윈도우 폼에 관련된 것이지만, System.Windows.Forms.Integration은 예외로 윈도우 폼과 WPF 코드를 통합하는데 도움이 되는 클래스들이 들어 있다
+
+
+
+이책의 예제 프로그램들은 일관된 명명 규칙을 따른다.각 프로그램은 마이크로소프트 비주얼 스튜디오 프로젝트로 돼 있으며, 프로젝트의 모든 코드는 네임스페이스를 정의하는 중괄호 내에 위치한다. 네임스페이스는 필자의 성인 Petzold와 프로젝트의 이름을 붙여 만들었다. 첫 예제 프로젝트의 이름은 SayHello이며, 네임스페이스는 Petzold.SayHello가 된다. 프로젝트의 클래스는 각 소스 코드 파일에 있고, 이 파일의 이름은 보통 클래스의 이름으로 돼있다. 위의 예제와 같이 프로젝트가 클래스 하나만으로 이루어져 있으면, 클래스의 이름은 보통 프로젝트 이름을 따른다.
+
+
+
+WPF 프로그램에서는 [STAThread] 속성(attribute)이 반드시 Main의 앞에 나와야 한다. 그렇지 않으면 InvalidOperationException 예외 상황과 함께 프로그램이 종료된다. 이 속성은 최초 애플리케이션 스레드의 스레드 모델을 단일 스레드 아파트먼트(single-threaded apartment)로 지정하는 것을 의미한다. 이는 컴포넌트 오브젝트 모델(COM)과 상호 운용하기 위해 필요하다. 단일 스레드 아파트먼트는 .NET 이전의 과거 COM 시대의 프로그래밍 용어이긴 하지만 애플리케이션이 다중 스레드를 사용하지 않는다는 것을 의미한다고 짐작할수 있을 것이다.
+
+
+
+SayHello 프로그램에서 Main은 Window 타입의 객체를 생성하는 것으로 시작된다. 이 클래스는 표준 애플리케이션 창을 생성할 떄 사용한다. Title 프로퍼티는 생성된 창의 제목 표시줄에 나타나게 될 글자를 지정하며, Show 메소드는 화면에 창을 나타나게 한다.
+
+
+
+마지막으로 중요한 단계는 Application 객체를 생성하고 Run 메소드를 호출하는 것이다. 윈도우 프로그래밍 용어로 말하면 이 메소드는 메시지 루프를 생성한다고 표현한다. 애플리케이션은 메시지 루프를 통해 키보드나 마우스로 사용자 입력을 받을수 있게 된다. 태블릿 PC에서 프로그램을 실행한다면 스타일러스 펜의 입력도 받을수 있다.
