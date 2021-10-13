@@ -1,0 +1,190 @@
+DetailViewController.swift
+
+import UIKit
+
+class DetailViewController : UIViewController
+{
+	@IBOutlet var wv: UIWebView!
+	var mvo: MovieVO! //목록 화면에서 전달하는 영화 정보를 받을 변수
+
+	override func viewDidLoad()
+	{
+		NSLog("linkurl = \(self.mvo.detail), title=\(self.mvo.title)")
+
+		//내비게이션 바의 타이틀에 영화명을 출력한다. 
+		let navibar = self.navigationItem
+		navibar.title = self.mvo?.title
+
+		if let url = self.mvo.detail
+		{
+			if let urlObj = URL(string : url)
+			{
+
+				let req = URLRequest(url: urlObj)
+				self.wv.load(req)
+			}else
+			{
+				//URL 형식이 잘못되었을 경우에 대한 예외처리
+				//let alert = UIAlertController(title: "오류", message: "잘못된 URL입니다.", preferredStyle: .alert)
+				let cancelAction = UIAlertAction(title: "확인", style: .cancel){ (_) in
+					//이전 페이지로 되돌려 보낸다.
+					_ = self.navigationController?.popViewController(animated: true)
+				}
+				alert.addAction(cancelAction)
+				self.present(alert, animated: false, completion: nil)
+			}
+		}else 
+		{
+			//URL 값이 전달되지 않았을 경우에 대한 예외처리
+			let alert = UIAlertController(title: "오류", message: "필수 파라미터가 누락되었습니다.", preferredStyle: .alert)
+			let cancelAction = UIAlertAction(title: "확인", style: .cancel) { (_) in
+			//이전 페이지로 되돌려보낸다. 
+			_ = self.navigationController?.popViewController(animated: true)
+		}
+		alert.addAction(cancelAction)
+		self.present(alert, animated: false, completion: nil)
+		}
+	}
+}
+
+
+위 코드에서 살펴보아야 할 부분은 크게 두 가지입니다. 먼저 옵셔널 변수를 if 조건절 부분에서 바인딩 처리하는 부분입니다. 
+
+if let url = self.mvo?.detail
+{
+	...
+}else
+{
+	...
+}
+
+if 조건절 내부에서 옵셔널 값을 변수나 상수에 바인딩하면 성공 여부에 따라 true나 false가 반환됩니다. 이를 이용하면 옵셔널 값이 있을 때와 nil일 때를 효율적으로 나눌수 있습니다. 옵셔널 값이 nil이 아니라면 if절이 실행됩니다. 바인딩 후에는 옵셔널이 자동해제되므로 ?나 !등 옵셔널 값을 처리하기 위한 연산자 없이 바로 값을 사용할수 있죠. 반대로 옵셔널 값이 nil이라면 if절 대신 else 절이 실행됩니다. 예외처리 코드는 else절에 작성하면 됩니다. 
+
+예제에서는 알림창을 통해 구문 처리가 실패했음을 알려주고 있습니다. 하지만 알림창만 보여주는 것은 사용자에게는 그래서 어쩌라고? 하는 의미로 다가오기 쉽습니다. 당황스럽겠죠. 그래서 확인 버튼을 누르면 이전 페이지로 되돌아가도록 로직을 덧붙였습니다. 
+
+if 조건절 내부는 다시 if 조건절이 삽입되어 있는데 이는 URL 인스턴스를 생성할 때 잘못된 URL 값이 입력될 가능성이 있기 때문입니다. 만약 올바르지 않은 URL이 입력된다면 URL 객체의 생성이 실패하면서 앞서와 마찬가지로 알림창을 보여줍니다. 사용자가 확인 버튼을 누르면 다시 이전 페이지로 되돌아가구요. 몇 개의 예외 처리만 덧붙였을 뿐인데 코드가 꽤나 길어져 버렸군요. 
+
+예외 처리가 잘 되어 있다고 해서 반드시 좋은 코드라고 할 수는 없습니다. 하지만 대부분의 좋은 코드는 적절한 예외처리를 바탕으로 합니다. 예외 처리가 잘 되어 있지 않으면 결코 좋은 코드가 될 수 없죠. 이 책에서는 학습 목적에 충실하기 위해 일부 예외처리를 생략하고 핵심 코드에 집중하고 있지만 여러분이 실제로 작성하는 코드에서는 반드시 예외 처리를 놓치지 않으면 좋겠습니다. 
+
+
+
+
+
+11.2 WKWebView
+조금 전까지 우리는 웹킷 뷰 객체를 사용하여 웹 페이지를 로딩하는 실습을 진행했지만 사실 실제로 웹킷 뷰에 관련된 코드는 단 한 줄에 불과했습니다. 안다고 말할수 있기엔 민망한 수준이죠. 이번 시간에는 웹킷 뷰에 대해 조금더 살펴보고 기능을 활용하는 방법을 알아보도록 하겠습니다. 
+
+웹킷 뷰의 기반이 되는 WKWebView는 iOS8부터 제공되기 시작한 클래스로 웹과 관련된 객체를 종합 제공하는 WebKit 프레임워크에 속해 있습니다. 이들 프레임워크에 속해있는 객체들에는 모두 WK라는 접두사가 붙는다는 공통점이 있죠. 
+
+API문서를 통해 WKWebView 클래스의 내용을 살펴봅시다. <Shift> + <Command> + <0> 을 함께 눌러 API 문서창을 띄운 다음 WKWebView라는 키워드로 API를 검색하면 다음과 같은 명세서가 나타납니다. 
+
+명세서 내용을 통해 우리는 웹킷 뷰를 다루기 위해 필요한 메소드와 속성을 확인할수 있습니다. 몇 가지만 골라 살펴보겠습니다. 
+
+
+※ load(_:)메소드
+앞에서 써본 경험이 있을텐데요. 요청된 정보를 바탕으로 HTML 파일을 읽어들이는 메소드입니다. 쉽게 말해 웹 페이지를 로딩하는 메소드라고 생각하면 됩니다. 
+
+이 메소드는 인자값으로 URLRequest 객체를 입력받습니다. 웹 페이지를 요청하기 위한 조건이 정의된 객체이죠. 이 인자값의 정보를 바탕으로 iOS는 네트워크상에 있는 웹 서버에서 웹페이지를 읽어들입니다. 
+
+load(_:)메소드는 네트워크 상에 있는 웹 페이지만을 대상으로 하므로 앱 내부에 저장된 로컬 HTML 파일을 읽어들일 수는 없습니다. 만약 앱 내부에 저장된 로컬 HTML 을 읽어들이고자 한다면 loadHTMLString(_:baseURL:)메소드를 사용해야 합니다. 다음은 API 문서에 작성된 load(_:)메소드의 명세서입니다. 
+
+load(_:)는 비동기 메소드입니다. 따라서 웹 페이지를 완전히 다 읽어 들일 때까지 다른 프로그래밍 코드의 실행을 모두 차단하는 블로킹(Blocking)현상이 발생하지 않습니다. 
+
+만약 이 메소드가 동기 방식으로 실행된다면 우리는 웹 페이지가 모두 완전히 로딩될 때까지 아무것도 하지 못하고 계속 기다려야 합니다. 혹시라도 아주 느린 인터넷 환경에서는 굉장히 심각한 문제를 불러 일으킬수 있을 정도죠. 하지만 이 메소드는 비동기 방식으로 동작하기 때문에 웹페이지를 로딩하면서 동시에 곧바로 다음 로직을 처리합니다. 웹 뷰의 화면은 앱 전체의 실행 순서와 상관없이 웹 페이지가 모두 로딩되고 나면 알아서 표시되구요. 이 메소드와 밀접한 연관을 가지는 메소드가 몇 개가 있습니다. 이에 대해서도 살펴봅시다. 
+
+
+※ stopLoading() 메소드
+stopLoading() 메소드는 웹 페이지 로딩 도중에 중단하고자 할 때 사용합니다. 인터넷 환경이 좋지 않거나 너무 큰 사이즈의 웹페이지를 로딩하다 보면 중간에 강제로 연결을 끊고 싶을 때 가 있는데요. 이때 사용하기에 적절합니다. 
+
+load(_:)메소드가 실행되는 도중에 이 메소드가 호출되면 load(_:)메소드의 실행이 중단되면서 동시에 웹 페이지의 로딩도 함께 중단됩니다. 
+
+
+※ isLoading 프로퍼티
+웹 뷰의 isLoading 프로퍼티를 사용하면 웹 페이지의 로딩 진행 여부를 확인할수 있습니다. 이값이 true이면 아직 로딩 중이라는 뜻이고 이외에는 모두 false로 반환됩니다. 
+
+load(_:)메소드를 호출하여 웹 페이지 로딩이 시작되면 isLoading프로퍼티의 값은 시스템에 의해 true로 설정되고, 웹 페이지 로딩이 끝나 load(_:)메소드의 실행이 종료되면 isLoading는 false로 변경됩니다. stopLoading()메소드가 실행되어 로딩이 중단되었을 때에도 마찬가지로 false값으로 바뀌죠. 이 속성값은 load(_:)메소드가 처리하는 진행 과정에 따라 자동으로 설정되는 값이므로 우리가 임의로 속성값을 변경할수 없도록 읽기 전용(Read-Only)으로 설정되어 있습니다. 
+
+
+
+※ goBack(), goForward()메소드
+웹 페이지를 보는 도중에 이전 URL이나 다음 URL로 이동하려면 goBack()과 goForward()메소드를 사용합니다. 웹 브라우저에서 제공되는 뒤로가기 /앞으로 가기 버튼과 같은 기능이라고 생각하면됩니다. 다만 첫 URL일 경우에는 goBack()이 동작하지 않으며 마지막 페이지일 경우에는 반대로 goForward()메소드가 동작하지 않습니다. 
+
+우리가 만들어볼 영화 차트 앱에서는 상세 보기 화면만 구현하면 되므로 이같은 메소드를 사용할일이 많지 않겠지만 만약 여러분이 웹 앱을 구현한다면 웹킷 뷰와 관련된 다양한 기능을 구현해야 하기 때문에 위에서 언급한 메소드들을 사용하게 될겁니다. 
+
+
+참고.. 웹 앱(Web App)이란?
+모바일 웹과 네이티브 앱을 함께 사용해서 서비스를 구현한 앱으로 하이브리드 앱이라고도 부릅니다. 주로 네이티브 앱이 앱으로서의 프레임을 모바일 웹이 내용과화면 콘텐츠를 담당합니다. 
+
+
+
+
+
+※ 웹 뷰와 델리게이트 패턴
+WKWebView는 델리게이트 패턴을 통해 웹 페이지의 로딩 상황을 추적하고, 콘텐츠나 사용자의 액션을 제어할수 있도록 지원합니다. 이를 위해 필요한 메소드들은 WKNavigationDelegate 프로토콜과 WKUIDelegate에 나뉘어 정의되어 있죠. 따라서 웹킷 뷰에 델리게이트 패턴을 적용하려면 WKNavigationDelegate, WKUIDelegate 프로토콜 메소드를 구현하면 됩니다. 우리가 이번에 학습할 내용은 대부분 WKNavigationDelegate프로토콜에 정의되어 있으므로, 이번에는 이 프로토콜에 대해 집중적으로 살펴보겠습니다. 
+
+WKNavigationDelegate 프로토콜은 주로 웹킷 뷰의 로딩 상황을 추적하거나 제어하는 데에 필요한 내용을 담고 있습니다. 다음은 웹킷 뷰 내에서 웹 페이지가 로딩될 때 호출되는 주요 메소드들입니다. 
+
+1. webView(_:dedciderPollcyFor:decisionHandler:)
+
+2. webView(_:didStartProvisionalNavigation:)
+
+3. webView(_:didCommit:)
+
+4. webView(_:didFinish:) 또는 webView(_:didFail:withError:)
+
+
+webView(_:decidePolicyFor:decisionHandler:)
+웹 페이지의 탐색 허용 여부를 결정
+	↓
+webView(_:didStartProvisionalNavigation:)
+웹 뷰가 콘텐츠 탐색을 시작할 때 호출
+	↓
+webView(_:didCommit:)
+웹 뷰가 콘텐츠를 받기 시작할 때 호출
+	↓						↓
+webView(_:didFinish:)					webView(_:didFail:withError:)
+웹 뷰가 콘텐츠 받기를 완료했을 때 호출 			웹 뷰가 콘텐츠를 받기를 실패했을 떄 호출
+
+위 메소드들은 우리가 직접 load(_:)메소드를 사용하여 특정 웹 페이지를 로딩할 때 호출될 뿐만 아니라 일단 로드된 웹 페이지에서 링크 방식으로 다른 웹 페이지를 넘어갈 때에도 마찬가지로 호출됩니다. 즉 일단 웹 페이지 로딩이 발생하기만 하면 델리게이트에 의해 메소드가 호출된다는 겁니다. 이 특성을 잘이용하면 웹 뷰 내에서 발생하는 대다수의 페이지 흐름을 제어할수 있으므로 웹 앱을 만들 때 적절히 활용하면 좋습니다. 다만 SPA(single Page Application: 동기 방식으로 페이지가 한번 로딩되면 이후에는 AJAX등을 사용하여 부분적으로만 UI를 교체해 가면서 콘텐츠를 제공하는 방식)형태로 구성된 웹 페이지에서는 델리게이트 메소드의 호출 순서가 일반적이지 않을 수 있으므로 주의해야 합니다. 
+
+각 메소드들을 차례대로 살펴봅시다. 
+
+1 webView(_:decidePolicyFor:decisionHandler:)
+웹 뷰가 웹페이지를 읽어올지 말지를 결정하는 메소드입니다. 이 메소드의 마지막 매개변수인 decisionHandler는 함수 타입으로 전달되는데, 이 매개변수에 특정 인자값을 넣어 호출함으로써 웹 페이지의 로딩 여부를 결정할수 있습니다. 예를 들어 이 메소드 안에서의 다음과 같은 함수 호출 구문은 웹 페이지의 로딩을 차단합니다. 
+
+//웹 페이지의 로딩을 명시적으로 허용하고자 할 때에는 .cancel 대신 .allow를 사용
+decisionHandler(.cancel)
+
+반대로 웹 페이지의 로딩을 허용하고 싶다면 decisionHandler 함수의 인자값을 .allow로 바꾸어 호출하거나 또는 아무 것도 호출하지 않으면 됩니다. 
+
+이 메소드를 이용하면 웹 뷰 내에서 허용하고 싶지 않은 요청이나 URL을 선택적으로 차단할수 있습니다. 다음은 웹 뷰 내에서 다른 외부 도메인으로 이동하는 URL 링크를 차단하는 예입니다. 
+
+func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolity) -> Void)
+{
+	//URLRequest로부터 URL을 추출
+	guard let url = navigationAction.request.url?.absoluteString else{
+		return
+	}
+	if (url.starts(with: "http")) { //URL이 "http"로 시작하면 즉 외부 도메인이라면
+		decisitonHandler(.cancel)
+	}
+}
+
+
+
+2. webView(_: didStartProvisionalNavigation:)
+웹 뷰가 콘텐츠를 로드하기 시작할 때 호출되는 메소드입니다. 이어서 등장하는 webView(_didCommit:)메소드와 비슷하지만 URL이 유효하지 않거나 온라인 상태일 때 에도 호출된다는 점에서 차이를 보입니다. 정상적인로딩 과정일 경우 웹킷 뷰의 동작에 따라 webView(_:didStartprovisionalNavigation:), webView(_:didCommit:)이 차례로호출되며 URL이 올바르지 않거나 네트워크에 문제가 있는 경우에는 webView(_:didStartProvisionalNavigation:), webView(_:didFailProvisionalNavigation:)이 차례로 호출됩니다. 어느 쪽이든 웹킷 뷰가 콘텐츠를 로딩하려고 준비할 때 호출되는 메소드라고 생각하면 됩니다. 
+
+
+3. webView(_:didCommit:)
+웹 뷰가 웹 콘텐츠를 받기 시작할때 호출되는 메소드로 뭔가 콘텐츠를 받기 시작할 때 처리해줄 것이 있을 때 유용하게 사용됩니다. 대표적인 것이 로딩 상태 표시입니다. 
+
+네트워크 상황에 따라 다르겠지만 웹 페이지를 읽어오는 과정은 상대적으로 오랜 시간이 소요 됩니다. 간혹 아주 느린 네트워크 상태에서는 상당한 인내를 요구하기도 하죠. 이때 웹페이지를 로딩하는 동안 텅 빈 화면만 계속 보여주다간 사용자가 에이 뭐야 아무것도 안되잖아 하고 앱을 닫아버릴수 있으므로 콘텐츠를 불러오고 있는 중임을 로딩 아이콘을 이용해서 보여주는 것이 좋습니다. 
+
+로딩 아이콘은 주로 액티비티 인디케이터 뷰(Activity Indicator View, 이하 인디케이터 뷰)를 이용하는데, webView(_:didCommit:)에 인디케이터 뷰를 화면에 표시하는 코드를 작성해 두면 로딩이 시작될 때 자동으로 화면에 로딩 아이콘이 표시됩니다. 로딩 아이콘을 제거할 때에는 조금 후에 등장할 webView(_:didFinish:)에다 인디케이터 뷰를 화면에서 숨기는 코드를 작성해 두기만 하면 되죠. 
+
+
+4. webView(_:didFinish:)
+웹 뷰가 콘텐츠 로딩을 완전히 마쳤을 때 호출되는 메소드입니다. 웹 페이지가 웹 뷰에 완전히 표시된 다음에 호출된다고 생각하면 됩니다. 주로 webView(_:didCommit:)와 쌍을 이루어 로딩 완료시에 처리해야 할 내용을 수행하는 역할로 사용됩니다. 
+
+5. webView(_:didFail:withError:)
+webView(_:didFinish:)와 달리 콘텐츠 로딩이 실패했을 떄 호출되는 메소드입니다. 잘못된 URL로 인해 응답을 아예 받지 못했을 때와는 달리 웹 페이지를 불러오던 도중에 로딩이 실패했을 경우에 호출됩니다. 참고로 URL이 잘못되었거나 네트워크가 정상적이지 않아서 웹 페이지를 불러오지 못했다면 webView(_:didFailProvisionalNavigation:withError:)메소드가 호출됩니다. 
