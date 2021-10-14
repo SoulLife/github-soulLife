@@ -1,0 +1,220 @@
+11.3 델리게이트 패턴을 이용한 웹 뷰의 로딩 처리
+앞에서 배운 델리게이트 패턴을 구현하여 보다 전문적으로 화면을 컨트롤해 봅시다. 이번 실습에서 델리게이트 패턴을 적용하여 구현할 기능은 다음과 같습니다. 
+
+1. 웹 뷰가 HTML 페이지를 불러오는 동안 로딩 아이콘 표시해주기
+
+2. 웹 뷰가 HTML 페이지로딩을 실패했을 때 실패 메시지 보여주기
+
+먼저 구현할 것은 앞에서 잠깐 언급했던 로딩 아이콘 표시입니다. HTML 콘텐츠를 읽어오는 과정을 비동기로 처리하더라도 웹 페이지를 불러오는 동안 사용자가 빈 화면만 계속 쳐다봐야 하는 상황은 그대로입니다. 이럴 때에는 무엇인가를 불러오는 중이라는 표시를 해주는 것이좋습니다. 사용자가 체감하는 대기 시간을 훨씬 짧게 줄일수 있으니까요 
+
+실제로 초고층 건물에서 생활하는 사람들이 엘리베이터 대기 시간이 너무 길어 불만이 많았는데 층마다 엘리베이터 문에 거울을 달았더니 대기 시간에 대한 불만이 큰 폭으로 줄었다는연구 결과가 있습니다. 멍하니 기다리느니 거울을 보고 이리저리 화장이라도 고치다보면 체감하는 대기 시간이 짧게 줄어든다는 것입니다. 로딩 아이콘이 거울과 같은 역할을 해주지는 못하지만, 그래도 뭔가가 로딩 중이라는 것을 안다면 사용자들이 체감하는 지루함은 줄어들 것입니다. 따라서 처리에 시간이 걸리는 작업들은 항상 로딩 화면을 제공해주는 것이 좋습니다. 
+
+웹 페이지를 불러오는 동안 로딩 아이콘을 표시해줄수 있도록 액티비티 인디케이터 뷰(Activity Indicator View)를 추가하고, WKNavigationDelegate 프로토콜을 구현하여 로딩 표시를 해주겠습니다. 
+
+
+STEP1 : 오브젝트 라이브러리에서 [Activity Indicator View]를 드래그하여 상세 화면용 뷰 컨트롤러의 중앙에 배치합니다. 드래그 중에 화면 정중앙에 위치할 경우 가이드라니이 표시되므로 이를 활용하면 중앙에 배치하기가 쉽습니다. 
+
+액티비티 인디케이터 뷰(그냥 인디케이터 뷰라고 부릅시다)를 추가하면 작은 크기의 로딩 아이콘이 표시됩니다. 이 뷰는 애니메이션 속성이 있으므로 이를 활용하여 적절한 시점에 애니메이션 기능을 시작하고 종료하는 식으로 제어하면 깔끔한 로딩 아이콘을 만들수 있습니다. 웹 페이지의 로딩 상태에 따라 제어해야 하므로, 델리게이트 메소드를 통해 이 뷰의 애니메이션을 컨트롤하면 됩니다. 
+
+
+STEP2 : 어트리뷰트 인스펙터 탭에서 인디케이터 뷰의 속성 일부를 다음과 같이 설정합니다. 
+
+※ [Style] : Large White
+※ [Color] : Black
+※ [Behavior] : Hides When Stopped 옵션 체크
+
+인디케이터 뷰의 스타일은 Large White, White, Gray 세 가지 중에서 선택할수 있는데, 이 중에서 Large White는 나머지 두 개보다 큰 사이즈의 아이콘이 적용됩니다. 아무 값도 지정하지 않으면 흰 색이 기본으로 설정되는데, 스토리보드에서는 잘 보이지만 실제로 실행해 보면 웹뷰의 기본 배경과 겹쳐 잘 표시가 나지 않으므로 컬러 속성을 블랙으로 지정해 주는 것이 좋습니다. 
+
+Behavior 속성에 나열된 Animating 옵션은 기본으로 애니메이션을 실행해 주는 옵션입니다. 화면에 처음 나타날 때부터 자동으로 인티케이터 뷰가 회전하도록 해주죠. 아래에 나타난 Hides When Stopped 옵션은 애니메이션이 정지해 있을 때에는 인디케이터 뷰를 화면에서 숨김 처리하는 역할을 합니다. 
+
+STEP3 : 인디케이터 뷰를 DetailViewController 클래스로 드래그하여 아울렛 변수 spinner 를 정의합니다. 
+
+
+STEP4 : DetailViewController 클래스의 viewDidLoad() 메소드 맨 위에 다음과 같은 코드를 추가합니다. 델리게이트 객체를 지정하는 구문으로 DetailViewController 클래스에다 델리게이트 메소드를 구현해둘 터이니 웹 뷰에 변화가 일어나면 그에 맞는 메소드를 호출해주세요라는 의미입니다. 
+
+override func viewDidLoad()
+{
+	//WKNavigationDelegate의 델리게이트 객체를 지정
+	self.wv.navigationDelegate = self
+
+	//내비게이션 바의 타이틀에 영화명을 출력한다.
+	...(중략)...
+}
+
+웹킷 뷰는 모두 두 개의 델리게이트 프로토콜을 지원합니다. 앞에서 다루어 본 WKNavigationDelegate와 WKUIDelegate이죠. 각각의 프로토콜은 그에 맞는 델리게이트 객체 지정용 멤버 변수를 가지는데 다음과같습니다. 
+
+//WKNavigationDelegate의 델리게이트 객체를 지정
+self.wv.navigationDelegate = self
+
+//WKUIDelegate의 델리게이트 객체를 지정
+self.wv.uiDelegate = self
+
+
+다시 말해, WKNavigationDelegate 프로토콜의 델리게이트 객체를 지정하려면 WKWebView.navigationDelegate 속성을 사용해야 하고, WKUIDelegate 프로토콜의 델리게이트 객체를 지정하려면 WKWebView.uiDelegate 속성을 사용해야 한다는 뜻입니다. 다만 여기서는 navigaionDelegate 속성만 사용하도록 하겠습니다. 
+
+우리가 지정한 델리게이트 속성에 맞는 프로토콜이 아직 선언되지 않았으므로 아마 컴파일 오류가 발생할 겁니다. 이어서 프로토콜을 선언해주겠습니다. 
+
+
+
+STEP5 : 익스텐션 구문을 이용하여 DetailViewController 클래스에 UIWebViewDelegate 프로토콜을 추가합니다. 
+
+DetailViewController.swift
+
+class DetailViewController : UIViewController
+{
+	...(중략)...
+}
+
+//MARK:- WKNavigationDelegate 프로토콜 구현
+extension DetailViewController : WKNavigationDelegate
+{
+
+}
+
+프로토콜을 구현할 때에는 본래의 클래스에 코드를 추가하기보다 익스텐션 구문을 활용하는 것이 유지보수 측면에서 더 낫습니다. 이와 함께 MARK 주석까지 덧붙인다면 아주 깔끔한 코드를 만들수 있죠. 다음은 MARK 주석이 표시된 점프 바의 모습입니다. 
+
+
+STEP6 : webView(_:didCommit:)메소드를 추가하고 인디케이터 뷰의 애니메이션이 실행되도록 구문을 작성합니다. 
+
+DetailViewController.swift
+
+extension DetailViewController : WKNavigationDelegate
+{
+	func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!)
+	{
+
+		self.spinner.startAnimating() // 인디케이터 뷰의 애니메이션을 실행
+	}
+}
+
+webView(_:didCommit:) 메소드는 웹 뷰가 HTML 페이지의 콘텐츠를 읽어 들이기 시작할때 호출되는 메소드입니다. 인디케이터 뷰의 애니메이션 시작 구문을 여기에 작성해 두면 웹 뷰가 웹 페이지 로딩을 시작하는 시점에 맞추어 로딩 표시를 해줄 수 있습니다. 숨겨져 있던 인디케이터 뷰는 애니메이션의 시작과 동시에 화면에 등장해서 열심히 빙글빙글 돌아갈 겁니다. 
+
+
+STEP7 : webView(_:didFinish:)메소드를 추가하고, 애니메이션 실행을 중지하는 구문을 작성합니다. 
+
+DetatilViewController.swift
+
+extension DetailViewController : WKNavigationDelegate
+{
+	...(중략)...
+	func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!)
+	{
+
+		self.spinner.stopAnimating() // 인디케이터 뷰의 애니메이션을 중단
+	}
+}
+
+webView(_:didFinish:) 메소드는 웹 뷰가 HTML 페이지를 읽어 들이는 과정이 완전히 끝났을 때 호출되는 메소드입니다. 여기에 인디케이터 뷰의 애니메이션을 중지하는 구문을 작성해 주면웹 페이지를 다 읽어 들이는 순간 이 메소드가 호출되면서 로딩 표시가 사라지게 됩니다. 애니메이션을 중지하는 것만으로 인디케이터 뷰가 사라지는 것은 앞서 우리가 [Hides When Stopped] 속성에 체크했기 때문입니다. 
+
+
+
+STEP8 : webView(_:didFail:withError:)메소드를 추가하고 여기에도 인디케이터 뷰의 애니메이션을 중지하는 구문을 작성합니다. 
+
+DetailViewController.swift
+
+extension DetailViewController : WKNavigationDelegate
+{
+	...(중략)...
+	func webView(_ webView : WKWebView, didFail navigation: WKNavigation!, withError error: Error)
+	{
+		self.spinner.stopAnimating() // 인디케이터 뷰의 애니메이션을 중지
+	}
+}
+
+네트워크 상황은 자주 달라집니다. 지하철 구간을 이동하거나 엘리베이터 안에서는 종종인터넷이 끊어지기도 하죠. 이 때문에 웹 뷰 사용시 webView(_:didFinish:)메소드가 호출되지 않는 경우가 생각보다 많습니다. 문제는 stopAnimation() 메소드가 호출되지 않으면 사용자의 앱에서는 로딩 아이콘이 영원히 돌아간다는 거죠. 이를 막기 위해서는 로딩이 실패했을 경우에도 stopAnimation()를 호출해 주어야 합니다. 
+
+이것으로 로딩 아이콘에 필요한 처리는 모두 완료되었습니다. 이어서 로딩이 실패했을 경우 사용자에게 메시지로 알려줄수 있도록 코드를 추가하겠습니다. 
+
+
+STEP9 : webView(_:didFail:withError:)메소드에 다음과 같이 알림창 구문을 추가합니다. 
+
+DetailViewController.swift
+
+extension DetailViewController : WKNavigationDelegate
+{
+	...(중략)...
+	func webView(_ webView : WKWebView, didFail navigation: WKNavigation!, withError error: Error)
+	{
+		self.spinner.stopAnimating() // 인디케이터 뷰의 애니메이션을 중지
+
+		//경고창 형식으로 유류 메시지를 표시해준다.
+		let alert = UIAlertController(title: "오류", message: "상세페이지를 읽어오지 못했습니다.", preferedStyle : .alert)
+		let cancelAction = UIAction(title : "확인", style: .cancel) { (_) in
+			//이전 화면으로 되돌려 보낸다.
+			_ = self.navigationController?.popViewController(animated: true)
+		}
+		alert.addAction(cancelAction)
+		self.present(alert, animated: false, completion: nil)
+	}
+}
+
+앱이 웹 콘텐츠를 제대로 읽어 들이지 못하고 실패했다면 단순히 인디케이터 뷰를 처리해주는 것 외에도 페이지를 불러오지 못했다는 것을 사용자에게 적극적으로 알려줄 필요가 있습니다. 단순히 로딩 표시만 숨기는 수준으로 이 메소드의 처리를 마무리한다면 사용자는 실패한 것을 제대로 인지하지 못해서 텅빈 화면만 보면서 계속 기다려야 할수도 있으니까요. 인디케이터 뷰의 로딩 애니메이션을 중지 처리한 것에 더해 경고창으로 메시지를 보여주는 것은 이 때문입니다. 
+
+그런데 경고창 문구 하나 때문에 코드가 좀 길어진 것이 영 거슬리네요. 자바스크립트에서는 경고창 문구를 위해서는 코드 한줄이면 충분한데 말입니다. 이를 실무에서 흔히 사용하는 방식으로 개선해 보겠습니다. 
+
+
+STEP10 : UIViewController를 확장하는 새로운 익스텐션을 추가합니다. 
+
+DetailViewController.swift
+
+...(중략)...
+//MARK:- 심플한 경고창 함수 정의용 익스텐션
+extension UIViewController
+{
+	func alert(_ message: String, onClick: (() -> Void)? = nil)
+	{
+		let controller = UIAlertController(title: nil, message: message, preferedStyle: .alert)
+		controller.addAction(UIAlertAction(title: "OK", style: .cancel) { (_) in
+			onClick?()
+		})
+		DispatchQueue.main.async
+		{
+			self.present(controller, animated : false)
+		}
+	}
+}
+
+새로운 익스텐션은 기존 DetailViewController.swift 파일에 작성합니다. UIViewController 에 대한 확장이기 때문에 어디에라도 작성해 두기만 하면 UIViewController 클래스를 상속받는 모든 뷰 컨트롤러에서 사용이 가능합니다.
+
+정의한 메소드는 OK 버튼을 가지는 단순경고창 입니다. 다만 버튼 클릭시에 처리할 뭔가가 있을 경우 이를 콜백함수로 전달하여 처리할수 있도록 두 번째 매개변수가 옵셔널 타입으로 추가되어 있습니다. 
+
+
+STEP11 : STEP 9에서 추가한 코드 전체를 다음과 같이 수정합니다. 
+
+DetailViewController.swift
+
+func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error)
+{
+	self.spinner.stopAnimating() //인디케이터 뷰의 애니메이션을 중지
+	self.alert("상세 페이지를 읽어오지 못했습니다."){
+		//버튼 클릭시 이전 화면으로 되돌려 보낸다.
+		_ = self.navigationController?.popViewController(animated: true)
+	}
+}
+
+
+
+STEP12 : WKNavigationDelegate를 구현하던 익스텐션에 webView(_:didFailProvisionaNavigation:withError:)메소드를 추가하고 다음과 같이 내용을 작성합니다. 
+
+DetailViewController.swift
+
+extension DetailViewController : WKNavigationDelegate
+{
+...(중략)...
+	func webView(_ webView: WKWebView, didFailProvisionaNavigation navigation: WKNavigation!, withError error : Error)
+	{
+		self.spinner.stopAnimating()
+		self.alert("상세 페이지를 읽어오지 못했습니다.") {
+			//버튼 클릭시, 이전 화면으로 되돌려 보낸다. 
+			_ = self.navigationController?.popViewController(animated: true)
+		}
+	}
+}
+
+웹 페이지 로딩이 실패했을 때 반드시 webView(_:didFail:withError:)메소드만 호출되는 것은 아닙니다. 오류 상태에 따라 webView(_:didFailProvisionaNavigation:withError:)메소드가 대신 호출될 때도 있습니다. 대표적인 경우가 네트워크에 문제가 있거나 또는 잘못된 URL이 입력된 경우입니다. 이 때에는 webView(_:didFail:withError:)가 호출되지 않기 때문에 오류 처리에 필요한 내용을 위 메소드에도 구현해 주어야 합니다. 
+
+이것으로 필요한 처리가 모두 끝났습니다. 앱을 실행하여 상세페이지로 들어가면 인디케이터뷰가 표시되면서 화면이 로딩 중임을 사용자에게 전달할 것이고 웹 페이지 불러오기에 실패하면 적절한 메시지를 표시하여 사용자에게 알려줄 것입니다. 
+
+
+
+여기까지의 실습 내용은 루비페이퍼 자료실에서 MyMoviChart-WebView.zip을 통해 확인할수 있습니다. 학습에 참고하세요. 
