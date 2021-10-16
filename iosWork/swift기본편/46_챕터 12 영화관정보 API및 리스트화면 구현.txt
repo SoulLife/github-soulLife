@@ -1,0 +1,281 @@
+12.2.2 영화관 정보 API
+영화관 목록 정보도 앞에서와 마찬가지로 네트워크 통신을 통해 가져오겠습니다. 호출할 API 정보를 확인해 봅시다. 
+
+※ Request URI : http://swiftapi.rubypaper.co.kr:2029/theater/list
+
+이어서 봐야할 것은 함께 전달해야할 파라미터입니다. 영화 차트 정보를 읽어올 때 사용했던 방식과 크게 다르지 않네요. 마지막 항목인 [type]은 반환되는 데이터 형식을 결정짓는 것으로 우리는 JSON 을 인자값으로 보내야 합니다. 
+
+표12-1 요청할 인자값 목록
+항목		데이터 타입		샘플값			설명
+s_page		정수			1			페이지 번호
+s_list		정수			100			페이지 크기
+type		문자열			json			데이터 형식
+
+API를 호출할 때에는 위 세개의 인자값을 함께 전달해야 합니다. RESTful API는 대소문자를 구분하므로 키를 입력할 때는 대소문자에도 유의하여야 합니다. 파라미터가 포함된 URI 샘플값은 다음과 같습니다. 
+
+http://swiftapi.rubypaper.co.kr:2029/theater/list?s_page=1&s_list=100&type=json
+
+이렇게 만들어진 API의 호출 결과는 다음과 같습니다. JSON 배열 타입으로 회신되죠. 
+
+항목 별로 내용을 살펴봅시다. 
+
+표12-2 요청에 따른 응답 내역
+항목			샘플 데이터
+_id			1.0
+상영관명			MMC 만경관 1관
+연락처			257-2041
+소재지도로명주소		대구광역시 중구 국채보상로 547(종로 1가)
+위도			35.8709275
+경도			128.5904236
+소재지우편번호
+소재지지번주소
+
+특이하게도 항목명이 영어가 아닌 한글로 되어 있네요. 이 값을 키로 하여 연결된 값을 읽어들이면 됩니다. 각각의 항목들을 확인하여 앱의 목록 화면에 표현해야 할 정보로 어떤 것들이 있을지 생각해봅시다. 특히 위도와 경도 두 개 값은 다음 단계에서 우리가 만들어볼 내용과 밀접하게 관련되어 있으므로 중요합니다. (사실 이 두개의 값 때문에 이 API를 사용하는 것이기도 합니다. )
+
+
+
+12.3 영화관 목록 화면 구현하기
+영화관 목록 화면은 앞서 탭 바에 추가된 테이블 뷰 컨트롤러를 이용합니다. 만약 테이블 뷰 컨트롤러가 추가되어 있지 않다면 아래 그림을 참고하여 테이블 뷰 컨트롤러를 추가하고 이를 내비게이션 컨트롤러와 직접 연결해주면 됩니다. 테이블 뷰 컨트롤러의 목록에서 표시해줄 정보는 상영관명, 연락처, 주소 정도면 될 것 같습니다. 이를 위한 프로토타입 셀을 설계해 봅시다. 
+
+
+
+STEP1 : 프로토타입 셀의 [Style] 속성을 Custom으로 설정하고, 재사용 큐를 위한 식별자 [Identifier]속성에는 'tCell'을 입력합니다. [Accessory]항목은 Disclosure Indicator를 설정하여 셀의 오른쪽에 꺾쇠 마크가 표시되게 합니다. 
+
+
+
+STEP2 : 상영관명, 연락처, 주소를 표시해줄 레이블 객체를 아래 그림과 같이 프로토타입 셀에 추가합니다. 각 레이블의 속성은 다음과 같습니다. 
+
+※ 상영관명 : 폰트 크기 15 (맨왼쪽레이블)
+※ 연락처 : 폰트 크기 14, 오른쪽 정렬 (맨오른쪽 레이블 상영관명 레이블 반대쪽끝)
+※ 주소 : 폰트 크기 13 (상영관명아래 레이블)
+
+만약 추가된 레이블보다 프로토타입 셀 높이가 부족하다면 리사이징 핸들을 드래그하여 적절하게 높이를 늘려주세요. 
+
+
+STEP3 : 프로젝트에 TheaterCell.swift 파일을 추가하고 프로토타입 셀을 커스터마이징할 클래스를 다음과 같이 작성합니다.
+
+TheaterCell.swift
+
+import UIKit
+class TheaterCell: UITableViewCell
+{
+}
+
+
+
+STEP4 : 프로토타입 셀과 TheaterCell 클래스를 연결합니다. 
+
+
+STEP5 : 프로토타입 셀에 추가된 각 레이블 객체를 TheaterCell 클래스로 드래그하여 각각 아울렛 변수 name, tel, addr을 추가합니다. 
+
+TheaterCell.swift
+
+import UIKit
+
+class TheaterCell: UITableViewCell
+{
+	//상영관명
+	@IBOutlet var name: UILabel!
+	//연락처
+	@IBOutlet var tel: UILabel!
+	//주소
+	@IBOutlet var addr: UILabel!
+}
+
+
+STEP6 : 영화관 목록을 위한 TheaterListController.swift 파일을 추가하고, TheaterListController 클래스를 작성합니다. 
+
+TheaterListController.swift
+
+import UIKit
+class TheaterListController : UITableViewController
+{
+}
+
+
+STEP7 : TheaterListController 클래스와 영화관 정보 뷰 컨트롤러를 연결합니다. 
+
+
+
+STEP8 : TheaterListController 클래스에 영화관 정보를 읽어오는 코드를 다음과 같이 작성 합니다. 
+
+TheaterListController.swift
+
+import UIKit
+
+class TheaterListController : UITableViewController
+{
+	//API를 통해 불러온 데이터를 저장할 배열 변수
+	var list = [NSDictionary]()
+	//읽어올 데이터의 시작 위치
+	var startPoint = 0
+
+	override func viewDidLoad()
+	{
+		//API를 호출한다
+		self.callTheaterAPI()
+	}
+	
+	//API로부터 극장 정보를 읽어오는 메소드
+	func callTheaterAPI()
+	{
+		// 1. URL을 구성하기 위한 상수값을 선언한다
+		let requestURI = "http://swiftapi.rubypaper.co.kr:2029/theater/list" // API 요청 주소
+		let sList = 100 //불러올 데이터 갯수
+		let type = "json" //데이터 형식
+
+		//2. 인자값들을 모아 URL 객체로 정의한다. 
+		let urlObj = URL(string: "\(requestURI)?s_page=\(self.startPoint)&s_list=\(sList)&type=\(type)")
+		do
+		{
+			//3. NSString 객체를 이용하여 API를 호출하고 그 결과값을 인코딩된 문자열로 받아온다
+			let stringdata = try NSString(contentsof: urlObj!, encoding: 0x80_000_422)
+	
+			//4. 문자열로 받은 데이터를 UTF-8로 인코딩처리한 Data로 변환한다
+			let encdata = stringdata.data(using:String.Encoding.utf8.rawValue)
+			do
+			{
+				// 5. Data 객체를 파싱하여 NSArray 객체로 변환한다
+				let apiArray = try JSONSerialization.jsonObject(with: encdata!, options:[]) as? NSArray
+				//6. 읽어온 데이터를 순회하면서 self.list 배열에 추가한다.
+				for obj in apiArray!
+				{
+					self.list.append(obj as! NSDictionary)
+				}
+			}catch
+			{
+				//경고창 형식으로 오류 메시지를 표시해준다.
+				let alert = UIAlertController(title: "실패", message: "데이터 분석이 실패하였습니다.", preferredStyle: .alert)
+				alert.addAction(UIAlertAction(title: "확인", style: .cancel))
+				self.present(alert, animated: false)
+			}
+			// 7. 읽어와야할 다음 페이지의 데이터 시작 위치를 구해 저장해둔다.
+			self.startPoint += sList
+		}catch
+		{
+			// 경고창 형식으로 오류 메시지를 표시해준다
+			let alert = UIAlertController(title: "실패", message: "데이터를 불러오는데 실패하였습니다", preferredStyle: .alert)
+			alert.addAction(UIAlertAction(title: "확인", style: .cancel))
+			self.present(alert, animated: false)
+		}
+	}
+}
+
+코드가 복잡하게 느껴질수 있습니다. 위에서부터 차례대로 살펴봅시다. 
+
+//API를 통해 불러온 데이터를 저장할 배열 변수
+var list = [NSDictionary]()
+
+API 결과값을 저장해둘 배열 변수를 초기화하는 구문입니다. [] 기호는 배열 객체를 의미하는 Array를 뜻하며 [NSDictionary] 구문은 배열에 저장되는 객체 타입이 NSDictionary 라는 제너릭 선언입니다. 제너릭을 통하여 배열을 선언하면 배열에 들어가는 데이터 형식이 고정되므로 나중에 값을 꺼낼 때 캐스팅하지 않아도 됩니다. 
+
+//읽어올 데이터의 시작 위치
+var startPoint = 0
+
+이번 API에서 제공하는 데이터 구조는 이전희 영화 차트 API와는 약간 다릅니다. 영화 차트 API에서는 1, 2, 3... 처럼 순차적으로 페이지 정보만 증가시켜주면 그 페이지에 해당하는 데이터 목록을 얻을수 있었지만 이번 API에서는 읽어올 데이터의 시작 위치를 직접 지정해야 합니다. 이것과 관련하여 읽어올 데이터의 위치를 계산하는 코드는 뒤에서 따로 살펴보겠습니다. 지금은 데이터의 위치가 0에서 시작된다는 것만 기억하기 바랍니다. 
+
+override func viewDidLoad()
+{
+	//API를 호출한다
+	self.callTheaterAPI()
+}
+
+//API로부터 극장 정보를 읽어오는 메소드
+func callTheaterAPI()
+{
+	...(중략)...
+}
+
+뷰가 메모리에 로딩되고 나면 self.callTheraterAPI()메소드를 호출하도록 코드를 작성합니다. callTheaterAPI()는 API를 호출하여 데이터를 읽어오는 과정을 처리할 사용자 정의 함수입니다. 
+
+
+//1. URL을 구성하기 위한 상수값을 선언한다.
+// 1. URL을 구성하기 위한 상수값을 선언한다
+		let requestURI = "http://swiftapi.rubypaper.co.kr:2029/theater/list" // API 요청 주소
+		let sList = 100 //불러올 데이터 갯수
+		let type = "json" //데이터 형식
+
+여기에서부터는 callTheaterAPI()메소드 내부의 코드입니다.  API를 호출하여 응답 데이터를 읽어오는 부분이죠. 먼저 API 호출에 사용될 인자값을 상수로 선언합니다. API 호출을 위해서는 API 요청 주소, 데이터의 시작 위치, 불러올 데이터 개수, 데이터 형식 등 네개의 값이 필요하지만 이중에서 불러올 데이터의 시작 위치는 클래스 상단에 page 프로퍼티로 이미 정의해 두었으므로 필요한 것은 나머지 세 개 뿐입니다. 예제에서는 한번에 백 개의 영화관 목록을 JSON 데이터 포맷으로 읽어오도록 지정하고 있습니다. 
+
+//2. 인자값들을 모아 URL 객체로 정의한다. 
+		let urlObj = URL(string: "\(requestURI)?s_page=\(self.startPoint)&s_list=\(sList)&type=\(type)")
+
+코드가 복잡해 보이지만 호출할 API를 위한 주소값을 만드는 과정일 뿐입니다. 문자열의 형식은 다음과 같이 이루어져 있습니다. 
+http://<도메인>?s_page=<데이터의 시작위치>&s_list=<읽을 데이터의 갯수>&type=<데이터 형식>
+
+//3. NSString 객체를 이용하여 API를 호출하고 그 결과값을 인코딩된 문자열로 받아온다
+let stringdata = try NSString(contentsof: urlObj!, encoding: 0x80_000_422)
+	
+//4. 문자열로 받은 데이터를 UTF-8로 인코딩처리한 Data로 변환한다
+let encdata = stringdata.data(using:String.Encoding.utf8.rawValue)
+
+가장 중요한 코드입니다. API를 호출하여 데이터를 읽어오는 부분이죠. 그런데 영화 차트를 가져올 때 사용했던 코드와 약간 다르죠? 영화 차트는 UTF-8로, 영화관 목록은 EUC-KR로 인코딩되어 있기 때문입니다. 한글까지 문제없이 처리할수 있는 호환 형식인 UTF-8과는 달리 EUC-KR은 데이터를 읽어올 때 인코딩 처리를 해야 합니다. Data 객체 대신 NSString 객체를 이용하여 API 데이터를 읽어오고 있는 것은 이 때문입니다. NSSTring은 인코딩 처리가 가능한 구문을 지원하거든요. 
+
+인자값으로 사용된 0x80_000_422는 EUC-KR 인코딩에 해당하는 16진수값입니다. 값 사이에 들어간 언더바는 자리수를 알아보기 쉽게 나눈 것으로 원래의 값인 0x80000422와 동일합니다. 스위프트에서 숫자가 길어질 때 구분을 위해 쉼표 대신 넣을수 있는 자리수 표기용 언더바는 원래의 값에 아무런 영향을 주지 않습니다. 
+
+NSString 으로 데이터를 읽어오면 Data 객체와 달리 문자열 형태로 반환됩니다. 우리가 사용할 데이터 타입은 Data이므로 문자열로 받은 데이터를 다시 Data 타입으로 바꾸어주어야 합니다. 4에서 처리하는 내용이 NSString을 Data타입으로 바꾸는 것이죠. 문자열의 인코딩 타입이 EUC-KR 이기 때문에 Data 객체로 변환할 때는 UTF-8인코딩 처리도 함께 해주어야 합니다. 
+
+다시 원래의 이야기로 돌아가 소스 코드를 계속 살펴봅시다. 
+
+// 5. Data 객체를 파싱하여 NSArray 객체로 변환한다
+let apiArray = try JSONSerialization.jsonObject(with: encdata!, options:[]) as? NSArray
+
+이 부분은 테이블 뷰에서 구현했던 코드와 거의 같습니다. JSON 형태로 읽어온 Data 객체를 JSONSerialization 객체를 사용해서 NSArray로 파싱하는 과정입니다. 다른 점은 파싱하는 타입이 NSDictionary가 아닌 NSArray라는 것입니다. 전달받은 데이터를 파싱해 보면 최상위 객체가 JSOn 객체가 아닌 JSON 배열 타입으로 작성되어 있으므로 이와 호환되는 NSArray 객체로 캐스팅해야 합니다. 
+
+//6. 읽어온 데이터를 순회하면서 self.list 배열에 추가한다.
+				for obj in apiArray!
+				{
+					self.list.append(obj as! NSDictionary)
+				}
+NSArray 배열 형태로 변환된 데이터는 이제 순회 처리할수 있으므로 for~in 구문에 넣고 차례대로 데이터를 읽어줍니다. 읽은 데이터는 self.list 배열에 집어넣어 데이터 소스로 만들어 둡니다. 데이터 소스라고 해봐야 거창한 것이 아니라고 말씀드렸을 텐데요. 그저 테이블 뷰에 들어갈수 있는 배열 형태의 데이터 집합이라고 생각하면 됩니다. 
+
+// 7. 읽어와야할 다음 페이지의 데이터 시작 위치를 구해 저장해둔다.
+self.startPoint += sList
+
+callTheaterAPI()메소드가 재호출되었을 때 동일한 데이터 범위를 다시 읽어오는 대신 그다음 범위를 읽어올수 있도록 처리하는 구문입니다. 데이터의 시작 위치를 뒤쪽으로 옮겨주고 있네요. 영화관 목록 API의 구조에 따르면 읽어들일 데이터의 범위는 다음 계산식과 같습니다. 
+
+읽어들일 데이터의 범위 = 데이터의 시작 위치 + 읽어들일 데이터 개수
+
+이를 상수로 바꾸어보면 self.startPoint + self.sLit가 됩니다. 이중에서 데이터의 개수는 항상 고정값이어야 하므로 데이터의 범위를 바꾸기 위해서는 결국 데이터의 시작점을 옮기는 수밖에없습니다. 읽어올 다음 범위만큼 시작점 위치를 뒤로 옮겨 API를 호출하면 그만큼 읽어오는 데이터의 범위가 뒤쪽으로 이동하는 결과가 만들어지거든요. 
+
+가령 한번에 읽어오는 데이터의 개수가 20개라고 했을때 맨 처음 호출시 데이터의 시작점은 0, 그다음 호출시 데이터의 시작점은 20, 그다음 호출 시에는 40이 됩니다. 즉 다음번 호출의 시작점은 이전에 호출한 시작점 + 한번에 읽어오는 데이터의 개수가 되는거죠. 이때 맨 처음 호출에서는 읽어오는 데이터의 개수를 더하면 안 되므로, 우선 데이터를 읽고 난 후에 다음번 데이터의 시작점을 미리 연산하여 저장해 놓는 방식이 적당합니다. 이 코드가 맨아래에 있는 이유입니다. 
+
+그렇다면 이 구문이 do~try 불록 바깥에 위치한 이유는 무엇일까요? 단지 필자의 실수라고 생각하시는 분 손?
+
+아닙니다. 이 구문이 do~try 블록 바깥에 위치한 이유는 읽어온 데이터 블록의 내용이 일부 잘못되어 파싱이 실패하더라도 다음 범위의 데이터를 정상적으로 읽어올수 있도록 하기 위함입니다. 
+
+do~try 블록의 특징 중 하나는 진행 중간에 오류가 발생하면 이후의 구문 실행을 모두 건너뛰고 바로 catch 블록으로 실행 흐름을 옮겨간다는 점입니다. 따라서 위 구문을 do~try 블록 내에 둔 상태에서 파싱 오류가 발생하면 더이상 다음 범위의 데이터를 읽어오지 못하게 됩니다. 시작점을 뒤로 옮겨줄 구문이 실행되지 않으니까요. 몇 번을 반복하더라도 계속 제자리 범위의 데이터만 반복해서 불러올 수 있을 뿐이고, 그에 따라 동일한 파싱 오류만 반복될 겁니다. 
+
+현실적으로 서버에서 일부 데이터에만 파싱 오류가 발생할 가능성이 적긴 하지만, 간혹 자바로 만들어진 서버에서 null 처리를 제대로 하지 않으면 특정 데이터에서만 파싱 오류가 발생하는 경우를 간혹 찾아볼수 있습니다. 이같은 현상이 발생했을 때 일단 파싱되지 못한 불량 데이터는 버리더라도 그다음 데이터를 읽어올수 있게 하기 위해 해당 구문이 do~try 블록 바깥에 위치하는 겁니다. 
+
+
+STEP9 : 이제 테이블 목록을 구현할 차례입니다. 데이터 소스 관련 메소드인 tableView(_:numberOfRowInSection:)와 tableView(_:cellForRowAt:)를 차례로 작성합니다. 내용은 아래와 같습니다. 
+
+TheaterListController.swift
+
+override func tableView(_ tableView : UITableView, numberOfRowInSection section: Int) -> Int
+{
+	return self.list.count
+}
+
+override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
+{
+	// self.list 배열에서 행에 맞는 데이터를 꺼냄
+	let obj = self.list[indexPath.row]
+
+	//재사용 큐로부터 tCell 식별자에 맞는 셀 객체를 전달받음
+	let cell = tableView.dequeueReusableCell(withIdentifier:"tCell") as! TheaterCell
+	cell.name?.text = obj["상영관명"] as? String
+	cell.tel?.text = obj["연락처"] as? String
+	cell.addr?.text = obj["소재지도로명주소"] as? String
+	return cell
+}
+
+테이블 뷰를 학습할 때 다뤄본 메소드들입니다. 내부에 작성된 구문 역시 영화 차트를 구현할 때 작성한 것과 거의 다르지 않습니다. 행 번호에 맞는 데이터를 추출하고 ,이를 이용하여 셀의 콘텐츠를 구성하는 구문이죠. 콘텐츠가 구성된 셀을 리턴하면 메소드가 할일은 모두 끝납니다. 
+
+영화관 목록 화면을 구현하는 코드가 모두 작성되었습니다. 앱을 빌드하고 실행해서 다음 화면을 확인해 봅시다. 출력한 목록에서 일견 데이터들이 중복되는 것처럼 보이겠지만 멀티플렉스 상영관이 개별 상영관으로 분류되어 있어서일 뿐 데이터가 중복되는 것은 아닙니다. 
+
+이렇게 해서 영화관 목록 화면을 구현해 보았습니다. 조금 더 욕심을 부려 보자면 영화관을 지역 별로 나누어 보여준다던가 현재의 GPS 좌표를 읽어 가장 가까운 곳에 있는 영화관 정보를 찾아주는 등의 작업을 추가할수 있겠지만 이는 우리의 학습 단계보다 조금멀리 있으므로 아직은 접어두겠습니다. 
+
+현재 이 화면에서는 더보기 버튼이 빠져 있습니다. 이 버튼은 이미 영화 목록 화면에서 구현해보았으므로 별도의 구현 과정 실습은 진행하지 않겠습니다. 다만 자료실에서 제공하는 프로젝트에는 더보기 기능을 구현해 두었으므로 이를 참고하시기 바랍니다. 
+
+여기까지의 실습 내용은 루비페이퍼 자료실에서 MyMovieChart-TabBar.zip 을 통해 확인할수 있습니다. 학습에 참고하세요.
