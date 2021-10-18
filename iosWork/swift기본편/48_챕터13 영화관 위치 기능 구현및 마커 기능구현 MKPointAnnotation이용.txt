@@ -1,0 +1,157 @@
+13.3 영화관 위치 기능 구현
+영화관 목록에 대한 상세페이지를 구현할 차례입니다. 상세 페이지는 스토리보드에 빈 뷰 컨트롤러를 추가하고, 여기에 맵킷 뷰를 추가하면 됩니다. 
+
+
+STEP1 : 스토리보드에서 영화관 목록 화면 옆에 일반 뷰 컨트롤러를 추가합니다. 
+
+
+STEP2 : 스위프트 파일을 추가하여 TheaterViewController.swift 라고 이름 짓고, 다음과 같이 작성하여 추가한 뷰 컨트롤러와 연결합니다. 
+
+TheaterViewController.swift
+
+import UIKit
+
+class TheaterViewController : UIViewController
+{
+	//전달되는 데이터를 받을 변수
+	var param: NSDictionary!
+}
+프로퍼티로 정의된 param은 영화관 목록 화면에서 사용자가 선택한 값을 전달받을 변수입니다. 영화관 목록이 사용하는 데이터가 NSDictionary 타입으로 정의되어 있으므로 이를 전달 받는 변수 역시 동일한 타입으로 정의해야 합니다. 
+
+
+STEP3 : TheaterViewController.swift 파일 상단에 import MapKit 구문을 추가합니다. 
+
+TheaterViewController.swift
+
+import UIKit
+import MapKit
+
+class TheaterViewController: UIViewController
+{
+	...(중략)...
+}
+
+우리는 조금 후에 MKMapView 타입의 변수 map을 추가할 예정인데, 이 타입은 MapKit 프레임워크에 정의되어 있습니다. 그러므로 이 타입을 사용하기 위해서는 MapKit 프레임워크를 현재의 클래스에 반입해야 합니다. UIViewController 객체를 사용하기 위해 import UIKit 을 추가하는 것과 같은 맥락입니다. 
+
+
+
+STEP4 : 오브젝트 라이브러리에서 MapKit View를 선택하여 뷰 컨트롤러에 추가합니다.  추가된 맵킷 뷰의 사이즈를 조절하여 뷰 컨트롤러 내부를 채워줍니다. 
+
+추가한 맵킷 뷰는 앱 내부에 지도를 표시해주는 뷰로, 맵킷 프레임워크에 정의된 객체입니다. 스토리보드에서는 단순히 하늘색 뷰로만 표시되어 있겠지만 앱을 실행하면 하늘색 뷰 영역은 모두 빠짐없이 지도 이미지로 가득 채워지게 됩니다. 
+
+
+STEP5 : 뷰 컨트롤러에 추가된 맵킷 뷰를 TheaterViewController 클래스로 <Ctrl> + 드래그하여 아울렛 변수 map을 생성합니다. 
+
+
+
+STEP6 : 넘어온 값 중에서 "상영관명" 항목을 이용하여 내비게이션 타이틀을 설정합니다. 
+
+TheaterViewController.swift
+
+override func viewDidLoad()
+{
+	self.navigationItem.title = self.param["상영관명"] as? String
+}
+
+
+STEP7 : 스토리보드의 영화관 목록 화면에서 테이블 뷰 셀을 클릭하고 상세 페이지 쪽으로 <Ctrl> + 드래그하여 세그웨이를 생성합니다. 세그웨이 타입은 [Show] 로 설정합니다.
+
+세그웨이가 연결되면 기존 맵킷 뷰(MapKit View)만 덩그러니 있었던 뷰 컨트롤러에 다음과 같이 내비게이션 바와 탭 바가 추가됩니다. 이것은 해당 뷰 컨트롤러가 각각 탭 바 컨트롤러와 내비게이션 컨트롤러의 제어하에 있다는 것을 의미합니다. 
+
+
+
+STEP8 : 목록과 상세 화면 사이에 연결된 세그웨이의 식별자[Identifier] 속성을 "segue_map"으로 입력합니다. 
+
+
+STEP9 : 추가된 내비게이션 바에 내비게이션 아이템(Navigation Item)을 드래그하여 추가합니다. 
+
+
+
+STEP10 : 맵킷 뷰에 지도를 나타낼 차례입니다. viewDidLoad() 메소드에 지도 처리를 위한 코드를 다음과 같이 추가합니다. 
+
+
+TheaterViewController.swift
+
+override func viewDidLoad()
+{
+	self.navigationItem.title = self.param["상영관명"] as? String
+	//1. 위도와 경도를 추출하여 Double 값으로 캐스팅
+	let lat = (param?["위도"] as! NSString).doubleValue
+	let lng = (param?["경도"] as! NSString).doubleValue
+	//2. 위도와 경도를 인수로 하는 2D 위치 정보 객체 정의
+	let location = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+	//3. 지도에 표현될 거리: 값의 단위는 m
+	let regionRadius: CLLocationDistance = 100
+	// 4. 거리를 반영한 지역 정보를 조합한 지도 데이터를 생성
+	let coordinateRegion = MKCoordinateRegion(center: location, latitudinalMeters: regionRadius, longitudinalMeters: regionRadius)
+	//5. map 변수에 연결된 지도 객체에 데이터를 전달하여 화면에 표시
+	self.map.setRegion(coordinateRegion, animated: true)
+}
+
+척 보기에도 뭔가 상당히 복잡해 보이는 코드들이 즐비하죠? 내용은 간단합니다. 하나씩 살펴보겠습니다. 
+
+1. 전달받은 값에서 위도와 경도 정보를 추출합니다. 이정보들은 String 타입으로 전달되고 있는데, 우리에게 필요한 것은 실수 타입입니다. 정확히는 Double 타입이죠. NSString 객체는 문자열을 Double 타입으로 변환해주는 doubleValue 속성이 있으므로 이를 이용하면 됩니다. String 타입으로 전달된 값을 NSString 으로 캐스팅한 것은 이 속성을 사용하기 위해서 입니다. 
+
+2. Double 타입으로 변환된 위도와 경도 정보를 이용하여 CLLocationCoordinate2D 객체를 생성합니다. 이 객체는 2D, 즉 2차원 평면 형태의 위치 정보를 저장하는 객체로 맵킷 뷰에서 나타낼 맵의 중심 좌표를 정하는 역할을 합니다. 
+
+그런데 위도와 경도를 이용하여 맵의 중심 좌표를 잡아줄수는 있지만 맵 뷰에서 맵을표현하려면 축척값도 필요합니다. 이맵이 보여줄 지역의 넓이가 얼마인가 하는 것이죠. 이 값을 누락하면 우리가 표시할 지역이 세계 지도급의 규모 위에 나타나는 난처한 상황이 벌어질 수 있습니다. 이어지는 코드에서는 이런 상황을 피하기 위한 추가적인 정보를 구성하고 있습니다. 
+
+
+3. 맵에 표현될 지역의 너비를 CLLocationDistance 객체를 이용하여 설정합니다. CLLocationDistance 타입의 상수 regionRadius에 대입되는 정수값이 맵에 표시되는 거리 (Distance)인데, 단위는 미터(m)입니다. 다시 말해 예제에서는 맵에 100미터만큼의 거리를 표현해 달라고 요청하고 있는 겁니다.  맵의 너비를 1미터 이라고 생각한다면 1:100의 비율이 되므로 이는 일종의 축척값을 나타냅니다. regionRadius 상수에 할당되는 값이 크면 클수록 축척이 작아지므로 더넓은 범위가 맵에 표현됩니다. 
+
+4. 위도와 경도를 이용하여 정의한 중심 위치 location과 거리값 regionRadius를 조합하여 맵 뷰에 전달될 MKCoordinateRegionMakeWithDistance를 생성합니다. regionRadius 인자값이 반복 사용되고 있는 것은 가로 거리, 세로 거리를 모두 동일한 값으로 잡았기 때문입니다. 
+
+5. setRegion() 메소드를 통해 MKCoordinateRegionMakeWithDistance 객체가 맵 뷰에 전달됩니다. 이 객체를 사용하여 앱 뷰는 중심 좌표를 어디로 잡을지 맵의 거리를 얼마나 표현할지 등을 결정합니다. 
+
+
+STEP11 : 마지막 단계입니다. 영화관 목록으로 돌아가 TheaterListController 클래스에 prepare(for:sender:)메소드를 추가하고 상세 화면으로 데이터를 전달하는 코드를 작성합니다. 
+
+
+TheaterListController.swift
+
+import UIKit
+class TheaterListController : UITableViewController
+{
+	...(중략)...
+	override func prepare(for segue: UIStoryboardSegue, sender: Any?)
+	{
+		if(segue.identifier == "segue_map") //실행된 세그웨이의 식별자가 segue_map이라면
+		{
+			//선택된 셀의 행보
+			let path = self.tableview.indexPath(for: sender as! UITableViewCell)
+			//선택된 셀에 사용된 데이터
+			let data = self.list[path!.row]
+			//세그웨이가 이동할 목적지 뷰 컨트롤러 객체를 구하고, 선언된 param 변수에 데이터를 연결해준다. 
+			(segue.destination as? TheraterViewController)?.param = data
+		}
+	}
+}
+
+작성이 끝났다면 이제 실행해 봅시다. 영화관 목록을 클릭하면 다음과 같은 지도가 화면에 표시될 겁니다. 맵킷 프레임워크를 구현한 맵킷 뷰이죠. 
+
+이것만으로도 훌륭하지만 아직은 좀 만족스럽지 않습니다. 우리가 찾는 위치가 정확히 어디인지 나와있지 않기 때문이겠죠. 보통 지도에서는 우리가 찾는 위치를 콕집어서 여기로구나 하고 표시해주잖아요? 우리도 원하는 위치를 표시해 봅시다. 다시 TheaterViewController 클래스를 열고 viewDidLoad() 메소드 맨 아래에 다음 세줄의 코드를 추가합니다(물론 주석을 제외하고 세 줄 입니다.)
+
+TheaaterViewController.swift
+
+override func viewDidLoad()
+{
+	...(중략)...
+	self.map.setRegion(coordinateRegion, animated: true)
+
+	// 위치를 표시해줄 객체를 생성하고, 앞에서 작성해준 위치값 객체를 할당
+	let point = MKPointAnnotation()
+	point.coordinate = location
+
+	//위치 표현값을 추가
+	self.map.addAnnotation(point)
+}
+
+지도에 특정 위치를 표시해주는 기능은 MKPointAnnotation 객체를 통해 구현할수 있습니다. 이 객체는 coordinate 속성을 통해 표시할 위치 좌표를 입력받고  지정된 맵 뷰 위에 핀 모양으로 해당 위치를 표시해 주는 역할을 합니다. coordinate 속성은 CLLocationCoordinate2D 타입으로 정의되어 있으므로 앞에서 정의한 location 상수를 대입하면 됩니다. 
+
+addAnnotation()메소드를 사용하여 MKPointAnnotation 객체를 맵 뷰에 등록하는 것으로 지도 위에 위치를 표시하는 작업이 모두 끝납니다. 맵 뷰에 표시할수 있는 핀의 개수에는 제한이 없으므로 지도 위에 여러 장소를 표시하고 싶다면 MKPointANnotation 객체를 표시할수만큼 생성하고 좌표를 지정하여 맵 뷰에 추가하면 됩니다. 이제 위치 표시가 적용된 지도를 확인해봅시다. 지정해 준 위치에 핀이 표시되어 있는 것을 볼 수 있습니다. 
+
+화면에 표시된 맵 뷰는 iOS에서 제공하는 지도 앱을 기능적으로 내장한 것이어서 특별한 기능구현 없이도 맵을 이동하거나 확대 축소 하는 등의 여러 가지 기능이 모두 제공됩니다. 주변 지물의 위치도 함께 제공되죠. 
+
+맵 뷰는 원하는 위치를 시각적으로 보여줄수 있는 만큼 위치 기반 서비스에서 사용하면 훌륭한 사용성을 기대할수 있습니다. 특히 사용자의 현재 위치를 입력받고 근처에 있는 지형지물의 위치 정보를 표현할 때 아주 요긴하게 사용되기도 합니다. 
+
+이것으로 맵킷 프레임워크를 활용하여 화면에 지도를 표현하는 과정을 익혀 보았습니다. 다루어 보지 못한 나머지 인앱 프레임워크도 사용하기에 따라 앱의 만족도를 충분히 올려줄수 있는 기능들입니다. 그러니 가급적 모두 실습해보기를 권합니다. 인앱 프레임워크의 기능을 충분히 이해한다면 앱의 기능을 설계할 때 인앱 프레임워크를 활용하여 적은 노력으로도 훌륭한 앱을 제작할수 있을 것입니다. 
