@@ -90,6 +90,8 @@ namespace SayHello.ex4
             btn.Content = "_Click me, please!";
             btn.Click += ButtonOnClick;
             Content = btn;
+            string hello = "Hello";
+            MessageBox.Show(hello.appendString(",", "World!"));
         }
 
         private void ButtonOnClick(object sender, RoutedEventArgs e)
@@ -97,4 +99,12 @@ namespace SayHello.ex4
             MessageBox.Show("The button has been clicked and all is well.", Title);
         }
     }
+    public static class StringExtension
+    {
+        public static string appendString(this string myString, string str1, string str2)
+        {
+            return myString + str1 + str2;
+        }
+    }
+
 }
