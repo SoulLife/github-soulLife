@@ -1,0 +1,67 @@
+9.3.1 자동 구현 프로퍼티 뒤에서 일어나는 일
+자동 구현 프로퍼티가 편하다는건 이제 우리 모두 잘 알게 되었습니다. 그런데 궁금하지 않습니까? C# 컴파일러가 보이지 않는 곳에서 자동 구현 프로퍼티를 위해 하는 일들 말입니다. 다음 그림은 이 번 장에서 제일 처음 만들었던 Property 예제 프로그램을 비주얼 스튜디오와 함께 제공되는 .NET디어셈블리 도구인 ildasm.exe로 열어본 결과입니다. Property.BirthdayInfo 클래스 안에 마름모 아이콘의 brithday와 name필드가 보이지요? 이들은 우리가 코드에서 직접 선언한 인스턴스입니다. 
+
+이번에는 ildasm.exe로 방금 전에 만들어본 AutoImplementedProperty 예제 프로그램을 열어보겟습니다. 앗 AutoImplementedProperty.BrithdayInfo 안쪽을 보세요. 여기에도 마름모아이콘의 필드가 두 개 보이는 군요 <Brithday>k_BackingField와 <Name>k_BackingField말입니다. 이 필드는 우리가 선언하지도 않았는데 어디서 나타났을까요? C# 컴파일러가 자동으로 구현해줬습니다. <Birthday>k_BackingField는 Birthday 프로퍼티를 위해, <Name>k_BackingField는 Name 프로퍼티를 위해 컴파일러가 물밑에서 선언해준 것입니다. 덕분에 우리는 한결 편한 프로그래밍을 할 수 있게 됐습니다. 
+
+
+
+
+9.4 프로퍼티와 생성자
+8장에서 객체를 생성할 때 매개변수를 입력받아 객체의 각 필드를 초기화하는 방법에 대해 이야기 했습니다. 이번에는 객체를 생성할 때 각 필드를 초기화하는 또다른 방법을 소개하려 합니다. 바로 프로퍼티를 이용한 초기화입니다. 그형식은 다음과 같습니다. 
+
+클래스이름 인스턴스 = new 클래스이름()
+	{
+		프로퍼티1 = 값,
+		프로퍼티2 = 값,
+		프로퍼티3 = 값
+	};
+이와같이 객체를 생성할 때 <프로퍼티=값> 목록에 객체의 모든 프로퍼티가 올 필요는 없습니다.
+여러분이 초기화하고 싶은 프로퍼티만 넣어서 초기화하면 됩니다. 매개변수가 있는 생성자를 작성할 때와 달리 어떤 필드를 생성자 안에서 초기화할지 미리 고민할 필요가 없습니다. 앞에서 만들었던 BirthdayInfo 클래스를 예로 들어 프로퍼티를 이용한 객체를 생성하고 초기화해보겠습니다. 
+
+BirthdayInfo birth = new BirthdayInfo()
+	{
+		Name = "서현",
+		Birthday = new DateTime(1991, 6, 28)
+	};
+
+
+
+
+
+9.5 초기화 전용 (Init-Only)자동 구현 프로퍼티
+의도치 않게 데이터가 오염되는 일이 종종 있는데 C#에는 데이터 오염을 방지할수 있는 장치가 여럿있습니다. 접근 한정자 readonly 필드, readonly 구조체, 튜플 등이 그 예죠. 하지만 프로퍼티를 읽기 전용으로 선언하는 방법이 조금 불편했는데요. 다음과 같이 생성자를 통해 필드를 초기화하고 그 필드에 접근하는 프로퍼티는 get 접근자만 갖도록 해야 했습니다. 
+
+class Transaction
+{
+	public Transaction(string _from, string _to, int _amount)
+	{
+		from = _from; to = _to; amount = _amount;
+	}
+	string from;	
+	string to;
+	int amount;
+
+	public string From { get{ return from; } }
+	public string To { get { return to; } }
+	public int Amount { get { return amount; }}
+}
+
+C#9.0에 이르러서는 읽기 전용 프로퍼티를 아주 간편하게 선언할수 있도록 개선되었습니다. init접근자가 새로 도입되었거든요. init 접근자는 set 접근자처럼 외부에서 프로퍼티를 변경할수 있지만, 객체 초기화를 할 때만 프로퍼티 변경이 가능하다는 점이 다릅니다. init를 사용하는 방법은 다음과 같습니다. 자동 구현프로퍼티를 선언하면서 set 접근자 대신 init 접근자를 명시하면 됩니다. 
+이렇게 선언한 프로퍼티를 "초기화 전용 자동 구현" 프로퍼티라고 합니다. 
+
+public class Transaction
+{
+	public string From { get; init; }
+	public string To {get; init; }
+	public int Amount { get; init; }
+}
+
+예제 프로그램을 만들어서 초기화 전용 자동 구현 프로퍼티를 테스트해보세요. 초기화가 한 차례 이루어진 후 변경되면 안되는 데이터에 어떤 것이 있을까요? 성적표, 범죄기록, 각종 국가 기록, 금융 거래 기록 등등 이루 셀수 없습니다. 우리는 그중에서 돈 거래를 표현하는 Transaction 클래스를 예제 코드에 선언하고, 이 클래스의 프로퍼티(From은 주는사람, To는 받는 사람, Amount는 거래량을 의미)를 초기화 전용으로 만들어보겠습니다. 
+
+객체 초기화가 이루어진 후에 초기화 전용 자동 구현 프로퍼티를 수정하려 들면 어떤 일이 생길까요? Bob이 Alice에게 빌린 100달러를 갖고 싶지 않아서 30달러만 받았다고 다음 코드와 같이 장부를 수정한다면 말입니다. 
+
+Transaction tr1 = new Transaction{From="Alice", To="Bob", Amount=100};
+tr1.Amount = 30; //컴파일 에러 발생
+
+init접근자는 초기화 이후에 발생하는 프로퍼티 수정을 허용하지 않으므로, C# 컴파일러는 다음과같은 에러 메시지를 출력합니다. 
+MainApp.cs(30, 13) error CS8852: 초깃값 전용 속성 또는 인덱서 Transaction.Amount은(는) 개체 이니셜라이저 또는 인스턴스 생성자나 init 접근자의 this또는 base에만 할당할수 있습니다. 
