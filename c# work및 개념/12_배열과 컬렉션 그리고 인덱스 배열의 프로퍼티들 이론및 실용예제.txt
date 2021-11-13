@@ -1,0 +1,191 @@
+CHAPTER10 : 배열과 컬렉션 그리고 인덱서
+링크드인(Linked In)으로 인맥 관리를 하는 것이 대세라고는 하나, 명함은 여전히 중요한 인맥 관리 수단입니다. 프로그래머들은 명함을 잘 사용하지 않는 편이지만 영업사원처럼 사람들과 많이 만나는 일을 하는 분은 명함을 많이 사용합니다. 이 분들은 자기 명함만 많이 돌리는 것이 아닙니다. 다른 사람들의 명함을 자신이 돌리는 명함 수의 몇 배로 수집합니다. 이렇게 다른 사람들의 명함을 많이 얻으면 이 명함들을 잘 관리할수 있는 방법을 고민합니다. 그방법중 하나는 명함집을 이용하는 것입니다. 
+
+우리가 지금까지 다뤄왔던 변수를 명함이라 한다면 배열이나 컬렉션은 명함집이라 할 수 있습니다. 명함집이 영업사원의 명함 관리 고민을 덜어주는 것처럼 이번 장에서 설명할 배열과 컬렉션은 프로그래머의 데이터 관리 고민을 덜어줍니다. 배열부터 이야기를 시작하겠습니다. 
+
+
+10.1 All for one, one for all
+프로그램을 작성하다 보면 같은 성격을 띤 다수의 데이터를 한번에 다뤄야 하는 경우가 자주 생깁니다. 학생들의 역사 점수, 받은 편지함에 있는 메일들, 게임 서버에 로그인해 있는 클라이언트들이 그런 예이지요. 비교적 그럴듯한 예만 뽑아봤는데, 사실 이런 경우 외에도 여러분은 앞으로 별 시답잖은 상황에서 같은 성격을 가진 다량의 데이터를 다루게 될 것 입니다. 이런 데이터를 다루려면 어떻게 해야 할까요? 물론 데이터를 담는 변수가 필요합니다. 예를 들어 학생 수가 5명인 학급의 역사 점수를 변수에 담아보겠습니다. 
+
+int score_1 = 80;
+int score_2 = 74;
+int score_3 = 81;
+int score_4 = 90;
+int score_5 = 34;
+다섯 명의 학생을 위한 다섯 개의 변수를 선언했고, 여기에 다섯 명의 점수를 입력했습니다. 아직까지는 별 문제가 없어 보입니다. 오 그런데 학교 근처에 새 아파트 단지가 들어서면서 학생 수가 급증했습니다. 한 학급에 50명씩 배정된다는군요. 변수를 45개 더 선언할까요? 전혀 틀린 방법은 아니지만, 한번 생각해보세요. 한 학년이 수백 명으로 늘었을 때 이 프로그램으로 역사 점수를 다뤄야 한다면 어떻게 하죠? 마냥 변수의 개수를 늘려 선언할 수만은 없는 노릇입니다. 
+
+배열은 이런 문제를 해결해줍니다. 마치 데이터를 담는 상자와 같아서 필요한 용량을 가진 배열을 만든 다음 여기에 데이터를 넣을수 있거든요. 예를 들어 300개의 변수 대신, 300개의 용량을 가진 변수를 한 개만 선언해서 사용하면 됩니다. 배열은 다음과 같은 형식으로 선언합니다. 
+대괄호 [와 ]가 포인트입니다. 
+
+데이터형식[] 배열이름 = new 데이터형식[용량];
+
+예를 들어 용량이 5개인 int 형식의 배열은 다음과 같이 선언할수 있습니다. 
+int[] scores = new int[5];
+
+배열의 각 요소에 데이터를 저장하거나 요소안에 있는 데이터를 읽어올 때는 배열 이름뒤에 괄호[ 와 ]를 붙여주고 괄호 사이에 인덱스(index)를 적어주면 됩니다. 여기서 주의할 점이 있는데 바로 인덱스는 1이 아닌 0부터 시작한다는 사실입니다. 아까는 학생 5명의 성적을 담기 위해 5개의 변수를 선언했었죠? 이번에는 배열에 이 데이터를 담아보겠습니다. 
+
+int[] scores = new int[5];
+scores[0] = 80;
+scores[1] = 74;
+scores[2] = 81;
+scores[3] = 90;
+scores[4] = 34;
+
+아직까지는 배열이 뭐가 좋은지 잘 모르겠다고요? 그럼 몇 가지 예를 통해 변수와 배열을 비교해보겠습니다. 먼저 학생들의 성적을 차례대로 출력하는 코드를 보시죠. 
+
+변수					배열
+Console.WriteLine(score_1);			foreach(int score in scores)
+Console.WriteLine(score_2);				Console.WriteLine(score);
+Console.WriteLine(score_3);
+Console.WriteLine(score_4);
+Console.WriteLine(score_5);
+같은 성격의 데이터라면 변수를 사용하는 것보다 배열로 정의한 다음 for 문이나 foreach문과 함께 사용하는 것이 코드를 훨씬 더 간결하게 만들수 있습니다. 이번에는 학생들의 평균 성적을 구해보겠습니다. 
+
+변수					배열
+int average=(score_1 + score_2+		int sum = 0;
+score_3 + score_4 + score_5)/5;		foreach(int score in scores)
+						sum += score;
+					int average = sum / scores.Length;
+일견 변수를 이용한 코드가 더 간결해 보이지만 학생 수가 50명으로 늘어난 경우를 생각해보면 그렇지 않음을 알 수 있습니다. 학생수가 늘어나면 변수를 이용한 코드에서는 합을 구하는 부분에 늘어난 학생 수만큼 변수의 이름을 넣어줘야 합니다. 하지만 배열을 이용한 코드는 바꿔줄 것이 하나도 없습니다. 이말은 즉 프로그램에 변경 사항이 생겼을 때 배열을 이용한 쪽이 코드 관리가 훨씬 쉽다는 이야기입니다. 
+
+이제 우리는 배열에 접근할 때 첫번째 요소의 인덱스는 0, 두번째 인덱스는 1, 세번째 인덱스는 2 마지막 인덱스는 배열길이 -1로 지정한다는 사실을 알고 있습니다. 배열 인덱스가 0으로 시작하니까 첫번째 요소를 기준으로 접근할 때는 큰 불편이 없지만 마지막 요소를 기준으로 접근하고 싶을 때는 약간의 트릭이 필요합니다. 가령 다음과 같이 길이가 5인 배열의 마지막 요소에 접근하려면 배열의 길이를 먼저 알아내고 거기서 1을 빼야합니다. 
+
+int[] scores = new int[5];
+scores[scores.Length-1] = 34; //scores[4] = 34; 와 동일
+
+C# 8.0부터는 이런 불편을 없앤 System.Index 형식과 ^연산자가 생겼습니다. ^연산자는 컬렉션의 마지막부터 역순으로 인덱스를 지정하는 기능을 갖고 있습니다. ^1은 컬렉션의 마지막 요소를 나타내는 인덱스, ^2는 마지막에서 두 번째 , ^3은 마지막에서 세번째를 나타내는 인덱스입니다. 아직 어려운가요? 그럼 ^를 Length와 같다고 생각하면 이해가 한결 쉬워질 겁니다. 익숙해지기 전까지 ^0은 scores.Length-0이라고 생각하는 겁니다.(scores.Length-0은 scores.Length이니까 이 값을 인덱스로 사용하면 프로그램은 예외를 일으킬 겁니다.) 앞의 예제에서 scores배열의 마지막 요소에 접근하는 인덱스를 구할 때 scores.Length-1을 계산했죠? 그러니까 ^1은 scores.Length-1과 같습니다. 한마디로 ^1은 배열의 마지막을 나타내는 인덱스입니다. 
+^연산자의 연산결과는 System.Index형식의 인스턴스로 나타납니다. 앞의 예제를 System.Index와 ^연산자를 이용해서 수정하면 다음과 같이 바꿀 수 있습니다. 
+
+System.Index last = ^1;
+scores[last] = 34; //scores[scores.Length-1] = 34;와 동일
+
+다음과 같이 System.Index의 인스턴스를 만들지 않는 더 간결한 버전도 가능합니다. 
+scores[^1] = 34; //scores[scores.Length-1] = 34;와 동일
+
+
+
+
+
+10.2 배열을 초기화하는 방법 세 가지
+이번에는 배열을 초기화하는 세 가지 방법을 알아보겠습니다. 첫 번째 방법은 이렇습니다. 배열의 원소 개수를 명시하고, 그 뒤에 중괄호 {와 }로 둘러싸인 블록을 붙인 뒤 블록 사이에 배열의 각 원소에 입력될 데이터를 입력합니다. 이렇게 배열 객체를 초기화하는 {} 블록을 일컬어 컬렉션 초기자(Collection Initializer)라고 부릅니다. 중요한 것은 아니지만 이름 정도는 알아두면 좋겠죠?
+
+string[] array1 = new string[3] <<배열의 용량을 명시 { "안녕", "Hello", "Halo"};
+
+
+두번째 방법은 첫 번째 방법에서 배열의 용량을 생략하는 것입니다. 다음과 같이 초기화해도 컴파일러는 첫 번째 방법을 이용해서 초기화한 것과 동일한 실행 파일을 만듭니다. 
+
+string[] array2 = new string[]{ "안녕", "Hello", "Halo" };
+
+마지막으로 세 번째 방법을 살펴보겠습니다. new 연산자, 형식과 대괄호 [와 ], 배열의 용량을 모두 생략한 채 코드 블록 사이에 배열의 각 원소에 할당할 데이터를 넣어주는 방법입니다. 문법은 훨씬 간편해졌지만 그 결과는 첫 번째/ 두번째 방법과 똑같습니다. 
+
+string[] array3 = { "안녕", "Hello", "Halo"};
+
+이렇게 세 가지 배열의 초기화 방법을 보면 세 번째 방법만 사용할것 같지만 꼭 그렇지도 않습니다. 코드를 작성할 때 세번째 방법이 편한 것은 사실입니다. 하지만 코드를 다른 사람이 물려받거나 동료들과 공유해야 할 때는 상대방이 읽기 편하도록 첫 번째 방법을 쓰는 것이 좋습니다. 물론 어느 방법을 쓰느야에 관한 것은 순전히 취향 문제이므로 여러분이 좋을 대로 하면 됩니다. 
+
+
+
+
+
+10.3 알아두면 삶이 윤택해지는 System.Array
+C#에서는 모든 것이 객체입니다. 배열도 객체이며, 당연히 기반이 되는 형식이 있습니다. .NET의 CTS(Common Type System)에서 배열은 System.Array 클래스에 대응됩니다. 다음 예제 프로그램은 int 기반의 배열이 System.Array 형식에서 파생되었음을 보여줍니다. 
+
+using System;
+
+namespace DerivedFromArray
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			int[] array = new int[]{ 10, 30, 20, 7, 1};
+			Console.WriteLine($"Type of array : {array.GetType()}");
+			Console.WriteLine($"Base type of array: {array.GetType().baseType}");
+		}
+	}
+}
+
+따라서 System.Array의 특성과 메소드를 파악하면 배열의 특성과 메소드를 알게 되는 셈이며, 보너스로 배열을 이용하여 재미있는 일들도 할 수 있습니다. 예를 들어 배열의 내부 데이터를 원하는 순서대로 정렬한다든가, 특정 데이터를 배열 속에서 찾아내는 작업들 말입니다. System.Array 클래스에는 수십가지 메소드와 프로퍼티가 있지만 지면을 절약하기 위해 우리는 그중에서 자주 사용하게 될 몇 가지만 살펴보겠습니다. 
+다음표는 Array 클래스의 주요 메소드와 프로퍼티를 나타냅니다. 
+
+
+분류		이름			설명
+정적메소드	Sort()			배열을 정렬합니다.
+		BinarySearch<T>()		이진 탐색을 수행합니다. 꺾쇠 괄호<, >와 그 사이에 있는 T에 대해선 잠시후에 설명하겠습니다. 
+		IndexOf()			배열에서 찾고자 하는 특정 데이터의 인덱스를 반환합니다. 
+		TrueForAll<T>()		배열의 모든 요소가 지정한 조건에 부합하는지의 여부를 반환합니다. 
+		FindIndex<T>()		배열에서 지정한 조건에 부합하는 첫 번째 요소의 인덱스를 반환합니다. IndexOf()메소드가 특정 값을 찾는데 비해
+					FineIndex<T>()메소드는 지정한 조건에 바탕하여 값을 찾습니다. 
+		Resize<T>()		배열의 크기를 재조정합니다.
+		Clear()			배열의 모든 요소를 초기화합니다. 배열이 숫자 형식 기반이면 0으로, 논리형식 기반이면 false로 참조형식 기반이면
+					null로 초기화합니다.
+		ForEach<T>()		배열의 모든 요소에 대해 동일한 작업을 수행하게 합니다. 
+		Copy<T>()		배열의 일부를 다른 배열에 복사합니다. 
+
+인스턴스 메소드	GetLength()		배열에서 지정한 차원의 길이를 반환합니다. 이 메소드는나중에 설명할 다차원 배열에서 유용하게 사용됩니다. 
+
+프로퍼티		Length			배열의 길이를 반환합니다.
+		Rank			배열의 차원을 반환합니다. 
+
+이 표에서 어려운 내용은 별로 없지만, 몇몇 메소드는 좀 이상하게 보이네요. BinarySearch, TrueForAll, FindIndex, Resize, ForEach처럼 뒤에 <T>를 붙이고 다니는 메소드 말입니다. <T>는 형식 매개변수(Type Parameter)라고 하는데, 이들 메소드를 호출할 때는 T 대신 배열의 기반 자료형을 인수로 입력하면 컴파일러가 해당 형식에 맞춰 동작하도록 메소드를 컴파일합니다. 자세한 내용은 일반화 프로그래밍에서 다룰 테니 여기서는 이정도로만 이야기하겠습니다. 
+
+Array 클래스의 메소드와 프로퍼티를 활용하는 예제를 준비했습니다. 다음 예제 코드를 따라 작성하면서 배열을 다루는 연습을 해보세요. 
+
+using System;
+
+namespace MoreOnArray
+{
+	class MainApp
+	{
+		private static bool CheckPassed(int score)
+		{
+			return score >= 60;
+		}
+		private static void Print(int value)
+		{
+			Console.WriteLine($"{value} ");
+		}
+		static void Main(string[] args)
+		{
+			int[] scores = new int[]{80, 74, 81, 90, 34};
+			foreach (int score in scores)
+				Console.WriteLine($"{score} ");
+			Console.WriteLine();
+
+			Array.Sort(scores);
+			Array.ForEach<int>(scores, new Action<int>(Print));
+			Console.WriteLine();
+	
+			Console.WriteLine($"Number of dimensions : {scores.Rank}");
+
+			Console.WriteLine($"Binary Search : 81 is at " + $"{Array.BinarySearch<int>(scores, 81)}");
+		
+			Console.WriteLine("Linear Search : 90 is at " + $"{Array.IndexOf(scores, 90)}");
+
+			Console.WriteLine($"Everyone passed ? : " + $"{Array.TrueForAll<int>(scores, CheckPassed)}");
+
+			int index = Array.FindIndex<int>(scores, (score) => score < 60); //FindIndex메소드는 특정 조건에 부합하는 메소드를 매개변수로 받									         습니다. 여기에선 람다식으로 구현해봤습니다. 람다식은 처음 보지									         요? 이 친구는 14장에서 다시 소개하겠습니다. 
+
+			scores[index] = 61;
+			Console.WriteLine($"Everyone passed ? : " + $"{Array.TrueForAll<int>(scores, CheckPassed)}");
+		
+			Console.WriteLine("Old length of scores : " + $"{scores.GetLength(0)}");
+
+			Array.Resize<int>(ref scores, 10); // 5였던 배열의 용량을 10으로 재조정합니다.
+			Console.WriteLine($"New length of scores : {scores.Length}");
+
+			Array.ForEach<int>(scores, new Action<int>(Print)); //Action 대리자에 대해서는 14장에서 다시 자세하게 설명하겠습니다.
+			Console.WriteLine();
+
+			Array.Clear(scores, 3, 7);
+			Array.ForEach<int>(scores, new Action<int>(Print));
+			Console.WriteLine();
+
+			int[] sliced = new int[3];
+			Array.Copy(scores, 0, sliced, 0, 3); //이 코드는 scores배열의 0번째 부터 3개 요소를 sliced배열의 0번째~2번째 요소에 차례대로 복사						         합니다. 
+			Array.ForEach<int>(sliced, new Action<int>(Print));
+			Console.WriteLine();
+		}
+	}
+}
+
+scores배열의 일부를 sliced 라는 배열에 복사합니다. 이렇게 배열의 일부를 다른 곳에 복사하는 것을 분할(Slice)한다고 표현하기도 하는데요. 다음 절에서는 C#8.0에 도입된 조금더 편리한 분할 방법을 알아보겠습니다. 
