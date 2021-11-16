@@ -1,0 +1,341 @@
+CHAPTER 11 : 일반화 프로그래밍
+C#은 프로그래머가 작성한 하나의 코드가 여러 가지 데이터 형식에 맞춰 동작할수 있도록 하는 일반화프로그래밍을 지원합니다. 일반화 프로그래밍이 일견 시시한 제목처럼 보여도 프로그래머의 코드 생산성을 좌우하는 아주 중요한 내용입니다. 특히 일반화 컬렉션은 꼭 익혀둘 필요가 있습니다. 
+
+
+
+11.1 일반화 프로그래밍이란?
+사람, 돼지, 오리너구리, 고래는 사는 곳이 다릅니다. 사람과 돼지는 땅 위에서 생활하고 고래는 물속에서 삽니다. 오리너구리는 땅과 물 양쪽에서 생활합니다. 번식 방법도 다릅니다. 사람, 돼지, 그리고 고래는 새끼를 낳지만 오리너구리는 알을 낳습니다. 이들은 이렇게 각자의 특징을 갖는 동물이지만 놀랍게도 새끼에게 양분을 공급하는 방식은 똑같습니다. 네, 바로 수유 말입니다. 그래서 이들을 묶는 공통 개념을 포유류 라고 하지요. 
+이처럼 특수한 개념으로부터 공통된 개념을 찾아 묶는 것을 일반화(Generalization)라고 합니다. 우리가 이번 장에서 다룰 일반화 프로그래밍(Generic Programming)은 이러한 일반화를 이용하는 프로그래밍 기법입니다. 일반화 프로그래밍은 일반화하는 대상이 조금 특이한데, (놀라지 마세요) 바로 데이터 형식(Data Type)입니다. 
+
+예를 하나 들어볼까요? 다음과 같이 정수형 1차원 배열을 복사하는 메소드를 작성했다고 해보죠. 
+
+void CopyArray(int[] source, int[] target)
+{
+	for(int i=0; i<source.Length; i++)
+		target[i] = source[i];
+}
+
+CopyArray()메소드를 잘 사용하고 있었는데, 이번에는 문자열 배열을 복사하는 기능이 필요해졌습니다. 그래서 CopyArray()메소드를 다음과 같이 오버로딩 했습니다. 
+
+void CopyArray(string[] source, string[] target)
+{
+	for(int i=0; i<source.Length; i++)
+		target[i] = source[i];
+}
+
+으악! 이번에는 MyClass 형식의 배열을 복사해야 할 필요가 생겼습니다. 그 다음에는 YourClass형식을 지원해야 했습니다. 그 다음에도 같은 작업을 반복해서 CopyArray()의 버전은 점점 늘어만 갔습니다. 이런 식으로 31가지 데이터 형식을 지원하는 CopyArray()메소드를 만들어야 한다면 여러분은 어떻게 하겠습니까? 뭐 별 뾰족한 수가 없으니 31가지 버전으로 CopyArray()를 오버로딩하겠지요. 하지만 한번 생각해보세요. 31가지 버전의 CopyArray()들은 매개변수에 입력되는 배열의 형식만 다를 뿐, 내부 논리는 똑같습니다. 그렇다면 특수한 형식을 사용하는 코드를 일반화한다면 CopyArray()메소드를 31개 버전으로 오버로딩하지 않고도 모든 형식을 지원할수 있지 않을까요? 일반화 프로그래밍은 바로 이런 아이디어를 바탕으로 만들어진 프로그래밍 패러다임 입니다. 
+
+
+
+
+11.2 일반화 메소드
+일반화 메소드(Generic Method)는 이름처럼 (데이터 형식을)일반화한 메소드입니다. 일반화 메소드가 어떤 장점이 있는지는 잠시 후에 알아보고, 우선 일반화 메소드를 어떻게 선언하는지부터 살펴보겠습니다. 일반화 메소드의 선언 문법은 일반 메소드의 선언 문법과 대부분 비슷합니다. 다만 일반화 할 형식이 들어갈 자리에 구체적인 형식의 이름 대신 형식 매개변수(Type Parameter)가 들어간다는 사실이 다릅니다. (이 말이 이해되지 않아도 걱정 마세요. 잠시 후 예제를 통해 확실히 이해하게 될 것입니다. )
+
+한정자 반환_형식 메소드이름<형식_매개변수> (매개변수_목록)
+{
+	//...
+}
+
+형식 매개변수는 예제를 통해 설명하겠습니다. 앞에서 봤던 CopyArray()코드를 일반화해볼게요. 다음에 int와 string 형식의 배열을 복사하는 CopyArray()메소드 선언 코드를 소환했습니다. 
+
+//int 버전
+void CopyArray(int[] source, int[] target)
+{
+	for(int i=0; i<source.Length; i++)
+		target[i] = source[i];
+}
+
+//string 버전
+void CopyArray(string[] source, string[] target)
+{
+	for(int i=0; i<source.Length; i++)
+		target[i] = source[i];
+}
+
+//기타 형식 등등 버전
+//...
+
+이 코드에서 데이터 형식이 사용된 부분을 T기호로 치환해봅시다. T는 형식(Type)을 뜻합니다. 
+
+void CopyArray(T[] source, T[] target)
+{
+	for(int i=0; i<source.Length; i++)
+		target[i] = source[i];
+}
+
+저나 여러분이나 T가 C#이 지원하는 형식이 아님을 잘 알고 있습니다.(적어도 기본 형식에는 포함되어 있지 않습니다. )따라서 이 코드를 컴파일하면 컴파일 에러가 날 거라는 사실도 알고 있지요. 이 코드를 컴파일하려면 T가 구체적으로 어떤 형식인지 알려줘야 합니다. 형식 매개변수를 입력하는 방법은 이렇습니다. 메소드 이름뒤에 홑화살괄호<와>를 넣어주고 그 사이에 T를 넣으면 T는 형씩 매개변수(Type Parameter)가 됩니다. CopyArray()를 호출할 때 < > 사이에 T 대신 형식의 이름을 입력하면 컴파일러는 메소드의 나머지 부분에 대해서도 T를 형식 매개변수 값으로 치환합니다. 
+
+void CopyArray<T>(T[] source, T[] target)
+{
+	for(int i=0; i<source.Length; i++)
+		target[i] = source[i];
+}
+
+이제 일반화 메소드 CopyArray()를 호출해보겠습니다. 
+
+int[] source = {1,2,3,4,5};
+int[] target = new int[source.Length];
+
+CopyArray<int>(source, target) //형식 매개변수 T에 int를 대입합니다. 
+foreach(int element in target)
+	Console.WriteLine(element);
+
+멋지지 않습니까? 이제 CopyArray()는 어떤 형식의 배열이든 복사할수 있습니다. 31가지 형식뿐 아니라 310가지 형식도 지원할수 있습니다. 그저 홑화살괄호 <와 >사이에 형식 이름만 넣어주면 되니말입니다.
+
+
+
+
+
+
+11.3 일반화 클래스
+예상하고 있겠지만 일반화 클래스는(데이터 형식을) 일반화한 클래스입니다. 일반화 클래스를 선언하는 문법은 다음과 같습니다. 일반화 메소드가 그랬던 것처럼, 일반화 클래스도 형식 매개변수가 있는 것을 제외하면 보통의 클래스와 똑같습니다. 
+
+class 클래스이름 <형식_매개변수>
+{
+	//...
+}
+
+다음 자료구조 클래스를 살펴보겠습니다. Array_Int와 Array_Double은 기능이 같은 클래스입니다. 하지만 내부적으로 사용하는 데이터 형식이 다르므로 클래스를 분리해서 구현했습니다. 
+
+class Array_Int
+{
+	private int[] array;
+	//...
+	public int GetElement(int index)  { return array[index]; }
+}
+
+class Array_Double
+{
+	private double[] array;
+	//...
+	public double GetElement(int index) { return array[index]; }
+
+이 두 클래스는 데이터 형식만 빼고 다른 부분이 모두 같으니 일반화할수 있습니다. 다음은 형식 매개변수를 이용해서 앞의 코드를 일반화 클래스로 개선한 예입니다. 
+
+class Array_Generic<T>
+{
+	private T[] array;
+	//...
+	public T GetElement(int index) { return array[index]; }
+}
+
+자 그럼 Array_Generic 클래스는 어떻게 사용할까요? 다음과 같이 사용합니다. 
+
+Array_Generic<int> intArr = new Array_Generic<int>();
+Array_Generic<double> doubleArray = new Array_Generic<double>();
+
+Array_Generic 클래스의 형식 매개변수 T는 객체를 생성할 때 입력받은 형식으로 치한되어 다음과 같이 컴파일 됩니다. 
+
+
+
+
+
+11.4 형식 매개변수 제약시키기
+일반화 메소드나 일반화 클래스가 입력받는 형식 매개변수 T는 모든 데이터 형식을 대신할수 있었습니다. 이렇게 모든 형식에 대응할수 있는 형식 매개변수가 필요한 때도 있지만 종종 특정 조건을 갖춘 형식에만 대응하는 형식 매개변수가 필요할 때도 있습니다. 이때 우리는 형식 매개변수의 조건에 제약을 줄 수 있습니다. 
+
+예를 들어 앞서 만들었던 MyList<T> 클래스의 형식 매개변수 T에 MyClass로부터 상속받는 형식이어야 할것 이라는 제약을 주려면 다음과 같이 클래스 선언문의 헤더에 where 절을 추가해줍니다. 
+
+class MyList<T> where T : MyClass
+{
+	//...
+}
+
+일반화 메소드의 예도 들어볼까요? CopyArray<T>() 의 형식 매개변수 T에 값 형식이어야 할것 이라는 제약은 다음과 같이 줄수 있습니다. 
+void CopyArray<T>(T[] source, T[] target) where T : struct
+{
+	for(int i=0;i <source.Length; i++)
+		target[i] = source[i];
+}
+눈치채셨겠지만 일반화 코드에서 형식을 제약하는 문법은 다음과 같으며 형식 매개변수에 대한 일반화 클래스나 일반화 메소드 모두에 동일하게 사용됩니다. 
+
+where 형식 매개변수 : 제약조건
+
+제약 조건에는 여러 가지가 올 수 있는데, 다음 표에 where 절과 함께 사용할수 있는 제약 조건이 정리되어 있습니다. 
+
+
+
+
+제약					설명
+where T : struct				T는 값 형식이어야 합니다. 
+where T : class				T는 참조형식이어야 합니다.
+where T : new()				T는 반드시 매개변수가 없는 생성자가 있어야 합니다. 
+where T : 기반_클래스_이름			T는 명시한 기반 클래스의 파생 클래스여야 합니다. 
+where T : 인터페이스_이름			T는 명시한 인터페이스를 반드시 구현해야 합니다. 인터페이스_이름에는 여러 개의 인터페이스를 명시할수도 있습					니다.
+where T : U				T는 또다른 형식 매개변수 U로부터 상속받은 클래스여야 합니다. 
+
+각 제약 조건에 대한 예를 하나씩 들어보겠습니다. 일단 struct는 앞의 CopyArray<T>()메소드에서 사용 예를 확인했고, class도 struct와 사용법이 거의 같으니 지나가겠습니다. 그리고 형식 매개변수를 특정 클래스의 파생 클래스로 한정 짓는 것도 조금전에 예제 코드로 설명했으니 이것 역시 지나가겠습니다. 제약 조건이 인터페이스를 구현하는 클래스인 경우도 기반 클래스의 파생 클래스인 경우와 사례가 거의 같으므로 지나갈게요. 그럼 우리가 다뤄보지 않은 것은 제약 조건이 new()와 형식 매개변수 U, 두 가지로 좁혀지네요. 지금부터 이 두가지의 예를 들어보겠습니다. 
+
+먼저 new()의 예를 보겠습니다. 다음 코드의 CreateInstance<T>()메소드는 기본 생성자를 가진 어떤 클래스의 객체라도 생성해줍니다. 이 메소드를 호출할 때 기본 생성자가 없는 클래스를 형식 매개변수에 넘기면 어떻게 되냐고요? 당연히 컴파일 에러가 납니다. 
+
+public static T CreateInstance<T>() where T : new()
+{
+	return new T();
+}
+
+다음은 상위 코드에서 사용되던 형식 매개변수 U로부터 상속받는 형식으로 제약 조건을 주는 예입니다. 다음 코드의 CopyArray<T>()는 소속 클래스인 BaseArray<U>의 형식 매개변수 U로부터 T가 상속받아야 할것을 강제하고 있습니다. 
+
+class BaseArray<U> where U : Base
+{
+	public U[] Array{ get; set; }
+	public BaseArray(int size)
+	{
+		Array = new U[size];
+	}
+	public void CopyArray<T>(T[] source) where T : U
+	{
+		Source.CopyTo(Array, 0);
+	}
+}
+
+머릿속이 빙글빙글하지요? 당장 이해가 가지 않는다거나 읽기가 어려워 보인다고해서 염려할 것은 없습니다. 조금만 연습해보면 자연스럽게 일반화 코드를 읽고 쓸 수 있게 될 겁니다. 
+
+
+
+
+
+11.5 일반화 컬렉션
+컬렉션은 이미 10장에서 소개된 적이 있습니다. 이때 등장했던 컬렉션 클래스들은 모두 object형식을 기반으로 했습니다. 어떤 형식이든(기본 데이터 형식이든, 복합 데이터 형식이든, 참조형식이든, 값 형식이든)간에 object 형식을 상속하므로 object 형식으로 형식 변환이 가능합니다. 10장의 컬렉션들은 바로 이점을 이용해서 만들어진 자료구조입니다. 우리는 이들 컬렉션 객체에 int 형식 데이터도, string 형식 데이터도, MyClass 의 객체도 담을 수 있었습니다. 
+
+이들 컬렉션은 object 형식에 기반하고 있기 때문에 태생적으로 성능 문제를 안고 있습니다. 컬렉션의 요소에 접근할 때마다 형식 변환이 주야장천 일어나기 때문입니다. 
+
+일반화 컬렉션은 object 형식 기반의 컬렉션이 갖고 있던 문제를 말끔히 해결합니다. 일반화 컬렉션은 말 그대로 일반화에 기반해서 만들어져 있기 때문에 컴파일할 때 컬렉션에서 사용할 형식이 결정되고, 쓸데없는 형식 변환을 일으키지 않습니다. 또한 잘못된 형식의 객체를 담게 될 위험도 피할수 있습니다. 
+
+System.Collections.Generic 네임스페이스는 다양한 컬렉션 클래스를 담고 있지만, 지면의 한계상 대표적인 다음 네 가지 클래스만 다루려 합니다. 
+
+* List<T>
+* Queue<T>
+* Stack<T>
+* Dictionary<TKey, TValue>
+
+List<T>, Queue<T>, Stack<T>, Dictionary<TKey, TValue>는 각각 10장에서 다뤘던 ArrayList, Queue, Stack, Hashtable의 일반화 버전입니다. 이들 클래스의 기능과 동작 방식은 10장에서도 다뤘기 때문에 10장에서 만들었던 예제 프로그램을 일반화 컬렉션을 이용해서 수정한 예제 프로그램 중심으로 이야기하겠습니다. 
+
+
+
+
+11.5.1 List<T>
+List<T> 클래스는 비일반화 클래스인 ArrayList 와 같은 기능을 하며 사용법 역시 동일합니다. 차이점이라면 List<T> 클래스는 인스턴스를 만들때 형식 매개변수를 필요로 한다는 것과 한 컬렉션에 "아무" 형식의 객체나 마구 집어넣을수 있었던 ArrayList와 달리 List<T>는 형식 매개변수에 입력한 형식 외에는 입력을 허용하지 않는다는 것입니다. 
+
+using System;
+using System.Collections.Generic;
+
+namespace UsingGenericList
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			List<int> list = new List<int>();
+			for(int i=0; i< 5; i++)
+				list.Add(i);
+
+			foreach(int element in list)
+				Console.WriteLine($"{element} ");
+			Console.WriteLine();
+
+			list.RemoveAt(2);
+	
+			foreach(int element in list)
+				Console.WriteLine($"{element} ");
+			Console.WriteLine();
+
+			list.Insert(2, 2);
+
+			foreach(int element in list)
+				Console.WriteLine($"{element} ");
+			Console.WriteLine();
+		}
+	}
+}
+
+
+
+
+
+
+11.5.2 Queue<T>
+Queue<T>클래스는 형식 매개변수를 요구한다는 점만 다를 뿐, 비일반화 클래스인 Queue와 같은 기능을하며 사용법도 동일합니다. 
+
+using System;
+using System.Collections.Generic;
+
+namespace UsingGenericQueue
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			Queue<int> queue = new Queue<int>();
+
+			queue.Enqueue(1);
+			queue.Enqueue(2);
+			queue.Enqueue(3);
+			queue.Enqueue(4);
+			queue.Enqueue(5);
+
+			while(queue.Count > 0)
+				Console.WriteLine(queue.Dequeue());
+		}
+	}
+}
+
+
+
+
+11.5.3 Stack<T>
+여러분이 예상하듯이 Stack<T>의 기능과 사용 방법은 Stack과 동일합니다. 
+
+using System;
+using System.Collections.Generic;
+
+namespace UsingGenericStack
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			Stack<int> stack = new Stack<int>();
+			
+			stack.Push(1);
+			stack.Push(2);
+			stack.Push(3);
+			stack.Push(4);
+			stack.Push(5);
+
+			while(stack.Count > 0)
+				Console.WriteLine(stack.Pop());
+		}
+	}
+}
+
+
+
+
+11.5.4 Dictionary<TKey, TValue>
+끝으로 Dictionary<TKey, TValue>는 10장에서 다뤘던 Hashtable 의 일반화 버전입니다. Dictionary<TKey, TValue>는 형식 매개변수 두 개를 요구하는군요. 형식 매개변수 이름에서 알 수 있듯이 TKey는 Key, TValue는 Value를 위한 형식입니다. 
+
+using System;
+using System.Collections.Generic;
+
+namespace UsingDictionary
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			Dictionary<string, string> dlc = new Dictionary<string, string>();
+
+			dic["하나"] = "one"
+			dic["둘"] = "two"
+			dic["셋"] = "three"
+			dic["넷"] = "four"
+			dic["다섯"] = "five"
+
+			Console.WriteLine(dic["하나"]);
+			Console.WriteLine(dic["둘"]);
+			Console.WriteLine(dic["셋"]);
+			Console.WriteLine(dic["넷"]);
+			Console.WriteLine(dic["다섯"]);
+		}
+	}
+}
+
