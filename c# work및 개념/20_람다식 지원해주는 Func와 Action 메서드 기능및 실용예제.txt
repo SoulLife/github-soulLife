@@ -1,0 +1,224 @@
+CHAPTER 14 : 람다식
+람다식은 익명 메소드를 만드는 또 하나의 방법입니다.(익명 메소드가 뭔지 벌써 가물가물하면 안 됩니다. 바로 앞장에서 공부했으니까요)대리자로 익명 메소드를 만들수 있는데 마이크로소프트는 왜 람다식이라는 기능을 C#에 넣었을까요? 대리자가 할 수 없는 일을 람다식이 할 수 있는건 아닐까요? 그리고 왜 하필 람다식이라는 이름을 사용한 걸까요? 이 장에서는 이런 질문에 하나씩 대답해나가며 람다식에 대해 알아보겠습니다. 
+
+
+
+14.1 람다식, 너는 어디에서 왔니?
+람다식은 영어로 Lambda Expression이라고 합니다. 어느 쪽이든 썩 살갑게 느껴지는 이름은 아니죠? 람다식은 알론조 처치(Alonzo Church)라는 수학자가 1936년에 발표한 람다 계산법(Lambda Calculus)에서 사용하는 식입니다. 오 너무 걱정하지 마세요. 저도 수학에 안좋은 기억이 많은 편이어서 수학 이야기를 오래할생각은 없거든요. 아주 조금만 람다 계산법에 대해 이야기해보겠습니다. 
+알론조 처치는 수학 기초론을 연구하던 중에 분명하고 간결한 방법으로 함수를 묘사하기 위해 람다 계산법을 고안해냈습니다. 람다 계산법은 크게 함수의 정의와 변수, 함수의 적용으로 이루어져 있는 데 이 계산법에서는 모든 것이 함수로 이루어져 있습니다. 심지어 0, 1,2 ...와 같은 숫자도 함수로 표현합니다. 따라서 람다 계산법에서 어떤 값을 변수에 대입하고 싶으면 함수를 변수에 대입하며, 이것을 함수의 적용이라고 부릅니다. 
+람다 계산법은 단순히 수학 이론에 그치지 않았습니다. 알론조 처치의 제자였던 존 매카시가 이것을 프로그래밍 언어에 도입할수 있겠다는 아이디어를 냈고, 1950년대 말에 LISP라는 언어를 만들었습니다. 그리고 람다 계산법의 개념은 이후 다른 프로그래밍 언어에도 도입되었으며, 우리가 공부하는 C#뿐만 아니라 C++, 자바, 파이썬 과 같은 주류 프로그래밍 언어는 대부분 람다식을 지원하고 있습니다. 
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? 람다의 뜻은 뭔가요?
+그리스 문자에서 L에 해당하는 문자입니다. 알론조 처치는 이 문자를 함수 표기를 위한 기호로 사용했는데, 원래는 ^였습니다. 당시에는 ^를 인쇄하기 어려웠기 때문에 바꾼것입니다. 이름에 심오한 뜻이 있을 것이라고 기대한 분들에게는 미안하군요. 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+14.2 처음 만나는 람다식
+이번에는 람다식을 코드로 만나볼 차례입니다. 앞에서도 설명했듯이 람다식은 익명 메소드를 만들기 위해 사용합니다. 다만 람다식으로 만드는 익명 메소드는 무명 함수(Anonymous Function)라는 이름으로 부릅니다. 메소드는 입력(매개변수)과 출력(반환값)을 갖고 있지요? 람다식도 마찬가지입니다. 
+
+기본적인 람다식을 선언하는 형식은 다음과 같습니다. 
+
+매개변수_목록 => 식
+
+문법의 모습이 꽤 독특하지 않습니까? => 연산자는 여기에서 처음 보네요. 이 연산자는 입력 연산자입니다. 이 연산자가 하는 역할은 그저 매개변수를 전달하는 것 뿐입니다. 람다식에서는 =>를 중심으로 왼편에는 매개변수가, 오른편에는 식이 위치합니다. 다음은 람다식의 선언 예입니다. 
+
+delegate int Calculate(int a, int b); //익명 메소드를 만들려면 대리자가 필요합니다. 기억하지요?
+//
+static void Main(string[] args)
+{
+	Calculate calc = (int a,int b) => a + b; //두개의 int 형 식 매개변수 a, b를 받아 이둘을 더해 반환하는 익명 메소드를 람다식으로 만들었습니다. 
+
+적응이 잘 안되지요? 하지만 천천히 코드를 읽어보세요. 람다식은 이보다 더 간결할 수 없을 정도로 간결합니다. 순수한 매개변수 목록과 계산코드(이 계산 코드의 결과는 곧 반환값이 됩니다) 그리고 매개변수를계산 코드 안으로 입력시키는 => 연산자로만 이루어지잖아요. 이뿐만이 아닙니다. C# 컴파일러는 이 코드를 한층 더간결하게 만들수 있도록 형식유추(Type Inference)라는 기능을 제공합니다. 형식 유추를 이용하면 다음과 같이 앞에 나온 예제 코드의 람다식에서 매개변수의 형식을 제거할수 있습니다. 
+
+delegate int Calculate(int a, int b); 
+//
+static void Main(string[] args)
+{
+	Calculate = (a, b) => a + b; //C# 컴파일러는 Calculator 대리자의 선언 코드로부터 이 람다식이 만드는 익명 메소드의 매개변수의 형식을 유추해냅니다. 
+}
+
+어떻습니까? 대리자를 이용해서 익명 메소드를 만들던 것을 생각해보면 코드의 양이 상당히 많이 줄었음을 느낄수 있을 겁니다. 그냥 이렇게 이야기할 게 아니라 직접 코드를 보고 비교해보면 되겠군요. 
+
+여러 예제 코드에서 살펴본 것처럼 람다식은 대리자보다 더 간결합니다. 생소한 것은 문제가 안됩니다. 적응하면 되니까요. 적응한 다음에는 여러분도 익명 메소드는 람다식만 써서 만들겁니다. 그렇다면 마이크로소프트는 어째서 익명 메소드를 만드는 방법으로 더 번거로운 방법(대리자)과 더 편리한 방법(람다식)을 같이 제공할까요? 그냥 람다식 하나만 제공하면 될텐데 말입니다. 여기에는 사연이 있습니다. 마이크로소프트는 대리자를 이용한 익명 메소드를 C#2.0에 도입했는데, 람다식은 C#3.0에 와서야 도입했기 때문입니다. 이미 수많은 프로그램들이 C#2.0으로 작성된 상황에서 C#3.0이 나왔다고 언어의 기능을 뺄 수는 없는 일이잖아요?
+
+
+
+
+
+14.3 문 형식의 람다식
+앞에서 살펴봤던 람다식은 말 그대로 식(Expression)형식을 하고 있었습니다.(식, 형식, 람다식 용어가 헷갈리기 쉽겠네요. 쓰는 저와 읽는 여러분 모두에게 집중이 필요한 부분입니다.) a + b나 a == b말고 if(a == b) return 0; else return 1; 같은 문장을 사용할순 없는걸까요? 있습니다. 있고 말고요(그러니 이번 절의 제목이 문 형식의 람다식 이겠지요)
+문 형식의 람다식(Statement Lambda)은 => 연산자의 오른편에 식 대신 { 와 }로 둘러싸인 코드 블록이 위치합니다. 형식은 다음과 같습니다. 
+(매개변수_목록) => {
+		문장1;
+		문장2;
+		문장3;
+		...;	
+		}
+다음은 문 형식의 람다식 예제 코드입니다. 이예제에서는 반환 형식과 매개변수가 없는 대리자를 사용하고 있습니다. 식 형식의 람다식으로는 반환 형식이 없는 무명함수를 만들수 없지만, 문 형식의 람다식을 이용하면 가능합니다. 
+
+delegate void DoSomething();
+//...
+static void Main(string[] args)
+{
+	DoSomething DoIt = () => //당연한 이야기지만, 매개변수가 없는 경우에는 ()에 아무것도 넣지 않습니다.
+		{
+			Console.WriteLine("뭔가를");
+			Console.WriteLine("출력해보자.");
+			Console.WriteLine("이렇게!");
+		}; //문장 형식의 람다식은 { 와 }로 둘러쌉니다.
+	DoIt();
+}
+
+이렇게해서 문 형식의 람다식도 알아봤습니다. 그럼 이제 예제 프로그램을 만들어봐야겠죠? 문장을 입력하면 스페이스를 모두 지우는 프로그램입니다. 
+
+using System;
+
+namespace StatementLambda
+{
+	class MainApp
+	{
+		delegate string Concatenate(string[] args);
+		static void Main(string[] args)
+		{
+			Concatenate concat = (arr) =>
+			{
+				string result = "";			
+				foreach(string s in arr)
+					result += s;
+				return result;
+			};
+			Console.WriteLine(concat(args));
+		}
+	}
+}
+
+
+
+
+
+14.4 Func와 Action으로 더 간편하게 무명 함수 만들기
+익명 메소드와 무명 함수는 코드를 더 간결하게 만들어주는 요소들입니다. 하지만 이들을 선언하기 전에 해야 하는 작업을 생각해보세요. 대부분 단 하나의 익명 메소드나 무명 함수를 만들기 위해 매번 별개의 대지라를 선언해야 합니다. 이것도 번거롭다면 번거로울수 있는 일이지요. 이 문제를 해결하기 위해 마이크로소프트는 .NET에 Func와 Action 대리자를 미리 선언해뒀습니다. Func대리자는 결과를 반환하는 메소드를, Action 대리자는 결과를 반환하지 않는 메소드를 참조합니다. 
+지금부터는 이 두 대리자가 어떻게 귀찮은 문제를 해결해주는지 알아보겠습니다. 
+
+
+
+14.4.1 Func대리자
+Func 대리자는 결과를 반환하는 메소드를 참조하기 위해 만들어졌습니다. .NET에는 모두 17가지 버전의 Func 대리자가 준비되어 있는데, 대략 다음과 같습니다. 
+
+public delegate TResult Func<out TResult>()
+public delegate TResult Func<in T, out TResult>(T arg)
+public delegate TResult Func<in T1, in T2, out TResult>)(T1 arg1, T2 arg2)
+public delegate TResult Func<in T1, in T2, in T3, out TResult>(T1 arg1, T2 arg2, T3 arg3)
+...
+public delegate TResult Func<in T1, in T2, in T3, ..., in T15, out TResult>(T1 arg1, T2 arg2, T3 arg3, ..., T15 arg15)
+public delegate TResult Func<in T1, in T2, in T3, ..., in T15, in T16, out TResult>(T1 arg1, T2 arg2, T3 arg3, ..., T15 arg15, T16 arg16)
+
+여러분도 Func 대리자의 선언을 읽으면서 눈치챘겠지만, 모든 Func 대리자의 형식 매개변수 중 가장 마지막에 있는 것이 반환 형식입니다. 형식 매개변수가 하나뿐인 Func는 그 하나가 반환 형식이고, 형식 매개변수가 두 개인 Func는 두 번째, 세개인 Func는 세 번째, 그리고 17개인 Func는 열일곱 번째가 반환 형식으로 사용됩니다. 
+
+Func 대리자는 입력 매개변수가 하나도 없는 것부터 16개에 이르는 것까지 버전이 다양하기 때문에 어지간한 경우(입력 매개변수가 16개 이상이라든가, ref나 out 한정자로 수식된 매개변수를 사용해야 하는 경우)가 아니면 별도의 대리자를 만들어 쓸 필요가 없습니다. 
+설명은 이정도로 하고, Func 대리자의 사용 예제를 살펴볼까요? 다음은 입력 매개변수가 없는 버전, Func<TResult>의 사용 예입니다. 
+
+Func<int> func1 = () => 10; //입력 매개변수는 없으며 무조건 10을 반환
+Console.WriteLine(func1()); //10출력
+
+이번에는 매개변수가 하나 있는 버전, Func<T1, TResult>의 사용예를 보겠습니다. 
+
+Func<int, int> func2 = (x) => x * 2; //입력 매개변수는 int 형식 하나 반환형식도 int
+Console.WriteLine(func2(3)); //6을 출력
+
+
+마지막으로 하나만 더 볼까요? 다음은 매개변수가 두 개 있는 버전, Func<T1, T2, TResult>의 사용예입니다. 
+
+Func<int, int, int> func3 = (x, y) => x + y; //입력 매개변수는 int 형식 둘, 반환형식은 int
+Console.WriteLine(func3(2,3)); //5를 출력
+
+Func 대리자.. 별것 없지요? 그저 .NET안에 미리 선언되어 있는 대리자일 뿐이니까요. 다음 예제 프로그램을 따라 만들어보세요. 저는 다음 절으로 넘어가서 Action 대리자를 설명할 준비를 하겠습니다. 
+
+using System;
+
+namespace FuncTest
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			Func<int> func1 = () => 10;
+			Console.WriteLine($"func1() : {func1()}");
+			
+			Func<int, int> func2 = (x) => x * 2;
+			Console.WriteLine($"func2(4) : {func2(4)}");
+		
+			Func<double, double, double> func3 = (x, y) => x / y;
+			Console.WriteLine($"func3(22, 7) : {func3(22, 7)}");
+		}
+	}
+}
+
+
+
+
+
+14.4.2 Action 대리자
+Action 대리자는 Func 대리자와 거의 똑같습니다. 차이점이라면 Action 대리자는 반환 형식이 없다는 것뿐입니다. Action 대리자도 Func 대리자처럼 17개 버전이 선언되어 있습니다. 
+
+public delegate void Action<>()
+public delegate void Action<in T>(T arg)
+public delegate void Action<in T1, in T2>(T arg1, T2 arg2)
+public delegate void Action<in T1,in T2, in T3>(T arg1, T arg2, T arg3)
+...
+public delegate void Action<in T1, in T2, in T3, ..., in T14,in T15>(T1 arg1, T2 arg2, T3 arg3, ..., T14 arg14, T15 arg15)
+public delegate void Action<in T1, in T2, in T3, ..., in T14, in T15, in T16>(T1 arg1, T2 arg2, T3 arg3, ..., T14 arg14, T15 arg15, T16 arg16)
+
+이 선언 코드를 보면 알 수 있듯이 Action 대리자의 형식 매개변수는 모두 입력 매개변수를 위해 선언되어 있습니다. Func와 달리 어떤 결과를 반환하는 것을 목적으로 하지 않고, 일련의 작업을 수행하는 것이 목적이기 때문입니다. 반환 형식이 없는 이유를 알겠죠? 한편 Action 대리자는 매개변수가 없는 버전에서부터 16개나 되는 버전까지 준비되어 있기 때문에 프로그래머가 필요로 하는 대부분의 경우에 사용 가능합니다. 사용 예를 보죠. 먼저 매개변수가 아무것도 없는 Action의 사용예입니다. 반환하는 결과는 없습니다.
+
+Action act1 = () => Console.WriteLine("Action()");
+act1();
+
+다음은 매개변수가 하나뿐인 버전 Action<T>의 사용 예입니다. 
+
+int result = 0;
+Action<int> act2 = (x) => result = x * x; //람다식 밖에서 선언한 result에 x*x의 결과를 저장합니다. 
+
+act2(3);
+Console.WriteLine("result : {0}", result); //9를 출력
+
+이번에는 매개변수가 두 개인 Action<T1,T2>대리자의 사용 예입니다. 
+
+Action<double, double> act3 = (x, y) =>
+	{
+		double pi = x / y;
+		Console.WriteLine("Action<T1, T2>{0}, {1}) : {2}", x, y, pi);
+	};
+act3(22.0, 7.0);
+
+제가 이야기한대로 Action 대리자도 Func 대리자와 별로 다른것이 없지요? 이제 예제 프로그램을 직접 만들어서 테스트해보세요. 
+
+using System;
+
+namespace ActionTest
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			Action act1 = () => Console.WriteLine("Action()");
+			act1();
+
+			int result = 0;
+			Action<int> act2 = (x) => result = x * x;
+			
+			act2(3);
+			Console.WriteLine($"result : {result}");
+
+			Action<double, double> act3 = (x,y) => 	
+				{
+					double pi = x / y;
+					Console.WriteLine($"Action<T1, T2>{x}, {y} : {pi}");
+				};
+	}
+}
+
+
