@@ -1,0 +1,218 @@
+CHAPTER15 : LINQ
+LINQ는 컬렉션을 편리하게 다루기 위한 목적으로 만들어진 질의(Query)언어입니다. C#3.0버전에서부터 탑재한 LINQ 덕분에 C# 프로그래머들은 데이터를 찾고 병합하고 정렬하는 코드를 작성하는 짐을 상당 부분 내려놓을수 있게 되었습니다. 공부의 짐은 조금 늘긴 했지만 말입니다. 
+
+이장에서는 LINQ에 대해 설명합니다. 그럼 시작하겠습니다. 
+
+
+
+15.1 데이터! 데이터! 데이터!
+데이터 엔지니어, 데이터 사이언티스트, 데이터 분석가...
+
+이들은 데이터 시대가 열리면서 새롭게 등장한 직군입니다. 아마 데이터 관련 전문가가 되기 위해 이책을 읽는 분도 있을 거예요. 데이터를 미디어에서 읽고, 거르고, 정렬하는 작업은 프로그램에서 부지기수로 일어납니다. 이러한 데이터 작업은 당연히 프로그래머가 프로그래밍해 넣어야 하지요. 프로그래머는 데이터를 가공하는 논리적인 작업에 더 신경을 쓰고 싶어하지만(이쪽이 더 재미있거든요)안타깝게도 데이터를 가공하기 전에 필요한 데이터를 찾아내는 일이 도저히 프로그래머를 놔주질 않습니다. 게다가 이 지루한 작업은 양도 적지 않습니다. 
+LINQ는 우리를 이 지루한 데이터 작업에서 해방시켜줍니다. 여러분이 이번 장을 마치고 LINQ를 사용하기 시작한다면 LINQ가 없는 다른 언어를 사용하는 프로그래머가 가여워질 겁니다. 
+서론은 이 정도로 하고, 이제부터 LINQ에 대한 이야기를 본격적으로 나눠보겠습니다. LINQ는 Language INtegrated Query의 약어로 C# 언어에 통합된 데이터 질의 기능을 말합니다. 
+
+데... 데이터 뭐시기라고요?
+
+데이터 질의 기능입니다. 질의(Query)란 원래 뭔가에 대해 물어본다는 뜻인데, 데이터 질의라고 하면 데이터에 대해 물어본다는 말이 됩니다. 그렇다면 그 질문을 받은 누군가는 데이터에 대한 답변을 주겠죠. 기본적으로 질문은 다음 내용을 포함합니다. 
+
+* From : 어떤 데이터 집합에서 찾을 것인가?
+* Where : 어떤 값의 데이터를 찾을 것인가?
+* Select : 어떤 항목을 추출할 것인가?
+
+이해를 돕기 위해 예를 들어 설명해보겠습니다. 먼저 다음과 같이 선언된 클래스가 있다고 해봅시다. 
+
+class Profile
+{
+	public string Name { get; set; }
+	public int Height { get; set;
+}
+
+그리고 이 클래스에 기반한 배열을 선언해봅시다.
+
+Profile[] arrProfile = { new Profile(){ Name="정우성", Height=186},
+		new Profile(){ Name="김태희", Height=158},
+		new Profile(){ Name="고현정", Height=172},
+		new Profile(){ Name="이문세", Height=178},
+		new Profile(){ Name="하동훈", Height=171}};
+
+자 arrProfile 에서 Height프로퍼티가 175 미만인 데이터만 골라 새 컬렉션으로 추출해야 한다면 여러분은 어떻게 하겠습니다? 제가 생각하는 것이 맞는다면 아마 다음과 같이 코드를 작성할 겁니다. 
+
+List<Profile> profiles = new List<Profile>();
+
+foreach(Profile profile in arrProfile) //arrProfile 안에 있는 각 데이터로부터
+{
+	if(profile.Height < 175) //Height가 175미만인 객체만 골라 profiles에 넣은후
+		profiles.Add(profile);
+}
+profiles.Sort( (profile1, profile2)=>  //키의 오름차순으로 정렬합니다.
+{
+	return profile1.Height - profile2.Height;
+});	
+
+foreach(var profile in profiles)
+	Console.WriteLine("{0}, {1}", profile.Name, profile.Height);
+
+이 코드에서 잘못된 부분은 전혀 없습니다. 다만 이 코드에 대해 LINQ를 모르는 프로그래머의 코드라는 평을 들을 수는 있습니다. LINQ를 아는 프로그래머의 코드는 어떻냐고요? 다음과 같습니다. (코드를 굳이 분석하려 들 필요는 없습니다. 그냥 코드의 양이 줄었다는 것만 보셔도 됩니다 )
+
+var profiles = from profile in arrProfile //arrProfile안에 있는 각 데이터로부터
+	where profile.Height < 175 //Height가 175미만인 객체만 골라
+	orderby profile.Height // 키순으로 정렬하여
+	select profile; //profile 객체를 추출합니다. 
+foreach(var profile in profiles)
+	Console.WriteLine("{0}, {1}", profile.Name, profileHeight);
+
+상당히 단순해지지 않았습니까? LINQ를 이용하면 프로그래머들은 지루한 데이터 작업으로부터 많이 벗어날수 있습니다. 생소하지만 LINQ의 문법이 논리정연하게 구성되어 있기 때문에 어렵지 않게 익힐수 있습니다. 그런 다음 장에서부터 본격적으로 LINQ에 대해 알아보겠습니다. 
+
+
+
+15.2 LINQ의 기본 : from, where, orderby, select
+
+
+15.2.1 from
+모든 LINQ 쿼리식(Query Expression)은 반드시 from 절로 시작합니다. 쿼리식의 대상이 될 데이터 원본(Data Source)과 데이터 원본 안에 들어 있는 각 요소 데이터를 나타내는 범위 변수(Range Variable)를 from 절에서 지정해줘야 합니다. 
+이때 from의 데이터 원본은 아무 형식이나 사용할수 없고, IEnumerable<T> 인터페이스를 상속 하는 형식이어야만 합니다. 7장에서 공부했던 배열이나 컬렉션 객체들은 IEnumerable<T>를 상속하기 때문에 이들은 모두 from 절의 데이터 원본으로 사용할수 있습니다. 범위 변수는 쿼리 변수(Query Variable)라고도 하는데, foreach문의 반복 변수를 생각하면 이해하기 쉽습니다. foreach(int x in arr)에서 x같은것 말입니다. 
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? LINQ의 범위 변수와 foreach 문의 반복 변수의 차이점?
+foreach 문의 반복 변수는 데이터 원본으로부터 데이터를 담아내지만 범위 변수는 실제로 데이터를 담지는 않습니다. 그래서 쿼리식 외부에서 선언된 변수에 범위 변수의 데이터를 복사해넣는다든가 하는 일은 할수 없습니다. 범위 변수는 오로지 LINQ 질의 안에서만 통용되며 질의가 실행될때 어떤일이 일어날지를 묘사하기 위해 도입됐기 때문입니다. 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+from 절은다음과 같이 from <범위변수> in <데이터원본> 의 형식으로 사용합니다. 
+
+int[] numbers = {1,2,3,4,5,6,7,8,9,10};
+
+var result = from n(범위변수) in numbers(데이터 원본)
+	where n % 2 == 0
+	orderby n
+	select n;
+
+참 아직 LINQ 예제 프로그램은 하나도 안 만들어봤죠? 그럼 from 절 연습도 할겸, 간단한 예제 프로그램을 하나 만들어보겠습니다. 다음 예제 프로그램은 LINQ를 이용해 숫자 배열로부터 짝수만 추출하여 그 결과를 출력합니다. 
+
+using System;
+using System.Linq;
+
+namespace From
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			int[] numbers = {9,2,6,4,5,3,7,8,1,10};
+			var result = from n in numbers
+				where n % 2 == 0 //where 절 이하는 지금 신경쓰지 마세요. 곧이어 자세히 설명하겠습니다.
+				orderby n
+				select n;
+			foreach(int n in result)
+				Console.WriteLine($"짝수 : {n}");
+		}
+	}
+}
+
+from 절을 이용해서 데이터 원본으로부터 범위 변수를 뽑아낸 후에는 LINQ 가 제공하는 수십 가지 연산자를 이용해서 데이터를 가공 및 추출해낼수 있습니다. 지면의 한계 때문에 LINQ 표준 연산자 모두를 설명하기는 어렵고, 일단 가장 많이 사용하는 where, orderby, select 세 가지를 알아본후 다음 장에서 추가적으로 나머지 연산자들을 설명하겠습니다. 
+
+
+
+
+15.2.2 where
+where는 한마디로 필터(Filter)역할을 하는 연산자입니다. from 절이 데이터 원본으로부터 뽑아낸 범위 변수가 가져야하는 조건을 where 연산자에 인수로 입력하면 LINQ는 해당 조건에 부합하는 데이터만을 걸러냅니다. 가령 다음과 같은 데이터가 있다고 합시다. 
+
+Profile[] arrProfile = { new Profile(){ Name="정우성", Height=186},
+		new Profile(){ Name="김태희", Height=158},
+		new Profile(){ Name="고현정", Height=172},
+		new Profile(){ Name="이문세", Height=178},
+		new Profile(){ Name="하동훈", Height=171}};
+
+다음과 같이 where 연산자를 이용해서 Height175 미만인 객체들을 걸러낼수 있습니다. 
+
+var profiles = from profile in arrProfile
+	where profile.Height < 175
+	select profile;
+
+
+
+
+
+
+15.2.3 orderby
+이름에서 이미 눈치챘겠지만 orderby는 데이터의 정렬을 수행하는 연산자입니다. 바로 앞에서 where 연산자를 설명할 때 사용했던 LINQ 예제를 수정해보겠습니다. 이 예제를 Height의 오름차순으로 정렬한 결과를 얻도록 고치려면 다음과 같이 orderby 연산자에 정렬의 기준이 될 항목을 인수로 입력해주면 됩니다. 
+
+var profiles = from profile in arrProfile
+	where profile.Height < 175
+	orderby profile.Height
+	select profile;
+
+orderby 연산자는 기본적으로 오름차순으로 데이터를 정렬하지만 같이 작업하는 동료를 배려하는 차원에서 좀더 명확하게 오름차순으로 정렬한다는 사실을 알려주기 위해 다음 코드처럼 ascending 키워드를 명시해도 됩니다. 
+var profiles = from profile in arrProfile
+	where profile.Height < 175
+	orderby profile.Height ascending
+	select profile;
+
+내림차순으로 정렬하고 싶으면 어떻게 하냐고요? orderby ~descending을 이용하면 됩니다. 다음은 조금 전과 달리 Height의 내림차순으로 정렬하는 LINQ 예제입니다. 
+
+var profiles = from profile in arrProfile
+	where profile.Height < 175
+	orderby profile.Height descending
+	select profile;
+
+
+
+
+
+
+15.2.4 select
+select 절은 최종 결과를 추출하는 쿼리식의 마침표 같은 존재입니다. from 절에서 데이터 원본으로부터 범위 변수를 뽑아내고 where 절에서 이 범위 변수의 조건을 검사한후, 그 결과를 orderby 절에서 정렬하고 select문을 이용하여 최종 결과를 추출해내는 겁니다. 이미 많이 봐왔듯이, select 절은 다음과 같이 사용하면 됩니다. 
+
+혹시 여러분은 var 형식으로 선언된 profiles의 실제 형식이 궁금하지 않습니까? C# 컴파일러가 var 형식을 LINQ 쿼리식이 반환할 결과 형식에 맞춰 알아서 컴파일해주기는 하지만, 실제로 var가 어떤 형식으로 치환되는지를 우리는 프로그래머로서 알아둘 필요가 있습니다.(의미도 모르는 코드를 프로그램에 넣는 프로그래머는 우리중에 없겠지요?) LINQ질의 결과는 IEnumerable<T>로 반환되는데, 이때 형식 매개변수 T는 바로 지금 공부하고 있는 select문에 의해 결정됩니다. 
+예를 들어 앞의 LINQ 쿼리식은 배열로부터 Height가 175미만인 Profile 객체를 골라내는데, 그 결과는 IEnumerable<Profile>형식이 됩니다. 만약 다음과 같이 select문에서 Profile 객체 전체가 아닌 Name 프로퍼티만 추출하면 profiles는 IEnumerable<string> 형식으로 컴파일됩니다. 
+
+var profiles = from profile in arrProfile
+	where profile.Height < 175
+	orderby profile.Height
+	select profile.Name;
+
+
+이 뿐만이 아닙니다. select 문은 무명 형식(기억하고 있나요? 기억나지 않는다면 9장으로 가서 다시 공부하고 돌아오세요)을 이용해서 다음과 같이 새로운형식을 즉석에서 만들어낼수도 있습니다. 
+
+var profiles = from profile in arrProfile
+	where profile.Height < 175
+	orderby profile.Height
+	select new { Name=profile.Name, InchHeight = profile.Height * 0.393 };
+
+자 이렇게 해서 from , where, orderby, select 로 이어지는 기본적인 LINQ문의 사용 방법을 알아보았습니다. 이번 절에서 배운 것을 정리하는 차원에서 간단한 예제 프로그램을 하나 만들어보겠습니다. 이 프로그램은 조금전에 다뤘던 예제 쿼리식을 이용하여 다음 그림과 같이 원하는 데이터를 조회 및 가공하여 출력합니다. 
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace SimpleLinq
+{
+	class Profile
+	{
+		public string Name { get; set; }
+		public int Height { get; set; }
+	}
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			Profile[] arrProfile = { new Profile(){ Name="정우성", Height=186},
+				new Profile(){ Name="김태희", Height=158},
+				new Profile(){ Name="고현정", Height=172},
+				new Profile(){ Name="이문세", Height=178},
+				new Profile(){ Name="하동훈", Height=171}};
+			};
+			var profiles = from profile in arrProfile
+				where profile.Height < 175
+				orderby profile.Height
+				select new
+				{
+					Name = profile.Name,
+					InchHeight = profile.Height * 0.393
+				};
+			foreach(var profile in profiles)
+				Console.WriteLine($"{profile.Name}, {profile.InchHeight}");
+		}
+	}
+}
