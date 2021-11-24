@@ -1,0 +1,399 @@
+15.3 여러 개의 데이터 원본에 질의하기
+LINQ 쿼리식, 그렇게 어렵지 않지요? 지금부터는 LINQ의 기본을 넘어서는 부분들을 조금씩 알아보려 합니다. 그 첫 번째 순서는 여러 개의 데이터 원본에 접근하는 쿼리식을 만드는 방법이 되겠습니다. 
+LINQ 쿼리식은 데이터 원본에 접근하기 위해 from 절을 사용합니다. 여러 개의 데이터 원본에 접근하려는 우리는 이 from 문을 중첩해서 사용하면 됩니다. foreach문을 중첩해서 사용하는 것처럼 말입니다. (from 절이 foreach 문과 비슷하다는 점을 떠올리면 이해하기 쉬울 겁니다.)
+예를 들어 설명해볼게요. 우선 다음과 같은 구조의 클래스가 있다고 해보겠습니다. 이 클래스는 학급의 성적을 나타내는데 여러 학생의 점수를 담기 위해 Score 필드를 배열로 선언했습니다. 
+
+class Class
+{
+	public string Name { get;set; }
+	public int[] Score { get; set; } //주목 배열입니다.
+}
+
+그리고 이 클래스를 바탕으로 배열 하나를 다음과 같이 선언하겠습니다. 
+
+Class[] arrClass = 
+{
+	new Class() { Name="연두반", Score= new int[]{99, 80, 70, 24 }},
+	new Class() { Name="분홍반", Score= new int[]{60, 45, 87, 72}},
+	new Class() { Name="파랑반", Score= new int[]{92, 30, 85, 94}},
+	new Class(){ Name="노랑반", Score=new int[]{90, 88, 0, 17}}
+};
+
+이제 준비는 끝났습니다. 이 배열에서 점수가 60점 미만인 학생이 소속된 학급과 그 학생의 점수를 중첩한 from절을 이용해서 뽑아보겠습니다. 
+
+
+var classes = from c in arrClass //첫 번째 데이터원본
+		from s in c.Score // 두번째 데이터 원본
+		where s < 60
+		select new { c.Name, Lowst = s};
+
+보셨습니까? 먼저 arrClass 객체에 from 절로 접근해서 범위 변수 c를 뽑고, 다시 그 c객체의 Score 필드에 또다른 from 절로 접근해서 새로운 범위 변수 s를 뽑았습니다. 이 범위 변수 s는 개별 점수를 나타내지요. where 절을 이용해서 이 s가 60보다 낮은지 걸러내고, 그 다음은 무명 형식을 선언해서 낙제점을 맞은 학생의 학급 이름과 점수를 담아냅니다. 
+결과가 궁금하지요? 
+
+using Syste;
+using System.Linq;
+
+namespace FromFrom
+{
+	class Class
+	{
+		public string Name { get;set; }
+		public int[] Score { get; set; } //주목 배열입니다.
+	}
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			Class[] arrClass = 
+			{
+				new Class() { Name="연두반", Score= new int[]{99, 80, 70, 24 }},
+				new Class() { Name="분홍반", Score= new int[]{60, 45, 87, 72}},
+				new Class() { Name="파랑반", Score= new int[]{92, 30, 85, 94}},
+				new Class(){ Name="노랑반", Score=new int[]{90, 88, 0, 17}}
+			};	
+			var classes = from c in arrClass
+					from s in c.Score
+					where s < 60
+					orderby s
+					select new {c.Name, Lowest = s};
+			foreach(var c in classes)
+				Console.WriteLine($"낙제 : {c.Name} ({c.Lowest})");
+		}
+	}
+}
+
+
+
+
+15.4 group by로 데이터 분류하기
+분류학이라는 학문을 알고 있습니까? 지구상에 존재하는 모든 생물을 특정 기준에 따라 나누어 정리하는 생물학의 한 분야입니다. 그저 분류를 나누고 정리하는 것이 뭐가 그리 대수길래 "학문의 분야"로 다루냐고요? 분류학자들은 매년마다 새로운 생물을 2만종 정도 발견합니다. 매년 멸종되는 것은 3만종 정도로 추산되고요. 분류학은 구글의 검색엔진 없이도 발견한 동식물이 전혀 새로운 종인지, 아니면 이미 학계에 보고된 종인지 구분할수 있게 해줍니다. 분류학이 없다면 아직도 인류가 발견하지 못한 새로운 2,000만종의 생물을 제대로 기록조차 할 수 없을 겁니다. 
+어떤 것을 특정 기준에 따라 나누어 정리하는 것이 생물학에서만 유용한 것은 아닙니다. 잘 정리된 분류 기준은 데이터를 다루는 사람들에게도 아주 훌륭한 도구입니다. 컴퓨터 프로그램이 이러한 분류 기준에 따라 데이터를 그룹화해준다면, 이 사람들은 더할 나위 없이 좋아할 겁니다. LINQ 질의식은 이처럼 멋진 작업을 group by 절을 통해 해냅니다. 
+
+group by 절은 다음의 형식으로 사용합니다. 
+
+group A by B into c
+
+A에는 from 절에서 뽑아낸 범위 변수를, B에는 분류 기준을, C에는 그룹 변수를 위치시키면 됩니다. 예가 하나 필요하겠네요. 앞에서 사용한 연예인들의 신장 데이터를 대상으로 group by 절을 이용해서 분류 작업을 해보겠습니다. 분류의 기준은 175 미만인가? 또는 175 이상인가? 입니다.
+
+Profile[] arrProfile = 
+{
+	new Profile(){Name="정우성", Height=186},
+	new Profile(){Name="김태희", Height=158},
+	new Profile(){Name="고현정", Height=172},
+	new Profile(){Name="이문세", Height=178},
+	new Profile(){Name="하하", Height=171}
+};
+
+이제 이 데이터를 group by 를 이용해서 분류해보겠습니다. 
+
+var listProfile = from profile in arrProfile
+		group profile by profile.Height < 175 into g
+		select new { GroupKey = g.Key, Profiles = g };
+
+이 쿼리식의 그룹 변수 g에는 Height값이 175 미만인 객체의 컬렉션, 175 이상인 객체의 컬렉션이 입력되고, select문이 추출하는 새로운 무명 형식은 컬렉션의 컬렉션이 됩니다. 그리고 이 무명 형식의 Profiles 필드는 바로 이 그룹 변수 g를 담게 될 것입니다. 최종적으로 쿼리식의 결과를 모두 담는 listProfile은 다음과 같은 모습을 할 것입니다. 
+
+
+
+
+15.5 두 데이터 원본을 연결하는 join
+join은 두 데이터 원본을 연결하는 연산입니다. 막무가내로 연결하는 것은 아니고, 각 데이터 원본에서 특정 필드의 값을 비교하여 일치하는 데이터끼리 연결을 수행합니다. 
+
+
+
+
+15.5.1 내부 조인
+내부 조인(Inner Join)은 교집합과 비슷합니다. 두 데이터 원본 사이에서 일치하는 데이터들만 연결한 후 반환하거든요. 조금 더 자세히 이야기하면, 내부 조인은 첫 번째 데이터 원본과 두 번째 데이터 원본의 특정 필드를 비교해서 일치하는 데이터를 반환합니다. 이때 기준은 첫 번째 원본 데이터입니다. 예를 들어 설명하겠습니다. 다음 그림에서 데이터 원본 A는 기준이 되며, A의 각 데이터는 name과 Height필드를 갖고 있습니다. 그리고 B는 A에 연결할 데이터 원본이며 Product와 Star 필드를 갖고 있습니다. 이제 배우의 이름, 작품, 키를 담는 새로운 컬렉션을 만들고 싶으면 A의 Name필드와 B의 Star 필드가 일치하는 데이터들만 연결하면 됩니다. 
+
+혹시 내부 조인 결과에 "하하"에 관한 데이터는 빠져 있는것 , 알고 있었습니까? 내부 조인을 수행할 때 기준 데이터 원본에는 존재하지만 연결할 데이터 원본에는 존재하지 않는 데이터는 조인결과에 포함되지 않습니다. 당연히 기준 데이터 원본에는 없지만 연결할 데이터 원본에는 존재하는 데이터의 경우에도 조인 결과에 포함되지 않습니다. 
+한편 내부 조인은 다음과 같이 join 절을 통해 수행합니다. 기준 데이터 a는 from 절에서 뽑아낸 범위 변수이고, 연결 대상 데이터 b는 join 절에서 뽑아낸 변수입니다. join 절의 on 키워드는 조인 조건을 수반합니다. 이때 on절의 조인 조건은 동등(Equality)만 허용됩니다. ~보다 작음, ~보다 큼 같은 비교 연산은 허락되지 않습니다. 기본 연산자 중 하나인 == 연산자가 아닌, equals라는 키워드가 조인을 위해 사용된다는 사실에 주의해주세요. 
+
+from a in A
+join b in B on a.XXXX equals b.YYYY
+
+예를 하나 들어보겠습니다. 조금 전에 우리가 같이 봤던 그림에서처럼 배우 프로필(Name, Height로 구성)과 작품 정보(Product, Star로 구성)를 내부 조인하여 새로운 컬렉션을 만들려면 다음과 같은 LINQ 쿼리식을 수행합니다. 
+
+class Profile
+{
+	public string Name { get; set; }
+	public int Height { get; set; }
+}
+class Product
+{
+	public string Title {get; set; }
+	public string Star { get; set; }
+}
+
+var listProfile = from profile in arrProfile
+		join product in arrProduct on profile.Name equals product.Star
+		select new { Name = profile.Name, Work = product.Title, Height = profile.Height };
+
+이 쿼리식이 어떤 결과를 내는지는 외부 조인에 대해 알아본 후 예제 프로그램을 통해 같이 확인해보겠습니다. 
+
+
+
+
+15.5.2 외부 조인
+외부 조인(Outer Join)은 기본적으로 내부 조인과 비슷하지만 다음 그림처럼 조인 결과에 기준이 되는 데이터 원본이 모두 포함된다는 점이 다릅니다. 
+
+내부 조인을 했을 때는 "하하" 데이터가 조인 결과에 없었는데, 외부 조인을 했을 때는 작품의 Title이 비어 있는 상태로 조인 결과에 포함되었습니다. 이것은 외부 조인이 기준이되는 데이터 원본의 모든 데이터를 조인 결과에 반드시 포함시키는 특징 때문입니다. 연결할 데이터 원본에 기준 데이터 원본의 데이터와 일치하는 데이터가 없다면 그 부분은 빈 값으로 결과를 채우게 됩니다.
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? 왼쪽 조인, 오른쪽 조인, 완전 외부 조인
+LINQ는 원래 DBMS에서 사용하던 SQL(Structured Query Language)을 본떠 프로그래밍 언어 안에 통합한 것입니다. LINQ가 SQL과 상당히 닮아 있긴 하지만 SQL은 그 자체로도 커다란 프로그래밍 언어입니다. 지원하는 데이터 형식도 프로그래밍 언어보다 훨씬 다양하고, 데이터를 다루는 데 필요한 함수 , 연산자 등이 다양하면서도 사용하기 쉽게 설계되어 있습니다. 
+
+물론 우리가 지금 다루고 있는 외부 조인도 SQL에서 본뜬 것입니다. 원래 SQL에서 지원하는 외부 조인에는 왼쪽 조인(Left Join), 오른쪽 조인(Right Join), 완전 외부 조인(Full Outer Join) 이렇게 세 가지가 있습니다. 왼쪽 조인은 왼쪽 데이터 원본을 기준으로 삼아 조인을 수행하고, 오른쪽 조인은 오른쪽 데이터 원본을 기준으로 삼습니다. 완전 외부 조인은 왼쪽과 오른쪽 데이터 원본 모두를 기준으로 삼습니다. 
+
+LINQ는 이 세가지 조인 방식 중에서 왼쪽 조인만을 지원합니다. 조금 아쉽기는 하지만 여러분도 LINQ를 사용하다 보면 왼쪽 조인만으로도 부족함 없이 데이터를 다룰수 있다는 사실을 알게 될 것입니다. 
+
+외부 조인을 사용하는 방법은 내부 조인과 크게 다르지 않습니다. 먼저 join 절을 이용해서 조인을 수행한 후 그 결과를 임시 컬렉션에 저장하고, 이 임시 컬렉션에 대해 DefaultIfEmpty 연산을 수행해서 비어 있는 조인 결과에 빈 값을 채워 넣습니다. DefaultIfEmpty 연산을 거친 임시 컬렉션에서 from 절을 통해 범위 변수를 뽑아내고, 이 범위 변수와 기준 데이터 원본에서 뽑아낸 범위 변수를 이용해서 결과를 추출해냅니다. 
+다음 외부 조인 예제 코드가 여러분이 조금 전의 설명을 이해하는데 도움을 드릴겁니다. 
+
+class Profile
+{
+	public string Name { get; set; }
+	public int Height { get; set; }
+}
+class Product
+{
+	public string Title {get; set; }
+	public string Star { get; set; }
+}
+
+var listProfile = from profile in arrProfile
+		join product in arrProduct on profile.Name equals product.Star into ps
+		from product in ps.DefaultIfEmpty(new Product(){Title="그런 거 없음"})
+		select new { Name = profile.Name, Work = product.Title, Height = profile.Height };
+
+
+
+
+15.6 LINQ 의 비밀과 LINQ 표준 연산자
+LINQ에 익숙해지면 마치 간단한 영어 문장을 만들듯 데이터 질의 코드를 작성할 수 있습니다.(물론 영어를 질색하는 분들도 많긴 하지만, 이런 분들도 장담컨대 지루한 데이터 처리 코드보다는 LINQ 쪽을 훨씬 좋아하게 될 겁니다.)놀랍게도 이토록 편리한 LINQ를 다른 .NET 언어에서는 사용할수 없습니다. 수많은 .NET 언어 중에서도 C#과 VB에서만 사용 가능합니다. 적어도 현재까지는 말입니다. 
+마이크로소프트는 LINQ 쿼리식이 실행될수 있도록 CLR을 개선하는 대신, C# 컴파일러와 VB 컴파일러를 업그레이드했습니다. 이들 컴파일러가 각각 LINQ쿼리식을 CLR이 이해할수 있는 코드로 번역해주도록 말입니다. 그렇다면 이들 컴파일러는 어떻게 LINQ를 CLR이 이해하는 코드로 만들어내는 걸까요?
+대단한 비밀은 없습니다. 그저 LINQ 쿼리식을 분석해서 일반적인 메소드 호출 코드로 만들어내는 것뿐입니다. 예를 들어 다음과 같은 쿼리식이 있다고 합시다. 
+
+var profiles = from profile in arrProfile
+		where profile.Height < 175
+		orderby profile.Height
+		select new { Name = profile.Name, InchHeight = profile.Height * 0.393};
+
+C# 컴파일러는 다음과 같은 코드로 번역합니다. 
+
+var profiles = arrProfile
+		.Where( profile => profile.Height < 175)
+		.OrderBy( profile => profile.Height)
+		.Select( profile => 
+			new
+			{
+				Name = profile.Name,
+				InchHeight = profile.Height * 0.393
+			});
+
+where는 Where()메소드로, orderby는 OrderBy()로, select는 Select()로 바뀌었고 from 절의 범위 변수 profile은 각 메소드에 입력되는 람다식의 매개변수로 바뀌었습니다. 혹시 제가 from 절의 매개변수는 IEnumerable<T>의 파생 형식이어야 한다고 이야기한 것, 기억하고 있습니까?
+LINQ 예제에서 늘 사용해왔던 arrProfile 객체는 배열입니다. 배열은 IEnumerable<T>의 파생 형식이며, IEnumerable<T>는 System.Collections.Generic 네임스페이스 소속입니다. System.Collections.Generic 네임스페이스만 사용하도록 using 문을 선언해놓고 arrProfile 객체에 대해 Where(), OrderBy(), Select()등의 메소드 호출 코드를 사용하려 한다면 여러분은 컴파일 에러를 보게 될 것입니다. 이들 메소드는 System.Linq 네임스페이스에 정의되어 있는 IEnumerable<T>의 확장 메소드(처음 본다구요? 7장으로 가서 다시 공부하고 돌아오세요)이기 때문입니다. 따라서 이들을 사용하려면 System.Linq 네임스페이스를 사용하도록 선언을 해둬야 합니다. 
+이렇게 글로만 설명할 것이 아니라, 실제로 예제 프로그램을 하나 만들어보겠습니다. 다음은 SimpleLinq 예제 프로그램에서 LINQ 쿼리식을 메소드 호출 코드로 바꾼 버전입니다 
+
+using System;
+using System.Linq;
+
+namespace SimpleLinq2
+{
+	class Profile
+	{
+		public string Name { get; set; }
+		public int Height { get; set; }
+	}
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			Profile[] arrProfile = 
+			{
+				new Profile(){Name="정우성", Height=186},
+				new Profile(){Name="김태희", Height=158},
+				new Profile(){Name="고현정", Height=172},
+				new Profile(){Name="이문세", Height=178},
+				new Profile(){Name="하하", Height=171}
+			};
+			var profiles = arrProfile.
+					Where(profile => profile.Height < 175),
+					OrderBy( profile => profile.Height),
+					Select(profile => 
+						new
+						{
+							Name = profile.Name,
+							InchHeight = profile.Height * 0.393
+						});
+			foreach(var profile in profiles)
+				Console.WriteLine($"{profile.Name}, {profile.InchHeight)");
+		}
+	}
+}
+
+여러분이 MSDN을 확인한다면 다음 내용을 어렵지 않게 정리할수 있겠지만 제가 적지 않은 지면을 할애해서 LINQ 표준 연산자들을 소개하는 이유는 표준 연산자의 수와 C#이 지원하는 쿼리식 문법의 수의 차이를 보고 느꼇으면 하는 바람이 있기 때문입니다. 아래표를 한 번 보시죠. 
+
+
+종류		메소드 이름		설명									C#쿼리식 문법
+정렬		OrderBy			오름차순으로 값을 정렬합니다. 						orderby
+		OrderByDescending	내림차순으로 값을 정렬합니다.						orderby ... descending
+		ThenBy			오름차순으로 2차 정렬을 수행합니다.						orderby ..., ...
+		ThenByDescending		내림차순으로 2차 정렬을 수행합니다.						orderby ..., ..descending
+		Reverse			컬렉션 요소의 순서를 거꾸로 뒤집습니다.
+
+집합		Distince			중복값을 제거합니다. 
+		Except			두 컬렉션 사이의 차집합을 반환합니다. 다시말해 임의의 한 컬렉션 (a, b , c, e)에는 존재
+					하는데 다른 한 컬렉션(a, d ,f)에는 존재하지 않는 요소들(b, e)을 반환합니다. 
+		Intersect			두 컬렉션 사이의 교집합을 반환합니다. 즉 두 컬렉션 양쪽에 존재하는 요소들만 반환합니다. 
+		Union			두 컬렉션 사이의 합집합을 반환합니다. 예를 들어 한쪽 컬렉션이 a, b, c, d 요소를 갖고 있고
+					다른 한쪽 컬렉션이 a, b, d, e 요소를 갖고 있다면 이두 컬렉션 사이의 합집합은 a, b, c, d, e입니다.
+
+필터링		OfType			메소드의 형식 매개변수로 형식 변환이 가능한 값들만 추출합니다. 
+		Where			필터링할 조건을 평가하는 함수를 통과하는 값들만 추출합니다. 			where
+		
+
+수량연산		All			모든 요소가 임의의 조건을 모두 만족시키는지 평가합니다. 결과는 true이거나 false 둘중 하나입니다.
+		Any			모든 요소 중 단 하나의 요소라도 임의의 조건을 만족시키는지 평가합니다. 결과는 true이거나 flase 둘중
+					하나입니다. 
+		Contains			명시한 요소가 포함되어 있는지 평가합니다. 역시 결과는 true이거나 false둘중 하나입니다. 
+
+데이터 추출	Select			값을 추출하여 시퀀스를 만듭니다. 						select
+		SelectMany		여러 개의 데이터 원본으로부터 값을 추출하여 하나의 시퀀스를 만듭니다. 
+					여러 개의 from 절을 사용합니다.
+
+데이터 분할	Skip			시퀀스에서 지정한 위치까지 요소들을 건너뜁니다.
+		SkipWhile		입력된 조건 함수를 만족시키는 요소들을 건너뜁니다. 
+		Take			시퀀스에서 지정한 요소까지 요소들을 취합니다.
+		TakeWhile		입력된 조건 함수를 만족시키는 요소들을 취합니다. 
+
+데이터 결합	Join			공통 특성을 가진 서로 다른 두 개의 데이터 소스의 객체를 연결합니다. 공통 특성을	join .. in .. on .. euqals ..
+					키(Key)로 삼아 키가 일치하는 두 객체를 쌍으로 추출합니다.
+		GroupJoin		기본적으로 Join 연산자와 같은 일을 하되, 조인결과를 그룹으로 만들어 넣습니다.	join .. in .. on .. euqals ..
+														into ...
+
+데이터 그룹화	GroupBy			공통된 특성을 공유하는 요소들을 각 그룹으로 묶습니다. 각 그룹은 			group .. by 또는
+					IGrouping<<Of<(TKey,TElement>)>)						group .. by .. into ...
+		ToLookup		키(Key)선택 함수를 이용하여 골라낸 요소들을 Lookup<(Of<(TKey, TElement>)>)형식의 객체에
+					삽입합니다. (이 형식은 하나의 키에 여러 개의 객체를 대응시킬 때 사용하는 컬렉션입니다.)
+
+생성		DefaultIfEmpty		빈 컬렉션을 기본값이 할당된 싱글턴 컬렉션으로 바꿉니다. 싱글턴(Singleton)이란, 해당
+					형식의 객체를 오직 단 하나만 만들고 이 객체를 전역에서 접근할수 있도록 하는 디자인 기법입니다.
+					기본값이 할당된 컬렉션은 참조용으로만 사용할것이니 여러 개의 인스턴스가 필요없고 싱글턴을
+					이용하여 메모리 낭비를 줄일수 있습니다. 
+		Empty			비어 있는 컬렉션을 반환합니다.
+		Range			일정 범위의 숫자 시퀀스를 담고 있는 컬렉션을 생성합니다.
+		Repeat			같은 값이 반복되는 컬렉션을 생성합니다. 
+
+동등 여부 평가	SequenceEqual		두 시퀀스가 서로 일치하는지를 평가합니다. 
+
+요소 접근		ElementAt		컬렉션으로부터 임의의 인덱스에 존재하는 요소를 반환합니다. 
+
+요소 접근		ElementAtOrDefault	컬렉션으로부터 임의의 인덱스에 존재하는 요소를 반환하되 인덱스가 컬렉션의 범위를
+					벗어날 때 기본값을 반환합니다 
+		First			컬렉션의 첫 번째 요소를 반환합니다. 조건식이 매개변수로 입력되는 경우 이조건을 만족
+					시키는 첫 번째 요소를 반환합니다. 
+		FirstOrDefault		First 연산자와 같은 기능을 하되 반환할 값이 없는 경우 기본값을 반환합니다. 
+		Last			컬렉션의 마지막 요소를 반환합니다. 조건식이 매개변수로 입력되는 경우 이조건을 만족시키는 
+					마지막 요소를 반환합니다. 
+		LastOrDefault		Last 연산자와 같은 기능을 하되, 반환할 값이 없는 경우 기본값을 반환합니다.
+		Single			컬렉션의 유일한 요소를 반환합니다. 조건식이 매개변수로 입력되는 경우 이 조건을 만족시키는
+					유일한 요소를 반환합니다. 
+		SingleOrDefault		Single연산자와 같은 기능을 하되, 반환할 값이 없거나 유일한 값이 아닌 경우 주어진 기본값을
+					반환합니다. 
+
+형식변환		AsEnumerable		매개변수를 IEnumerable<(Of<T>)>) 로 형식 변환하여 반환합니다.
+		AsQueryable		(일반화) IEnumerable 객체를 (일반화) IQueryable형식으로 변환합니다.
+		Cast			컬렉션의 요소들을 특정 형식으로 변환합니다. 					범위 변수를 선언할 때 명	
+														시적으로 형식을 지정하
+														면 됩니다. 
+														예)from Profile profile in
+														arrProfile
+		OfType			특정 형식으로 형식 변환할수 있는 값만 걸러냅니다.
+		ToArray			컬렉션을 배열로 변환합니다. 이 메소드는 강제로 쿼리를 실행합니다. 
+		ToDictionary		키 선택 함수에 근거해서 컬렉션의 요소를 Dictionary<(Of<(TKey, TValue>)>)에 삽입합니다.
+					이 메소드는 강제로 쿼리를 실행합니다.
+		ToList			컬렉션을 List<(Of<(T>)>) 형식으로 변환합니다. 이 메소드는 강제로 쿼리를 실행합니다. 
+		ToLookup		키 선택 함수에 근거해서 컬렉션의 요소를 Lookup<(Of<(TKey, TElement>)>)에 삽입합니다.
+					이 메소드는 강제로 쿼리를 실행합니다. 
+
+연결		Concat			두 시퀀스를 하나의 시퀀스로 연결합니다. 
+
+집계		Aggregate		컬렉션의 각 값에 대해 사용자가 정의한 집계 연산을 수행합니다. 
+		Average			컬렉션의 각 값에 대한 평균을 계산합니다. 
+		Count			컬렉션에서 조건에 부합하는 요소의 개수를 셉니다. 
+		LongCount		Count와 동일한 기능을 하지만 매우 큰 컬렉션을 대상으로 한다는 점이 다릅니다. 
+		Max			컬렉션에서 가장 큰 값을 반환합니다. 
+		Min			컬렉션에서 가장 작은 값을 반환합니다.
+		Sum			컬렉션 내의 값의 합을 계산합니다. 
+
+앞의 표에 있는 53개의 표준 LINQ 연산 메소드 중에 C#의 쿼리식에서 지원하는 것은 11개뿐입니다. 물론 11가지만으로도 대부분의 데이터 처리가 가능하지만 나머지 42개를 모두 활용할수 있다면 삶이 조금더 편해질 겁니다. 그런의미에서 LINQ 쿼리식과 메소드를 함께 사용하는 방법을 알아둘 필요가 있습니다. 그리 어려운 것도 아닙니다. 예를 들어 설명해볼게요. 다음과 같은 데이터 원본이 있다고 하고 LINQ를 통해 키가 180cm 미만인 연예인들의 키 평균을 구해보겠습니다. 
+
+Profile[] arrProfile = 
+{
+	new Profile(){Name="정우성", Height=186},
+	new Profile(){Name="김태희", Height=158},
+	new Profile(){Name="고현정", Height=172},
+	new Profile(){Name="이문세", Height=178},
+	new Profile(){Name="하하", Height=171}
+};
+
+먼저 우리가 잘 아는 where 절을 통해 다음과 같이 데이터를 걸러내야겠지요?
+
+var profiles = from profile in arrProfile
+		where profile.Height < 180
+		select profile;
+
+이제 profiles 는 180 미만의 데이터만 갖고 있는 IEnumerable<Profile>형식의 컬렉션입니다. 따라서 LINQ를 사용할수 있으며, 저는 profiles에 대해 다음과 같이 Average()메소드를 호출할겁니다. 
+
+double Average = profiles.Average(profile => profile.Height);
+Console.WriteLine(Average); //169.75 출력
+
+어떻습니까. 어려울것 없지요? 우리는 이들 쿼리식과 이 쿼리식의 결과에 대해 Average()메소드를 호출하는 코드를 다음과 같이 한 문장으로 묶을수도 있습니다. 한층 깔끔 해졌네요. 
+
+double Average = (from profile in arrProfile
+		where profile.Height < 180
+		select profile).Average(profile => profile.Height);
+Console.WriteLine(Average); //169.75 출력
+
+LINQ는 사용하면 할수록 멋집니다. 방금 전처럼 키가 180 미만인 데이터에 대해 평균을 구하는 코드를 LINQ없이 작성해야 한다고 생각해보세요. LINQ를 사용할수 없는 언어를 사용하는 프로그래머들이 불쌍해질 지경입니다. 이제 여러분이 직접 실행해볼수 있는 예제 프로그램을 만들어보면 좋을것 같습니다. 약간만 난이도를 높여서 연예인의 프로필 중 키를 175 이상과 175미만으로 그룹을 나누고, 각 그룹에서 키가 가장 큰 연예인 가장 작은 연예인의 수를 뽑아보겠습니다 
+
+using System;
+using System.Linq;
+
+namespace MinMaxAvg
+{
+	class Profile
+	{
+		public string Name { get; set; }
+		public int Height { get; set; }
+	}
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			Profile[] arrProfile = 
+			{
+				new Profile(){Name="정우성", Height=186},
+				new Profile(){Name="김태희", Height=158},
+				new Profile(){Name="고현정", Height=172},
+				new Profile(){Name="이문세", Height=178},
+				new Profile(){Name="하하", Height=171}
+			};
+			var heightStat = from profile in arrProfile
+					group profile by profile.Height < 175 into g
+					select new
+					{
+						Group = g.Key == true? "175미만":"175이상",
+						Count = g.Count(),
+						Max = g.Max(profile => profile.Height),
+						Min = g.Min(profile => profile.Height),
+						Average = g.Average(profile => profile.Height)
+					};
+			foreach(var stat in heightStat)
+			{
+				Console.WriteLine("{0} - Count:{1}, max:{2}, ", stat.Group, stat.Count, stat.Max);
+				Console.WriteLine("Min:{0}, Average:{1}", stat.Min, stat.Average);	
+			}
+		}
+	}
+}
