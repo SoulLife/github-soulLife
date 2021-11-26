@@ -1,0 +1,405 @@
+CHAPTER17 : dynamic 형식
+2008년 10월 LA 컨벤션 센터에서 열린 PDC(Professional Developers Conference)에서 마이크로소프트의 C# 팀을 이끌고 있는 앤더스 헤일스버그가 전 세계 개발자들이 기다렸던 C# 4.0의 새 기능을 발표했습니다. 이 중에는 선택적 인수와 명명된 인수처럼 이견 없이 모든 프로그래머들에게 환영받은 기능이 있었던 반면에 많은 논란을 일으킨 기능도 있었습니다. 논란의 주인공은 바로 이번 장에서 다룰 dynamic 형식입니다. 
+
+
+17.1 dynamic 형식 소개
+dynamic 형식도 데이터 형식입니다. 다만 형식 검사를 하는 시점이 프로그램 실행 중이라는 점이 다릅니다. 
+class MyClass
+{
+	public void FuncAAA()
+	{	//Do Nothing }
+}
+
+class MainApp
+{
+	static void Main(string[] args)
+	{
+		MyClass obj = new MyClass();
+		obj.FuncAAA();
+		obj.FuncBBB(); //FuncBBB()메소드가 MyClass에 정의되어 있지 않으므로 컴파일 에러가 발생합니다. 
+	}
+}
+
+이 코드는 MyClass 클래스에 FuncBBB() 메소드를 선언하지 않았기 때문에 컴파일되지 않습니다. 다음은 dynamic 형식 코드입니다. 
+
+class MyClass
+{
+	public void FuncAAA()
+	{	//Do Nothing }
+}
+
+class MainApp
+{
+	static void Main(string[] args)
+	{
+		dynamic obj = new MyClass();
+		obj.FuncAAA();
+		obj.FuncBBB(); //FuncBBB() 메소드를 선언하지 않았지만 obj가 dynamic 으로 선언되어서 컴파일러 형식 검사를 피해갑니다. 
+	}
+}
+
+MyClass를 이용해서 obj를 선언하던 코드와 달리 dynamic 키워드를 이용해서 obj를 선언한 이코드는 컴파일러의 방해 없이 실행 파일을 만들어낼 수 있습니다. 컴파일러가 dynamic 키워드를 만나면 프로그램을 실행할 때 형식 검사를 하도록 미루기 때문입니다. 
+
+아니!이게뭐야!
+
+혼란스럽지요? C# 컴파일러가 제공하는 강력한 형식 검사의 이점과 방금 전에 설명한 dynamic형식의 특징이 상충하니 말입니다. dynamic 이주는 이점도 분명히 여럿 있지만(이후에 천천히 소개하겠습니다.)형식 검사를 컴파일할 때 같이 하지 않는다는 점 때문에 프로그래머들 사이에 논란이 많았던 것입니다. 
+한번 생각해보세요. dynamic 키워드는 형식 검사를 컴파일할 때 실행해도 미루겠다는 것뿐이지, 하지 않겠다는 것은 아닙니다. 강력한 형식 검사는 dynamic 키워드가 사용된 곳에서도 여전히 유효합니다. 프로그래머가 코드를 작성하면서 만드는 버그는 수백, 수천 가지에 이릅니다. 그 많은 버그 중에서 잘못된 형식을 이용하는 문법 오류는 아주 일부에 지나지 않지요. 프로그래머는 컴파일 한번 해보고 프로그램을 배포하는 것이 아닙니다. 여러 단계의 테스트를 거쳐서 프로그램에 오류가 없음을 확인한 후 배포합니다. dynamic 형식으로 인해 형식 검사를 못하는 문제는 바로 이 테스트 단계에서 발견하여 제거할수 있습니다. 
+dynamic 형식에 대한 변호는 이 정도로 하고, 이어지는 절부터는 dynamic 형식을 활용할수 있는 몇 가지 방법에 대해 설명하겠습니다. 이 내용을 다 읽고 나면 여러분도 마이크로소프트가 왜 C#에 dynamic 형식을 추가했는지 이해할수 있을 겁니다. 
+
+
+
+
+17.1.1 덕 타이핑
+오리처럼 걷고 오리처럼 헤엄치며 오리처럼 꽉꽉 거리는 새를 봤을 때, 나는 그 새를 오리라고 부른다. 
+
+이 문장은 미국의 시인인 제임스 휘트컴라일리(1849~1916)의 시에서 인용된 것으로, 덕 타이핑(Duck Typing)을 가장 잘 설명하는 문장이기도 합니다. 덕 타이핑은 객체지향 프로그래밍과는 상당히 다른 각도에서 형식을 바라봅니다. 객체지향 프로그래밍에서는 C#에서 어떤 형식이 오리(Duck)라고 인정받으려면 그 형식의 조상 중에오리가 있어야 하지요? 예를 들어 다음과 같이 말입니다. 
+
+class Duck
+{
+	public void Walk()
+	{ Console.WriteLine("Duck.Walk"); }
+	public void Swim()
+	{ Console.WriteLine("Duck.Swim"); }
+	public void Quack()
+	{ Console.WriteLine("Duck.Quack"); }
+}
+class Mallard : Duck //Mallad(청둥오리)는 Duck으로부터 상속을 받으므로 Duck이라고 인정할수 있습니다. 
+{
+	//...
+}
+
+반면에 덕 타이핑에서 어떤 형식이 오리로 인정을 받으려면 오리처럼 걷고, 오리처럼 헤엄치고, 오리처럼 꽉꽉거리기만 하면 됩니다. 그 형식이 어느 형식으로부터 상속받는지는 전혀 중요하지 않습니다. 다음은 덕 타이핑에서 오리로 인정하는 클래스들의 선언 코드입니다. 
+
+class Duck //Duck도 오리이고.
+{
+	public void Walk()
+	{ Console.WriteLine("Duck.Walk"); }
+	public void Swim()
+	{ Console.WriteLine("Duck.Swim"); }
+	public void Quack()
+	{ Console.WriteLine("Duck.Quack"); }
+}
+class Robot //Robot도 오리입니다.
+{
+	public void Walk()
+	{ Console.WriteLine("Robot.Walk"); }
+	public void Swim()
+	{ Console.WriteLine("Robot.Swim"); }
+	public void Quack()
+	{ Console.WriteLine("Robot.Quack"); }
+}
+
+덕 타이핑 관점에서 보면 이 예제 코드에서 선언한 Duck도 오리이고 Robot도 오리입니다. 둘다 오리처럼 걷고, 헤엄치고, 꽉꽉거리거든요. 
+하지만 C# 컴파일러는 Duck이나 Mallard는 오리로 인정해도 Robot은 오리로 인정하지 않습니다. 가령 다음과 같은 Duck 형식의 배열을 선언하고 여기에 Duck, Mallard, Robot의 인스턴스를 요소로 넣어 초기화하려면 컴파일러는 형식 검사를 하면서 Robot은 Duck형식이 아니라고 에러 메시지를 내뱉을 겁니다. 우리가 아무리 오리처럼 걷고 헤엄치고 꽉꽉거리면 오리다 라고 생각해도 컴파일러는 그렇게 생각하지 않는데 어떻게 덕 타이핑의 철학을 프로그래밍에 적용할수 있겠습니까?
+
+Duck[] arr= new Duck[]{ new Duck(), new Mallard(), new Robot() };
+이런 경우는 dynamic 형식을 통해 해결할수 있습니다. dynamic 형식으로 선언하면 형식 검사를 실행할 때로 미룬다는 점을 이용하는 겁니다. 다음과같이 말입니다. 
+
+dynamic[] arr = new dynamic[]{ new Duck(), new Mallard(), new Robot() };
+foreach(dynamic duck in arr)
+{
+	Console.WriteLine(duck.GetType());
+	duck.Walk();
+	duck.Swim();
+	duck.Quack();
+
+	Console.WriteLine();
+}
+
+Duck, Mallard, Robot 클래스가 Walk(), Swim(), Quack() 메소드를 구현하고 있으므로 이코드는 컴파일도 실행도 문제없이 잘될 겁니다. 
+
+
+덕 타이핑의 개념은 알수 있겠지요? 그런데 말입니다. 덕 타이핑은 왜 사용하는 걸까요? 인터페이스 상속을 이용한다면 비슷한 일을 할수 있을 텐데 말입니다. 
+
+인터페이스를 설계하기 위해서는 추상화를 잘해야 하는데 추상화를 잘하려면 연습과 경험이 많이 필요합니다. 인터페이스를 잘못 설계했다가 나중에 파생 클래스를 수정해야 할 일이 생기면 위로는 인터페이스를 수정하고아래로는 자신의 파생 클래스들, 옆으로는 형제 클래스들을 줄줄이 수정해야 하는 일이 생깁니다. 덕 타이핑은 이런 문제를 만났을 때 좀 더 유연하게 해결할수 있도록 돕습니다. 
+상속 관계를 이용하지 않기 때문에 프로그램의 동작에 관여하는 부분만 손을 대면 되거든요. 
+덕 타이핑이 좋은 점만 있는 것은 아닙니다. 우선 비주얼 스튜디오의 리팩토링 기능을 이용할수 없습니다. 가령 Walk()메소드의 이름을 Run()으로 고치고 싶어도 여러분이 직접 Walk()메소드가 선언된 곳과 사용되고 있는 곳을 코드에서 찾아 수정해야 합니다. 인터페이스를 이용했다면 비주얼 스튜디오를 이용해서 자동으로 그것도 단번에 이일을 할수 있는데 말입니다. 
+인터페이스를 이용한 구조적 타이핑과 덕 타이핑중 딱히 어느쪽이 우수한 설계 기법이라고는 단정하기가 어렵습니다. 어느쪽이 우수한가 하는 문제는 대게 프로그래머의 취향과 개발 환경에 따라 답이 다르게 나오기 때문입니다. 
+
+
+
+
+17.2 COM과 .NET 사이의 상호 운용성을 위한 dynamic 형식
+COM이 세상을 지배하던 때가 있었습니다. 수많은 COM컴포넌트가 시장에 나왔고  프로그래머들 은 이들을 이용하여 안정된 기능의 애플리케이션을 더욱 빠르게 개발할 수 있었습니다. 대안 기술이 여럿 등장한 지금도 COM은 여전히 많이 사용되는 상황이며, 제 예상이 맞다면 한동안은 지금처럼 COM의 세상이 계속될 겁니다. 
+
+아 그런데 COM이 잘나가는 것하고 C#하고 무슨 상관이냐고요? 상관이 있고 말고요. COM은 부품 역할을 하는 소프트웨어 입니다. 전자공학이나 반도체를 전공하지 않은 일반인들도 PC를 조립할수 있는 것은 첫째로 PC의 각 부품과 부품사이를 연결하는 규격 설계(예를 들자면 PCI)가 잘되었기 때문이고, 둘째로는 부품들이 각 전문 업체에 의해 그 기능을 충실히 수행하도록 만들어졌기 때문입니다. 기판과 저항, 콘덴서 등을 이용해서 그래픽 카드를 직접 만들어야 한다고 생각해보세요. 만드는 시간도 시간이지만 전문 지식이 없는 한 이것은 불가능한 일입니다. 
+COM 컴포넌트는 그래픽 프로그래밍에 서툰 프로그래머가 화려한 차트 기능을 애플리케이션에 넣을수 있도록 해주고, 엑셀 문서의 파일 구조를 몰라도 엑셀 문서를 읽거나 쓸수 있게 해줍니다. 이렇게 멋진 COM을 우리가 공부하고 있는 C#에서는 사용할수 없다고 생각해보세요. 얼마나 끔찍한 일입니까?
+다행히도 C#을 비롯한 .NET언어들은 RCW(Runtime Callable Wrapper)를 통해서 COM 컴포넌트를 사용할 수 있습니다. RCW는 .NET이 제공하는 Type Library Importer(tlbimp.exe)를 이용해서. 만들수 있는데, 비주얼 스튜디오를 사용해서 COM 객체를 프로젝트 참조에 추가하면 IDE가 자동으로 tlbimp.exe를 호출해 RCW를 만들어줍니다. RCW는 COM에 대한 프록시 역할을 함으로써 C# 코드에서 .NET 클래스 라이브를 사용하듯 COM API를 사용할수 있게 해줍니다. 
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? COM이란?
+COM은 Component Object Model의 약자로 마이크로소프트의 소프트웨어 컴포넌트 규격을 말합니다. OLE ActiveX COM+와 같은 파생 규격들이 모두 COM을 바탕으로 만들어졌지요. 2000년대 초 마이크로소프트에서 .NET을 발표하자 COM이 곧 역사의 뒤안길로 사라질 거라는 예상이 많았지만 COM은 여전히 수많은 프로그래머들의 지지를 받으며굳건히 그 지위를 지키고 있습니다. 마이크로소프트에서 출시되는 대부분의 제품이 COM을 지원하는 것은 두말할 필요도 없지요. 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+여기까지만 보면 C#과 COM이야기는 그 후로 프로그래머들은 RCW를 통해 C#코드에서 COM컴포넌트가 갖고 있는 API들을 호출하며 행복하게 잘 살았답니다. 로 끝날것 같지만 실상은 그렇지 못했습니다. 애초부터 COM 친화적인 언어였던 비주얼 베이직은 COM과 잘 어울렸지만 C#은 RCW가 있어도 여전히 COM과 서먹했던 것이죠. C#이 COM 사이를 서먹하게 만든 원인은 다음 두 가지입니다. 
+
+1. COM은 메소드가 결과를 반환할 때 실제 형식이 아닌 object형식으로 반환합니다. 이 때문에 C# 코드에서는 이 결과를 실제 형식으로 변환해줘야 하는 번거로움이 있었습니다. 
+
+2. COM은 오버로딩을 지원하지 않습니다. 그 대신 메소드의 선택적 인수와 기본값을 지원하지요. C#은 4.0 버전으로 업그레이드되기 전까지는 선택적 인수와 기본값을 지원하지 못했습니다. 덕분에 C# 코드에서 COM API 하나를 호출하려면 사용하지도 않을 인수를 수없이 입력해야 하는 번거로움이 있었습니다. 
+
+마이크로소프트는 어색했던 COM과 C# 사이의 관계를 몇년 동안이나 방치해뒀었는데 C# 4.0에 이르러서야 dynamic 형식의 도입을 통해 1번 문제를 해결하고, 메소드의 선택적 인수 기본값 도입을 통해 2번 문제를 해소했습니다. 비로소 C#도 VB처럼 COM 친화적인 언어가 된 것입니다. 
+예를 하나 보여드리겠습니다. 마이크로소프트느는 워드를 비롯해서 파워포인트, 엑셀 등 오피스 제품들의 기능을 여러분의 코드에서 이용할수 있도록 이소프트웨어들을 COM 컴포넌트로 구성해놨습니다. 이 중에서도 엑셀의 COM 컴포넌트를 이용해서 문서를 생성하고 그 안에 데이터를 넣은 후 저장까지 하는 코드를 다음 표에 작성했습니다. 표의 왼쪽은 C# 4.0미만의 버전에서 엑셀 COM 컴포넌트를 사용하는 코드이고, 오른쪽은 C#4.0 이상의 버전에서 COM 컴포넌트를 사용하는 코드입니다. 왼쪽 코드는 수많은 형식 변환과 의미없는 인수 입력이 난무하는 반면, 오른쪽 코드는 간결하기 그지 없습니다. 
+
+
+
+C# 3.0 이하
+public static void OldWay(string[,] data, string savePath)
+{
+	Excel.Application excelApp = new Excel.Application();
+	excelApp.Workbooks.Add(Type.Missing);
+	Excel.WorkSheet workSheet = (Excel.Worksheet)excelApp.ActiveSheet;
+	for (int i=0; i<data.GetLength(0); i++)
+	{
+		((Excel Range)workSheet.Cells[i + 1, 1]).Value2 = data[i, 0];
+		((Excel Range)workSheet.Cells[i + 1, 2]).Value2 = data[i, 1];
+	}
+	workSheet.SaveAs(savePath + "\\shpark-book-old.xlsx",Type.Missing,Type.Missing,Type.Missing,Type.Missing,Type.Missing,Type.Missing,Type.Missing,
+			Type.Missing);
+	excelApp.Quit();
+}
+
+
+
+C# 4.0 이상
+public static void NewWay(string[,] data, string savePath)
+{
+	Excel.Application excelApp = new Excel.Application();
+	excelApp.Workbooks.Add();
+	Excel.__Worksheet workSheet = excelApp.ActiveSheet;
+	for(int i=0; i<data.GetLength(0); i++)
+	{
+		workSheet.Cells[i + 1, 1] = data[i, 0];
+		workSheet.Cells[i + 1, 2] = data[i, 1];
+	}
+	workSheet.SaveAs(savePath + "\\shpark-book-dynamic.xlsx");
+	excelApp.Quit();
+}
+
+잠깐 간결한건 알겠는데, 선택적 매개변수라든가 dynamic 키워드 같은건 보이지 않는데요?
+
+선택적 인수와 dynamic 형식은 비주얼 스튜디오가 RCW를 만들때 사용하며 우리는 전혀 손대지 않아도 되는 부분입니다. 수고로움을 더는 부분이죠. 바로 이어 예제 프로그램을 만들 텐데, 코드를 작성하면서 인텔리센스 기능을 이용하여 RCW의 메소드와 각 형식을 확인해보기 바랍니다. 다음 그림에서처럼 dynamic 형식을 비롯하여 선택적 인수 등이 도입된 것을 확인할수 있을 겁니다. 
+
+이제 예제 프로그램을 만들어 보겠습니다. 이번 예제 프로그램은 지금까지 만들어왔던 예제 프로그램들과 달리 COM 컴포넌트를 참조에 추가하는 등의 절차가 필요합니다. 차근차근 순서대로 엑셀 COM 컴포넌트를 프로젝트에 추가한 후 코드를 작성해 나가시길 바랍니다. 
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? 엑셀이 설치되어 있어야 합니다
+이 예제 프로그램은 엑셀 COM 컴포넌트를 사용하는데, 이 컴포넌트는 마이크로소프트 엑셀이 설치되어 있어야 사용할수 있습니다. 참고로 본문의 예제 프로그램은 엑셀 2019를 기준으로 작성되었습니다. 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+STEP1
+비주얼 스튜디오를 실행하고 새 프로젝트를 만드세요. 지금까지 해왔던 것처럼 콘솔 앱(.NET Core)템플릿을 선택한 후 프로젝트의 이름을 COMInterop이라고 입력하세요. 
+
+STEP2
+솔루션 탐색기에서 Program.cs 파일의 이름을 MainApp.cs로 바꾸세요. 
+
+STEP3
+솔루션 탐색기에서 종속성 항목 위에 마우스 커서를 올린뒤 마우스 오른쪽 버튼을 클릭하세요. 이때 다음 그림과 같은 컨텍스트 메뉴가 나타나는데 여기에서 [COM 참조 추가]항목을 선택하세요. 
+
+STEP4
+이제 다음과 같은 창이 나타날 겁니다. 창의 왼편에서 [COM] > [형식 라이브러리]항목을 선택하고 구성 요소 목록에서 Microsoft Excel 16.0 Object Library를 선택한 후 <확인> 버튼을 클릭하세요.(엑셀 2019이전 버전이라면 15.0을 선택합니다.)
+
+STEP5
+지금까지의 작업이 성공적으로 진행되었다면 다음 그림과 같이 COM 항목에 Interop.Microsoft.Office.Interop.Excel이 추가될 겁니다. 
+
+
+솔루션 탐색기에서 Interop.Microsoft.Office.Interop.Excel 항목을 선택한 후, 다음 그림과 같이 속성 창에서 [Interop 형식 포함]항목 값을 예로 변경해주세요. 
+
+
+STEP6
+이제 본격적으로 코드를 작성해보겠습니다. MainApp.cs 파일을 열어 다음과 같이 편집하고 컴파일하세요. 
+
+using System;
+using Excel = Microsoft.Office.Interop.Excel;
+
+namespace COMInterop
+{
+	class MainApp
+	{
+
+		public static void OldWay(string[,] data, string savePath)
+		{
+			Excel.Application excelApp = new Excel.Application();
+			excelApp.Workbooks.Add(Type.Missing);
+			Excel.WorkSheet workSheet = (Excel.Worksheet)excelApp.ActiveSheet;
+			for (int i=0; i<data.GetLength(0); i++)
+			{
+				((Excel Range)workSheet.Cells[i + 1, 1]).Value2 = data[i, 0];
+				((Excel Range)workSheet.Cells[i + 1, 2]).Value2 = data[i, 1];
+			}
+			workSheet.SaveAs(savePath + "\\shpark-book-			old.xlsx",Type.Missing,Type.Missing,Type.Missing,Type.Missing,Type.Missing,Type.Missing,Type.Missing,
+			Type.Missing);
+			excelApp.Quit();
+		}
+
+
+		public static void NewWay(string[,] data, string savePath)
+		{
+			Excel.Application excelApp = new Excel.Application();
+			excelApp.Workbooks.Add();
+			Excel.__Worksheet workSheet = excelApp.ActiveSheet;
+			for(int i=0; i<data.GetLength(0); i++)
+			{
+				workSheet.Cells[i + 1, 1] = data[i, 0];
+				workSheet.Cells[i + 1, 2] = data[i, 1];
+			}
+			workSheet.SaveAs(savePath + "\\shpark-book-dynamic.xlsx");
+			excelApp.Quit();
+		}
+
+		static void Main(string[] args)
+		{
+			string savePath = System.IO.Directory.GetCurrentDirectory();
+			string[,] array = new string[,]
+			{
+				{"뇌를 자극하는 알고리즘", "2009"},
+				{"뇌를 자극하는 C# 4.0", "2011},
+				{"뇌를 자극하는 C# 5.0", "2013"},
+				{"뇌를 자극하는 파이썬 3", "2016"},
+				{"그로킹 딥러닝", "2019"},
+				{"이것이 C#이다", "2018"},
+				{"이것이 C#이다 2E", "2020}};
+			Console.WriteLine("Creating Excel document in old way...");
+			OldWay(array, savePath);
+			
+			Console.WriteLine("Creating Excel document in new way...");
+			NewWay(array, savePath);
+		}
+	}
+}
+
+STEP7
+이제 실행 파일이 만들어졌을 겁니다. 프로그램을 실행하면 다음과 같이 메시지를 출력한후 종료됩니다. 
+Creating Excel document in old way...
+Creating Excel document in new way...
+
+
+STEP8
+엑셀 문서가 잘 만들어졌는지 확인해봐야겠지요? 프로그램을 실행한 폴더를 열어보면 shpark-book-old.xlsx 파일과 shpark-book-dynamic.xlsx 파일이 생겼을 텐데 둘 중 아무거나 열어보세요. 두파일 모두 다음내용이 동일하게 입력되어 있을 겁니다. 
+
+
+
+
+
+
+
+17.3 동적 언어와의 상호 운용성을 위한 dynamic 형식
+파이썬(Python)과 루비(Ruby)는 프로그래머들 사이에서 인기가 많은 동적 언어(Dynamic Language 또는 Dynamic Typed Language)입니다. 파이썬은 귀도 반 로섬(Guido van Rossum)이 오픈소스 프로젝트로 만들어온 언어였는데, 이 언어에 강한 매력을 느낀 구글이 아예 귀도를 스카우트하여 귀도가 구글내에서 파이썬 개발을 하기도 했었습니다. 루비(역시 오픈소스 프로젝트입니다.)는 일본인인 마츠모토 유키히로가 만든 언어입니다. 영어로 작성된 문서가 거의 없었음에도 특이하게 알음알음 전 세계의 프로그래머들이 루비에 빠져들기 시작했습니다 그러던 중 베이스캠프(당시는 37signals)회사에서 루비 온 레일즈(Ruby On Rails)라는 프레임워크를 선보인 후부터 사용자가 폭발적으로 증가하여 어느덧 주류 프로그래밍 언어가 되었습니다. 파이썬과 루비 두 언어 모두 뛰어난 가독성, 유연하면서도 표현력이 풍부한 언어 구조, 다양한 라이브러리를 갖추고 있어 프로그래머들이 굉장히 좋아합니다. 특히 프로그래밍을 시작하는 학생들뿐 아니라 C나 자바 같은 언어를 이미 주력으로 사용하고 있는 프로그래머들도 이 언어들을 좋아합니다. 
+
+한편 CLR(Common Language Runtime)은 IL(Intermediate Language)로 컴파일 할 수 있는 언어들은 지원하지만, 파이썬이나, 루비처럼 실행할 때 코드를 해석해서 실행하는 방식의 동적 언어는 지원할수 없었습니다. 
+그래서 마이크로소프트는 동적 언어를 실행할수 있도록 하는 플랫폼인 DLR(Dynamic Language Runtime)을 선보였습니다. DLR은 CLR 위에서 동작하며 파이썬이나 루비와 같은 동적 언어를 실행할수 있습니다. DLR의 장점은 그저 동적 언어를 .NET 플랫폼에서 실행할수 있다는 정도에서 그치지 않습니다. DLR은 파이썬이나 루비같은 동적 언어의 코드에서 만들어진 객체에 C#이나 VB같은 정적 언어의 코드에서 접근할수 있게 해줍니다. 한마디로 여러분의 C# 코드에서 직접 파이썬이나 루비 코드를 실행하고 그 결과를 받아볼수 있다는 이야기입니다. 
+
+또한 CLR 입장에서 보면 DLR API를 기반으로 구현된 동적 언어라도 호스팅(Hosting(주인이 손님을 섬긴다는 뜻입니다. 여기에서는 CLR이 주인이고 그 위에 얹혀 동작하는 동적 언어가 손님입니다.))할수 있다는 장점이 있습니다. 가령 파이썬을 줄곧 사용해오다가 파이썬에는 없는 라이브러리가 루비에 있는 경우 C#프로그래머는 별도의 학습 없이도 바로 루비 라이브러리를 이용하는 코드를 호스팅할수 있습니다.(물론 루비의 문법은 알고 있어야겠지요)
+앞 절에서 COM에 대한 이야기를 나누는 동안 여러분도 느꼈겠지만, 서로 다른 구조를 가진 시스템 사이의 상호 운용성을 확보하는 것은 쉬운일이 아닙니다. 제대로 된 상호 운용성을 확보하는데 꽤 오랜 시간이 걸린 COM과 .NET이 같은 회사에서 만들어진 플랫폼이라는 사실을 생각해보세요. 
+CLR에서 동적 언어를 지원하는 일도 역시 쉽지 않은 작업임을 가늠할수 있습니다. 
+다행스럽게도 COM과 .NET의 상호 운용성 문제에 사용했던 dynamic을 CLR과 DLR 사이의 상호 운용성 문제를 해결하는데 사용할수 있습니다. 미리 형식 검사를 할수 없는 동적 형식 언어에서 만들어진 객체를 C#의 dynamic 형식이 받아낼수 있거든요. 
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? DLR은 .NET의 일부가 되었습니다.
+DLR도 마이크로소프트에서 개발하고는 있지만 .NET과는 전혀 별개의 프로젝트로 진행되고 있다가 2010년 .NET에 통합되었습니다. 마이크로소프트는 DLR을 오픈소스로 개발하여 공개하고 있으며 http://github.com/IronLanguages/dlr에서 DLR의 소스 코드를 내려받을수 있습니다. C# 언어로 만들어졌기 때문에 여러분도 직접 빌드해서 사용할수 있습니다. 
+
+하지만 파이썬 코드를 실행하는 IronPython은 별도로 설치해야 합니다. IronPython을 설치하는 방법은 잠시후 실습 예제와 함께 설명하겠습니다. 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+이번에는 DLR이 제공하는 클래스들 중 몇 가지를 살펴보겠습니다. C# 코드에서 동적 언어를 호스팅하기 위해서는 이 클래스들의 도움을 받아야 하거든요. 
+
+
+클래스			설명
+ScriptRuntime		동적 언어를 호스팅하는 시작점입니다. ScriptRuntime 클래스는 참조된 어셈블리나 전역 객체같은 전역 상태를 나타내며 하나의
+			.NET AppDomain 안에 여러 개의 ScriptRuntime 인스턴스를 만들수 있습니다. 
+ScriptScope		기본적으로 네임스페이스를 나타냅니다. 호스트(즉, C# 코드)는 ScriptScope 객체 안의 동적 언어 코드에서 사용하는 변수에 값을 
+			대입하거나 읽을수 있습니다. 
+ScriptEngine		스크립트 엔진은 언어의 구문을 나타내는 일꾼입니다. 스크립트엔진은 코드를 실행하고 ScriptScope와 ScriptSource를 생성하는
+			다양한 방법을 제공합니다. 
+ScriptSource		이 클래스는 소스 코드를 읽어들이는 여러 메소드와 읽어들인 소스 코드를 다양한 방법으로 실행하는 메소드들을 제공합니다. 
+CompiledCode		이 클래스는 컴파일된 코드를 나타냅니다. 한번 컴파일해놓고 여러 번 반복해서 실행하는 코드를 나타내는데 사용됩니다. 
+
+표의 클래스들은 C# 호스트 코드에서 게스트 코드를 실행할 때 다양한 방법으로 조합하여 사용할수 있습니다. 우선 ScriptRuntime 객체는 소스 코드 파일의 경로를 넘겨받아 실행할수 있습니다. 다음은 파이썬 소스 코드 파일을 ScriptRuntime 객체가 읽어 실행하는 예제입니다. 
+
+ScriptRuntime runtime = Python.CreateRuntime();
+dynamic result = runtime.ExecuteFile("namecard.py"); //py는 파이썬 소스코드의 확장자입니다. 
+
+프로그램을 실행할 때 생성한 문자열에 담긴 동적 언어 코드도 실행할수 있습니다. ScriptEngine, ScriptScope, ScriptSource 클래스를 이용하면 됩니다. 다음은 문자열에 담긴 파이썬 코드를 실행하는 예제입니다. 
+
+ScriptEngine engine = Python.CreateEngine();
+ScriptScope scope = engine.CreateScope();
+scope.SetVariable("n", "박상현");
+scope.SetVariable("p", "010-123-4566");
+
+ScriptSource source = engine.CreateScriptSourceFromString(@"
+	class nameCard :
+		name = ''
+		phone = ''
+		def __init__(self, name, phone) :
+			self.name = name
+			self.phone = phone
+
+		def printNameCard(self) :
+			print self.name + ', ' + self.phone
+
+	NameCard(n, p)
+	");
+dynamic result = source.Execute(scope);
+result.printNameCard();
+Console.WriteLine("{0}, {1}", result.name, result.phone);
+
+자, 양쪽 예제 코드의 마지막 줄을 주목해주세요. dynamic 형식은 ScriptRuntime을 이용해서 소스 파일에 담긴 코드를 실행하든 ScriptEngine,m ScriptScope, ScriptSource를 이용해서 문자열에 담긴 코드를 그 자리에서 실행하든 C# 코드가 호스팅하고 있는 파이썬 코드 안에서 만들어진 객체를 그대로 받아냅니다. 이렇게 받아낸 파이썬 출신의 객체는 C# 코드에서 직접 메소드를 호출할수 있고 필드에 접근하는 것도 가능합니다.(제가 지금껏 DLR을 설명한 것도 바로 이 dynamic 형식의 기능을 이야기하기 위해서였습니다.)
+이제 예제 프로그램을 만들어보겠습니다. 이 예제는 NuGet 패키지 관리자를 이용해서 IronPython 을 설치하는 과정을 포함합니다. 
+
+
+STEP1
+콘솔 프로젝트를 하나 생성하고 프로젝트 이름을 WithPython으로 지정하세요. 
+
+STEP2
+비주얼 스튜디오 메뉴에서 [도구] > [NuGet 패키지 관리자] > [패키지 관리자 콘솔]을 클릭하세요. IDE 하단에 패키지 관리자 콘솔이 나타날 겁니다. 
+
+STEP3
+패키지 관리자 콘솔에서 다음과 같이 명령어를 입력하세요. NuGet 패키지가 인터넷에 접속해서 자동으로 DLR과 IronPython을 내려받고 필요한 클래스 라이브러리 참조를 프로젝트에 추가해줍니다 
+PM> Install-Package IronPython
+
+STEP4
+이제 코딩만 남았습니다. WithPython 프로젝트의 Program.cs 파일의 이름을 MainApp.cs로 변경하고 다음 코드를 입력하세요. 코드 입력이 끝나면 프로젝트를 빌드해서 실행 결과를 확인하세요. 
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+using Microsoft.Scripting;
+using Microsoft.Scripting.Hosting;
+using IronPython.Hosting;
+
+namespace WithPython
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			ScriptEngine engine = Python.CreateEngine();
+			ScriptScope scope = engine.CreateScope();
+			scope.SetVariable("n", "박상현");
+			scope.SetVariable("p", "010-123-4566");
+		
+			ScriptSource source = engine.CreateScriptSourceFromString(@"
+		class NameCard : //파이썬 코드에서 클래스를 선언
+			name = ''
+			phone = ''
+			def __init__(self, name, phone) :
+				self.name = name
+				self.phone = phone
+
+			def printNameCard(self) :
+				print self.name + ', ' + self.phone
+
+		NameCard(n, p)
+		");
+			dynamic result = source.Execute(scope); //파이썬 코드를 실행하여 그결과를 반환합니다. 34행에서 nameCard()생성자를 호출했으니
+								NameCard 객체가 생성되어 반환됩니다. 
+			result.printNameCard(); //이객체의 메소드를 호출할 수도 있고	
+			Console.WriteLine("{0}, {1}", result.name, result.phone); //필드에도 접근할수 있습니다. 
+		}
+	}
+}
+
+DLR과 파이썬에 대해서 하고싶은 이야기가 정말 많지만 두 주제는 따로 설명해도 각각 책 한권의 지면이 필요합니다. 게다가 우리는 파이썬을 공부하는 중이 아니라 C#을 공부하던 중이었잖아요? 이야기를 꺼낸 것도 C#의 dynamic 형식을 설명하기 위해서였으니 이쯤에서 정리하고 다음 장으로 넘어가겠습니다. 다음 장에서 우리가 공부할 내용은 파일 처리입니다. 
