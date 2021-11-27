@@ -1,0 +1,525 @@
+CHAPTER18 : 파일 다루기
+계산과 더불어 컴퓨터가 하는일 중에 가장 중요한 것은 바로 영구적으로 기록을 남기는 일입니다. 여러분이 만들 프로그램도 십중 팔구는 파일에서 데이터를 읽어들인 후 그 데이터를 가공한 결과를 다시 파일에 기록하는 기능을 포함할 것입니다. 여러분이 사용하는 프로그램을 생각해보세요. 파일 저장 같은 기능이 없는 지뢰찾기 게임마저도 최고 득점자 정보를 남기기위해 디스크 어딘가의 파일에 데이터를 기록합니다. 이렇듯 파일 다루기는 프로그래머라면 피해갈수 없는 일입니다. 
+
+이번 장에서는 바로 이 파일 다루기에 대해 설명하려 합니다. 먼저 파일과 디렉터리 정보를 다루는 법에 대해 이야기하고, 그후 파일의 내용을 읽고 쓰는 법을 설명하겠습니다. 
+
+
+
+18.1 파일 정보와 디렉터리 정보 다루기
+파일(File)은 컴퓨터 저장 매체에 기록되는 데이터의 묶음입니다. 디렉터리(Directory)는 파일이 위치하는 주소로, 파일(서류)을 담는다는 의미에서 폴더(Folder:서류철)라고 부르기도 합니다. .NET은 파일과 디렉터리 정보를 손쉽게 다룰수 있도록 System.IO 네임스페이스 아래에 다음과 같은 클래스들을 제공합니다. 
+
+클래스		설명
+File		파일의 생성, 복사, 삭제, 이동, 조회를 처리하는 정적 메소드를 제공합니다. 
+FileInfo		File 클래스와 하는일은 동일하지만 정적 메소드대신 인스턴스 메소드를 제공합니다. 
+Directory		디렉터리의 생성, 삭제, 이동, 조회를 처리하는 정적 메소드를 제공합니다. 
+DirectoryInfo	Directory클래스와 하는일은 동일하지만 정적 메소드 대신 인스턴스 메소드를 제공합니다. 
+
+File 클래스와 FileInfo 클래스는 거의같은 기능을 제공합니다. 차이라면 File 클래스는 같은 기능을 정적 메소드를 통해 제공하고 FileInfo 클래스는 인스턴스 메소드를 통해 제공한다는 점뿐입니다. 어떤 경우에 File 클래스와 FileInfo 클래스 중 어느것을 사용해야 한다는 규칙 같은 것은 없지만, 하나의 파일에 대해 한두 가지 정도의 작업을 할 때는  File 클래스의 정적 메소드를 이용하고, 하나의 파일에 여러 작업을 수행할 때는 FileInfo 클래스의 인스턴스 메소드를 이용하는 편입니다. 
+Directory 클래스와 DirectoryInfo 클래스에 대해서도 마찬가지입니다. 디렉터리에 대해 한두 가지 작업을 해야 할 때는 Directory클래스를, 여러 가지 작업을 해야할  때는 DirectoryInfo 클래스를 이용하면 됩니다. 
+
+다음표에는 File 클래스와 FileInfo 클래스, Directory 클래스와 DirectoryInfo 클래스가 제공하는 주요 메소드와 프로퍼티가 정리되어 있습니다. 이들은 파일/디렉터리 작업에 있어 핵심이라 할수 있는 생성/복사/삭제/이동/정보 조회 등의 기능을 수행합니다.(참고로 다음표에서 ()가 붙은 항목은 메소드, ()가 없는 항목은 프로퍼티를 나타냅니다. )
+
+
+기능		File		FileInfo			Directory				DirectoryInfo
+생성		Create()		Create()			CreateDirectory()			Create()
+복사		Copy()		CopyTo()			-				-
+삭제		Delete()		Delete()			Delete()				Delete()
+이동		Move()		MoveTo()			Move()				MoveTo()
+존재 여부 확인	Exists()		Exists			Exists()				Exists
+속성 조회		GetAttributes()	Attributes		GetAttributes()			Attributes
+하위 디렉터리 조회	-		-			GetDirectories()			GetDirectories()
+하위 파일 조회	-		-			GetFiles()				GetFiles()
+
+이제 표에 나타난 메소드와 프로퍼티를 사용 하는 예제 코드를 확인해야겠지요? 먼저 파일 관련 클래스들의 예제를 살펴보겠습니다. File 클래스와 FileInfo 클래스는 하는 일이 같으므로 사용하는 스타일만 비교하면 됩니다. 다음 표에 이 두 클래스의 사용 예제가 나타나 있습니다. 
+
+
+기능		File					FileInfo
+생성		FileStream fs = File.Create("a.dat");		FileInfo file = new FileInfo("a.dat");
+							FileStream fs = file.Create();
+복사		File.Copy("a.dat", "b.dat");			FileInfo src = new FileInfo("a.dat");
+							FileInfo dst = src.CopyTo("b.dat");
+삭제		File.Delete("a.dat");				FileInfo file = new FileInfo("a.dat");
+							file.Delete();
+이동		File.Move("a.dat", "b.dat");			FileInfo file = new FileInfo("a.dat");
+							file.MoveTo("b.dat");
+존재 여부 확인	if(File.Exists("a.dat")				FileInfo file = new FileInfo("a.dat");
+							if(file.Exists)
+속성 조회		Console.WriteLine(File.GetAttributes("a.dat");	FileInfo file = new FileInfo("a.dat");
+							Console.WriteLine(file.Attributes);
+
+어떻습니까? File 클래스와 FileInfo 클래스, 어느 쪽이든 사용 방법에는 별 어려움이 없지요? 이번에는 디렉터리를 다루는 Directory클래스와 DirectoryInfo 클래스의 사용 방법을 보겠습니다. 
+
+기능			Directory						DirectoryInfo
+생성			DirectoryInfo dir = Directory.CreateDirectory("a");	DirectoryInfo dir = new DirectoryInfo("a");
+									dir.Create();
+삭제			Directory.Delete("a");				DirectoryInfo dir = new DirectoryInfo("a");
+									dir.Delete();
+이동			Directory.Move("a", "b");				DirectoryInfo dir = new DirectoryInfo("a");
+									dir.MoveTo("b");
+존재 여부 확인		if(Directory.Exists("a.dat"))				DirectoryInfo dir = new DirectoryInfo("a");
+									if(dir.Exists)
+속성 조회			Console.WriteLine(Directory.GetAttributes("a"));		DirectoryInfo dir = new DirectoryInfo("a");
+									Console.WriteLine(dir.Attributes);
+하위 디렉터리 조회		string[] dirs = Directory.GetDirectories("a");		DirectoryInfo dir = new DirectoryInfo("a");
+									DirectoryInfo[] dirs = dir.GetDirectories();
+하위 파일 조회		string[] files = Directory.GetFiles("a");			DirectoryInfo dir = new DirectoryInfo("a");
+									FileInfo[] files = dir.GetFiles();
+
+간단하게 파일과 디렉터리를 다루는 방법에 대해 정리해봤는데, 이렇게 끝내기는 아쉽죠? 그래서 예제 프로그램 두 가지를 준비했습니다. 하나는 도스의 dir 명령어처럼 인수로 입력받은 경로의 디렉터리 내에 있는 하위 디렉터리와 파일 목록을 출력해주는 프로그램이고, 또 다른 하나는 유닉스나 리눅스에서 파일을 만들 때(파일이 이미 존재한다면 파일의 최종 수정 시간을 변경합니다.)사용하는 touch와 비슷한 기능을 하는 프로그램입니다. 
+
+
+
+
+18.1.1 예제 프로그램 : 디렉터리/ 파일 정보 조회하기
+이 프로그램은 사용자가 인수를 입력하지 않으면 현재 디렉터리에 대해, 인수를 입력한 경우에는 입력한 디렉터리 경로에 대해 하위 디렉터리 목록과 파일 목록을 차례대로 출력합니다. 하위 디렉터리 목록을 출력할 때는 이름과 속성을, 파일 목록을 출력할 때는 파일의 이름과 크기, 속성을 출력합니다. 
+
+using System;
+using Sytem.Linq;
+using System.IO;
+
+namespace Dir
+{
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			string directory; 
+			if(args.Length < 1)
+				directory = ".";
+			else
+				directory = args[0];
+			Console.WriteLine($"{directory} directory Info");
+			Console.WriteLine("- Directories :");
+			var directories = (from dir in Directory.GetDirectories(directory) //하위 디렉토리 목록 조회
+					let info = new DirectoryInfo(dir)
+					select new {
+						Name = info.Name,
+						Attributes = info.Attributes
+					}).ToLinst();
+			foreach(var d in directories)
+				Console.WriteLine($"{d.Name} : {d.Attributes}");
+			Console.WriteLine("-Files :");
+			var files = (from file in Directory.GetFiles(directory)
+				let info = new FileInfo(file) //let은 LINQ안에서 변수를 만듭니다. LINQ의 var라고 생각하면 이해하기 좋습니다. 
+				select new{
+					Name = info.Name,
+					FileSize = info.Length,
+					Attributes = info.Attributes
+					}).ToList();
+			foreach(var f in files)
+				Console.WriteLine($"{f.Name} : {f.Attributes}");
+		}
+	}
+}
+
+
+
+
+18.1.2 예제 프로그램 : 디렉터리 / 파일 생성하기
+이 예제 프로그램은 인수로 입력받은 경로에 새 디렉터리나 파일을 만듭니다. 만약 사용자가 입력한 경로에 이미 만들어져 있는 파일이나 디렉터리가 존재한다면 해당 파일이나 디렉터리의 최종 수정시간만 갱신합니다. 
+using System;
+using System.IO;
+
+namespace Touch
+{
+	class MainApp
+	{
+		static void OnWrongPathType(string type)
+		{
+			Console.WriteLine($"{type} is wrong type");
+			return;
+		}
+		static void Main(string[] args)
+		{
+			if(args.Length == 0)
+			{
+				Console.WriteLine("Usage : Touch.exe <Path> [Type:File/Directory]");
+				return;
+			}
+			string path = args[0];
+			string type = "File";
+			if(args.Length > 1)
+				type = args[1];
+
+			if(File.Exists(path) || Directory.Exists(path))
+			{
+				if(type == "File")
+					File.SetLastWriteTime(path, DateTime.Now);
+				else if(type == "Directory")
+					Directory.SetLastWriteTime(path, DateTime.Now);
+				else
+				{
+					OnWrongPathType(path);
+					return;
+				}
+				Console.WriteLine($"Updated {path} {type}");
+			}else
+			{
+				if(type == "File")
+					File.Create(path).Close();
+				else if(type == "Directory")
+					Directory.CreateDirectory(path);
+				else
+				{
+					OnWrongPathType(path);
+					return;
+				}
+				Console.WriteLine($"Created {path} {type}");
+			}
+		}
+	}
+}
+
+
+
+
+18.2 파일을 읽고 쓰기 위해 알아야 할 것들
+앞에서 설명한 내용이 파일과 디렉터리의 정보를 다루는 방법에 대한 것이었다면 지금부터 설명할 내용은 파일의 내용을 읽고 쓰는 방법 , 즉 파일의 입력과 출력에 대한 것입니다. 본격적으로 파일 입출력을 배우기에 앞서 몇 가지 개념을 정리하려 합니다. 이 개념들은 파일 입출력에서 영어의 알파벳과 같은 존재거든요. 
+
+가장 먼저알아둬야 할 개념은 스트림(Stream)입니다. 스트림은 영어로 시내, 강 또는 도로의 차선을 뜻하는 단어인데, 파일을 다룰 때 말하는 스트림은 데이터가 흐르는 통로를 뜻합니다. 메모리에서 하드디스크(예로 든 것일뿐 SD 카드나 플래시 메모리 등 어떤 저장 매체든 관계없습니다.)로 데이터를 옮길 때(즉 파일을 쓸 때)에는 먼저 이 스트림을 만들어 둘 사이를 연결한 후 메모리에 있는 데이터를 바이트 단위로 하드디스크로 옮겨 넣습니다. 하드디스크에서 메모리로 데이터를 옮길 때(즉 파일을 읽을 때)도 마찬가지입니다. 하드디스크와 메모리 사이에 스트림을 놓은 후 파일에 담긴 데이터를 바이트 단위로 메모리로 차례차례옮겨 옵니다. 
+
+스트림은 데이터의 흐름이기 때문에 스트림을 이용하여 파일을 다룰 때는 처음부터 끝까지 순서대로 읽고 쓰는 것이 보통입니다.(이것을 순차 접근(Sequential Access)방식이라고 합니다.) 이러한 스트림의 구조는 네트워크나 데이터 백업 장치의 데이터 입/출력 구조와도 통하기 때문에 스트림을 이용하면 파일이 아닌 네트워크를 향해 데이터를 흘려보낼 수 있고(당연히 네트워크로 흘러 들어오는 데이터를 읽을 수도 있습니다.) 테이프 백업 장치를 통해 데이터를 기록하거나 읽을수도 있습니다. 
+
+하지만 하드디스크는 데이터의 흐름이 단방향성을 가진 네트워크나 자기 테이프 장치와 달리 암과 헤드를 움직여 디스크의 어떤 위치에 기록된 데이터에라도 즉시 찾아갈수 있습니다. 가령 1MB 크기의 파일에서 768byte 번째에 위치한 데이터를 읽고 싶을 때, 하드디스크는 앞에 있는 767byte를 읽지 않아도 곧장 원하는 위치로 이동할수 있습니다. 이렇게 임의의 주소에 있는 데이터에 접근하는 것을 가리켜 임의 접근(Random Access)방식이라고 합니다. 
+
+지금까지 소개한 입력 스트림과 출력 스트림, 순차 접근 방식과 임의 접근 방식을 모두 이해했다면 C# 코드를 통해 파일을 다룰 준비가 다된겁니다.. 이제 여러분들에게 System.IO.Stram 클래스를 소개하겠습니다. 
+
+
+
+
+
+18.2.1 System.IO.Stream 클래스
+Stream 클래스는 그 자체로 입력 스트림, 출력 스트림의 역할을 모두 할 수 있으며 파일을 읽고 쓰는 방식 역시 순차 접근 방식과 임의 접근 방식 모두를 지원합니다. 단 Stream 클래스는 추상 클래스이기 때문에 이 클래스의 인스턴스를 직접 만들어 사용할수는 없고 이 클래스로부터 파생된 클래스를 이용해야 합니다. Stream 클래스가 이렇게 만들어진 이유는 스트림이 다루는 다양한 매체나 장치들에 대한 파일 입출력을 스트림 모델 하나로 다룰수 있도록 하기 위함입니다. 가령 Stream의 파생 클래스인 FileStream 은 저장 장치와 데이터를 주고받도록 구현되어 있지만, 역시 Stream을 상속하는 NetworkStream은 네트워크를 통해 데이터를 주고받도록 구현되어 있습니다. 다음 그림은 Stream클래스와 이를 상속하는 다양한 파생 클래스들의 계보를 나타냅니다. 
+							Stream
+FileStream		NetworkStream			GZipStream			BufferedStream
+디스크 파일에 데이터를	네트워크 피어에 데이터를		GZipStream 클래스는 데이터를	BufferedStream은 데이터를 파일이나 네트워크에 즉시
+기록합니다.		전송합니다.			GZip(GNU ZIP)형식으로 압축합니다.	기록하는 대신 메모리 버퍼에 담아뒀다가 일정량이 쌓
+											일때(쌀알을 젓가락으로 집어먹는 것하고 숟가락으로 
+											퍼먹는 것의 차이를 생각하면 이해가 쉽습니다.)마다
+											기록하게 해줍니다. 
+
+이상속도에 나타난 파생 클래스들의 이름을 보세요. 데이터가 기록되는 위치뿐 아니라 기록하는 방식이나 형식에 따라서도 다양한 클래스들이 파생되었습니다. .NET은 이들 외에도 다양한 스트림 클래스들을 제공하지만(늘 그랬듯이) 저는 여러분이 프로그래밍을 하면서 자주 사용하게 될 몇가지 클래스들만 다루겠습니다. 나머지도 모두 Stream 클래스를상속하기 때문에 사용 방법이 대동소이하므로 여러분 스스로도 큰 어려움 없이 익힐수 있을 겁니다. 
+아무튼 현재 우리의 관심사는 네트워크 압축도 아니고 그저 파일을 읽고 쓰는 것입니다. FileStream 을 같이 보시죠. 우선 FileStream 클래스의 인스턴스는 다음과 같이 생성하면 됩니다. 
+
+Stream stream1 = new FileStream("a.dat", FileMode.Create); //새파일생성
+Stream stream2 = new FileStream("b.dat", FileMode.Open); //파일 열기
+Stream stream3 = new FileStream("c.dat", FileMode.OpenOrCreate); //파일을 열거나 파일이 없으면 생성
+
+Stream stream4 = new FileStream("d.dat", FileMode.Truncate); //파일을 비워서 열기
+Stream stream5 = new FileStream("e.dat", FileMode.Append); //덧붙이기 모드로 열기
+
+FileStream의 인스턴스를 만들었으면 파일을 읽고 써야겠지요? 먼저 파일을 쓰는 방법부터 보겠습니다. FileStream 클래스는 파일에 데이터를 기록하기 위해 Stream 클래스로부터 물려받은 다음 두 가지 메소드를 오버라이딩하고 있습니다. 
+
+public override void Write(byte[] array,int offset, int count); //쓸데이터가 담겨있는 byte 배열, byte배열 내의 시작 오프셋, 기록할 데이터의 총길이(단위는 바이트)
+public override void WriteByte(byte value);
+
+세상에, Write()와 WriteByte() 메소드의 매개변수좀 보세요. byte 아니면 byte 배열만 입력할수 있게 되어 있군요. C#에서 다루는 데이터 형식이 얼마나 다양한데 저두 메소드로 해결을 보라는 걸까요? 다행히도 우리에게는 각종 데이터 형식을 byte 배열로 변환해주는 BitConverter 클래스가 있습니다. 이 클래스는 임의 형식의 데이터를 byte의 배열로 변환해주기도 하지만, byte 의 배열에 담겨있는 데이터를 다시 임의 형식으로 변환해줄수도 있습니다. 다음 코드는 BitConverter의 도움을 받아 long 형식의 데이터를 파일에 기록하는 예입니다. 
+
+long someValue = 0x123456789ABCDEF0;
+
+//1) 파일 스트림 생성
+Stream outStream = new FileStream("a.dat", FileMode.Create);
+
+//2) someValue(long 형식)를 byte 배열로 변환
+byte[] wBytes = BitConverter.GetBytes(someValue);
+
+//3) 변환한 byte 배열을 파일 스트림을 통해 파일에 기록
+outStream.Write(wBytes, 0, wBytes.Length);
+
+//4) 파일 스트림 닫기
+outStream.Close();
+
+이번엔 FileStream 을 통해 파일에서 데이터를 읽어오는 방법을 살펴보겠습니다. FileStream은 파일에서 데이터를 읽기 위해 Stream으로부터 물려받은 다음 두 개의 메소드를 구현하고 있습니다. 
+
+public override int Read(byte[] array, int offset, int count); // 읽은 데이터를 담을 byte 배열, byte배열 내의 시작 오프셋, 읽을 데이터의 최대 바이트 수
+public override ReadByte();
+
+파일에서 데이터를 읽는 Read()와 ReadByte() 메소드는 이름만 다를 뿐이지 Write()와 WriteByte() 메소드하고 똑같군요. 물론 사용 요령도 비슷합니다. 
+
+byte[] rBytes = new byte[8];
+
+//1) 파일 스트림 생성
+Stream inStream = new FileStream("a.dat", FileMode.Open);
+
+//2) rBytes의 길이만큼(8바이트) 데이터를 읽어 rBytes에 저장
+inStream.Read(rBytes,0, rBytes.Length);
+
+//3) BitConverter를 이용하여 rBytes에 담겨있는 값을 long 형식으로 변환
+long readValue = BitConverter.ToInt64(rBytes,0);
+
+//4) 파일 스트림 닫기
+inStream.Close();
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? long 형식으로부터 변환된 바이트 배열의 저장 순서가 이상해요?
+16진수 123456789ABCDEF0을 바이트 단위로 쪼개면 12, 34, 56, 78, 9A, BC, DE, F0의 순서로 배열에 들어가야 할 텐데 앞의 예제 프로그램 결과를 보면 이 순서가 뒤집혀서 출력되는 것을 볼 수 있습니다. 파일에 저장된 데이터도 딱 이 순서로 저장됩니다. 다음그림은 a.dat를 바이너리 파일 뷰어로 열어본 결과입니다. 
+
+offset(h) 		00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+00000000	F0 DE BC 9A 78 56 34 12
+
+컴퓨터에 문제라도 생긴걸까요? 아닙니다. 이것은 CLR이 지원하는 바이트 오더(Byte Order)가 데이터의 낮은 주소부터 기록하는 리틀 엔디안(Little Endian)방식이기 때문에 나타난 현상입니다. 재미있게도 자바의 가상머신은 빅엔디안(Big Endian)바이트 오더를 지원합니다. 
+
+ARM과 x86계열의 CPU들은 리틀 엔디안 방식으로 동작하지만 Power CPU나 Sparc 계열의 CPU는 빅엔디안 방식으로 동작합니다. 다시 말해 이세상에는 서로 다른 바이트 오더 방식을 사용하는 시스템 투성이라는 이야기입니다. C# 프로그램에서 만든 파일을 다른 시스템에서 읽도록 하려면 바이트오더의 차이를 반드시 고려해야 합니다. 그반대도 마찬가지이고요. 네트워크를 통해 전송되는 데이터에 대해서도 같은 고려가 필요합니다. 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+조금 전의 BasicIO 예제 프로그램은 한 개의 데이터만 파일에 쓰고 읽었습니다. 그럼 여러 개의 데이터를 기록하려면 어떻게 해야 할까요? 이 질문에 대한 답을 얻기 위해서는 먼저 FileStream 클래스의 Write(), WriteByte(), Read(), ReadByte() 메소드가 호출된 뒤에 어떤 일이 벌어지는지 알 필요가 있습니다. 
+
+Stream 클래스에는 Position이라는 프로퍼티가 있습니다. Stream 클래스를 상속하는 FileStream클래스도 이 프로퍼티를 갖고 있지요. Position 프로퍼티는 현재 스트림의 읽는 위치 또는 쓰는 위치를 나타냅니다. 가령 Position이 3이라면 파일의 3번째 바이트에서 쓰거나 읽을 준비가 되어 있는 상태입니다. 
+
+이그림을 보면 FileStream 객체를 생성할 때 Position이 0이되고, WriteByte()메소드를 호출할 때마다 데이터를 기록한 후 자동으로 Position이 1씩 증가하는 것을 볼 수 있습니다. 이것은 Write() 메소드를 호출할 때도, 그리고 Read() 메소드나 ReadByte()메소드를 호출할 때도 마찬가지입니다. 단 Write()나 ReadByte()는 쓰거나 읽은 바이트 수만큼 Position이 증가하지요. 따라서 여러 개의 데이터를 기록하는 일은 그냥 Write()나 WriteByte() 메소드를 차례차례 호출하는 것으로 충분합니다. 이렇게 파일을 순차적으로 쓰거나 읽는 방식을 순차 접근(Sequential Access)이라고 합니다. 
+
+한편 파일 내의 임의의 위치에  Position이 위치하도록 할수도있습니다. 이른바 임의 접근(Random Access)방식인데 앞의 그림에서처럼 Seek() 메소드를 호출하거나 Position 프로퍼티에 직접 원하는 값을 대입하면 지정한 위치로 점프해 읽기/쓰기를 위한 준비를 할 수 있습니다. 다음 코드를 보시죠. 
+
+Stream outStream = new FileStream("a.dat", FileMode.Create);
+
+//..
+outStream.Seek(5, SeekOrigin.Current); //현재 위치에서 5바이트 뒤로 이동
+outStream.WriteByte(0x04);
+
+그럼 이번에는 WriteByte()를 이용해서 순차적으로 파일 내의 위치를 옮겨가며 데이터를 기록하는 순차적 접근 방식과 Seek() 메소드를 활용해서 임의의 주소로 단번에 점프하는 임의 접근 방식을 보여주는 예제 프로그램을 만들어보겠습니다. 
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? 파일 입출력이 원래 이렇게 힘든 건가요?
+영 간단치가 않지요? 이것은 메모리의 구조와 데이터를 저장할 장치의 구조가 상이하기 때문에 생긴 문제입니다. 그나마 다행인 것은 C#에서는 디스크, 네트워크 등에 데이터를 기록하고 읽는 방법을 Stream 클래스로 추상화해놨기 때문에 같은 프로그래밍 모델을 이용할수 있다는 사실입니다. 지금은 좀 괴로워도 FileStream을 통해 Stream 파일 처리모델을 익혀두면 나중에 네트워크 프로그래밍을 할 때도 쉽게 적응할수 있으니 조금만 참고 계속 공부해주세요. 
+
+게다가 .NET은 파일 입출력을 보다 간단하게 할수 있는 방법도 제공하고 있습니다. 이부분은 FileStream을 알고 있어야 이해할수 있으므로 나중에 다시 설명하겠습니다. 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+18.3 실수를 줄여주는 using 선언
+이미 앞에서 프로그래머의 실수에 대해 여러 차례 언급했는데요. 파일을 다룰 때도 프로그래머의 실수가 자주 나타납니다. 파일을 열어서 실컷 이용한 다음 자원을 해제하지 않는 것이 대표적인 실수입니다. C#은 이러한 실수를 줄일수 있는 문법을 제공합니다. 곧 소개할 using 선언이 그것인데 요 여러분도 잘 아는 것처럼 using은 네임스페이스를 참조하기 위해서도 사용하지만 파일이나 소켓을 비롯한 자원을 다룰 때도 요긴합니다. 
+
+다음은 앞에서 봤던 스트림 열기, 스트림 기록하기, 스트림 닫기를 수행하는 코드입니다. 이 코드에서 우리(즉, 프로그래머가)가 가장 잘 빼먹는 부분이바로 4)파일 스트림 닫기 입니다. 
+
+long someValue = 0x123456789ABCDEF0;
+
+//1) 파일 스트림 생성
+Stream outStream = new FileStream("a.dat", FileMode.Create);
+
+//2) someValue(long 형식)를 byte 배열로 변환
+byte[] wBytes = BitConverter.GetBytes(someValue);
+
+//3) 변환한 byte 배열을 파일 스트림을 통해 파일에 기록
+outStream.Write(wBytes, 0, wBytes.Length);
+
+//4) 파일 스트림 닫기
+outStream.Close();
+
+using 선언을 이용하면 앞의 코드를 다음과 같이 수정할수 있습니다. 
+
+//...
+{
+	//1) 파일 스트림 열기
+	using Stream outStream = new FileStream("a.dat", FileMode.Create);
+	
+	//2) someValue(long 형식)을 byte 배열로 변환
+	byte[] wBytes = BitConverter.GetBytes(someValue);
+
+	//3) 변환한 byte 배열을 파일 스트림을 통해 파일에 기록
+	outStream.Write(wBytes, 0, wBytes.Length); 
+} //using 선언을 통해 생성된 객체는 코드 블록이 끝나면서 outStream.Dispose() 호출
+
+
+코드 블록의 마지막에서 Dispose() 메소드가 호출되도록 하는 using 선언은 Close() 메소드 호출과 사실상 동일한 코드라고 할 수 있습니다. Stream.Close() 메소드가 IDisposable 인터페이스에서 상속받은 Dispose()메소드를 호출하기 때문입니다. 당연히 using 선언은 Stream 객체뿐 아니라 IDispose를 상속해서 Dispose()메소드를 구현하는 모든 객체에 대해 사용할수 있습니다. 
+
+또다른 using 선언 스타일도 존재합니다. 다음 예제처럼 using 선언문 아래에 코드 블록을 만드는 방법인데요 자원의 수명을 세부적으로 조절하고 싶을때 유용합니다. 
+
+//1) 파일 스트림 열기
+using(Stream outStream = new FileStream("a.dat", FileMode.Create))
+{
+	//2) someValue(long 형식)을 byte 배열로 변환
+	byte[] wBytes = BitConverter.GetBytes(someValue);
+
+	//3) 변환한 byte 배열을 파일 스트림을 통해 파일에 기록
+	outStream.Write(wBytes, 0, wBytes.Length); 
+}// using 선언을 통해 생성된 객체는 코드 블록이 끝나면서 outStream.Dispose()호출
+
+
+
+
+
+18.4 이진 데이터 처리를 위한 BinaryWriter/BinaryReader
+앞에서 살펴본 FileStream 클래스는 파일 처리를 위한 모든 것을 갖고 있지만, 사용하기에 여간 불편한 것이 아닙니다. 특히 데이터를 저장할 때 반드시 byte 형식 또는 byte 의 배열 형식으로 변환해야 한다는 문제가 있었습니다. 이것은 파일로부터 데이터를 읽을 때도 마찬가지였습니다. 
+
+.NET은 FileStream 의 이런 불편함을 해소하기 위해 도우미 클래스들을 제공하고 있습니다. 바로 BinaryWriter와 BinaryReader 클래스가 그 예입니다. BinaryWriter는 스트림에 이진 데이터(Binary Data)를 기록하기 위한 목적으로, 그리고 BinaryReader클래스는 스트림으로부터 이진 데이터를 읽어 들이기 위한 목적으로 만들어진 클래스입니다. 이 두 클래스는 어디까지나 파일 처리의 도우미 역할을 할 뿐이기 때문에 이들 클래스들을 이용하려면 Stream 으로부터 파생된 클래스의 인스턴스가 있어야 합니다. 예를 들어 BinaryWriter와 FileStream을 함께 사용한다면 BinaryWriter의 이진 데이터 쓰기 기능을 파일 기록에 사용할수 있고, NetworkStream과 함께 사용한다면 네트워크로 이진 데이터를 내보낼수 있습니다. 다음은 BinaryWriter를 FileStream과 함께 이용하는 예입니다. 
+
+BinaryWriter bw = new BinaryWriter(new FileStream("a.dat",FileMode.Create));
+
+bw.Write(32);
+bw.Write("Good Morning!");
+bw.Write(3.14); //Write()메소드는 C#이 제공하는 모든 기본 데이터 형식에 대해 오버로딩되어 있습니다.
+bw.Close();
+
+이 코드를 잠깐 살펴볼까요? 가장 먼저 BinaryWriter의 생성자를 호출하면서 FileStream의 인스턴스를 인수로 넘기고 있습니다. 이제 BinaryWriter의 객체는 FileStream의 인스턴스가 생성한 스트림에 대해이진 데이터 기록을 수행할 겁니다. 그런데 그 다음에 이어지는 코드를 보니 그냥 Write()메소드만 호출하고 있습니다. 데이터를 byte나 byte의 배열로 변환하지 않은 채로 말입니다. 이것은 BinaryWriter가 Write()메소드를 C#이 제공하는 모든 기본 데이터 형식에 대해 오버로딩하고 있기 때문입니다. 우리는 BinaryWriter를 이용하면 FileStream만을 이용해서 파일에 데이터를 저장할 때와 같은 생고생은 하지 않아도 됩니다. 
+이번에는 BinaryReader를 볼까요? BinaryReader 역시 객체를 생성하고 사용하는 요령이 BinaryWriter와 거의 비슷합니다. 다음은 BinaryReader를 이용해서 파일로부터 이진 데이터를 읽어오는 예제입니다. 
+
+BinaryReader br = new BinaryReader(new FileStream("a.dat", FileMode.Open));
+
+int a = br.ReadInt32();
+string b = br.ReadString();
+double c = br.ReadDouble(); //BinaryReader는 읽을 데이터 형식별로 ReadInt32처럼 Read데이터형식() 메소드를 제공합니다. 
+
+그냥 FileStream만 이용해서 데이터를 저장하고 읽을 때와는 비교도 안될 정도로 편리하네요. 이제 BinaryWriter와 BinaryReader를 이용한 예제 프로그램을 만들어보겠습니다. 
+
+
+실행 결과를 보니 BinaryWriter와 BinaryReader가 제대로 일하고 있다는 것을 알 수 있겠군요. 아 그런데 BinaryWriter가 과연 어떻게 파일을 만들어놨는지 궁금해집니다. 이 예제 프로그램이 생성한 결과 파일을 바이너리 데이터 뷰어로 열어보겠습니다. 
+
+FileStream만으로 데이터를 기록할 때는 BitConverter를 이용해서 각 데이터를 바이트 단위로 나눠 따로 저장했는데, 이 그림을 보면 BinaryWriter가 각 데이터 타입을 알아서 바이트 단위로 저장해줬음을 알 수 있습니다. 문자열을 저장할 때는 문자열의 길이를 저장할 데이터의 가장 첫 번째 바이트에 저장해두고 그 뒤부터 문자열 데이터를 저장하고 있네요. 정말 멋집니다. 그렇죠?
+
+
+
+
+18.5 텍스트 파일 처리를 위한 StreamWriter/StreamReader
+텍스트 파일은 구조는 간단하지만 활용도가 높은 파일 형식입니다. ASC2 인코딩에서는 각 바이트가 문자 하나를 나타내기 때문에 바이트 오더 문제에서도 벗어날수 있고, 이로 인해 플랫폼에 관계없이 생성하고 읽을수 있습니다. 그뿐만 아니라 프로그램이 생성한 파일의 내용을 편집기로 열면 사람이 바로 읽을 수도 있습니다. 
+.NET이 이렇게 활용도가 높은 파일 형식에 대한 지원을 하지 않을 리가 없습니다. 바이너리 파일 쓰기/읽기를 위해 BinaryWriter/BinaryReader를 제공했던 것처럼 .NET은 텍스트 파일을 쓰고 읽을수 있도록 StreamWriter/StreamReader를 제공합니다. 
+StreamWriter와 StreamReader도 BinaryWriter와 BinaryReader처럼 Stream의 도우미 클래스입니다. Stream이 주연이고 StreamWriter/StreamReader는 조연인 셈이죠. Stream이 NetworkStream이라면 네트워크를 통해 텍스트 데이터를 내보내거나 읽어들이고, FileStream이 라면 파일로 텍스트 데이터를 내보내거나 이로부터 읽어들입니다. (지금은 우리의 관심사가 파일 다루기 니까 FileStream에 대해서만 이야기하고 있지만요)
+이들 이름을 보고 대강 예상하신 분들도 있겠지만, StreamWriter와 StreamReader의 사용법은 BinaryWriter와 BinaryReader의 사용법과 유사합니다. 먼저 StreamWriter의 사용 예제 코드를 보시죠. 
+
+StreamWriter sw = new StreamWriter(new FileStream("a.dat", FileMode.Create));
+
+sw.Write(32);
+sw.Write("Good Morning! ");
+sw.Write(3.14); //Write()와 WriteLine()메소드는 C#이 제공하는 모든 기본 데이터형식에 대해 오버로딩되어 있습니다. 
+sw.Close();
+
+제가 말한대로죠? BinaryWriter와 사용법이 비슷하다니까요. FileStream의 인스턴스를 매개변수 삼아 생성자를 호출하고, Write()와 WriteLine()메소드를 이용해서 데이터를 스트림에 기록합니다. 이번에는 StreamReader의 사용 예제를 보겠습니다. 
+
+StreamReader sr = new StreamReader(new FileStream("a.dat", FileMode.Open));
+
+while (sr.EndOfStream == false) //EndOfStream프로퍼티는 스트림의 끝에 도달했는지를알려줍니다.
+{
+	Console.WriteLine(sr.ReadLine());
+}
+sr.Close();
+
+
+
+
+
+
+
+18.6 객체 직렬화하기
+BinaryWriter/Reader와 StreamWriter/Reader는 기본 데이터 형식을 스트림에 쓰고 읽을수 있도록 메소드를 제공하지만 프로그래머가 직접 정의한 클래스나 구조체 같은 복합 데이터 형식은 지원하지 않습니다. BinaryWriter/Reader나 StreamWriter/Reader로 복합 데이터 형식을 기록하고 읽으려면 그 형식이 가진 필드의 값을 저장할 순서를 정한 후, 이 순서대로 저장하고 읽는 코드를 작성해야 합니다. 이걸 한번에 저장할 방법은 없는 걸까요?
+
+이 문제를 위해 C#은 복합 데이터 형식을 쉽게 스트림에 쓰기/읽기할 수 있게 하는 직렬화(Serialization)라는 메커니즘을 제공합니다. 직렬화란 객체의 상태(여기에서 말하는 객체의 상태는 객체의 필드에 저장된 값들을의미합니다.)를 메모리나 영구 저장 장치에 저장이 가능한 0과 1의 순서로 바꾸는 것을 말합니다. 
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? .NET의 직렬화가 지원하는 형식
+.NET에서는 조금 전에 이야기한 것처럼 0과1의 순서로 구성되는 이진(Binary)형식으로의 직렬화도 지원하지만 JSON(JavaScript Object Notation)이나 XML 같은 텍스트 형식으로의 직렬화도 지원합니다. 어떤 형식이든 간에 결과만 다르지 직렬화 또는 역직렬화하는 요령은 비슷하므로 이 책에서는 이진 형식으로의 직렬화와 역직렬화만 다루겠습니다. 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+C#으로 프로그래밍을 하는 우리는 참 행복한 사람들입니다. 왜냐면 C#에서는 객체를 직렬화할수 있는 아주 간단한 방법을 제공하기 때문입니다. 다음과 같이 그저 [Serializable]애트리뷰트를 클래스 선언부 앞에 붙여주면 이 클래스는 메모리나 영구 저장 장치에 저장할수 있는 형식이 됩니다. 
+
+[Serializable]
+class MyClass
+{
+	//l..
+}
+이게 끝이냐고요? 예 끝입니다. 이렇게 선언한 형식은 다음과 같이 Stream 클래스와 BinaryFormatter를 이용해서 간단히 저장할수 있습니다. 
+
+Stream ws = new FileStream("a.dat", FileMode.Create);
+BinaryFormatter serializer = new BinaryFomatter();
+
+MyClass obj = new MyClass();
+//obj의 필드에 값 저장
+serializer.Serialize(ws, obj); //직렬화
+ws.Close();
+
+이 코드의 BinaryFormatter는 처음 보는 친구죠? 이 클래스는 System.Runtime.Serialization.Formatters.Binary 네임스페이스에 소속되어 있고 하는 일은 객체를 직렬화(Serialization)하거나 역직렬화(Deserialization)하는 것입니다. 역직렬화는 예제 코드도 같이 보겠습니다. 
+
+Stream rs = new FileStream("a.dat", FileMode.Open);
+BinaryFormatter deserializer = new BinaryFormatter();
+
+MyClass obj = (MyClass)deserializer.Deserialize(rs);
+rs.Close();
+
+어떻습니까, 정말 간편하지요? 클래스 안에 어떤 필드들이 어떻게 선언되어 있는지 고민할 필요가 없습니다. 그냥 BinaryFormatter에게 맡기면 객체의 직렬화든 역직렬화든 알아서 해줍니다. 
+
+아 제가 설명을 깜빡한 것이 있습니다. 직렬화하고 싶지 않은 필드는 어떻게 처리해야 할지에 대해 이야기하지 않았네요. 상태를 저장하고 싶지 않은 필드가 있다면 다음과 같이 그 필드만 [NonSerialized]애트리뷰트로 수식해주면 됩니다. 이렇게 하면 이 필드의 상태는 직렬화할 때도 저장되지 않고 역직렬화할 때도 역시 복원되지 않습니다. 
+
+[Serializable]
+class MyClass
+{
+	public int myField1;
+	public int myField2;
+	
+	[NonSerialized]
+	public int myField3; //myField3을 제외한 나머지 필드들만 직렬화됩니다.
+	public int myField4;
+}
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? 복합 데이터 형식을 직렬화할 때 주의할점
+Serializable 애트리뷰트를 이용해서 복합 데이터 형식을 직렬화하고자 할 때 직렬화하지 않는 필드뿐 아니라 직렬화하지 못하는 필드도 Nonserialized 애트리뷰트로 수식해야 합니다. 다음과 같이 Serializable 하지않은 복합 데이터 형식을 필드로 갖는 복합 데이터 형식을 직렬화하고자 하면 오류가 발생합니다. 
+
+class NonserializedClass
+{
+	public int myField
+}
+[Serializable]
+class MyClass
+{
+	public int myField1;
+	public int myField2;
+
+	public NonserializedClass myField3; //NonserializedClass는 Serializable하지않으므로 직렬화를 수행할 때 오류가 발생합니다. 
+	public int myField4;
+}
+
+이 코드의 문제를 해결하려면 둘중 하나를 해야합니다. NonserializedClass를 Serializable 애트리뷰트로 수식하거나 myField3을 Nonserialized 애트리뷰트로 수식하거나 말입니다. 
+
+
+한편 List를 비롯한 컬렉션들도 직렬화를 지원합니다. 예를 들어 List<NameCard> 형식의 객체도 직렬화를 통해 파일에 저장해뒀다가 이를 역직렬화를 통해 메모리 내의 컬렉션으로 불러들일수 있습니다. 요령은 하나의 객체를 직렬화하고 역직렬화할 때와 동일합니다. 설명이 별로 필요없을것 같군요. 
+
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+
+namespace SerializingCollection
+{
+	[Serializable]
+	class NameCard
+	{
+		public NameCard(string Name, string Phone, int Age)
+		{
+			this.Name = Name;
+			this.Phone = Phone;
+			this.Age = Age;
+		}
+		public string Name;
+		public string Phone;
+		public int Age;
+	}
+	class MainApp
+	{
+		static void Main(string[] args)
+		{
+			using(Stream ws = new FileStream("a.dat", FileMode.Create))
+			{
+				BinaryFormatter serializer = new BinaryFormatter();
+				List<NameCard> list = new List<nameCard>();
+				list.Add(new NameCard("박상현", "010-123-4567", 33));
+				list.Add(new NameCard("김연아", "010-323-1111", 22));
+				list.Add(new NameCard("장미란", "010-555-5555", 26));
+
+				serializer.Serialize(ws, list);
+			}
+			using Stream rs = new FileStream("a.dat", FileMode.Open);
+			BinaryFormatter deserializer = new BinaryFormatter();
+		
+			List<NameCard> list2;
+			list2 = (List<NameCard>)deserializer.Deserialize(rs);
+			foreach(NameCard nc in list2)
+			{
+				Console.WriteLine($"Name: {nc.Name}, Phone: {nc.Phone}, Age: {nc.Age}");
+			}
+		}
+	}
+}
