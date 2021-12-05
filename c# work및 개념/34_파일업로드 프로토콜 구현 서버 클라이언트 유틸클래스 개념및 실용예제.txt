@@ -1,0 +1,719 @@
+21.4.1 파일 업로드 프로토콜
+우리의 파일 업로드 프로토콜(이름이 길어서 앞으로는 FUP(File Upload Protocol 라고 부르겠습니다.)은 헤더와 바디의 두 부분으로 나뉩니다. 바디에는 실제로 전달하고자 하는 데이터를 담고, 헤더에는 본물 길이를 비롯해 메시지의 속성 몇 가지를 담을 겁니다. 바디의 길이는 담는 데이터에 따라 달리지지만 헤더의 길이는 16바이트로 항상 일정합니다. 따라서 수신한 패킷을 분석할 때는 가장 먼저 16바이트를 먼저확인해서 (바디의 길이를 포함한)메시지의 속성을 확인하고, 그 다름에 바디의 길이만큼을 또 읽어 하나의 메시지 끝을 끊어내야 합니다. 다음 그림은 FUP의 구조를 나타냅니다. 
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? 고정길이 VS 가변 길이
+스트림에서 패킷의 경계를 구분해내는 일은 TCP 네트워크 프로그래밍에서 필수적입니다. 패킷의 경계를 구분하는 방법은 메시지 포맷을 설계할 때 고려해야 하는데 대표적인 방법이 고정 길이 형식과 가변 길이 형식입니다. 고정 길이 형식에서는 모든 메시지가 같은 길이를 갖습니다. 16바이트면 16바이트씩만, 32바이트면 32바이트씩만 항상 잘라내는 것이죠. 구현하기는 간편하지만 , 이방식은 대역폭이 낭비될 가능성이 높다는 단점이 있습니다. 
+
+가변 길이 형식에는 흔히 두 가지 방식을 사용하는데, 메시지를 두 부분으로 나눠서 길이가 고정된 앞부분에 뒷부분의 길이를 기입하는 방식과 메시지를 구분하는 특정 값(' '라든가 캐리지 리턴 등)을 이용하는 방식이 있습니다. 후자의 경우에는 텍스트 방식의 통신에 주로 이용되고 전자는 바이너리 통신에 이용되지요, 우리의 FUP는 가변 길이 형식에서도 전자에 해당합니다.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+다음 표에는 FUP의 헤더가 갖고 있는 각 송성 필드에 대한 설명이 나타나 있습니다. 
+
+필드 이름			크기(바이트)		설명
+MSGID			4			메시지 식별 번호
+
+MSGTYPE			4			메시지의 종류
+						* 0x01 : 파일 전송 요청
+						* 0x02 : 파일 전송 요청에 대한 응답
+						* 0x03 : 파일 전송 데이터
+						* 0x04 : 파일 수신 결과
+BODYLEN			4			메시지 본문의 길이(단위:바이트)
+
+FRAGMENTED		1			메시지의 분할 여부
+						* 미분할 : 0x0
+						* 분할 : 0x1
+
+LASTMSG		1			분할된 메시지가 마지막인지 여부
+						* 마지막 아님 : 0x0
+						* 마지막 : 0x1
+
+SEQ			2			메시지의 파편 번호
+
+FUP의 헤더에 대해서는 여기까지 이야기하고, 지금부터는 바디에 대해 설명하겠습니다. FUP의 바디는 모두 네 가지 입니다. 헤더의 MSGTYPE이 가질수 있는 값이 모두 네 개(0x01, 0x02, 0x03, 0x04)이므로 바디의 종류로 네 가지로 나뉩니다. 
+
+먼저 MSGTYPE이 파일 전송 요청(0x01)인 경우의 바디 구조를 보겠습니다. 이 메시지는 클라이언트에서 사용합니다. MSGTYPE 0x01의 바디는 다음 표와 같이 파일의 크기와 파일의 이름으로 이루어져 있습니다. 
+
+필드이름			크기(바이트)			설명
+FILESIZE			8				전송할 파일 크기(단위: 바이트)
+FILENAME		BODYLEN-FILESIZE(8byte)		전송할 파일의 이름
+
+다음 표는 파일 전송 요청에 대한 응답(0x02)메시지의 바디구조를 나타냅니다. 이 메시지는 서버에서 사용하며, 클라이언트에서 보낸 파일 전송 요청(0x01)메시지의 메시지 식별 번호와 같이 결과를 클라이언트에 전송합니다. 
+
+필드 이름			크기(바이트)			설명
+MSGID			4				파일 전송 요청 메시지(0x01)의 메시지 식별 번호
+
+RESPONSE		1				파일 전송 승인 여부
+							* 거절 : 0x0
+							* 승인 : 0x1
+
+파일 전송 요청에 대한 응답(0x02)메시지의 RESPONSE 필드가 0x1을담고 클라이언트에 돌아오면, 클라이언트는 파일 전송을 개시합니다. 클라이언트의 파일은 네트워크 전송에 알맞도록 잘게 쪼개져서 파일 전송 데이터(0x03)메시지에 담겨 서버로 날아갑니다. 이 경우 FUP의 바디는 DATA만 담습니다. 
+
+필드 이름			크기(바이트)			설명
+DATA			헤더의 BODYLEN			파일 내용
+
+클라이언트가 마지막 파일 데이터를 전송할 때는 파일 전송 데이터 메시지 헤더의 LASTMSG 필드에 0x01을 담아보냅니다. 마지막 파일 전송 데이터 메시지를 수신한 서버는 파일이 제대로 수신됐는지를 확인해서 파일 수신 결과(0x04)메시지를 클라이언트에 보냅니다. 이때 메시지 바디에는 파일 전송 데이터(0x03)메시지의 MSGID와 파일 수신 결과가 함께 담깁니다. 
+
+필드 이름			크기(바이트)			설명
+MSGID			4				파일 전송 데이터(0x03)의 식별 번호
+
+RESULT			1				파일 전송 성공 여부
+							* 실패 : 0x0
+							* 성공 : 0x1
+
+아이고, 많기도 하네요. 메시지의 형식은 여기까지가 전부입니다. 이젠 이러한 형식의 메시지들을 서버와 클라이언트가 어떻게 주고받는지 이야기해야겠지요? 다음 그림은 서버와 클라이언트가 메시지를 주고받는 과정을 나타냅니다. 
+
+
+프로토콜 설계가 끝났습니다. 서버와 클라이언트가 어떤 구조의 메시지를 어떤 순서로 주고받아야 하는지 감이 잡히지요? 그렇다면 이 프로토콜을 코드로 옮길 차례가 된겁니다. 다음절로 넘어가겠습니다. 
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+여기서 잠깐? 직렬화가 있는데 왜 이고생을 하나요?
+C#으로만 이루어진 애플리케이션과 통신할 거라면 이런 복잡한 프로토콜보다는 직렬화가 더 적절한 답일수 있습니다. 하지만 대개의 경우 통신 애플리케이션은 자신과 상이한 환경에서 이미 터를 잡고 동작하고 있는 선배님 애플리케이션과 통신해야 합니다. 인터넷은 이미 그 역사가 수십년에 이르고 있습니다. 이 역사 속에서 개발되어 동작하고 있는 네트워크 애플리케이션의 상당수가 C나 C++로 작성되었고, 이들과 어울리려면 이들이 지원하는 프로토콜을 우리도 지원해야 합니다. 이 문제는 C#의 직렬화 메커니즘으로는 해결할 수 없고, 직접 프로토콜을 구현하는 수밖에 없습니다. 이것이 제가 직렬화를 이용한 통신 프로그래밍을 설명하지 않는 이유입니다. 
+이말이 나왔으니까 말인데 직렬화를 이용한 통신 프로그래밍은 여러분의 숙제로 남겨드리겠습니다. 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+21.4.2 파일 업로드 서버와 클라이언트 구현하기
+이번 예제 프로그램 구현은 다음과 같이 세 부분으로 나눠서 진행됩니다. 
+
+* 서버/클라이언트 공용 클래스 라이브러리 구현
+* 서버 구현
+* 클라이언트 구현
+
+클래스 라이브러리 제작은 우리가 한 번도 안해봤던 부분이지요? 일반 응용 프로그램을 만드는 것과 특별히 다른 부분은 없습니다. 빌드한 결과물 파일의 확장자가 exe가 아닌 dll이라는 것과 혼자서는 실행되지 않는 다는 점이 다를 뿐이지요. 그럼 바로 클래스 라이브러리 제작부터 설명하겠습니다. 
+
+
+
+
+
+
+21.4.3 서버/클라이언트가 같이 사용할 클래스 라이브러리 만들기
+당연한 이야기지만, 파일 업로드 서버와 클라이언트는 모두 FUP 프로토콜을 사용합니다. 이말은 즉 , FUP 프로토콜을 처리하는 코드를 서버와 클라이언트 양쪽에서 공유할수 있다는 뜻입니다. 그래서 우리는 FUP 프로토콜을 클래스 라이브러리로 만들어놓으려 합니다. 다음 절차를 따라 프로젝트를 만들고 코드를 작성해서 FUP 프로토콜 클래스 라이브러리를 만드세요. 
+
+STEP1
+비주얼 스튜디오를 실행하고 [새 프로젝트 만들기] 대화상자를 띄우세요. 템플릿에서 [클래스 라이브러리(.NET Core)]를 선택한 뒤 프로젝트 이름에 FUP를 입력하고 <만들기> 버튼을 클릭하여 프로젝트 생성을 완료합니다. 
+
+
+STEP2
+프로젝트를 생성하고 나면 솔루션 탐색기에서 Class1.cs 라는 파일이 보일겁니다. 그 파일을 제거하세요. 
+
+STEP3
+솔루션 탐색기에서 [FUP]프로젝트를 선택한 다음 Ctrl + Shift + A키를 눌러 [새 항목 추가]대화상자를 띄우세요. 템플릿에는 클래스가 자동 선택되어 있을 겁니다. 그 항목을 그대로 두고 이름 항목에 Message.cs를 입력하고 <추가> 버튼을 클릭하세요. 
+
+STEP4
+Message.cs 파일이 생성됐지요? 이제 다음 코드를 따라 입력하세요. 
+
+
+namespace FUP
+{
+	public class CONSTANTS
+	{
+		public const uint REQ_FILE_SEND = 0x01; //메시지 타입 (MSGTYPE)상수 정의
+		public const uint REP_FILE_SEND = 0x02;
+		public const uint FILE_SEND_DATA = 0x03;
+		public const uint FILE_SEND_RES = 0x04;
+
+		public const byte NOT_FRAGMENTED = 0x00;
+		public const byte FRAGMENTED = 0x01;
+
+		public const byte NOT_LASTMSG = 0x00;
+		public const byte LASTMSG = 0x01;
+
+		public const byte ACCEPTED = 0x01;
+		public const byte DENIED = 0x00;
+
+		public const byte FAIL = 0x00;
+		public const byte SUCCESS = 0x01;
+	}
+	public interface ISerializable //메시지, 헤더, 바디는 모두 이 인터페이스를 상속합니다. 즉 이들은 자신의 데이터를 바이트 배열로 변환하고 그 바이트 배열
+	{			의 크기를 반환해야 합니다.
+		byte[] GetBytes();
+		int GetSize();
+	}
+	public class Message : ISerializable // FUP의 메시지를 나타내는 클래스, Header와 Body로 구성됩니다. 
+	{
+		public Header Header { get; set; }
+		public ISerializable Body { get; set; }
+		public byte[] GetBytes()
+		{
+			byte[] bytes = new byte[GetSize()];
+			Header.GetBytes().CopyTo(bytes, 0);
+			Body.GetBytes().CopyTo(bytes, Header.GetSize());
+			return bytes;
+		}
+		public int GetSize()
+		{
+			return Header.GetSize() + Body.GetSize();
+		}
+	}
+}
+
+STEP5
+조금 전에 했던 것처럼 FUP 프로젝트에 Header.cs를 추가하고 다음 코드를 따라 입력하세요. 
+
+using System;
+
+namespace FUP
+{
+	public class Header : ISerializable
+	{
+		public uint MSGID { get; set; }
+		public uint MSGTYPE { get; set; }
+		public uint BODYLEN { get; set; }
+		public byte FRAGMENTED { get; set; }
+		public byte LASTMSG { get; set; }
+		public ushort SEQ { get; set; }
+
+		public Header() { }
+		public Header(byte[] bytes)
+		{
+			MSGID = BitConverter.ToUint32(bytes, 0);
+			MSGTYPE = BitConverter.ToUint32(bytes, 4);
+			BODYLEN = BitConverter.ToUint32(bytes, 8);
+			FRAGMENTED = bytes[12];
+			LASTMSG = bytes[13];
+			SEQ = BitConverter.ToUint16(bytes, 14);
+		}
+		public byte[] GetBytes()
+		{
+			byte[] bytes = new byte[16];
+			byte[] temp = BitConverter.GetBytes(MSGID);
+			Array.Copy(temp, 0, bytes, 0, temp.Length);
+			
+			temp = BitConverter.GetBytes(MSGTYPE);
+			Array.Copy(temp, 0, bytes, 4, temp.Length);
+
+			temp = BitConverter.GetBytes(BODYLEN);
+			Array.Copy(temp, 0, bytes, 8, temp.Length);
+
+			bytes[12] = FRAGMENTED;
+			bytes[13] = LASTMSG;
+
+			temp = BitConverter.GetBytes(SEQ);
+			Array.Copy(temp, 0, bytes, 14, temp.Length);
+
+			return bytes;
+		}
+		public int GetSize()
+		{
+			return 16;
+		}
+	}
+}
+
+
+STEP6
+이번에는 FUP 프로젝트에 Body.cs 를 추가하고 다음 코드를 따라 입력하세요. 이 소스 코드 파일은 네 가지 MSGTYPE에 따른 본문 형식을 각각의 클래스로 나타냅니다. 
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace FUP
+{
+	public class BodyRequest : ISerializable // 파일 전송 요청 메시지(0x01)에 사용할 본문 클래스입니다. FILESIZE와 FILENAME필드를 가집니다. 
+	{
+		public long FILESIZE;
+		public byte[] FILENAME;
+
+		public BodyRequest() { }
+		public BodyRequest(byte[] bytes)
+		{
+			FILESIZE = BitConverter.ToInt64(bytes, 0);
+			FILENAME = new byte[bytes.Length - sizeof(long)];
+			Array.Copy(bytes, sizeof(long), FILENAME, 0, FILENAME.Length);
+		}
+		public byte[] GetBytes()
+		{
+			byte[] bytes = new byte[GetSize()];
+			byte[] temp = BitConverter.GetBytes(FILESIZE);
+			Array.Copy(temp, 0, bytes, 0, temp.Length);
+			Array.Copy(FILENAME, 0, bytes, temp.Length, FILENAME.Length);
+
+			return bytes;
+		}
+		public int GetSize()
+		{
+			return sizeof(long) + FILENAME.Length;
+		}
+	}
+	public class BodyResponse : ISerializable //파일 전송 요청에 대한 응답(0x02)에 사용할 본문 클래스 입니다. MSGID와 RESPONSE필드를 가집니다.
+	{
+		public int MSGID;
+		public byte RESPONSE;
+		public BodyResponse() { }
+		public BodyResponse(byte[] bytes)
+		{
+			MSGID = BitConverter.ToUint32(bytes, 0);
+			RESPONSE = byte[4];
+		}
+		public byte[] GetBytes()
+		{
+			byte[] bytes = new byte[GetSize()];
+			byte[] temp = BitConverter.GetBytes(MSGID);
+			Array.Copy(temp, 0, bytes, 0, temp.Length);
+			bytes[temp.Length] = RESPONSE;
+
+			return bytes;
+		}
+		public int GetSize()
+		{
+			return sizeof(uint) + sizeof(byte);
+		}
+	}
+	public class BodyData : ISerializable // 실제 파일을 전송하는 메시지(0x03)에 사용할 본문 클래스 입니다. 앞서 프로토콜 정의에서 이야기 했던 것처럼
+	{				DATA 필드만 갖고 있습니다. 
+		public byte[] DATA;
+		public BodyData(byte[] bytes)
+		{
+			DATA = new byte[bytes.Length];
+			bytes.CopyTo(DATA, 0);
+		}
+		public byte[] GetBytes()
+		{
+			return DATA;
+		}
+		public int GetSize()
+		{
+			return DATA.Length;
+		}
+	}
+	public class BodyResult : ISerializable // 파일 전송 결과 메시지(0x04)에 사용할 본문 클래스입니다. 요청 메시지의 MSGID와 성공 여부를 나타내는 
+	{				RESULT 프로퍼티를 가집니다. 
+		public uint MSGID;
+		public byte RESULT;
+	
+		public BodyResult() { }
+		public BodyResult(byte[] bytes)
+		{
+			MSGID = BitConverter.ToUint32(bytes, 0);
+			RESULT = bytes[4];
+		}
+		public byte[] GetBytes()
+		{
+			byte[] bytes = new byte[GetSize()];
+			byte[] temp = BitConverter.GetBytes(MSGID);
+			Array.Copy(temp, 0, bytes, 0, temp.Length);
+			bytes[temp.Length] = RESULT;
+
+			return bytes;
+		}
+		public int GetSize()
+		{
+			return sizeof(uint) + sizeof(byte);
+		}
+	}
+}
+
+
+STEP7
+FUP 프로젝트에 새로운 소스 코드를 추가하고 이름을 MessageUtil.cs 라고 붙이세요. 그리고 다음 코드를 입력하세요. 이 소스 코드 파일은 스트림으로부터 메시지를 보내고 받기 위한 메소드를 가지는 MessageUtil 클래스를 구현합니다. 
+
+using System;
+using System.IO;
+
+namespace FUP
+{
+	public class MessageUtil
+	{
+		public static void Send(Stream writer, Message msg) //Send() 메소드는 스트림을 통해 메시지를 내보냅니다.
+		{
+			writer.Write(msg.GetBytes(), 0, msg.GetSize());
+		}
+		public static Message Receive(Stream reader)
+		{
+			int totalRecv = 0;
+			int sizeToRead = 16;
+			byte[] hBuffer = new byte[sizeToRead];
+
+			while(sizeToRead > 0)
+			{
+				byte[] buffer = new byte[sizeToRead];
+				int recv = reader.Read(buffer, 0, sizeToRead);
+				if (recv == 0)
+					return null;
+				buffer.CopyTo(hBuffer, totalRecv);
+				totalRecv += recv;
+				sizeToRead -= recv;
+			}
+			Header header = new Header(hBuffer);
+			totalRecv = 0;
+			byte[] bBuffer = new byte[header.BODYLEN];
+			sizeToRead = (int)header.BODYLEN;
+
+			while( sizeToRead > 0)
+			{
+				byte[] buffer = new byte[sizeToRead];
+				int recv = reader.Read(buffer, 0, sizeToRead);
+				if (recv == 0)
+					return null;
+
+				buffer.CopyTo(bBuffer, totalRecv);
+				totalRecv += recv;
+				sizeToRead -= recv;
+			}
+			ISerializable body = null;
+			switch(header.MSGTYPE) //헤더의 MSGTYPE 프로퍼티를 통해 어떤 Body 클래스의 생성자를 호출할지 결정합니다. 
+			{
+				case CONSTANTS.REQ_FILE_SEND:
+					body = new BodyRequest(bBuffer);
+					break;
+				case CONSTANTS.REP_FILE_SEND:
+					body = new BodyResponse(bBuffer);
+					break;
+				case CONSTTANTS.FILE_SEND_DATA:
+					body = new BodyData(bBuffer);
+					break;
+				case CONSTANTS.FILE_SEND_RES:
+					body = new BodyResult(bBuffer);
+					break;
+				default:
+					throw new Exception(String.Format("Unknown MSGTYPE : {0}", header.MSGTYPE));
+			}
+			return new Message() { Header = header, Body = body };
+		}
+	}
+}
+
+Message.cs , Header.cs, Body.cs, MessageUtil.cs 모두 작성했습니까? 그럼 솔루션 탐색기에서 FUP 프로젝트 항목 위에 마우스 커서를 올려놓고 오른쪽 버튼을 클릭하세요. 아마 팝업 메뉴가 나타날 텐데 거기에서 빌드 항목을 클릭해서 클래스 라이브러리를 빌드하세요. 탐색기를 실행해서 프로젝트 폴더를 뒤져보면 bin/Debug나 bin/Release 폴더에 FUP.dll이 생성된 것을 확인할수 있을 겁니다. 이 파일을 잘 챙겨두세요. 이제곧 사용해야 하니까요. 
+
+
+
+
+
+
+
+
+
+21.4.4 파일 업로드 서버 구현하기
+후아 프로토콜 구현이 겨우 끝났네요. 이번 소절에서는 파일을 받아 저장하는 서버를 구현해보겠습니다. 먼저 프로젝트를 하나 새로 만들어야겠죠?
+
+
+STEP1
+비주얼 스튜디오를 실행하고 [새 프로젝트 만들기] 대화상자를 띄우세요. 템플릿에서 콘솔 앱(.NET Core)을 선택하고 프로젝트 이름에는 FileReceiver를 입력하세요. 그리고 <만들기> 버튼을 클릭하여 프로젝트 생성을 완료합니다. 
+
+
+STEP2
+앞에서 고생스럽게 파일 업로드 프로토콜을 구현한 FUP.dll을 프로젝트 참조에 추가시킵니다. 솔루션 탐색기에서 FileReceiver 프로젝트 아래에 있는 종속성 항목을 선택하고 마우스 오른쪽 버튼을 클릭해서 팝업 메뉴를 띄우세요. 그리고 팝업 메뉴에서 COM참조 추가를 찾아 클릭하세요. 그러면 [참조 관리자]대화 상자가 나타날 겁니다. 여기에서 <찾아보기> 버튼을 선택하고 앞에서 빌드한 FUP.dll 파일(잘 챙겨뒀지요?)을 선택한 뒤 <확인> 버튼을 클릭하세요. 
+
+
+STEP3
+이젠 서버 프로그램 코드를 작성할 차례입니다. 솔루션 탐색기에서 Program.cs의 이름을 MainApp.cs로 바꾸고 다음 코드를 입력하세요. 아 컴파일 하는 것도 잊지 마세요. 
+
+
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using FUP;
+
+namespace FileReceiver
+{
+	class MainApp
+	{
+		static void Main(string[] args)	
+		{
+			if(args.Length < 1)
+			{
+				Console.WriteLine("사용법 : {0} <Directory>", Process.GetCurrentProcess().ProcessName);
+				return;
+			}
+			uint msgId = 0;
+		
+			string dir = args[0];
+			if(Directory.Exists(dir) == false)
+				Directory.CreateDirectory(dir);
+
+			const int bindPort = 5425; //서버 포트는 5425입니다. 
+			TcpListener server = null;
+		
+			try
+			{
+				IPEndPoint localAddress = new IPEndPoint(0, bindPort); //IP주소를 0으로 입력하면 127.0.0.1뿐 아니라 os에 할당되어 
+										있는 어떤 주소로도 서버에 접속이 가능합니다. 
+				server = new TcpListener(localAddress);
+				server.Start();
+
+				Console.WriteLine("파일 업로드 서버 시작... ");
+				while(true)
+				{
+					TcpClient client = server.AcceptTcpClient();
+					Console.WriteLine("클라이언트 접속 : {0}, ((IPEndPoint)client.Client.RemoteEndPoint).ToString());
+
+					NetworkStream stream = client.GetStream();
+
+					Message reqMsg = MessageUtil.Receive(stream); //클라이언트가 보내온 파일 전송 요청 메시지를 수신합니다. 
+
+					if(reqmsg.Header.MSGTYPE != CONSTANTS.REQ_FILE_SEND)
+					{
+						stream.Close();
+						client.Close();
+						continue;
+					}
+					BodyRequest reqBody = (BodyRequest)reqMsg.Body;
+
+					Console.WriteLine("파일 업로드 요청이 왔습니다. 수락 하시겠습니까? yes/no");
+					string answer = Console.ReadLine();
+
+					Message rspMsg = new Message();
+					rspMsg.Body = new BodyResponse()
+					{
+						MSGID = reqMsg.Header.MSGID, RESPONSE = CONSTANTS.ACCEPTED
+					};
+					rspMsg.Header = new Header()
+					{
+						MSGID = msgId++,
+						MSGTYPE = CONSTANTS.REP_FILE_SEND,
+						BODYLEN = (uint)rspMsg.Body.GetSize(),
+						FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+						LASTMSG = CONSTANTS.LASTMSG,
+						SEQ = 0
+					};
+
+					if(answer != "yes")
+					{
+						rspMsg.Body = new BodyResponse() //사용자가 yes가 아닌 답을 입력하면 클라이언트에게 거부 응답을
+						{				보냅니다.
+							MSGID = reqMsg.Header.MSGID,
+							RESPONSE = CONSTANTS.DENIED
+						};
+						MessageUtil.Send(stream, rspMsg);
+						stream.Close();
+						client.Close();
+
+						continue;
+					}else
+						MessageUtil.Send(stream, rspMsg); //물론 yes를 입력하면 클라이언트에게 승낙 응답을 보냅니다. 
+					Console.WriteLine("파일 전송을 시작합니다...");
+
+					long fileSize = reqBody.FILESIZE;
+					string fileName = Encoding.Default.GetString(reqBody.FILENAME);
+					FileStream file = new FileStream(dir + "\\" + fileName, FileMode.Create);
+
+					uint? dataMsgId = null;
+					ushort prevSeq = 0;
+					while((reqMsg = MessageUtil.Receive(stream)) != null)
+					{
+						Console.Write("#");
+						if(reqMsg.Header.MSGTYPE != CONSTANTS.FILE_SEND_DATA)
+							break;
+						if(dataMsgId == null)
+							dataMsgId = reqMsg.Header.MSGID;
+						else
+						{
+							if(dataMsgId != reqMsg.Header.MSGID)
+								break;
+						}
+						if(prevSeq++ != reqMsg.Header.SEQ) //메시지 순서가 어긋나면 전송을중단합니다. 
+						{
+							Console.WriteLine("{0}, {1}", prevSeq, reqMsg.Header.SEQ);
+							break;
+						}
+						file.Write(reqMsg.Body.GetBytes(), 0, reqMsg.Body.GetSize());//전송받은 스트림을 서버에서 생성한 
+													파일에 기록합니다. 
+						if (reqMsg.Header.FRAGMENTED == CONSTANTS.NOT_FRAGMENTED)
+							break; //분할 메시지가 아니라면 박복을 한번만 하고 빠져나옵니다. 
+						if(reqMsg.Header.LASTMSG == CONSTANTS.LASTMSG)
+							break; //마지막 메시지면 반복문을 빠져나옵니다.
+					}
+					long recvFileSize = file.Length;
+					file.Close();
+
+					Console.WriteLine();
+					Console.WriteLine("수신 파일 크기 : {0} bytes", recvFileSize);
+
+					Message rstMsg = new Message();
+					rstMsg.Body = new BodyResult()
+					{
+						MSGID = reqMsg.Header.MSGID,
+						RESULT = CONSTANTS.SUCCESS
+					};
+					rstMsg.Header = new Header()
+					{
+						MSGID = msgId++,
+						MSGTYPE = CONSTANTS.FILE_SEND_RES,
+						BODYLEN = (uint)rstMsg.Body.GetSize(),
+						FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+						LASTMSG = CONSTANTS.LASTMSG,
+						SEQ = 0
+					};
+
+					if(fileSize == recvFileSize)
+						MessageUtil.Send(stream, rstMsg);//파일 전송 요청에 담겨온 파일 크기와 실제로 받은 파일의 크기를
+										비교하여 같으면 성공 메시지를 보냅니다. 
+					else
+					{
+						rstMsg.Body = new BodyResult()
+						{
+							MSGID = reqMsg.Header.MSGID,
+							RESULT = CONSTANTS.FAIL
+						};
+						MessageUtil.Send(stream, rstMsg); //파일 크기에 이상이 있다면 실패 메시지를 보냅니다. 
+					}
+					Console.WriteLine("파일 전송을 마쳤습니다.");
+					stream.Close();
+					client.Close();
+				}
+			}
+			catch(SocketException e)
+			{
+				Console.WriteLine(e);
+			}
+			finally
+			{
+				server.Stop();
+			}
+			Console.WriteLine("서버를 종료합니다.");
+		}
+	}
+}
+
+
+
+
+
+21.4.5 클라이언트 구현하기
+서버를 만들었으니 서버에 파일을 보내주는 클라이언트를 구현할 차례입니다. 이번에도 프로젝트를 새로 생성하는 것으로 시작하겠습니다. 
+
+
+STEP1
+비주얼 스튜디오를 실행하고 [새 프로젝트 만들기] 대화상자를 띄우세요. 템플릿에서 콘솔 앱(.NET Core)을 선택하고 프로젝트 이름에는 FileSender를 입력하세요. 그리고 <만들기> 버튼을 클릭하여 프로젝트 생성을 완료합니다. 
+
+
+
+STEP2
+클라이언트도 파일 업로드 프로토콜을 구현하고 있는 FUP.dll을 필요로 합니다. 서버를 만들때 했던 것처럼 FUP.dll을 프로젝트에 추가해주세요. 
+
+
+STEP3
+마지막으로, 솔루션 탐색기에서 Program.cs의 이름을 MainApp.cs로 바꾸고 다음 코드를 입력한 뒤 컴파일 하세요. 
+
+
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using FUP;
+
+namespace FileSender
+{
+	class MainApp
+	{
+		const int CHUNK_SIZE = 4096;
+
+		static void Main(string[] args)
+		{
+			if(args.Length < 2)
+			{
+				Console.WriteLine("사용법 : {0} <Server IP> <File Path>", Process.GetCurrentProcess().ProcessName);
+				return;
+			}
+			string serverIp = args[0];
+			const int serverPort = 5425;
+			string filePath = args[1];
+		
+			try
+			{
+				IPEndPoint clientAddress = new IPEndPoint(0, 0); //클라이언트는 OS에서 할당한 IP주소와 포트에 바인딩합니다. 
+				IPEndPoint serverAddress = new IPEndPoint(IPAddress.Parse(serverIp), serverPort);
+
+				Console.WriteLine("클라이언트: {0}, 서버:{1}", clientAddress.ToString(), serverAddress.ToString());
+
+				uint msgId = 0;
+				Message reqMsg = new Message();
+				reqMsg.Body = new BodyRequest()
+				{
+					FILESIZE = new FileInfo(filepath).Length;
+					FILENAME = System.Text.Encoding.Default.GetBytes(filepath)
+				};
+				reqMsg.Header = new Header()
+				{
+					MSGID = msgId++;
+					MSGTYPE = CONSTANTS.REQ_FILE_SEND,
+					BODYLEN = (uint)reqMsg.Body.GetSize(),
+					FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+					LASTMSG = CONSTANTS.LASTMSG,
+					SEQ = 0
+				};
+				TcpClient client = new TcpClient(clientAddress);
+				client.Connect(serverAddress);
+		
+				NetworkStream stream = client.GetStream();
+		
+				MessageUtil.Send(stream, reqMsg); //클라이언트는 서버에 접속 하자마자 파일 전송 요청 메시지를 보냅니다. 
+
+				Message rspMsg = MessageUtil.Receive(stream); //그리고 서버의 응답을 받습니다.
+
+				if(rspMsg.Header.MSGTYPE != CONSTANTS.REP_FILE_SEND)
+				{
+					Console.WriteLine("정상적인 서버 응답이 아닙니다.{0}", rspMsg.Header.MSGTYPE); 
+					return; 
+				}
+				if((BodyResponse)rspMsg.Body).RESPONSE == CONSTANTS.DENIED)
+				{
+					Console.WriteLine("서버에서 파일 전송을 거부했습니다.");
+					return;	
+				}
+				using (Stream fileStream = new FileStream(filepath, FileMode.Open))//서버에서 전송 요청을 수락했다면, 파일 스트림을 
+				{							열어 서버로 보낼 준비를 합니다.
+					byte[] rbytes = new byte[CHUNK_SIZE];
+
+					long readValue = BitConverter.ToInt64(rbytes, 0);
+
+					int totalRead = 0;
+					ushort msgSeq = 0;
+					byte fragmented = (fileStream.Length < CHUNK_SIZE) ?
+							 CONSTANTS.NOT_FRAGMENTED : ONSTANTS.FRAGMENTED
+					while(totalRead < fileStream.Length)
+					{
+						int read = fileStream.Read(rbytes, 0, CHUNK_SIZE);
+						totalRead += read;
+						Message fileMsg = new Message();
+
+						byte[] sendBytes = new byte[read];
+						Array.Copy(rbytes, 0, sendBytes, 0, read);
+
+						fileMsg.Body = new BodyData(sendBytes);
+						fileMsg.Header = new Header()
+						{
+							MSGID = msgId,
+							MSGTYPE = CONSTANTS.FILE_SEND_DATA,
+							BODYLEN = (uint)fileMsg.Body.GetSize(),
+							FRAGMENTED = fragmented,
+							LASTMSG = (totalRead < fileStream.Length)? 
+									CONSTANTS.NOT_LASTMSG: CONSTANTS.LASTMSG,
+							SEQ = msgSeq++;
+						};
+						Console.Write("#");
+						MessageUtil.Send(stream, fileMsg); //모든 파일의 내용이 전송될 때까지 파일 스트림을 0x03 메시지에 
+										담아 서버로 보냅니다. 
+		
+						BodyResult result = ((BodyResult)rstMsg.Body);
+						Console.WriteLine("파일 전송 성공 : {0}", result.RESULT == CONSTANTS.SUCCESS);
+					}
+					stream.Close();
+					client.Close();
+				}
+				catch(SocketException e)
+				{
+					Console.WriteLine(e);
+				}
+				Console.WriteLine("클라이언트를 종료합니다.");
+			
+		}
+	}
+}
+
+
+
+
+21.4.6 파일 업로드 시험하기
+여러분은 방금 이 책에서 가장 긴코드를 가진 예제 프로그램을 만들었습니다. 이 제 프로그램을 테스트해봐야겠지요(제 컴퓨터에는 192.168.0.23이라는 IP주소가 할당되어 있습니다.)다음과 같이 프로그램을 실행할 때는 여러분 컴퓨터의 IP 주소 또는 127.0.0.1 을 입력하기 바랍니다.)?
