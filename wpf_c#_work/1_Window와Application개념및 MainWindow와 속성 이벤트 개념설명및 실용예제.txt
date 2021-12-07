@@ -1,0 +1,230 @@
+WPF 애플리케이션을 만들고 컴파일하고 실행하는 데 비주얼 스튜디오 2005를 사용한다면, 다음 단계를 거쳐 SayHello 프로그램을 만들어 볼 수 있다. 
+1. 파일 메뉴에서 새 프로젝트를 선택한다. 
+2. 새 프로젝트 대화상자에서 Visual C#, Windows Presentation Foundation, 빈 프로젝트를 차례로 선택한다. 프로젝트에 적당한 위치를 찾고 이름은 SayHello라고 입력한다. 솔루션용 디렉토리 만들기의 체크박스는 선택하지 않는다. 그리고 확인을 누른다(역자주: 비주얼 스튜디오 2005용 WPF Extension에는 빈 프로젝트 옵션이 포함돼 있지 않기 때문에, WpfEmpty Project.zip 파일을 \My Documents\Visual Studio 2005\Templates\ProjectTemplates\Visual C#에 미리 복사해 두어야한다)
+
+3. 오른쪽의 솔루션 탐색기에서 참조 항목에 PresentationCore, PresentationFramework, System, WindowsBase가 포함되게 한다. 참조 항목에 이 DLL들이 포함되지 않았으면 이들을 추가해야 한다. 참조에서 마우스 오른쪽 버튼을 누른 후 참조 추가를 선택한다(또는 프로젝트 메뉴에서 참조 추가를 선택할 수도 있다.)참조 추가 대화상자에서 .NET 탭을 누르고 필요한 DLL들을 선택한다. 그리고 확인을 누른다. 
+
+4. 오른쪽의 솔루션 탐색기에서 SayHello 프로젝트 이름에서 마우스 오른쪽 버튼을 누르고 추가 메뉴의 새 항목을 선택한다(또는 프로젝트 메뉴의 새 항목 추가를 선택해도된다)새 항목 추가 대화상자에서 코드 파일을 선택한다. 파일 이름에는 SayHello,cs라고 입력하고 확인을 누른다. 
+
+5. SayHello.cs 파일에 앞의 예제 프로그램을 입력한다. 
+
+6. 디버그 메뉴에서 디버깅 하지 않고 시작을 선택해 프로그램을 컴파일하고 실행시킨다(바로 가기키로 Ctrl + F5를 눌러도 된다.)
+
+이 책의 1부에 있는 대부분의 예제 프로그램은 같은 단계를 거쳐 프로젝트를 생성한다. 예외적으로 1장을 포함해 몇 개의 프로젝트는 둘 이상의 소스 코드 파일로 된 프로젝트를 다루기도 한다.
+
+SayHello로 생성한 창을 닫을 때 콘솔 창이 실행 중인 것을 볼 수 있을 것이다. 이 콘솔 창의 존재 여부는 전적으로 컴파일러의 설정에 의해 좌우되는데, 프로젝트의 속성에서 제어가 가능하다. 오른쪽에 있는 프로젝트의 이름에서 마우스 오른쪽 버튼을 누르고 메뉴에서 속성을 누른다(프로젝트 메뉴에서 속성을 선택해도 된다)그러면 프로젝트의 속성들을 살펴보고 고칠수 있다. 출력 형태가 콘솔 애플리케이션으로 돼 있는 것을 확인할 수 있을 것이다. 이 설정은 콘솔 창이 생성되는 것 외에는 프로그램의 기능에 아무런 영향을 미치지 않는다. 출력 형태를 윈도우 애플리케이션으로 바꾸면, 콘솔 창 없이 실행될 것이다. 개인적인 의견이지만 콘솔 창은 프로그램 개발에 있어서 매우 유용하다. 프로그램이 실행 중이거나 디버깅 중일 때 텍스트 정보를 표시하는 곳으로 이용할 수 있다. 또한 프로그램에 심각한 버그가 있어서 무한 루프에 빠지는 등의 창이 표시조차 되지 않는 상황일 때 콘솔 창에서 Ctrl+C를 눌러서 애플리케이션을 쉽게 종료시킬 수도 있다. 
+
+SayHello에 사용된 Window와 Application 클래스는 모두 DispatcherObject에서 상속됐다. 단 Window는 아래의 클래스 계층도에서 보듯이 더 많은 단계의 상속을 거친다. 
+
+
+Object
+	DispatcherObject(abstract)
+		Application
+			DependencyObject
+				Visual(abstract)
+					UIElement
+						FrameworkElement
+							Control
+								ContentControl
+									Window
+
+물론 아직은 클래스 계층도에 대해 상세하게 알 필요는 없지만 WPF를 알게 될수록 이 클래스들을 반복해서 접하게 될 것이다. 
+
+한 프로그램은 하나의 Application 객체만 생성할 수 있는데, 이 객체는 프로그램 내의 다른 부분에서도 항상 접근할 수 있다. Application 객체는 보이지 않는 반면에 Window 객체는 표준 창으로서 화면에 표시된다. 
+
+Title 프로퍼티로 지정한 텍스트를 표시하는 제목 표시줄이 있으며, 제목 표시줄의 왼쪽에서는 시스템 메뉴 아이콘이 있고, 오른쪽에는 최소화, 최대화, 닫기 아이콘이 있다. 또한 창에는 크기를 조절하는 경계가 있고, 창 내부를 차지하고 있는 클라이언트 영역이 있다. 
+
+제한된 범위 내에서 SayHello 프로그램의 Main 메소드 안에 있는 명령문들의 순서를 뒤바꿀수 있다. 그래도 여전히 제대로 동작할 것이다. 예를 들어 Show 메소드를 호출한 후에 Title 프로퍼티를 설정할 수도 있다. 이론상으로는 이렇게 수정할 경우 제목 표시줄에 아무런 글자도 없는 상태로 윈도우가 시작되겠지만, 실제로는 너무 빨라서 눈치 챌 수 없을 것이다. 
+
+Window 객체를 생성하기 전에 Application 객체를 생성할 수도 있다. 그러나 Run 메소드는 반드시 가장 나중에 호출해야 한다. Run 메소드는 창이 닫히기 전까지는 반환되지 않는다. 따라서 창이 닫힐 때 Main 메소드가 종료되고, 창이 정리돼야 한다. Run을 호출하는 부분을 삭제해도 Window 객체는 여전히 생성되고 화면에 창도 표시된다. 그러나 Main이 종료되는 시점에 바로 객체가 소멸된다. 
+
+Window 객체의 Show 메소드를 호출하는 대신에 아래와 같이 Window 객체를 Run의 인자로 넘길수도 있다. 
+
+app.Run(win);
+
+이 경우에 Run 메소드는 Window 객체의 Show를 호출하는 것까지 담당한다. 
+
+프로그램은 Run 메소드가 호출되기 전까지는 실제로 시작되지 않으며, 호출된 후에야 Window 객체가 사용자의 입력에 반응할 수 있게 된다. 사용자가 창을 닫고 Run 메소드가 반환될 때 프로그램은 종료를 준비한다. 즉 프로그램은 Run을 호출하는 데  대부분의 시간을 사용한다. 그런데 프로그램이 Run에 모든 시간을 쓴다면 다른 일을 어떻게 할 수 있을까?
+
+사실상 프로그램이 하는 일은 이벤트(event)에 대해 반응하는 것이 전부라고 말 할 수 있다. 이벤트란 통상적으로 사용자의 키보드, 마우스, 스타일리스 펜의 입력을 의미한다. UIElement 클래스에는 키보드, 마우스, 스타일러스와 관련된 몇 가지의 이벤트가 정의돼 있으며 Window 클래스는 이 모든 이벤트를 상속받는다. 이런 이벤트 중 하나는 MouseDown이다. 사용자가 윈도우의 클라이언트 영역을 누를 때마다 윈도우에서는 MouseDown 이벤트가 발생한다. 
+
+다음 프로그램을 보면 Main 안에 몇가지 명령문들이 있고 MouseDown 이벤트에 대한 이벤트 핸들러도 설치돼 있다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+
+class HandleAnEvent
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		
+		Window win = new Window();
+		win.Title = "Handlc An Event";
+		win.MouseDown += WindowOnMouseDown;
+
+		app.Run(win);
+	}
+	static void WindowOnMouseDown(object sender, MouseButtonEventArgs args)
+	{
+		Window win = sender as Window;
+		string strMessage = string.Format("Window clicked with {0} button at point ({1})", args.ChangedButton, args.GetPosition(win));
+		MessageBox.Show(strMessage, win.Title);
+	}
+}
+
+필자는 이벤트 핸들러의 이름을 다음과 같은 방식으로 정한다. 이벤트를 처리하는 클래스나 객체의 이름을 먼저 쓴 후 뒤에 On을 붙이고 그 뒤에는 이벤트의 이름을 쓴다(WindowOnMouseDown과 같이 된다)자신만의 독특한 방식으로 이름을 짓는 것도 무방하다. 
+
+MouseDown 이벤트는 이를 처리하는 이벤트 핸들러인 MouseButtonEventHandler 위임자와 함께 문서화된다. MouseButtonEventHandler 위임자의 첫 번째 인자는 object 타입이고 두번째 인자는 MouseButtonEventArgs 타입이다. 이 클래스는 System.Windows.Input 네임스페이스에 정의돼 있으므로 using 문을 사용해 선언해 줘야 한다. 이 프로그램에서는 이벤트 핸들러를 정적으로 정의했는데, 정적으로 정의된 Main 메소드에서 참조되기 때문이다. 
+
+이 책의 예제 프로그램에서는 System.Windows.Input에 대해 using 문으로 선언돼 있는데, 실제로 사용하지 않아도 관례상 대부분 선언하고 있다. 
+
+사용자가 윈도우의 클라이언트 영역을 누를 때마다 MouseDown 이벤트가 발생된다. 이벤트 핸들러의 첫 번째 인자는 이벤트를 발생시키는 객체인데, 여기에서는 Window 객체가 된다. 이벤트 핸들러는 이 객체를 Window 타입의 객체로 안전하게 형 변환된다. 
+
+이 프로그램에서 이벤트 핸들러에 Window 객체가 필요한 이유는 두 가지다. 첫 번째 이유는 MouseButtonEventArgs 클래스에 정의된 GetPosition 메소드의 인자로 Window 객체를 넘겨야 하기 때문이다. 이 GetPosition 메소드는 Point 타입(System.Windows에 정의된 구조체)의 객체를 반환하는데, 이 값은 인자로 넘긴 객체의 좌측 상단을 기준으로 한 마우스의 위치 좌표이다. 두번 째 이유는 이벤트 핸들러가 Window 객체의 Title 프로퍼티를 읽어서 메시지 박스의 제목으로 사용하기 때문이다. 
+
+MessageBox 클래스 역시 System.Windows 네임스페이스에 정의돼 있다. 이 클래스에는 정적으로 선언된 Show 메소드가 12가지의 다른 형태로 오버로딩 돼있어서 버튼과 이미지를 표시하는 데 다양한 선택 사항을 충족시킨다. 기본값으로는 확인 버튼 하나만 나타난다. 
+
+HandleAnEvent 프로그램의 메시지 박스에는 클라이언트 영역의 좌측 상단을 기준으로 마우스 커서의 위치가 출력된다. 당연히 픽셀 단위의 좌표계라고 생각하겠지만 그렇지 않다. 장치 독립적(device-independent)인 1/96인치 단위로 돼 있는데, 다소 이상하게 보일 수 있는 이 좌표계에 대해서는 1장의 후반부에서 다시 살펴보겠다. 
+
+HandleAnEvent 프로그램의 이벤트 핸들러에는 sender 인자를 Window 타입의 객체로 형 변환하고 있지만 동일한 Window 객체를 이벤트 핸들러 안에서 구하는 다른 방법도 있다. Main에서 생성된 Window 객체는 정적 필드로 저장돼, 이벤트 핸들러에서 이를 사용할 수 있다. 또 다른 방법으로 Application 클래스의 특정 프로퍼티를 사용해도 된다. Application 에는 Current란 정적 프로퍼티가 있는데, 이 프로퍼티는 프로그램이 생성한 Application 클래스를 반환한다. (언급한대로 하나의 프로그램은 하나의 Application 객체만을 생성할 수 있다.) 또한 Application은 Window 객체를 반환하는 MainWindow란 이름의 인스턴스 프로퍼티를 갖고 있다. 따라서 이벤트 핸들러에서 다음과 같은 방법으로 Window 타입의 지역 변수를 할당할수 있다. 
+
+Window win = Application.Current.MainWindow;
+
+메시지 박스의 Title 문자만을 정하기 위해 Window 객체를 얻어야 한다면 MessageBox.Show메소드의 인자로 Application.Current.MainWindow.Title을 넘기면 된다.
+
+Application 클래스에는 유용한 몇 가지 이벤트가 정의돼 있다. .NET의 관례대로 대부분의 이벤트는 이를 처리하는 protected 메소드와 연관된다. Application에 정의된 StartUp 이벤트는 protected로 선언된 OnStartup과 연관되며, Application 객체의 Run 메소드가 호출된 직후에 실행된다. Run 메소드가 반환되기 직전에 Exit 이벤트가 발생하고, 이에 대응하는 OnExit 메소드가 호출된다. 애플리케이션의 초기화나 종료를 수행할 때 이 두가지 이벤트를 사용할 수 있다. 
+
+사용자가 윈도우를 로그오프하거나 컴퓨터를 종료시킬 때는 OnSessionEnding 메소드와 SessionEnding 이벤트가 발생한다. 이 이벤트는 SessionEndingCancelEventArgs 타입의 인자를 넘기는데, 이 타입은 cancelEventArgs 클래스로부터 상속됐으며, Cancel이란 이름의 프로퍼티를 갖고 있다. 윈도우가 종료되는 것을 방지하고 싶다면 이 프로퍼티를 true로 세팅한다. 콘솔 애플리케이션이 아닌 윈도우즈 애플리케이션으로 컴파일한 경우에만 SessionEnding 이벤트를 받을 수 있다. 
+
+프로그램에서 Application 클래스의 이벤트들을 처리할 필요가 있다면 해당하는 이벤트에 대한 이벤트 핸들러를 설치해야 하지만 가장 편리한 방법은 Application 을 상속하는 클래스를 정의하는 것이다. 다음 예제인 InheritTheApp에서 이 방법을 사용했다. Application을 상속받은 클래스에서는 발생된 이벤트를 처리하는 기본 메소드들을 오버라이딩 할 수 있다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+
+class InheritTheApp : Application
+{
+	[STAThread]
+	public static void Main()
+	{
+		InheritTheApp app = new InheritTheApp();
+		app.Run();
+	}
+	protected override void OnStartup(StartupEventArgs args)
+	{
+		base.OnStartup(args);
+		Window win = new Window();
+		win.Title = "Inherit the App";
+		win.Show();
+	}
+	protected override OnSessionEnding(SessionEndingCancelEventArgs args)
+	{
+		base.OnSessionEnding(args);
+		MessageBoxResult result = MessageBox.Show("Do you want to save your data?",
+			MainWindow.Title, MessageBoxButton.YesNoCancel,MessageBoxImage.Question, MessageBoxResult.Yes);
+		args.Calcel = (result == MessageBoxResult.Cancel);
+	}
+}
+
+InheritTheApp 클래스는 Application을 상속받았고, Application에 정의된 OnStartup메소드와 OnSessionEnding 메소드를 오버라이딩 하고 있다. 이 프로그램의 Main 메소드에서는 Application 타입의 객체를 생성하지 않고 InheritTheApp 타입의 객체를 생성하고 있다. 아직 Main은 이 클래스의 멤버가 아니다. Main에서 자신이 속한 클래스의 인스턴스를 생성한다는 것이 다소 이상하게 보이겠지만 Main은 정적으로 정의되었기 때문에 전혀 문제가 없다. InheritTheApp 객체가 아직 생성되지 않은 시점이라도 Main 메소드는 존재하는 것이다. 
+
+InheritTheApp에서는 OnStartup 메소드와 OnSessionEnding 메소드를 오버라이딩 했다(앞서 설명했듯이, 프로그램이 Run을 호출한 직후에 OnStartup 메소드가 호출된다.) 프로그램이 Window객체를 생성하고 화면에 나타내는 시점은 OnStartup 메소드에서다. 같은 일을 InheritTheApp 클래스의 생성자에서 할 수도 있다. 
+
+오버라이딩한 OnSessionEnding에서는 예, 아니오, 취소 버튼이 있는 메시지 박스를 출력한다. 메시지 박스의 제목은 MainWindow.Title의 값을 이용하고 있다. Application에서 상속된 클래스 이기 때문에, 간단히 MainWindow만으로 이 인스턴스의 프로퍼티 값을 얻을 수 있다. this 키워드를 MainWindow앞에 붙여서 명시적으로 Application의 프로퍼티임을 나타낼수도 있다. 
+
+이 프로그램에서는 저장시킬 값이 없으므로, 예나 아니오 중 무엇을 선택하든지 구분하지 않고 애플리케이션의 종료와 사용자 세션(session)의 종료를 허용한다. 취소를 누르게 되면, SessionEndingCancelEventArgs객체의 Cancel 플래그를 true로 설정한다. 이럴 경우에는 윈도우가 종료되거나 로그오프되는 것을 막는다. SessionEndingCancelEventArgs의 ReasonSessionEnding 프로퍼티에 어떤 값을 지정하느냐에 따라서 어떤 동작을 막을 것인지를 구체적으로 지정할 수 있다. ReasonSessionEnding에는 ReasonSessionEnding.Logoff 또는 ReasonSessionEnding.Shutdown이라는 열거형의 값으로 대입할 수 있다. 
+
+OnStartup과 OnSessionEndiong 모두 베이스 클래스(base class)의 메소드를 호출하는 것으로 시작 하고 있다. 이 경우에는 꼭 호출할 필요는 없지만, 호출해서 문제될 것은 없다. 통상적으로 특별한 이유가 없어도 베이스 클래스의 메소드를 호출하는 것이 더 신중한 방법이다. 
+
+이미 잘 알겠지만 명령 프롬포트 창에서 프로그램을 실행할 수 있으며, 그 프로그램에 명령행 인자를 줄 수도 있다. 윈도우 프로그램 또한 마찬가지다. 명령 행 인자를 처리하기 위해서는 아래와 같이 Main 메소드를 약간 다르게 정의해야 한다. 
+
+public static void Main(string[] args)
+
+명령 행 인자는 문자열의 배열 형태로 Main에 전달된다. 이 문자열의 배열은 OnStartup 메소드에서도 사용할 수 있다. StartupEventArgs 인자의 Args 프로퍼티를 참조하면 된다. 
+
+Application에 MainWindow란 이름의 프로퍼티가 있다는 것은 프로그램이 여러 개의 창을 가질 수 있음을 시사하고 있는데, 이는 사실이다. 대화상자를 그 좋은 예로 들 수 있다. 대화상자는 기본적으로는 Window 객체이지만 표시 방식이 조금 다르다는 점과 사용자와 상호작용을 한다는 점에서 약간의 차이가 있다. 
+
+다음 프로그램은 몇 개의 창을 더 만드는 프로그램이다. 마치 여러 개의 창을 초대해 파티를 여는 것 같아서 이름을 ThrowWindowParty로 했다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+
+class ThrowWindowParty: Application
+{
+	[STAThread]
+	public static void Main()
+	{
+		ThrowWindowParty app = new ThrowWindowParty();
+		app.Run();
+	}
+	protected override OnStartup(StartupEventArgs args)
+	{
+		Window winMain = new Window();
+		winMain.Title = "Main Window";
+		winMain.MouseDown += WindowOnMouseDown;
+		winMain.Show();
+
+		for(int i=0; i<2; i++)
+		{
+			Window win = new Window();
+			win.Title = "Extra Window No. " + (i+1);
+			win.Show();
+		}
+	}
+	void WindowOnMouseDown(object sender, MouseButtonEventArgs args)
+	{
+		Window win = new Window();
+		win.Title = "Modal Dialog Box";
+		win.ShowDialog();
+	}
+}
+
+InheritTheApp 클래스처럼 ThrowWindowParty 클래스도 Application을 상속받고 있으며 OnStartup 메소드에서 Window 객체를 생성하고 있다. 그런 다음 두 개의 Window 객체를 더 생성하고 화면에 표시한다. 
+
+첫번째 중요한 사실은 OnStartup 에서 생성된 3개의 창은 이 애플리케이션에서 모두 동등하다는 점이다. 어떤 창이라도 눌러 전면으로 나오게 할 수 있다. 어떤 순서로도 닫을 수 있으며, 마지막 창이 닫힐 때 프로그램이 종료된다. 하나의 창 제목이 Main Window가 아니라면, 어떤 창이 메인 창인지 알기 어려울 것이다. 
+
+그렇지만 Application 객체의 MainWindow 프로퍼티를 살펴보면 Show 가 호출되는 첫 창이 그 애플리케이션에서 메인창으로 간주되는 것을 알 수 있을 것이다.(적어도 최초에는 그렇다)
+
+Application 클래스에는 WindowCollection 타입의 Windows(s가 붙음에 주의)라는 이름의 프로퍼티가 있다. WindowCollection 클래스는 전형적인 .NET 컬렉션 클래스로서 ICollection과 IEnumerable 인터페이스를 구현하고 있고 여러 개의 Window 객체를 저장할 수 있다. 이 클래스에는 Count란 프로퍼티가 있으며 각기 Window 객체를 얻을 수 있게 인덱스 참조 연산을 할 수 있다. 오버라이딩된 OnStartup 의 마지막에서는 Windows.Count 프로퍼티가 3을 반환할 것이고 Windows[0]은 Main Window란 제목의 창을 가리키게 된다. 
+
+이 프로그램에서 이상한점 하나를 발견할 수 있는데 세 개의 윈도우 모두 화면 하단부에 있는 윈도우의 작업 표시줄에 나타난다는 점이다. 작업 표시줄에 세 칸을 차지하고 있는 것이 그리 좋아보이지는 않을 것이다. 나머지 창들을 작업 표시줄에서 안보이게 하려면 for 루프에 다음 구문을 추가시키면된다. 
+
+win.ShowinTaskbar = false;
+
+그러나 이 경우에는 다른 문제점이 생긴다. Main Window란 제목의 창이 먼저 닫힐 경우 작업 표시줄에 있는 항목이 사라지게 된다. 하지만 프로그램은 분명히 실행 중이며 두 개의 다른 창들도 여전히 표시되고 있다. 
+
+일반적으로 Run 메소드가 반환될 때 프로그램이 종료되는데, 마지막 창을 닫을 경우에 Run메소드가 반환된다. 이와 같은 동작은 Application의 ShutdownMode 프로퍼티를 어떻게 설정 하느냐에 따라 다르게 결정되며, 이 프로퍼티는 ShutdownMode 열거형의 멤버로 설정한다. 기본값으로는 ShutdownMode.OnLastWindowClose 멤버가 지정돼 있지만, 이제는 ShutdownMode.OnMainWindowClose로 설정해서 결과를 살펴보자. Run을 호출하기 직전에 다음의 구문을 넣는다. 
+
+app.ShutdownMode = ShutdownMode.OnMainWindowClose;
+
+OnStartup의 아무 곳이나 다음 구문을 추가해도 같은 결과를 얻게 된다. (Main에서는 Application 객체의 이름인 app를 먼저 적어주어야 되는 반면에 OnStartup에서는 this키워드가 붙게 된다. 그런데 this는 생략할 수 있으므로, 그냥 프로퍼티 이름만 적어도 된다)
+
+ShutdownMode = ShutdownMode.OnMainWindowClose;
+
+이제 메인 창이 닫힐 때만 Run이 반환되고, 프로그램이 종료된다. 
+
+ShutdownMode를 변경한 것은 그대로 두고 for 루프에 다음 구문을 추가해보자. 
+
+MainWindow = win;
+
+MainWindow는 Application 클래스의 프로퍼티임을 기억하자. 따라서 이 구문은 어떤 창을 메인 창으로 지정하는지를 나타낸다. for 루프가 종료되면 결론적으로 Extra Window No 2란 제목의 창을 메인창으로 지정하는 것이며 그러므로 이 창을 닫을 때 프로그램이 종료된다. 
+
+세 번째로 ShutdownMode에 대입할 수 있는 값은 ShutdownMode.OnExplicitShutdown인데, 이는 Application의 Shutdown 메소드를 명시적으로 호출하는 경우에만 Run이 반환된다. 
+
+이제 ShutdownMode와 Application 클래스의 MainWindow 프로퍼티를 포함해 지금까지 추가한 코드를 삭제하자. 여러 개의 창들에 대한 계층 구조를 만드는 방법에 대해서 알아보자. 여기에는 Window 클래스에 정의된 Owner 프로퍼티를 이용한다. 이 프로퍼티의 기본값은 null인데, 창의 소유자(owner)가 없다는 뜻이다. Owner 프로퍼티에 다른 Window 객체를 대입할 수 있다(단 그 소유 관계가 순환 구조를 이룰 수는 없다) for 루프에 다음 코드를 추가해보자. 
+
+win.Owner = winMain;
+
+이제 메인 창이 나머지 두 개의 창을 소유하게 된다. 이렇게 해도 세 개 창 사이에 전환이 가능하다. 그렇지만 소유된 창이 그 소유자보다 항상 앞에 나타난다. 소유자를 최소화시키면, 소유자가 소유하는 창들도 화면에서 사라진다. 그리고 소유자를 닫게 되면 소유된 창들도 자동적으로 닫힌다. 즉 소유된 두 창은 모달리스(modeless)대화상자가 되는 것이다. 
+
+대화상자는 크게 모달리스 대화상자와 모달 대화상자로 나뉘는데, 더 일반적인 형태는 모달(modal)대화상자이다. ThrowWindowParty 프로그램에서 메인 창의 클라이언트 영역을 마우스로 누를 때 나타나는 창이 모달 대화상자의 예다. WindowOnMouseDown 메소드에서는 또다른 Window 객체를 생성하고, Title 프로퍼티에 값을 대입하며, Show의 호출 대신에 ShowDialog를 호출하고 있다. Show와 달리 ShowDialog는 호출 즉시 반환되지 않는다. 그리고 모달 대화상자가 나타난 경우에는 다른 창으로 전환이 되지 않는다(윈도우의 다른 프로그램으로 는 전환이 가능하다)모달 대화상자를 닫을 때에만 ShowDialog가 반환된다. 
+
+반면 모달리스 대화상자는 메인 애플리케이션과 대화상자 모두 다 동작한다. 모달리스 대화상자의 좋은 예는 비주얼 스튜디오의 빠른 찾기 대화상자다. 여기서 소스 코드의 문자열을 찾게 해주며, 빠른 찾기 대화상자가 여전히 표시되는 상태에서도 소스 파일을 편집할 수 있다. 모달 대화상자는 사용자 입력을 가로채고 직접 처리하며, 대화상자를 종료하기 전까지는 다른 창에서 작업할수 없다. 모달리스 대화상자는 그렇지 않다. 
+
+첫 번째 예제 프로그램인 SayHello에서 Show를 ShowDialog로 바꾸고 Application 객체를 참조하는 부분을 모두 주석 처리한다. ShowDialog가 자신의 메시지 루프를 구현하고, 입력 이벤트들을 처리하기 때문에 프로그램은 여전히 잘 동작한다. 모달 대화상자는 애플리케이션의 메시지 루프에 참여하지 않음으로써 모달이 되는 것이며, 그렇기 때문에 사용자 입력이 애플리케이션으로 넘어가지 않는다. 
+
+이전의 두 예제에서는 Application 을 상속해 클래스를 정의했다. Window를 상속해 클래스를 정의하는 것도 가능하다. 다음 예제에는 세 개의 클래스가 있고 세 개의 소스 코드 파일이 있다. 비주얼 스튜디오 2005에서 프로젝트에 빈 소스 코드 파일을 추가하기 위해 솔루션 탐색기의 프로젝트 이름에서 마우스의 오른쪽 버튼을 누르고 메뉴의 추가  > 새 항목을 선택한다. 또는 프로젝트 메뉴의 새 항목 추가를 선택해도 된다. 그런 후 코드 파일을 선택한다. 
