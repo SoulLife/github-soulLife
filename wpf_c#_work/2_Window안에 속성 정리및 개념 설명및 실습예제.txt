@@ -1,0 +1,232 @@
+프로젝트의 이름은 InheritAppAndWindow이고, 아래의 코드는 Main만 있는 클래스로 프로젝트 이름과 같다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+
+class InheritAppAndWindow
+{
+	[STAThread]
+	public static void Main()
+	{
+		MyApplication app = new MyApplication();
+		app.Run();
+	}
+}
+
+Main에서 MyApplication 타입의 객체를 생성하고, 이 객체의 Run을 호출한다. 
+MyApplication 클래스는 Application을 상속해 다음과 같이 정이한다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+
+class MyApplication : Application
+{
+	protected override void OnStartup(StartupEventArgs args)
+	{
+		base.OnStartup(args);
+		MyWindow win = new MyWindow();
+		win.Show();
+	}
+}
+
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+
+class MyWindow : Window
+{
+	public MyWindow()
+	{
+		Title = "Inherit App & Window";
+	}
+	protected override void OnMouseDown(MouseButtonEventArgs args)
+	{
+		base.OnMouseDown(args);
+
+		string strMessage = string.Format("Window clicked with {0} button at point ({1})", args.ChangedButton,args.GetPosition(this));
+		MessageBox.Show(strMessage, title);
+	}
+}
+
+
+
+Window를 상속받는 클래스는 일반적으로 생성자에서 그 클래스를 초기화한다. 예제에서는 Title 프로퍼티만 초기화한다. 프로퍼티 이름 앞에 객체의 이름을 따로 쓰지 않았는데, MyWindow가 Window를 상속받기 때문이다. 다음과 같이 this 키워드를 명시할 수도 있다. 
+
+this.Title = "Inherit App & Window";
+
+MouseDown 이벤트에 대한 이벤트 핸들러를 따로 설치하지 않고 클래스 OnMouseDown 메소드를 오버라이딩 할 수 있다. OnMouseDown이 인스턴스 메소드이기 때문이며, this를 GetPosition 메소드에 넘겨 Window 객체를 참조할 수 있고, 직접 Title 프로퍼티를 참조할수도 있다. 
+
+살펴본 예제에서 큰 문제는 없지만 Application을 상속해 클래스를 정의하는 것이 아니라 Window를 상속한 클래스를 하나의 파일에서 정의하는 것이 조금 더 일반적이며, 더 쉬운 방법이다. 다음의 예가 하나의 파일로 만든 프로그램의 전형적인 예다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+
+class InheritTheWin : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new InheritTheWin());
+	}
+	public InheritTheWin()
+	{
+		Title = "Inherit the Win";
+	}
+}
+
+이 책의 1부에 있는 많은 예제 프로그램에서 이런 구조를 사용했다. 더 단순해진 모습을 알 수 있다. Main 메소드를 더 간단하게 만들려면 다음과 같이 모든 기능을 하나의 구문으로 만들수 있다. 
+
+new Application().Run(new InheritTheWin());
+
+
+이 프로그램을 가지고 다양하게 수정을 해보며 탐구해보자. 몇 가지 방안을 제시하겠지만, 이 외에도 다양한 방법을 연구해보기 바란다. 
+
+윈도우 운영체제에서 창은 화면상에 표시되는 위치와 크기를 갖는데, 이를 재지정할 수 있다. Window클래스는 FrameworkElement로부터 Width와 Height 프로퍼티를 상속 받는다. 따라서 다음과 같이 생성자에서 이 프로퍼티 값을 재설정 할 수 있다. 
+
+Width = 288;
+Height = 192;
+
+두 프로퍼티는 정수가 아닌 double 값으로 정의돼 있어서 다음과 같은 설정이 가능하다. 
+
+Width = 100 * Math.PI;
+Height = 100 * Math.E;
+
+Width와 Height 프로퍼티는 초기에는 정의돼 있지 않으며, 프로그램에서 따로 정의하지 않는 한 계속 이런 상태로 남는다. 이를 달리 표현하면 NaN값을 갖는다고 하는데, IEEE(전기,전자 기술자 협회, Institute of Electrical and Electronics Engincers, Inc)에서 숫자가 아님(not a number)에 대한 부동 소수점 표준으로 정의된 약어이다. 
+
+따라서 창의 실제 크기를 얻기 위해서는 Width와 Height 프로퍼티를 사용해서는 안 되며, 그 대신 읽기 전용인 ActuilWidth, ActualHeight 프로퍼티를 사용해야 한다. 그러나 이 두 프로퍼티도 Window 생성자에서는 값이 0이다. 창이 화면에 표시된 후에 비로소 실제 값을 갖게 된다 
+
+앞서 보인 두 구문을 다시 살펴보자. 다음과 같이 임의로 선택한 숫자를 할당하고 있다. 
+
+Width = 288;
+Height = 192;
+
+이는 픽셀(pixel)을 의미하는 숫자가 아니다. Width와 Height 프로퍼티를 픽셀 단위로 지정한다면 double 값으로 정의하지 않았을 것이다. WPF에서는 모든 크기나 위치를 지정할 때 장치 독립적 픽셀(device-independent pixels)또는 논리 픽셀(logical pixels)이라고 하는 단위를 사용한다. 그러나 픽셀이라고 부르는 게 그리 타당하지 않아서 앞으로는 장치 독립적 단위(device-indenpendeni units)라고 부를 것이다. 이 단위는 1/96인치이며, 따라서 288과 192의 값은 실제로는 창의 가로가 3인치이고, 세로가 2인치 임을 의미한다. 
+
+모니터에 자를 대고 길이를 재보면 크기가 정확하게 일치하지 않을 수도 있다. 픽셀과 인치와의 관계는 윈도우에서 설정되며 사용자에 의해 변경이 가능하기 때문이다. 변경하기 위해서는 윈도우 화면에서 마우스의 오른쪽 버튼을 누르고 드롭다운 메뉴에서 속성을 누른다. 설정탭을 누르고, 고급버튼을 누른 후 일반 탭을 눌러보자. 
+
+기본값으로는 96DPI(인치당 도트 수, dots per inch)로 설정돼 있는데, 그런 경우라면 Width와 Height 의 값인 288과 192가 그대로 픽셀 값과 일치한다. 
+
+그러나 120DPI로 설정을 변경한다면 Width와 Height 프로퍼티가 288, 192인 경우에 실제 픽셀 수가 360과 240이 되는 것이다. 픽셀이 아닌 실제 창의 크기가 3인치, 2인치를 의미하는 것도 변함없다. 
+
+미래의 모니터는 지금보다 더 해상도가 높아질 것이다. 이런 경우에도 WPF 프로그램은 별다른 수정없이 잘 동작할 수 있어야 한다. 예를 들어 모니터의 설정이 인치당 200개의 픽셀이라고 가정하자. 어떤 사용자는 화면의 모든 것이 작아지는게 싫어서, 디스플레이 등록정보를 192 DPI와 같이 적당한 해상도로 바꾸는 경우도 있을 것이다. WPF 프로그램에서는 Width와 Height가 각기 288과 192라는 장치 독립적 단위이므로, 이 경우에는 576픽셀과 384 픽셀이되며, 실제 크기는 여전히 3인치와 2인치가 된다. 
+
+WPF 전반에 걸쳐 장치 독립적 단위를 사용한다. 이전에 나온 예제 프로그램에서 마우스를 누를 때 나타나는 메시지 박스는 클라이언트 영역의 좌측 상단을 기준으로 위치를 지정했다 이 위치도 픽셀 단위가 아니라 1/96인치의 장치 독립적 단위다. 
+
+Width와 Height에 매우 작은 값을 넣어 시험해보면, 창의 제목 표시줄은 항상 특정 크기보다 작아지지 않는다는 사실을 발견할수 있다. 이런 창의 최소 크기는 정적 읽기 전용 프로퍼티인 System.Parameters.MinimumWindowWidth와 System.Parameters.MinimumWindowHeight에 저장돼 있다(여기도 1/96인치의 장치 독립적 단위다)SystemParameters 클래스에는 이같은 몇 가지의 정적 프로퍼티가 있다. 
+
+화면의 특정한 위치에 창을 위치시키고 싶다면 다음과 같이 Window 클래스에 정의된 Left와 Top 프로퍼티를 변경한다 
+
+Left = 500;
+Top = 250;
+
+이 두 프로퍼티는 화면의 좌측 상단을 기준으로 창의 좌측 상단이 위치되는 곳을 가리킨다. 
+다시 말하지만 장치 독립적 단위는 double 값이며 , 프로그램에서 이 프로퍼티를 변경하지 않으면 NaN의 값이 유지된다. Window 클래스에 Right와 Bottom 프로퍼티는 정의돼 있지 않다. 창의 오른쪽 하단 위치는 Left와 Top, 창의 크기 등을 통해 계산해 낼 수 있다. 
+
+비디오 어댑터와 모니터가 가로 1600픽셀, 세로 1200픽셀의 해상도를 지원한다고 가정하고, 디스플레이 등록정보 대화상자에서 해상도를 변경했다고 하자, 정적 프로퍼티인 SystemParameters.PrimaryScreenWidth와 SystemParameters.PrimaryScreenHeight에 있는 값을 살펴본다면 이 값이 1600과 1200일까? 화면의 DPI 설정이 96일경우에만 그렇다, 그리고 이 경우에는 화면이 16의3/2인치와 12의2/1인치이다. 
+
+그러나 화면의 DPI가 120으로 돼 있다면, SystemParameters.PrimaryScreenWidth와 SystemParameters.PrimaryScreenHeight가 각기 1280과 960 장치 독립적 단위를 반환할 것이며, 이 경우에는 크기가 13의3/1인치와 10인치일 것이다. 
+
+SystemParameters는 모든 크기를 장치 독립적 단위로 표현하기 때문이지만, 여기에 예외가 있는데 SystemParameters 프로퍼티중 SmallIconWidth과 SmallIconHeight는 픽셀 단위다. 대부분의 값들은 별다른 변환 없이 바로 사용할 수 있다. 예를 들어 창을 화면의 우측하단 영역에 위치시키기 위해 다음과 같이 할 수 있다. 
+
+Left = SystemParameters.PrimaryScreenWidth - Width;
+Top = SystemParameters.PrimaryScreenHeight - Height;
+
+Width와 Height 프로퍼티는 미리 설정했다고 가정한다. 그런데 이 결과에 만족하지 않을 수 있다. 화면 하단부에 작업 표시줄이 있다면 창의 하단 위치가 겹칠 수 있기 때문이다. 애플리케이션 데스크톱 툴바(작업표시줄이 한예)가 차지하고 있지 않는 영역인 작업 영역(work area)을 기준으로 해서 우측 하단에 위치시키는게 더 좋을 것 같다. 
+
+SystemParameters.WorkArea 프로퍼티는 Rect 타입의 객체를 반환한다. 이 타입은 왼쪽 상단의 위치와 크기로써 사각형을 정의하는 구조체이다. 이 WorkArea 프로퍼티는 폭과 높이가 아닌 Rect로 정의돼야만 한다. 사용자가 작업 표시줄을 화면의 왼쪽에 배치할 수도 있기 때문이다. 이런경우라면 Rect 구조체의 Left 프로퍼티가 0보다 큰 값을 가질 것이고, Width 프로퍼티는 화면의 폭에서 Left 값을 뺀 값을 갖게 된다. 
+
+다음은 창을 작업 영역의 우측 하단에 위치시키는 코드이다. 
+
+Left = SystemParameters.WorkArea.Width - Width;
+Top = SystemParameters.WorkArea.Height - Height;
+
+그리고 다음 코드는 창을 작업 영역의 중앙에 위치시킨다. 
+
+Left = (SystemParameters.WorkArea.Width - Width) / 2 + SystemParameters.WorkArea.Left;
+Top = (SystemParameters.WorkArea.Height - Height) / 2 + SystemParameters.WorkArea.Top;
+
+이 코드를 Window 클래스에 정의된 WindowStartupLocation 프로퍼티를 사용해 바꿀 수 있다. WindowStartupLocation 열거형의 멤버를 이 프로퍼티에 대입한다. 기본값은 WindowStartupLocation.Manual로 프로그램이나 윈도우 운영체제에서 수동으로 창의 위치를 지정한다. WindowStartupLocation.CenterScreen으로 지정하면 창을화면의 중앙에 위치시킨다. 이름은 Screen 으로 돼 있지만 화면이 아닌 작업 영역의 중앙을 의미한다. 세 번째로 WindowStartupLocation.CenterOwner가 있는데 모달 대화상자를 그 소유자의 중앙에 위치시킨다. 
+
+다음은 창을 작업 영역의 중앙에 위치시키고 위 화살표나 아래 화살표를 누를 때마다 창의 크기가 10%씩 변화되는 프로그램이다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+
+public class GrowAndShrink : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new GrowAndShrink());
+	}
+	public GrowAndShrink()
+	{
+		Title = "Grow & Shrink";
+		WindowStartupLocation = WindowStartupLocation.CenterScreen;
+		Width = 192;
+		Height = 192;
+	}
+	protected override void OnKeyDown(KeyEventArgs args)
+	{
+		base.OnKeyDown(args);
+
+		if(args.Key == Key.Up)
+		{
+			Left -= 0.05*Width;
+			Top -= 0.05*Height;
+			Width *= 1.1;
+			Height *= 1.1;
+		}else if(args.Key == Key.Down)
+		{
+			Left += 0.05 * (Width /= 1.1);
+			Top += 0.05*(Height /= 1.1);
+		}
+	}
+}
+
+KeyDown 이벤트와 관련된 OnKeyDown 메소드는 키 누름을 통지한다. 키보드의 키를 누르고 뗄 때 OnKeyDown과 OnKeyUp메소드가 호출된다. 이 메소드를 오버라이딩해 키입력을 처리할 수 있다. KeyEventArgs 객체의 Key 프로퍼티는 Key 열거형의 멤버로 설정돼 있으며 누르거나 뗀 키가 어떤 키인지를 알려준다. Left, Top, Width, Height 프로퍼티는 모두 부동 소수점 값이므로 창의 크기를 늘리거나 줄이기 위해 이 값들을 사용한다. 윈도우 전체 화면보다 더 크거나 작게 해서는 안되므로 크기가 특정한 값에 도달하면, 프로퍼티 값을 더 이상 변경하지 않고 그대로 유지해야 한다. 
+
+OnKeyDown과 OnKeyUp 메소드는 커서 이동키나 기능 키에 대한 조작을 처리하는 데 유용하게 사용된다. 키보드에서 실제 유니코드 문자를 얻을 때에는 OnTextInput 메소드를 오버라이딩해야 하며, TextCompositionEventArgs 인자의 Text 프로퍼티에는 유니코드의 문자열이 저장된다. 일반적으로 이 문자열은 하나의 문자가 되겠지만 음성이나 필기 형태의 입력도 OnTextInput 메소드를 호출하게 되는데, 이때의 문자열은 더 길어질 것이다. 
+
+다음은 Title 프로퍼티를 따로 지정하지 않고, 사용자가 직접 타이핑 할 수 있는 프로그램이다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+
+public class TypeYourTitle : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new TypeYourTitle());
+	}
+	protected override void OnTextInput(TextCompositionEventArgs args)
+	{
+		base.OnTextInput(args);
+		if (args.Text == "\b" && Title.Length > 0)
+			Title = Title.Substring(0, Title.Length -1);
+		else if(args.Text.Length > 0 && !Char.IsControl(args.Text[0]))
+			Title += args.Text;
+	}
+}
+
+Title이 한 글자 이상인 경우에 한해 백스페이스("\b")만을 따로 처리하고 있다. 그 외의 경우에는 단순히 키보드에서 입력된 글자를 Title 프로퍼티 뒤에 덧붙이고 있다. 
+
+Window 클래스에는 창의 외형이나 동작에 영향을 주는 다른 프로퍼티들도 정의돼 있다. WindowStyle 프로퍼티에 WindowStyle 열거형의 멤버를 대입할수 있는데, 기본값은 WindowStyle.SingleBorderWindow다. WindowStyle.SingleBorderWindow는 약간 더 미려하지만, 클라이언트 영역의 크기는 약간 줄어든다. 대화상자에는 보통 WindowStyle.ToolWindow를 사용한다. 제목 표시줄이 약간 더 짧고 닫기 버튼은 있지만, 최소화 버튼과 최대화 버튼은 없다. 그러나 Alt+Space Bar를 누르면 시스템 메뉴가 생기므로, 최소화나 최대화 동작을 수행 할 수는 있다. WindowStyle.None으로 설정하면 창 크기 조절 경계는 표시되지만 제목 표시줄이 없어진다. 역시 Alt+Space Bar를 눌러 시스템 메뉴를 부를 수는 있다. Title 프로퍼티가 창에는 나타나지 않지만 작업 표시줄에서는 표시된다. 
+
+ResizeMode 프로퍼티를 통해 창 크기 조절 경계를 나타나게 하거나 사라지게 할 수 있다. 이 프로퍼티에는 ResizeMode 열거형의 멤버를 대입한다. 기본값은 ResizeMode.CanResize이며 창의 크기를 조정할 수 있고 최대화와 최소화도 가능하다. ResizeMode.CanResizeWithGrip으로 하면 클라이언트 영역의 우측 하단에 창 크기를 조절할 수 있는 표시가 생긴다. ResizeMode.CanMinize로 지정하면 창 크기를 조절하는 경계가 보이지 않으며, 최대화 버튼도 사용할 수 없고, 최소화만 가능하다. 따라서 고정된 크기를 갖는 창의 경우에 유용하게 사용할 수 있다. 마지막으로 ResizeMode.NoResize는 최소화, 최대화 버튼도 사용할수 없으며 ,크기 조절 경계도 사라진다. 
+
+WindowState 프로퍼티에 WindowState 열거형의 멤버를 대입해서 창이 최초에 표시되는 방식을 결정할 수 있다. 대입할 수 있는 값으로는 WindowState.Normal, WindowState.Minimized, WindowState.Maximized가 있다. 
+
+Topmost 프로퍼티를 true로 설정하면 다른 모든 창보다 앞에 나타난다. (이 기능은 신중하게 사용해야 한다. 오직 하나의 창만 맨 앞으로 나올 수 있으므로 사용자가 기능을 켜고 끌 수 있게 하는 것이 좋다. )
+
+Window 클래스에서 다른 중요한 프로퍼티는 Background이다. Control에서 상속받은 프로퍼티로서 클라이언트 영역의 색을 지정한다. 실제 Background 프로퍼티로 작업을 하기에는 아직 색상이란 막연한 용어이다. Background 프로퍼티는 Brush 타입의 객체이며 배경색을 지정하는 데 사용할 수 있는 브러시 타입에는 그라디언트 브러시, 비트맵(bitmap)등의 이미지를 이용한 브러시 등이 있다. 브러시는 WPF에서 매우 중요한 역할을 하기 때문에 이책에서 는 두 장이나 할애했다. 이어질 2장에서 그중 하나인 브러시에 대해 자세히 살펴볼 것이다. 
