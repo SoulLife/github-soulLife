@@ -1,0 +1,591 @@
+CHAPTER 02 : 브러시
+
+표준 창에서 넓은 내부를 클라이언트 영역(client area)이라고 부른다. 텍스트, 그래픽, 컨트롤 등을 출력하는 영역이며, 이 영역을 통해 사용자의 입력을 받기도 한다. 
+
+1장에서 만든 창은 클라이언트 영역이 흰색이다. 클라이언트 영역은 기본 배경색이 흰색이기 때문이다. 하지만 윈도우 제어판에서 미적인 이유나 개성을 발휘하기 위해 다른 색을 설정할 수도 있다. 어떤 사람들은 검정색의 배경에 글자는 흰색인 화면을 더 선호하기도 한다. 이런 경우로 인해 개발자들은 화면 색상을 다루는 필요성과 그 방법을 알아야 한다. 
+
+WPF에서는 색상을 다루기 위해서 System.Windows.Media 네임스페이스에 정의된 Color 구조체를 사용한다. Color 구조체는 색상을 표현하기 위해 빨간색, 녹색, 파란색을 원색으로 사용한다(빛의 3원색)이 3원색을 R, G, B로 나타내는데, 이렇게 정의된 3차원의 공간을 RGB 색공간(color space)이라고도 한다. 
+
+Color 구조체에는 R, G, B라는 byte 타입의 3가지 프로퍼티가 있으며, 각 프로퍼티는 0에서 255 사이의 값이 될 수 있다. 세 프로퍼티가 모두 0인 경우는 검정색을 의미하며, 모두 255인 경우는 흰색을 나타낸다. 
+
+Color 구조체에는 3원색 외에도 알파 채널(alpha chanel)을 의미하는 A라는 이름의 프로퍼티가 있다. 알파 채널은 색상의 투명도를 결정한다. 값이 0이면 색이 완전히 투명하다는 의미이고, 255인 경우는 불투명함을 뜻한다. 이 둘 사이의 값이 될 수 있으며 값이 낮을수록 더 투명하다. 
+
+다른 구조체처럼 Color 에도 아무 인자가 없는 생성자가 있다. 이 경우에는 A, R, G, B 값이 모두0으로 설정된 색 즉, 완전히 투명한 검정색을 생성하게 된다. 다른 색을 만들기 위해서는 아래와 같이 4가지 Color 프로퍼티에 수동으로 값을 할당 하면 된다. 
+
+Color clr = new Color();
+clr.A = 255;
+clr.R = 255;
+clr.G = 0;
+clr.B = 255;
+
+
+이 색은 불투명한 자홍색(megenta)이다. 
+
+또한 Color 구조체에는 한 줄로 Color 객체를 생성하는 몇 가지의 정적 메소드가 있다. 다음 메소드는 byte 타입의 인자 3개를 받는다. 
+
+Color clr = Color.FromRgb(r, g , b);
+
+이 메소드는 A가 255의 값이 된다. 알파 값을 직접 지정하기 위해서 다음과 같이 호출하는 방법도 있다. 
+
+Color clr = Color.FromArgb(a, r, g, b);
+
+빨간색 녹색 파란색의 byte 값으로 결정되는 RGB 색공간을 sRGB 색공간이라고도 한다. 여기서의 s는 표준(standard)을 의미한다. 스캐너나 디지털 카메라로부터 생성된 비트맵 이미지를 모니터로 출력하는 데 sRGB 공간이 관례로 굳어졌다. 비디오 디스플레이에 색을 출력할 때 sRGB의 값은 일반적으로 비디오 디스플레이 보드로부터 모니터로 보내는 전기 신호의 전압과 정비례한다. 
+
+그러나 다른 출력 장치에 색을 표시하는 데는 sRGB가 적당하지 않을 수도 있다. 예를 들어 일반적인 컴퓨터 모니터보다 녹색을 더 강하게 출력할 수 있는 프린터가 있다면 모니터에서 녹색의 최대값인 255를 어떻게 표현해야 할까?
+
+이런 점들을 충족시키려면 다른 RGB 색 공간을 정의해야 한다. WPF의 Color 구조체에는 scRGB라는 또 다른 방법이 지원되는데, 이는 3원색을 64비트의 값으로 표현하기 때문에 예전에는 sRGB64라고도 불렀다. Color 구조체에는 scRGB 색성분이 float 값으로 저장된다. Color 구조체에서 scRGB 색공간을 수용하기 위해 ScA, ScR, ScB라는 4가지의 float 타입 프로퍼티가 있다. 이들 프로퍼티는 A, R, G, B의 값과 별개로 존재하는 것이 아니어서, G 프로퍼티를 바꾸면 ScG 프로퍼티도 바뀌게 되고, 반대의 경우도 그렇다. 
+
+scG		G
+<= 0		0
+0.1		89
+0.2		124
+0.3		149
+0.4		170
+0.5		188
+0.6		203
+0.7		218
+0.8		231
+0.9		243
+>= 1.0		255
+
+
+G 프로퍼티가 0이면 ScG도 0이 되며, G가 255이면 ScG는 1이된다. 위 표에서도 알 수 있지만, 이 범위 안에서 선형(linear) 관계를 가지는 것은 아니다. 
+
+ScR과 R의 관계, ScB와 B의 관계도 scG와 G의 관계와 같다. ScG의 값은 비디오 디스플레이의 범위나 sRGB의 범위를 넘어서는 색을 표현하기 위해서 0보다 작을 수도 있고 1보다 클 수도 있다. 
+
+오늘날의 브라운관(음극선관)에서는 보통 선형적 방식으로 빛을 표현하지 않는다. 빛의 세기(I)와 디스플레이로 보내지는 전압은 다음과 같이 지수승의 관계가 있다. 
+
+감마 승수는 디스플레이의 특성과 환경광(ameient light)에 관한 값이다. 이 값은 보통 사용되는 모니터에서는 일반적으로 2.2에서 2.5 사이의 값을 가진다(sRGB 표준에서는 2.2로 가정한다.)
+
+사람이 빛의 세기를 시각적으로 인지하는 능력 또한 비선형으로, 대략 빛의 세기의 1/3 제곱에 비례한다. 다행스럽게도 사람 인지력의 비선형성과 CRT의 비선형성이 서로 상쇄돼 sRGB의 원색은 거의 선형적으로 인지된다. 즉 RGB 값이 16진수로 80-80-80인 경우에 사람의 시각에서는 대게 중간 정도의 회색으로 인지된다. 이런 점 때문에 어찌됐건 sRGB가 표준의 위치에 오르게 됐다. 
+
+반면에 scRGB의 원색은 빛의 세기에 대해 선형적인 관계로 설계됐기 때문에 scG와 G의 관계 는 다음과 같게 된다. 
+
+지수승 2.2는 sRGB 표준에서 가정한 감마 값이다. 이 관계에서는 근사치임에 유의해야 한다. 투명도는 다음과 같이 더 간단한 관계를 가진다. 
+
+scRGB에 기반한 Color 객체를 만들기 위해서는 다음과 같이 정적 메소드를 사용한다. 
+
+Color clr = Color.FromScRgb(a, r, g, b);
+
+인자들은 float 값이며, 0보다 작을 수도 있고 1보다 클 수도 있다. 
+
+System.Windows.Media에는 Colors란 이름의 클래스도 있는데, 여기에는 알파벳순으로 AliceBlue, AntiqueWhite에서부터 YellowGreen까지 141개의 읽기 전용 정적 프로퍼티가 있다 다음 구문처럼 사용한다. 
+
+Color clr = Colors.PapayaWhip;
+
+한 가지 특징 외에 모든 색 이름은 웹 브라우저가 지원하는 것과 동일하다. 그 특징은 Transparent 프로퍼티로서, 알파가 0인 Color 값이 반환된다. Colors 클래스의 다른 140개 프로퍼티는 알파가 255이고, 미리 정의된 sRGB 값의 Color 객체가 반환된다. 
+
+Control에서 상속된 Window의 Background 프로퍼티를 바꾸면 클라이언트 영역의 배경색을 바꿀 수 있다. 단 Background 프로퍼티에 Color 객체를 직접 대입할 수는 없고, 훨씬 다양하게 사용되는 Brush 타입의 객체를 Background에 대입해야 한다. 
+
+Brush는 WPF에서 매우 광범위하게 사용되므로 책의 앞부분에서 살펴볼 필요가 있다. 아래계층 도에서 보는 것처럼 Brush 그 자체는 추상 클래스 이다. 
+
+Object
+	DispatcherObject(abstract)
+		DependencyObject
+			Freezable(abstract)
+				Animatable(abstract)
+					Brush(abstract)
+						GradientBrush(abstract)
+							LinearGradientBrush
+							RadialGradientBrush
+						SolidColorBrush
+						TileBrush(abstract)
+							DrawingBrush
+							ImageBrush
+							VisualBrush
+
+Window 객체의 Background 프로퍼티에 실제 대입할수 있는 것은 Brush를 상속받은 비추상(nonabstract)클래스의 인스턴스다. 브러시(brush)와 관련된 모든 클래스는 System.Windows.Media 네임스페이스에 있다. 2장에서는 SolidColorBrush 클래스 하나와 GradientBrush를 상속받은 두 개의 클래스에 대해 살펴볼 것이다. 
+
+이름에서 암시하듯이 가장 간단한 브러시는 SolidColorBrush로써 단일 색상의 브러시이다. 1장 후반부의 예제 프로그램에 System.Windows.Media에 대한 using 문을 넣고 Window 객체 생성자에 다음 구문을 추가하면 클라이언트 영역의 색을 변경할 수 있다. 
+
+Color clr = Color.FromRgb(0, 255, 255);
+SolidColorBrush brush = new SolidColorBrush(clr);
+Background = brush;
+
+이렇게 하면 배경이 청록색(cyan)이 된다. 물론 다음과 같이 모든 내용을 한 줄로 써도 된다. 
+
+Background = new SolidColorBrush(Color.FromRgb(0, 255, 255));
+
+SolidColorBrush 에는 인수가 없는 생성자도 있으므로 이를 이용해 객체를 생성하고 그 후 에 Color라는 프로퍼티에 값을 설정할 수도 있다. 다음을 살펴보자. 
+
+SolidColorBrush brush = new SolidColorBrush();
+brush.Color = Color.FromRgb(128, 0, 128);
+
+다음은 창의 중간 지점과 마우스 포인터와의 거리에 따라 클라이언트 영역의 배경색을 바꾸는 프로그램이다. System.Windows.Media 에 대한 using 문이 있는데, 이후 대부분의 프로그램에서도 이를 포함시킬 것이다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class VaryTheBackground : Window
+{
+	SolidColorBrush brush = new SolidColorBrush(Colors.Black);
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new VaryTheBackground());
+	}
+	public VaryTheBackground()
+	{
+		Title = "Vary the Background";
+		Width = 384;
+		Height = 384;
+		Background = brush;
+	}
+	protected override void OnMouseMove(MouseEventArgs args)
+	{
+		double width = ActualWidth - 2 * SystemParameters.ResizeFrameVerticalBorderWidth;
+		double height = ActualHeight - 2 * SystemParameters.ResizeFrameHorizontalBorderHeight - SystemParameters.CaptionHeight;
+
+		Point ptMouse = args.GetPosition(this);
+		Point ptCenter = new Point(width / 2, height /2);
+		Vector vectMouse = ptMouse - ptCenter;
+		double angle = Math.Atan2(vectMouse.Y, vectMouse.X);
+		Vector vectEllipse = new Vector(width / 2 * Math.Cos(angle), height / 2 * Math.Sin(angle));
+		Byte byLevel = (byte) (255 * ( 1 - Math.Min(1, vectMouse.Length / vectEllipse.Length)));
+		Color clr = brush.Color;
+		clr.R = clr.G = clr.B = byLevel;
+		brush.Color = clr;
+	}
+}
+
+마우스를 클라이언트 영역의 중간으로 이동할수록 배경색은 더 밝은 회색이 되며, 반대로 클라이언트 영역을 채우는 가상의 타원을 벗어나면 배경은 검정색이 된다. 
+
+OnMouseMove 메소드를 오버라이딩한 곳에서 이 동작을 수행하며 이 메소드는 마우스가 클라이언트 영역 위를 움직일 때마다 호출된다. 이 메소드는 다음 두 가지 이유에서 약간 복잡하다. 먼저 클라이언트 영역의 크기를 계산해야 한다. 그렇지만 클라이언트 영역에는 실제 내용이 없기 때문에 그 크기를 알 수 있는 좋은 방법이 없다. 그래서 창의 ActualWidth와 ActualHeight 프로퍼티에서 창의 크기를 조절하는 경계와 제목 표시줄의 크기를 뺀다. 이 크기는 SystemParameters 클래스의 정적 프로퍼티로부터 얻을 수 있다. 
+
+MouseEventArgs 클래스의 GetPosition 메소드를 호출해서 마우스 포인터의 위치를 구할수 있는데, 이 위치는 ptMouse 라는 Point 객체에 저장된다. 한편 클라이언트 영역의 중심은 ptCenter라는 Point 객체에 저장한다. ptMouse 에서 ptCenter를 빼면 중심으로부터의 거리가된다. Point 구조체에 대한 문서화 내용을 살펴보면 Point에서 Point를 뺀 결과는 Vector 타입의 객체가 된다는 사실을 알 수 있을 것이다. 이 메소드에서는 vectMouse가 이에 해당한다. 수학적으로 벡터는 크기와 방향을 가진다. vectMouse의 크기는 ptCenter와 ptMouse 사이의 거리이며, Vector 구조체의 Length 프로퍼티로 알 수 있다. Vector 객체의 방향은 x, y 프로퍼티로 알 수 있으며, 이는 원점(0, 0)에서 점(x, y)까지의 방향을 의미한다. 이 경우에 vectMouse.X는 ptMouse.X - ptCenter.X와 같게 되며 Y의 경우도 마찬가지다 
+
+Vector 객체의 방향은 각도로도 표현할 수 있다. Vector 구조체에는 두 Vector 객체 사이의 각을 계산하는 AngleBetween이란 이름의 정적 메소드가 있다. 그러나 VaryTheBackground 프로그램의 OnMouseMove 메소드에서는 Y와 X의 비율을 가지고 탄젠트의 역함수인 아크탄젠트를 이용해 vectMouse의 각도를 직접 계산했다. 이 각도는 수평축에서 시계 방향으로 측정된 라디안 값이다. 그런 후 이 각도를 또 다른 Vector 객체를 계산하기 위해 사용하는데, 이 Vector는 클라이언트 중심에서 클라이언트 영역을 채우는 타원 위의 점까지 거리를 표현한다. 회색의 정도는 단순하게 이 두 벡터의 비율로 정했다. 
+
+그 다음은 최초 생성 때 클래스 필드로 설정한 SolidColorBrush 의 Color 객체를 얻어온다. 그리고 회색을 만들기 위해 3원색을 같은 값으로 설정하고, 다시 이 값을 브러시의 Color프로퍼티에 대입한다. 
+
+이 프로그램이 수행하는 것을 보면 꽤 놀랄것이다. 분명 브러시가 변경될 때마다 클라이언트 영역이 다시 그려지는데, 이와 관련된 어떤 코드도 넣은 적은 없기 때문이다. 이런 동적인 응답이 가능한 이유는 Brush가 Freezable 클래스를 상속받았기 때문인데, Freezable 클래스에는 Changed라는 이벤트가 구현돼 있다. Changed 이벤트는 Brush 객체에 어떤 변화가 생길 때마다 발생하며, 이를 이용해서 브러시에 변화가 생길 때마다 배경을 다시 그릴수 있는 것이다. 
+
+Changed 이벤트와 유사한 메커니즘은 애니메이션의 구현이나 WPF의 다른 기능들을 위해 매우 광범위하게 사용된다. 
+
+Colors 클래스에 색 이름으로 된 141개의 읽기 전용 정적 프로퍼티가 있듯이, Brushes(s가 붙음에 주의)란 이름의 클래스에도 141개의 읽기 전용 정적 프로퍼티가 있다. Colors에서의색 이름이 그대로쓰이나 반환되는 객체는 SolidColorBrush 타입이다. Background프로퍼티를 다음과 같이 설정하는 대신에
+
+Background = new SolidColorBrush(Colors.PaleGoldenrod);
+
+다음과 같이 바꿔 쓸 수도 있다.
+
+Background = Brushes.PaleGoldenrod);
+
+이 두 구문 모두 같은 색으로 창의 배경을 칠하기는 하지만 두 방법에는 차이점이 있다. VaryTheBackground 프로그램에서 다음의 정의 부분을
+
+SolidColorBrush brush = new SolidColorBrush(Colors.Black);
+
+다음과 같이 변경 해보자
+
+SolidColorBrush brush = Brushes.Black;
+
+
+다시 컴파일 하고 실행시키면 읽기 전용 상태이므로 #FF000000 개체에서 속성을 설정할수 없습니다. 라는 잘못된 연산 오류가 나타날 것이다. 이 문제는 OnMouseMove 메소드의 가장 마지막 문장에서 브러시의 Color 프로퍼티에 값을 설정하려고 했기 때문에 발생한다(예외 상황 메시지에서의16진수는 Color 프로퍼티의 현재 값이다.)
+
+Brushes 클래스로부터 반환된 SolidColorBrush 객체는 고정된(frozen)상태로, 더 이상 값을 변경할 수 없다. Changed 이벤트처럼 고정이라는 것도 Freezable 클래스에 구현됐고, Brush는 이 클래스를 상속받는다. Freezable 객체의 CanFreeze 프로퍼티가 true이면 Freeze메소드를 호출할 수 있다. 이 메소드를 호출하면 객체를 변경할 수 없게 고정 상태로 만든다. 이렇게 하면 IsFrozen 프로퍼티가 true가 된다. 객체를 고정시키면 더 이상 변화 상태를 모니터링할 필요가 없기 때문에 성능을 향상시킬 수 있다. 고정된 Freezable 객체는 스레드 간에도 공유가 가능하지만 고정되지 않은 Freezable 객체는 공유할 수 없다. 고정된 객체를 다시 고정 해제된 상태로 만들수는 없으나, 고정되지 않는 상태의 복사본을 만들 수 는 있다. VaryTheBackground의 필드 정의는 다음과 같이 하면 된다. 
+
+SolidColorBrush brush = Brushes.Black.Clone();
+
+다음 FlipThroughTheBrushes 프로그램은 클라이언트 영역을 141개의 브러시로 각기 그린 결과를 볼 수 있다. 위와 아래 화살표 키를 이용해서 브러시를 변경할 수 있다. 
+
+
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class FlipThroughTheBrushes : Window
+{
+	int index = 0;
+	PropertyInfo[] props;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new FlipThroughTheBrushes());
+	}
+	public FlipThroughTheBrushes()
+	{
+		props = typeof(Brushes).GetProperties(BindingFlags.Public | BindingFlags.Static);
+		SetTitleAndBackground();
+	}
+	protected override void OnKeyDown(KeyEventArgs args)
+	{
+		if(args.Key == Key.Down || args.Key == Key.Up)
+		{
+			index += args.Key == Key.Up? 1 : props.Length -1;
+			index %= props.Length;
+			SetTitleAndBackground();
+		}
+		base.OnKeyDown(args);
+	}
+	void SetTitleAndBackground()
+	{
+		Title = "Flip Thorugh the Brushes - " + props[index].Name;
+		Background = (Brush)props[index].GetValue(null, null);
+	}
+}
+
+이 프로그램에서는 Brushes 클래스의 멤버를 얻기 위해 System.Reflection을 사용한다. 생성자의 첫 줄에서 typeof(Brushes)라는 표현식을 이용해 Type이라는 타입의 객체를 얻게 된다. Type 클래스에는 GetProperties라는 메소드가 정의돼 있어서 클래스의 프로퍼티에 하나씩 대응되는 PropertyInfo 객체의 배열을 반환한다. GetProperties의 인자에 BindingFlags를 사용함으로써 명시적으로 public과 static 프로퍼티만으로 제한하고 있음을 확인하자. Brushes의 프로퍼티는 모두 public과 static 이기 때문에 이런 제한이 반드시 필요한 건 아니지만 그렇다고 문제될 것도 없다. 
+
+생성자와 OnKeyDown 모두에서 SetTitleAndBackground를 호출하고 있으며, 이 메소드에서는 Title 프로퍼티와 Background 프로퍼티를 설정한다. Background 프로퍼티는 Brushes클래스 멤버 중 하나로 설정해야 한다. props[0].Name이란 표현식은 클래스의 첫 프로퍼티의 이름인 AliceBlue를 문자열로 반환한다. props[0].GetValue(null, null)표현식은 실제 SolidColorBrush 객체를 반환한다. GetValue에 두 개의 null 인자를 전달했다. 첫 번째 인자는 원래 얻고자 하는 프로퍼티 값을 갖고있는 객체가 돼야 하지만 Brushes는 정적 프로퍼티이므로 객체가 없다. 두 번째 인자는 인덱스를 갖는 프로퍼티일 경우에만 사용된다. 
+
+System.Windows 네임스페이스에는 SystemColors 클래스가 있는데, 읽기 전용의 프로퍼티만 있다는 점에서 Colors나 Brushes와 유사하다. 이 클래스는 윈도우 레지스트리에 저장된 현재 사용자의 색 구성표를 알려준다. 예를 들어 SystemColors.WindowColor에는 클라이언트 영역의 배경색이 들어 있으며, SystemColors.WindowTextColor에는 클라이언트 영역의 글자색이 지정돼 있다. SystemColors.WindowBrush와 SystemColors.WindowTextBrush는 같은 색상에 대해 SolidColorBrush 객체로 반환한다. 대부분의 애플리케이션에서 이 색들을 사용해야 한다. 
+
+SystemColors에서 얻은 브러시 객체는 고정돼 있으므로 아래와 같이 써야한다. 
+
+Brush brush = new SolidColorBrush(SystemColors.WindowColor);
+
+여기에서 아래와 같이 쓸 수는 없다. 고정된 값을 할당했기 때문에 앞서 살펴본 것처럼 잘못된 연산 오류가 나올 것이다. 
+
+Brush brush = SystemColors.WindowBrush;
+
+Freezable에서 상속된 클래스의 객체만이 고정될 수 있다. Color는 구조체이므로 Color 객체는 고정될 수 없다. 
+
+SolidColorBrush 대신에 쓸 수 있는 브러시로는 그라디언트 브러시(gradient brush)가 있다. 그라디언트 브러시는 두 개 이상의 색을 점진적으로 섞어서 표시하는 방법이다. 보통 그라디언트 브러시는 프로그래밍의 고급 주제에 속하지만 WPF 에서는 쉽게 만들 수 있으며, 현대적 배색으로 꽤 인기가 있다 
+
+가장 간단한 형태인 LinearGradientBrush에는 두 개의 Color 객체와(이둘을 clr1과 clr2로 부르기로 하자)두 개의 Point 객체(pt1과 pt2)가 필요하다. 점  pt1은 clr1의 색으로 칠해지고, pt2는 clr2의 색으로 칠해진다. pt1과 pt2를 잇는 선은 clr1과 clr2가 혼합된 색으로 칠해지며, 선의 중간 지점은 clr1과 clr2의 평균이 된다. pt1과 pt2를 잇는 선에 대한 모든 수식 성분은 두 색의 비율에 따라 결정된 색으로 균일하게 칠해진다. 
+
+이제 정말 좋은 소식이 있다. 보통 두 점을 픽셀 단위나 장치 독립적 단위로 지정했는데, 창의 크기가 변경될 때마다 그라디언트가 적용되게 하려면 매번 두 점을 다시 지정해야만 할 것이다. 
+
+그러나 WPF의 그라디언트 브러시는 창의 크기에 따라 브러시를 다시 생성하거나 수정할 필요가 없다는 특징이 있다. 기본값으로 그라디언트 브러시가 색칠하는 화면에 대해 상대 위치로 두 점을 지정한다. 화면의 가로와 세로 모두 1을 기준으로 하는 단위이다. 즉 화면의 좌측 상단 꼭지점은(0,0)이며 우측 하단 꼭지점은 점(1,1)이다.
+
+예를 들어 보자. 좌측 상단 꼭지점이 빨간색이고, 우측 하단 꼭지점이 파란색이면 다음 생성자를 사용하면 된다. 이 생성자는 두 색과 두 점을 지정한다. 
+
+LinearGradientBrush brush = new LinearGradientBrush(Colors.Red, Colors.Blue, new Point(0, 0), new Point(1, 1));
+
+다음은 이 그라디언트를 이용한 예제 프로그램이다 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class GradientTheBrush : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new GradientTheBrush());
+	}
+	public GradientTheBrush()
+	{
+		Title = "Gradient the Brush";
+
+		LinearGradientBrush brush = new LinearGradientBrush(Colors.Red, Colors.Blue, new Point(0, 0), new Point(1, 1));
+		Background = brush;
+	}
+}
+
+클라이언트 영역의 크기가 변경될 때 그라디언트 브러시도 저절로 변경된다. 즉 Change 이벤트가 Freezable 클래스에 의해 구현됐기에 가능한 것이다. 
+
+상대 좌표계를 이용해 점의 위치를 설정하는 것이 편리하지만 반드시 그렇게 해야 하는 것은 아니다. GradientBrush 클래스에는 MappingMode 프로퍼티가 정의돼 있으며 BrushMappingMode 열거형의 멤버로 대입한다. 멤버에는 기본값인 RelativeToBoundingBox가 있고, 장치 독립적 단위를 사용한다는 의미인 Absolute가 있다
+
+GradientTheBrush 프로그램에서 클라이언트 영역의 좌측 상단은 16진수의 RGB로 FF-00-00이며, 우측 하단은 00-00-FF이다. ColorInterpolationMode의 기본값이 ColorInterpolationMode.SRgbLinearInterpolation이기 때문에 중간에서의 색상은 반올림에 따라 7F-00-7F나 80-00-80이 될것이다. ColorInterpolationMode.ScRgbLinearInterpolation으로 하면, 중간색이 scRGB 값으로 0.5-0-0.5가 되며 이에 해당하는 sRGB 값은 BC-00-BC 가 된다. 
+
+수평이나 수직의 그라디언트를 만들려면, 다음과 같은 생성자를 사용하는 것이 더 쉽다. 
+
+new LinearGradientBrush(clr1, clr2, angle);
+
+angle은 각도로 지정하므로 0이면 수평, 그라디언트가 된다. 이때 clr1은 왼쪽에서의 색상이 된다. 위의 구문은 아래의 구문과 동일한 효과를 갖는다. 
+
+new LinearGradientBrush(clr1, clr2, new Point(0, 0), new Point(1, 0));
+
+값이 90이면 수직 그라디언트가 되고 clr1은 위쪽의 색상이 된다. 역시 아래 구문과 동일한 효과가 있다. 
+
+new LinearGradientBrush(clr1, clr2, new Point(0, 0), new Point(0, 1));
+
+다른 각도를 사용하려면 약간 기교를 부려야 한다. 일반적인 경우에는 첫 번째 점을 항상 원점으로 하고, 두번째 점을 다음과 같이 계산한다. 
+
+new Point(cos(angle), sin(angle))
+
+45도를 예로 들면 두 번째 점은 대략 (0.707, 0.707)이 된다. 이때 클라이언트 영역에 대해 상대적이라는 사실을 기억해야 한다. 그래서 클라이언트 영역이 정사각형이 아니라면 두 점을 잇는 선이 정확히 45도가 될 수 없다. 또한 우측 하단에 남는 영역도 생긴다. 이 남는 영역은 어떻게 될까? 기본값은 두 번째 색으로 칠하게 된다. 이는 SpreadMethod 프로퍼티가 어떤 값을 갖는지에 따라 달라지는데, 이 프로퍼티에는 GradientSpreadMethod 열거형의 멤버로 대입한다. 기본값은 Pad이며, 마지막에서는 색이 필요한 만큼 계속된다는 의미이다. 다른 값으로는 Reflect와 Repeat가 있다. GradientTheBrush 프로그램에서 다음 구문을 이용해 시험 해보자. 
+
+LinearGradientBrush brush = new LinearGradientBrush(Colors.Red, Colors.Blue, new Point(0, 0), new Point(0.25, 0.25));
+brush.SpreadMethod = GradientSpreadMethod.Reflect;
+
+이 브러시는 점 (0, 0)과 점 (0.25, 0.25) 사이를 빨간색에서 파란색까지의 그라디언트로 출력한다 그리고 점 (0.25, 0.25)부터 점 (0.5, 0.5)까지는 파란색에서 빨간색으로 점 (0.5, 0.5)부터 점 (0.75, 0.75)까지는 다시 빨간색에서 파란색으로 , 점(0.75, 0.75)부터 점 (1, 1) 까지는 파란색에서 빨간색으로 그라디언트가 된다. 
+
+가로 크기와 세로 크기의 차이를 강조하기 위해 창을 옆으로 매우 좁게 하거나 위/아래로 짧게 하면, 균일한 색상의 선이 거의 수평이나 수직으로 보이게 된다. 마주 보는 꼭지점을 그라디언트로 할 수도 있는데, 이렇게 하면 다른 두 꼭지점에 균일한 색의 선이 생긴다. 
+
+이를 이해 하는데 다음 그림이 도움이 될 것이다. 직사각형 모양으로 크기를 늘린 클라디언트 영역의 모습이다. 
+
+점선은 pt1과 pt2를 잇는 점에 수직 성분을 표시한 것으로 균일한 색으로 칠해지는 영역을 나타낸다. 위와 약간 다른 아래 형태의 그라디언트를 만들어 보자. 
+
+자홍색의 영역이 두 꼭지점을 지나고 있다. 문제는 좌측 하단과 우측 상단을 잇는 선에 대해 두 점을 잇는 선이 수직이 되게 pt1과 pt2를 계산해야 한다는 점이다. 
+
+사각형의 중심에서 pt1과 pt2를 잇는 선의 길이(L)는 다음과 같이 계산할수 있다. 
+
+여기서 W는 창의 폭이며, H는 높이가 된다. 다음은 클라이언트 영역을 보여주는데 몇 가지 선과 설명을 추가했다. 
+
+
+직선 L은 pt1과 pt2를 잇는 선과 평행이다. sin(a)를 두 가지 방법으로 계산할 수 있다. 먼저 다음과 같이 H를 사각형의 대각선 길이로 나누는 방법이다. 
+
+또다른 방법으로 L에 대해서는 W가 빗변이 될 수 있으므로, 다음과 같이 계산할 수도 있다. 
+
+이 두 방정식을 결합해서 L을 구하는 것이다. 
+
+다음 예제의 생성자에서는 LinearGradientBrush를 생성하는데, MappingMode를 Absolute로 지정한다. 또한 생성자에서 SizeChanged 이벤트에 대한 핸들러를 설치하고 있는데, SizeChanged는 창의 크기가 변경될 때마다 발생하는 이벤트이다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class AdjustTheGradient : Window
+{
+	LinearGradientBrush brush;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new AdjustTheGradient());
+	}
+	public AdjustTheGradient()
+	{
+		Title = "Adjust the Gradient";
+		SizeChanged += WindowOnSizeChanged;
+
+		brush = new LinearGradientBrush(Colors.Red, Colors.Blue, 0);
+		brush.MappingMode = BrushMappingMode.Absolute;
+		Background = brush;
+	}
+	void WindowOnSizeChanged(object sender, SizeChangedEventArgs args)
+	{
+		double width = ActualWidth - 2 * SystemParameters.ResizeFrameVerticalBorderWidth;
+		double height = ActualHeight - 2 * SystemParameters.ResizeFrameHorizontalBorderHeight - SystemParameters.CaptionHeight;
+	
+		Point ptCenter = new Point(width /2, height /2);
+		Vector vectDiag = new Vector(width, -height);
+		Vector vectPerp = new Vector(vectDiag.Y, -vectDiag.X);
+
+		vectPerp.Normalize();
+		vectPerp *= width * height / vectDiag.Length;
+
+		brush.StartPoint = ptCenter + vectPerp;
+		brush.EndPoint = ptCenter - vectPerp;
+	}
+}
+
+2장 앞부분의 VaryTheBackground 프로그램에서와 같이 이벤트 핸들러의 시작 부분은 클라이언트 영역의 폭과 높이를 계산한다. Vector 객체인 vectDiag는 좌측 하단에서부터 우측 상단까지의 대각 성분을 나타내는 벡터이다. 다음과 같이 우측 상단의 좌표에서 좌측 하단의 좌표를 빼는 방법으로 계산할 수도 있다. 
+
+vectDiag = new Point(width, 0) - new Point(0, height);
+
+vectPerp 객체는 대각선에 대해 수직이다. 수직 벡터는 x와 y 프로퍼티를 서로 바꾸고, 어느 한 쪽의 부호를 바꾸는 것으로 쉽게 만들 수 있다. Normalize 메소드는 X와 Y프로퍼티를 Length 프로퍼티로 나누어서, 결과적으로 Length 프로퍼티를 1이 되게 만든다. 그 후에 앞서 설명한 L에 해당하는 길이를 vectPerp에 곱한다. 
+
+마지막 단계는 LinearGradientBrush 의 StartPoint와 EndPoint 프로퍼티를 설정하는 것이다. 이 프로퍼티들은 보통 브러시 생성자를 통해 설정하는데, LinearGradientBrush 자체에 정의돼 있는 프로퍼티는 이 두 개 뿐이다.(이외에는 GradientBrush 추상 클래스로부터 몇 가지 프로퍼티를 상속받는다.)
+
+다시 말하지만 브러시가 변경될 때 창도 스스로 다시 그려지기 때문에 프로그램에서 해야 할 유일한 작업은 LinearGradientBrush의 프로퍼티를 변경하는 것뿐이다. 이는 Freezable 클래스에 정의된 Changed 이벤트의 마술이다. 
+
+사실 LinearGradientBrush는 지금까지 살펴본 두 프로그램에서 사용했던 것보다 더 다양하게 사용할 수 있다. 이 브러시는 여러 색들 사이에서의 그라디언트도 만들 수 있다. 이런 특징을 사용하려면 GradientBrush에 정의된 GradientStops 프로퍼티를 이용해야 한다. 
+
+GradientStops 프로퍼티는 GradientStopCollection 타입의 객체이며, GradientStop 객체들의 모음이다. GradientStop에는 Color와 Offset이란 두 개의 프로퍼티가 정의돼 있고 다음과 같이 프로퍼티를 받는 생성자가 있다. 
+
+new GradientStop(clr, offset);
+
+Offset 프로퍼티는 0부터 1까지의 값을 갖는데, StartPoint와 EndPoint 사이의 상대적인 거리를 나타낸다. 예를 들어 StartPoint(70, 50)이고 EndPoint가 (150, 90)인 경우를 가정하면 0.25의 offset 프로퍼티는 StartPoint에서 EndPoint 까지의 거리가 1/4가 되는 점인(90 ,60)을 의미하게 된다. 물론 StartPoint(0, 0)이고 ,EndPoint가(0,1)이나 (1,0)또는(1,1)이라면 offset에 대응하는 점을 결정하기는 훨씬 쉽다. 
+
+다음 프로그램에서는 수직 LinearGradinetBrush를 생성하고, 7가지의 무지개 색에 대응하는 7개의 GradientStop 객체를 생성한다. 각 GradientStop은 창 폭의 1/6씩 오른쪽으로 위치한다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class FollowTheRainbow : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new FollowTheRainbow());
+	}
+	public FollowTheRainbow()
+	{
+		Title = "Follow the Rainbow";		
+		LinearGradientBrush brush = new LinearGradientBrush();
+		brush.StartPoint = new Point(0, 0);
+		brush.EndPoint = new Point(1, 0);
+		Background = brush;
+
+		//무지개 색은 빨주노초 파남보
+		brush.GradientStops.Add(new GradientStop(Colors.Red, 0));
+		brush.GradientStops.Add(new GradientStop(Colors.Orange, .17));
+		brush.GradientStops.Add(new GradientStop(Colors.Yellow, .33));
+		brush.GradientStops.Add(new GradientStop(Colors.Green, .5));
+		brush.GradientStops.Add(new GradientStop(Colors.Blue, .67));
+		brush.GradientStops.Add(new GradientStop(Colors.Indigo, .84));
+		brush.GradientStops.Add(new GradientStop(Colors.Violet, ));
+	}
+}
+
+이제 주제를 LinearGradientBrush에서 RadialGradientBrush로 옮겨보자. 이를 위해서 브러시에 사용된 클래스 이름을 RadialGradientBrush로 바꾸고 ,StartPoint와 EndPoint대입문을 모두 지운다. 이렇게 하면 다음과 같이 될 것 이다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class CircleTheRainbow : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new CircleTheRainbow());
+	}
+	public FollowTheRainbow()
+	{
+		Title = "Circle the Rainbow";		
+		RadialGradientBrush brush = new RadialGradientBrush();
+		Background = brush;
+
+		//무지개 색은 빨주노초 파남보
+		brush.GradientStops.Add(new GradientStop(Colors.Red, 0));
+		brush.GradientStops.Add(new GradientStop(Colors.Orange, .17));
+		brush.GradientStops.Add(new GradientStop(Colors.Yellow, .33));
+		brush.GradientStops.Add(new GradientStop(Colors.Green, .5));
+		brush.GradientStops.Add(new GradientStop(Colors.Blue, .67));
+		brush.GradientStops.Add(new GradientStop(Colors.Indigo, .84));
+		brush.GradientStops.Add(new GradientStop(Colors.Violet, ));
+	}
+}
+
+
+이제 브러시는 클라이언트 영역의 중심에서 빨간색으로 시작해, 클라이언트 영역을 채우는 타원까지 보라색으로 진행한다. 타원의 바깥 영역인 꼭지점 부분은 보라색이 계속 될 것이다. SpreadMethod의 기본값이 Pad이기 때문이다. 
+
+RadialGradientBrush 클래스에는 유용한 기본값을 가진 몇 개의 프로퍼티가 있다. 타원은 세 가지 프로퍼티로 결정한다. Center 프로퍼티는 Point 객체로, 기본값은 (0.5, 0.5)이며 브러시가 미치는 영역의 중심이다. RadiusX와 RadiusY는 double 값을 가지며 타원의 수평 반경과 수직 반경이다. 기본값은 0.5이므로 수평과 수직 모두 브러시로 칠해진 영역의 가장 자리까지타원이 도달된다. 
+
+Center, RadiusX, RadiusY로 정의되는 타원의 경계는 offset 프로퍼티가 1일 때의 색이된다(이 예제에서는 보라색이다)
+
+네 번째 프로퍼티인 Gradientorigin은 Center 프로퍼티처럼 기본값이 (0.5, 0.5)인 Point객체다. 이름에서 알 수 있듯이 GradientOrigin은 그라디언트가 시작되는 지점이다. offset 프로퍼티가 0인 색(CircleTheRainbow에서는 빨간색)을 볼 수 있는 지점이다. 
+
+그라디언트는 GradientOrigin과 타원의 경계 사이에서 생긴다. GradientOrigin이 Center와 같다면 그라디언트는 타원의 중심에서 그 둘레까지 생기게 된다. GradientOrigin이 Center에서 다소 벗어나 있다면 그라디언트는 찌그러져 보일 것이고, GradientOrigin이 경계의 밖에 있다면 그라디언트는 부채꼴처럼 펼쳐져 보일 것이다. 이러한 효과를 보려면 CircleTheRainbow 프로그램에 다음과 같은 구문을 추가해보자. 
+
+brush.GradientOrigin = new Point(0.75, 0.75);
+
+다음의 ClickTheGradientCenter 프로그램을 통해 Center와 GradientOrigin 프로퍼티 사이의 관계를 시험해 볼 수 있다. RadialGradientBrush에는 두 개의 인자를 받는 생성자가 있어서 GradientOrigin의 색상과 타원 둘레의 색상을 지정한다. 그러나 RadiusX와 RadiusY는 0.10으로 SpreadMethod는 Repeat로 할당해 브러시가 연속적인 동심원이 되게 한다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class ClickTheRadientCenter : Window
+{
+	RadialGradientBrush brush;
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ClickTheRadientCenter());
+	}
+	public ClickTheRadientCenter()
+	{
+		Title = "Click the Gradient Center";
+		brush = new RadialGradientBrush(Colors.White, Colors.Red);
+		brush.RadiusX = brush.RadiusY = 0.10;
+		brush.SpreadMethod = GradientSpreadMethod.Repeat;
+		Background = brush;
+	}
+	protected override void OnMouseDown(MouseButtonEventArgs args)
+	{
+		double width = ActualWidth - 2 * SystemParameters.ResizeFrameVerticalBorderWidth;
+		double height = ActualHeight - 2 * SystemParameters.ResizeFrameHorizontalBorderHeight - SystemParameters.CaptionHeight;
+		Point ptMouse = args.GetPosition(this);
+		ptMouse.X /= width;
+		ptMouse.Y /= height;
+		if(args.ChangedButton == MouseButton.Left)
+		{
+			brush.Center = ptMouse;
+			brush.GradientOrigin = ptMouse;
+		}else if(args.ChangedButton == MouseButton.Right)
+			brush.Gradientorigin = ptMouse;
+	}
+}
+
+OnMouseDown를 오버라이딩해서 클라이언트 영역을 클릭할 수 있게 한다. 왼쪽 마우스 버튼을 통해 Center와 GradientOrigin  프로퍼티를 같은 값으로 변경할 수 있다. 이 경우 전체 브러시가 클라이언트 영역의 중심에서 단순하게 이동된 것으로 보일 것이다. 오른쪽 마우스 버튼을 클릭하면 GradientOrigin만 변경한다. Center 지점의 근처로 옮겼으면 한쪽은 찌그러지고 한쪽은 확장된 그라디언트를 볼 수 있을 것이다. 
+
+효과가 너무 흥미로워서 애니메이션으로 만들어볼 결심을 했다. 다음 프로그램 RotateTheGradientorigin은 WPF의 내장된 애니메이션 기능을 전혀 사용하지 않는다. 그 대신 GradientOrigin 프로퍼티를 변경하기 위해 간단한 타이머를 사용한다. 
+
+.NET에는 적어도 네 개의 타이머 클래스가 있고, 그 중 세 개의 이름은 Timer다. 
+
+
+System.Threading과 System.Timers에 있는 Timer 클래슨느 특정 프로그램에서는 사용할 수 없다. 타이머 이벤트가 다른 스레드에서 발생하는데, freezable 객체는 생성된 스레드와 같은 스레드에서만 변경되기 때문이다. System.Windows.Forms에 있는 Timer 클래스는 표준 윈도우 타이머를 캡슐화한 것이며 ,이를 사용하려면 참조 추가에서 System.Windows.Forms.dll 어셈블리를 추가해야 한다. 
+
+DispatcherTimer 클래스는 System.Windows.Threading 네임스페이스에 있으며, WPF 프로그램에서 사용할 수 있다. 특히 애플리케이션 스레드에서 이벤트가 발생돼야할 때 이 타이머를 선택한다. 타이머 발생 간격을 의미하는 Interval 프로퍼티에 TimeSpan 프로퍼티로 설정하는데, 10밀리 초(millisecond)보다 더 작게 설정할 수는 없다. 여기서 정한 시간마다 Tick 이벤트가 발생한다. 
+
+다음 프로그램은 창의 크기를 4인치의 정사각형으로 해 처리 시간이 너무 길지 않게 한다. 
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
+
+public class RotateTheGradientOrigin : Window
+{
+	RadialGradientBrush brush;
+	double angle;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new RotateTheGradientorigin());
+	}
+	public RotateTheGradientOrigin()
+	{
+		Title = "Rotate the Gradient Origin";
+		WindowStartupLocation = WindowStartupLocation.CenterScreen;
+		Width = 384;
+		Height = 384;
+
+		brush = new RadialGradientBrush(Colors.White, Colors.Blue);
+		brush.Center = brush.GradientOrigin = new Point(0.5, 0.5);
+		brush.RadiusX = brush.RadiusY = 0.10;
+		brush.SpreadMethod = GradientSpreadMethod.Repeat;
+		Background = brush;
+
+		DispatcherTimer tmr = new DispatcherTimer();
+		tmr.Interval = TimeSpan.FromMilliseconds(100);
+		tmr.Tick += TimerOnTick;
+		tmr.Start();
+	}
+	void TimerOnTick(object sender, EventArgs args)
+	{
+		Point pt = new Point(0.5 + 0.05 * Math.Cos(angle), 0.5 + 0.05 * math.Sin(angle));
+		brush.GradientOrigin = pt;
+		angle += Math.PI / 6; //즉 30도
+	}
+}
+
+이번 장에서는 Window 의 Background 프로퍼티에 초점을 맞췄지만 이외에 Window의 다른 세 가지 프로퍼티도 Brush 타입이다. 그중 하나는 OpacityMask로서 UIElement 에서 상속받은 프로퍼티인데 이에 대해서는 31장에서 더 자세히 논의할 것이다. 
+
+또한 Window는 Control로부터 두 개의 Brush를 상속받는다. 첫 번째는 BorderBrush로, 클라이언트 영역의 경계선을 그리는데 사용된다. 예제 프로그램에 다음 구문을 추가해보자. 
+
+BorderBrush = Brushes.SaddleBrown;
+BorderThickness = new Thickness(25, 50, 75, 100);
+
+Thickness 구조체는 Left, Top, Right, Bottom이라는 4개의 프로퍼티가 있고, 이 4개의 인자를 차례로 생성자로 넘긴다. 이 프로퍼티는 클라이언트 영역의 네 경계선 두께를 장치 독립적 단위로 지정한다. 네 경계선을 모두 같은 두께로 설정하려면 다음고 같이 하나의 인자만을 취하는 생성자를 사용한다. 
+
+BorderThickness = new Thickness(50);
+
+물론 다음과 같이 경계에 대해서도 그라디언트를 사용할 수 있다. 
+
+BorderBrush  = new LinearGradientBrush(Colors.Red, Colors.Blue, new Point(0, 0), new Point(1, 1));
+
+클라이언트 영역의 경계에서만 볼 수 있다는 점을 제외하면 클라이언트 영역을 채우는 그라디언트 브러시와 매우 닮았다. 좌측 상단의 꼭지점에서 빨간색을 우측 하단 꼭지점에서는 파란색을 보게 된다. 다음과 같이 BorderBrush와 Background에 모두 같은 그라디언트 브러시를 지정해도 두 개의 브러시가 완전히 섞이지는 않는다
+
+Background = new LinearGradientBrush(Colors.Red, Colors.Blue, new Point(0, 0), new Point(1, 1));
+
+경계 브러시로 칠해지지 않은 영역 내에서 배경 브러시가 완전히 나타난다. 
+
+마지막 Window의 Brush 타입 프로퍼티는 Foreground이다. 그러나 이 프로퍼티로 무엇을 하려면 먼저 창에 어떤 컨텐트(content)를 넣어야 한다. 컨텐트는 텍스트나 그래픽 이미지, 또는 컨트롤 등 매우 다양한 형태를 갖는다. 이어지는 3장에서 이에 대해 살펴보자. 
