@@ -1,0 +1,586 @@
+CHAPTER 03 : 컨텐트
+Window 클래스에는 100개가 넘는 public 프로퍼티가 있고, Title 프로퍼티와 같은 일부 프로퍼티는 상당히 중요하다. 그러나 Window의 가장 중요한 프로퍼티는 역시 Content 라 할 수 있다. 클라이언트 영역에 붙이고 싶은 객체를 Content 프로퍼티에 지정하게 된다. 
+
+Content 프로퍼티에는 문자열이나, 비트맵(bitmap), 그림, 버튼, 스크롤바 등을 지정할 수 있고, WPF에서 지원하는 50여 가지 컨트롤을 이용할 수 있다. Content 프로퍼티에는 무엇이든지 지정할 수 있는 것이다. 한 가지 작은 문제가 있긴 하다. 
+
+하나의 Content 프로퍼티에는 오직 하나의 객체만 할당할 수 있다. 
+
+이런 제약 때문에 처음 컨텐트를 사용하면 약간 실망스러울 수도 있겠지만 좀 더 뒷부분에서 Content 프로퍼티에 여러 개의 객체를 할당하는 방법에 대해 설명할 것이다. 그전까지는 하나의 Content 객체만을 논의할 것이다. 
+
+Window 클래스는 ContentControl로부터 Content 프로퍼티를 상속받는다. ContentControl 은 Control을 상속받는 클래스이고, Window가 ContentControl을 직접 상속 받는다. 
+
+ContentControl 클래스는 거의 Content 프로퍼티를 정의하기 위해 존재한다고 할 정도로, Content 와 관련된 프로퍼티와 메소드를 가진다. 
+
+Content 프로퍼티는 object 타입으로 정의돼 있어서 어떤 객체라도 할당할 수 있다는걸 암시하는 셈인데, 거의 사실이라고 할 수 있다. 거의 사실 이라고 말한건 Content 프로퍼티에 Window 타입의 객체를 할당하는 것이 불가능하기 떄문이다. Window는 반드시 트리의 루트(root)가 되어야지, 다른 Window 객체의 가지(branch)가 돼선 안된다. 이를 어기면 런타임 예외 상황(run-time exception)이 발생한다. 
+
+다음 예는 Content 프로퍼티에 텍스트 문자열을 할당하는 프로그램이다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class DisplaySomeText : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new DisplaySomeText());
+	}
+	public DisplaySomeText()
+	{
+		Title = "Display Some Text";
+		Content = "Content can be simple text!";
+	}
+}
+
+이 프로그램은 클라이언트 영역의 좌측 상단 부분에 "Content can be simple text!" 라는 텍스트를 출력한다. 
+
+모든 텍스트가 들어가지 못할 정도로 창을 좁게 만들면, 자동으로 줄 바꿈이 되는 게 아니라 텍스트가 잘려진다는 사실을 발견할 수 있을 것이다. 그러나 캐리지 리턴("\r")이나, 라인피드("\n") 또는 둘 모두("\r\n")를 사용해서 줄 바꿈을 넣을 수는 있다. 
+
+시험 삼아 텍스트의 폰트, 색상과 관련된 프로퍼티들을 변경할 수 있게 System.Windows.Media 네임스페이스를 추가했다. 관련 프로퍼티들은 모두 Window가 상속받은 Control 클래스에 정의돼 있다. 
+
+다음과 같이 클라이언트 영역에 출력되는 텍스트의 폰트를 바꿀 수 있다. 
+
+FontFamily = new FontFamily("Comic Sans MS");
+FontSize = 48;
+
+이 구문은 클래스의 생성자 어디에든 올 수 있다. 
+
+WPF에서는 Font 클래스란 것이 없다. 첫번째 줄을 보면 FontFamily 객체를 참조하고 있다. 
+
+폰트 패밀리(font family)란 타입 패밀리(type family)라고도 부르며, 관련된 서체의 모음이다. 윈도우에서는 굴림, 돋움, 궁서, Courier New, Times New Roman, Arial, Palatino Linotype, Verdana, Comic Sans MS와 같은 폰트 패밀리가 있다. 
+
+타입페이스(typeface)는 페이스 이름이라고도 하는데, 폰트 패밀리와 이를 이용한 변화를 조합한 개념이다. Times New Roman Bold, Times New Roman Italic, Times New Roman Bold Italic과 같은 예를 들 수 있다. 모든 폰트 패밀리에 대해서도 이런 변화가 가능한 것은 아니다. 그리고 어떤 폰트 패밀리에는 Arial Nartow처럼 각 글자의 폭이 달라지는 변화도 있다. 
+
+폰트(font)라는 용어는 일반적으로 특정한 크기를 가진 특정 글자체들의 조합을 의미하는 말로 쓰인다. 폰트의 크기를 측정하는 일반적인 용어는 em size다(이 용어는 과거에 사용된 대문자 M에 대한 사각형 금속 활자 조각의 크기에서 유래됐다)em size는 통상적으로 라틴 알파벳에서 글자의 높이를 지칭한다. 여기에서의 높이란 발음기호를 제외한 알파벳의 대소문자를 통틀어 상승 문자의 윗부분부터 하강 문자의 아랫부분까지의 거리를 의미한다(역자주: 영어에서 상승 문자(ascender)는 기준선 위에 표기하는 글자(a, b, l, m 등)를, 하강 문자(descender)는 기준선에 걸쳐 표기하는 글자(p, q, y 등)을 말한다) 그렇지만 em size는 측량적인 개념이 아닌 인쇄상의 디자인 개념이기 때문에 특정 폰트에서 실제 글자의 크기는 em size 보다 다소 크거나 작을 수 있다. 보통 em size는 포인트(point)라는 단위로 명기한다. 전통적인 인쇄술에서 1포인트는 0.01384인치지만, 컴퓨터에서는 정확히 1/72인치로 정한다 그래서 36포인트의 em size는 글자의 높이가 1/2인치라는 것을 의미한다. 
+
+WPF에서는 원하는 em size를 FontSize 프로퍼티에 지정한다. 이때 Fontsize의 단위는 포인트가 아니고 WPF에서 늘 사용되는 1/96인치의 장치 독립적 단위이다. FontSize 프로퍼티에 48을 대입하면 em size 는 1/2인치 즉, 36포인트가 되는 것이다. 
+
+em size를 포인트로 쓰는 것에 익숙해 있다면 FontSize 프로퍼티에 대입할 때 포인트 크기에 4/3을 곱하면 된다(또는 0.75로 나눠도 된다.)포인트에 익숙하지 않다면, 익숙해지게 해야 한다. FontSize 프로퍼티를 대입할 때는 단순히 4/3만 곱하면 된다. 
+
+FontSize프로퍼티의 기본값은 11 즉 8.25포인트이다. 뉴욕 타임즈(The New York Times)는 8포인트 글자체로 인쇄되며, 뉴스워크(Newsweek)는 9포인트 글자체를 사용한다. 이 책은 9.5포인트 글자체를 사용했다. 
+
+FontFamily 생성자에는 다음과 같이 타입페이스 전체의 이름을쓴다. 
+
+FontFamily = new FontFamily("Times New Roman Bold Italic");
+FontSize = 32;
+
+24포인트의 크기이며, 굵은(bold) 기울임꼴(italic)의 Times New Roman 글자체를 의미한다. 그러나 FontFamily 생성자에서는 폰트 패밀리의 이름만을 사용하고, 굵은꼴과 기울임꼴은 FontStyle과 FontWeight 프로퍼티에서 설정하는 게 더 일반적이다. 다음 예를 살펴보자. 
+
+FonftFamily = new FontFamily("Times New Roman");
+FontSize = 32;
+FontStyle = FontStyles.Italic;
+FontWeight = FontWeights.Bold;
+
+FontStyle과 FontWeight 프로퍼티에 대입하는 값은 FontStyles와 FontWeights 클래스의 정적 읽기 전용 프로퍼티다. 이 프로퍼티는 FontStyle과 FontWeight 타입의 객체를 반환한다. 다음 변화도 약간 흥미롭다. 
+
+FontStyle = FontStyles.Oblique;
+
+기울임꼴의 타입페이스는 기울임꼴이 아닌 타입페이스와 모양이 조금 다르다. 소문자 a를 자세히 보면 차이를 알 수 있다. 그러나 oblique 타입페이스는 단순히 글자체를 오른쪽으로 눕힌 것뿐이다. 일부 폰트 패밀리에서는 FontStrech 프로퍼티를 FontStretches 클래스의 프로퍼티로 대입할 수 있다. 
+
+클라이언트 영역 배경을 색칠할 때 썻던 Background 프로퍼티에 대해서는 이제 잘 알고 있을 것이다. 텍스트 자체의 색은 Foreground 프로퍼티를 이용한다. 다음과 같이 해보자. 
+
+Brush brush = new LinearGradientBrush(Colors.Black, Colors.White, new Point(0, 0), new Point(1, 1));
+Background = brush;
+Foreground = brush;
+
+이제 Foreground와 Background가 모두 같은 브러시로 색이 적용돼서 텍스트가 보이지 않을 것이라 염려스러 울수 있지만, 그런 일은 일어나지 않는다. 2장에서 살펴본 것처럼 배경색을 칠할 때 쓰는 그라디언트 브러시는 자동적으로 클라이언트 영역의 크기에 따라 조정된다. 비슷하게 Foreground의 브러시도 자동적으로 컨텐트인 실제 텍스트 문자열의 크기에 맞게 조정된다. 창 크기를 변경하는 것은 Foreground 의 브러시에 영향을 미치지 않지만 클라이언트 영역을 정확하게 텍스트의 크기로 조정하면 두 브러시가 일치하게 돼 텍스트가 보이지 않을 수 있다. 
+
+이제 다음과 같이 해보자. 
+
+SizeToContent = SizeToContent.WidthAndHeight;
+
+Window 클래스에 정의된 SizeToContent 프로퍼티를 사용해 창의 크기를 컨텐트의 크기에 맞게 조정할 수 있다. Foreground와 Background에 같은 LinearGradientBrush를 계속 쓰고 있다면 텍스트가 보이지 않게 된다. SizeToContent 프로퍼티에는 SizeToContent 열거형의 멤버를 대입한다. 여기에는 기본 값인 Manual이 있고, 그밖에 Width, Height, WidthAndHeight가 있다. 이 3개는 각기 컨텐트의 폭, 높이, 전체 크기에 맞추어 창의 크기를 조정한다. 
+대화상자나 다른 폼을 설계할 때 편리하게 사용할 수 있는 프로퍼티다. 창의 크기를 변경할때 간혹 창의 크기 조절용 경계를 없애는 것도 고려할만 한데, 이는 다음과 같이 한다. 
+
+ResizeMode = ResizeMode.CanMinimize;
+
+또는 다음과 같이 할 수도 있다. 
+
+ResizeMode = ResizeMode.NoResize;
+
+2장의 끝 부분에서 봤던 구문처럼 클라이언트 영역 안쪽에 경계선을 추가할 수도 있다. 
+
+BorderBrush = Brushes.SaddleBrown;
+BorderThickness = new Thickness(25, 50, 75, 100);
+
+Foreground 브러시와 SizeToContent 모두 이 경계선의 영향을 받고 있다. 컨텐트는 항상 이 경계선의 안쪽에 나타난다. 
+
+DisplaySomeText 프로그램에서 텍스트 문자열을 출력하는 것은 사실매우 일반화된 방법을 사용한다. 이미 알 고 있겠지만 모든 객체에는 ToString 메소드가 있어서 그 객체를 표현하는 문자열을 반환한다. 객체의 출력은 이 ToString 메소드를 사용한다. 문자열이 아닌 다른 형태도 Content 프로퍼티에 넣을 수 있으며 다음이 그런 예다. 
+
+Content = Math.PI;
+
+다음 예도 살펴보자. 
+
+Content = DateTime.Now;
+
+두 경우 모두 창에 출력되는 것은 ToString 이 반환하는 문자열이다. 그 객체의 클래스가 ToString을 오버라이딩하지 않았으면 기본 ToString 메소드에서 클래스 이름 전체를 반환한다. 다음의 예를 살펴보자. 
+
+Content = EventArgs.Empty;
+
+출력되는 문자열은 System.EventArgs이다. 유연한 예외를 배열인 경우에서 찾았다. 다음과 같이 해보자. 
+
+Content = new int[57];
+
+ToString 메소드는 System.int32[]를 반환하는 반면에 출력되는 내용은 Int32[]Array이다
+
+다음 프로그램에서는 Content 프로퍼티에 빈 텍스트 문자열을 할당해두고 키보드 입력을 통해 문자를 추가해나간다. 1장에서 TypeYourTitle 프로그램과 유사하며 캐리지 리턴이나 탭도 입력이 가능하다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class RecordKeystrokes : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new RecordKeystrokes());
+	}
+	protected override void OnTextInput(TextCompositionEventArgs args)
+	{
+		base.OnTextInput(args);
+		string str = Content as string;
+		if(args.Text == "\b")
+		{
+			if(str.Length > 0)
+				str = str.Substring(0, str.Length-1);
+		}else
+		{
+			str += args.Text;
+		}
+		Content = str;
+	}
+}
+
+RecordKeystrokes 프로그램에서는 키가 눌릴 때마다 Content 프로퍼티가 변경되고 Window 클래스는 이 변경에 반응해서 클라이언트 영역을 다시 그린다. 프로그램을 약간 바꾸면 제대로 동작하지 않을 수 있다. 예를 들어 다음과 같이 빈 문자열을 정의해보자. 
+
+string str = "";
+
+그리고 생성자에서 이 변수를 Content 프로퍼티에 대입한다. 
+
+Content = str;
+
+OnTextInput에 있는 같은 구문을 제거하고, str의 정의 부분도 제거한다. 그러면 프로그램은 동작하지 않는다. OnTextInput에 있는 다음의 할당문을 살펴보자. 
+
+str += args.Text;
+
+이는 다음 구문과 동일하다. 
+
+str = str + args.Text;
+
+두 구문 모두 다음과 같은 문제가 있다. 연결 연산자로부터 반환된 object 객체가 입력한 string 객체와 같지 않다는 점이다. 문자열은 변경할 수 없다는 것을 기억해야 한다. 연결 연산자는 새로운 문자열을 생성하지만 Content 프로퍼티는 여전히 최초의 문자열로 설정돼있다. 
+
+이제부터는 약간 다르게 시도해 볼 것이다. 이를 위해 System.Text 에 대한 using 문이 필요하다. 그리고 다음과 같이 StringBuilder 객체를 정의한다. 
+
+StringBuilder build = new StringBuilder("text");
+
+생성자에서 이 객체를 다음과 같이 Content 에 대입한다. 
+
+Content = build;
+
+StringBuilder 객체의 ToString 메소드는 생성 시 만들어진 문자열을 반환하기 때문에 창에서는 text가 표시됨을 짐작할 수 있다. 다음과 같이 OnTextInput 메소드에 있는 구문을 수정한다 
+
+if (args.Text == "\b")
+{
+	if(build.Length > 0)
+		build.Remove(build.Length - 1, 1);
+}else
+{
+	build.Append(args.Text);
+}
+
+이렇게 해도 제대로 동작하지 않을 것이다. StringBuilder 객체가 하나뿐이지만, StringBuilder 객체에 저장된 문자열이 언제 변경되는 지를 알지 못하기에 새로운 텍스트 문자열로 업데이트 되지 않고 있다. 
+
+이런 경우를 지적하는 이유는 WPF에서의 객체들이 때때로 마술처럼 스스로 업데이트되기 때문이다. 마술처럼 보이겠지만 마술은 아니고, 항상 이벤트의 형태로 통지하고 있다. 무슨 일이 일어나고 일어나지 않는지를 알아야 환경을 이해하는 데 훨씬 도움이 된다. 
+
+OnTextInput의 가장 아래 부분을 다음과 같이 고쳐보았다. 그러나 아직도 제대로 동작하지는 않는다 
+
+Content = build;
+
+build로 할당된 Content에 또다시 같은 객체를 대입하고 있음을 감지해 업데이트가 필요하지 않다고 판단하는 것이다. 
+
+다음 구문들을 추가해보자. 
+
+Content = null;
+Content = build;
+
+이 구문은 제대로 동작한다 
+
+윈도우 컨텐트에 일반적인 텍스트를 지정할 수 있음을 살펴보았다. 하지만 Content 프로퍼티의 존재 이유가 단순 텍스트만을 출력하는 것은 절대 아니다. Content 프로퍼티의 진정한 목적은 더욱 자연스러운 그래픽이 가미되는 것이고, UIElement 를 상속받은 어떠한 클래스 인스턴스라도 지정할 수 있게 하는 것이다. 
+
+UIElement 는 WPF에서 매우 중요한 클래스로 키보드, 마우스 , 스타일러스 펜을 처리하는 것이 구현돼 있다. UIElement 클래스에는 또한 OnRender라는 중요한 메소드가 있다. OnRender메소드는 객체의 그래픽 표시를 얻기 위해 호출된다(3장의 끝 부분에서 이에 대한 예를 살펴볼 것이다.)
+
+Content 프로퍼티의 동작에 관한 모든 객체는 UIElement 를 상속받은 것과 그렇지 않은 것의 두 그룹으로 나눌수 있다. 후자 그룹은 ToString 으로 출력이 되는 객체이며, 전자 그룹은 OnRender로 출력이 된다. 
+
+UIElement 를 직접 상속받은 유일한 클래스는 FrameworkElement이고, WPF에서 살펴볼 모든 엘리먼트는 FrameworkElement를 상속받는다. 이론상으로 UIElement는 사용자 인터페이스 이벤트와 화면에 표현하는 데 필요한 구조를 제공한다. 이런 구조는 다양한 프로그래밍 프레임워크(framework)를 지원하는데, WPF는 이런 프레임워크의 하나이며, FrameworkElement를 상속받는 클래스들로 구성된다. 상식선에서 프로퍼티와 메소드를 확연하게 구별하기 어려울 것이다. 같은 맥락으로 UIElement에서 정의된 이벤트와 FrameworkElement에 서 정의된 이벤트를 구별하는 것도 쉽지 않다. 
+
+FrameworkElement를 상속받는 중요한 클래스중 하나는 Image이다. 다음은 Image와 관련된 클래스 계층도이다. 
+
+Object
+	DispatcherObject(abstract)
+		DependencyObject
+			Visual(abstract)
+				UIElement
+					FrameworkElement
+						Image
+
+Image 클래스는 도큐먼트나 애플리케이션에서 쉽게 이미지를 사용할수 있게 해준다. 다음은 필자의 웹사이트에서 비트맵을 가져와 창에 표시하는 프로그램이다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class ShowMyFace : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ShowMyFace());
+	}
+	public ShowMyFace()
+	{
+		Title = "Show My Face";
+		Uri uri = new Uri("http://www.charlespetzold.com/PetzoldTattoo.jpg");
+		BitmapImage bitmap = new BitmapImage(uri);
+
+		Image img = new Image();
+		img.Source = bitmap;
+		Content = img;
+	}
+}
+
+이미지를 출력하기 위해서는 두 단계가 필요하다. 먼저 Uri 객체를 생성하고, 비트맵의 위치를 지정한다. 그리고 이를 BitmapImage 의 생성자에 넘긴다. BitmapImage에서 실제로 이미지를 메모리에 로딩한다(GIF, TIFF, JPEG, PNG 등 다양한 대중적인 포맷이 지원된다.) Image 클래스로 창에 이미지를 출력한다. Content 프로퍼티에 대입하는 것이 바로 Image 클래스의 인스턴스다. 
+
+Image 클래스는 System.Windows.Controls 네임스페이스에 있다. 엄격하게 말하면 Image는 컨트롤로 간주되지 않으며, Control 클래스를 상속받고 있지도 않다. 그러나 System.Windows.Controls 네임스페이스는 매우 중요해서 대부분의 프로그램에서 사용할 것이다. BitmapImage 클래스는 System.Windows.Media.Imaging 네임스페이스에 있으며, 비트맵 작업을 한다면 매우 중요한 네임스페이스이다. 그러나 프로그램에서 꼭 필요한 경우가 아니면 using 문으로 포함시키지는 않을 것이다. 
+
+이미지 파일을 메모리가 아닌 디스크 드라이브에 로딩할 수도 있다. Uri 생성자의 인자로 전체 파일 이름을 절대 경로로 지정하거나, file://를 붙여서 상대 경로로 할 수 있다. 다음 구문으로 교체해서 송어를 낚아 올리는 낚시꾼의 이미지를 받아보자. 
+
+Uri uri = new Uri(System.IO.Path.Combine(Environment.GetEnvironmentVariable("windir"), "Gone Fishing.bmp"));
+
+Environment.GetEnvironmentVariable 메소드는  "C:\\WINDOWS와 같이 windir 의 환경 변수를 알려준다. Path.Combine 메소드는 경로이름과 비트맵의 파일 이름을 합쳐주어, 게으른 프로그래머들이 슬래시를 정확하게 넣어야 하는 걱정을 덜어준다. Path 클래스 앞에 System.IO를 붙여도 되고 using문을 이용해 네임스페이스를 포함시킬 수도 있다. 
+
+Uri 객체를 BitmapImage 생성자에 넘길수도 있지만 BitmapImage 의 UriSource 프로퍼티에 Uri 객체를 직접 대입할 수도 있다. 다만 아래와 같이 이 프로퍼티에 대입하는 것을 BitmapImage의 BeginInit와 EndInit호출 사이에 위치시킬 것을 권장한다. 
+
+bitmap.BeginInit();
+bitmap.UriSource = uri;
+bitmap.EndInit();
+
+
+잘 알고 있듯이 비트맵에는 가로 픽셀 수와 세로 픽셀 수가 있다. BitmapImage 클래스는 BitmapSource에서 읽기 전용의 정수형인 PixelWidth와 PixelHeight 프로퍼티를 상속받는다. 항상 그렇지는 않지만 비트맵에는 해상도 정보가 포함되기도 한다. 해상도 정보는 어떨때에는 매우 중요하고(희귀 우표의 스캔처럼), 또 어떨 때는 별로 그렇지 않다. 인치당 점의 개수에 해당되는 해상도 정보는 읽기 전용의 double 값인 DpiX와 DpiY에 있다. BitmapImage 클래스에는 읽기 전용의 double 프로퍼티인 Width와 Height도 있다. 이값은 다음 공식으로 계산된다. 
+
+이 공식에서 분자에 있는 96이라는 숫자를 빼면 높이와 폭이 인치로 계산된다. 96 때문에 인치에서 장치 독립적 단위로 변환된다. Height와 Width 프로퍼티는 장치 독립적 단위로 비트맵의 크기를 나타낸다. 또한 BitmapImage는 BitmapSource에서 Format 프로퍼티를 상속받는데, 이는 비트맵의 색 포맷(color format)을 알려준다. 색 테이블(color table)이 있는 경우라면 Palette 프로퍼티를 통해 접근할 수 있다. 
+
+ShowMyFace 프로그램이 얼굴을 출력하든지, 송어 낚시꾼이나 기타 어떤 내용을 출력하든지에 상관없이 이미지는 창의 영역에 맞게 왜곡 없이 출력되고 있다. 클라이언트 영역의 가로 세로 비율이 정확히 맞지 않으면, 남는 부분인 위와 아래 혹은 왼쪽과 오른쪽은 창의 배경이 보일 것이다. 
+
+창의 내부에서 이미지 크기를 결정하는 것은 Image프로퍼티다. 그 중 하나는 Stretch인데 기본값은 Strech.Uniform이며, 이는 클라이언트 영역을 채울 때 이미지 크기를 균일하게 늘리거나 줄이라는 의미이다. 
+
+Stretch 프로퍼티에 설정할 수 있는 또다른 값은 Stretch.Fill이다. 
+
+img.Stretch = Stretch.Fill;
+
+이 설정은 이미지가 창 전체에 표시되게 가득 채우라는 의미이며, 보통은 이미지의 왜곡이 생긴다. 이는 가로 세로의 비율이 정확하게 일치하지 않으므로 크기가 서로 다르게 변경되기 때문이다. Stretch.UniformToFill은 이미지의 크기를 균일하게 변경시키기는 하지만 클라이언트 영역 전체를 채운다. 이를 수행하기 위해서 이미지의 어느 한쪽을 잘라내는 방법을 사용한다. 
+
+Stretch.None은 BitmapSource의 Width, Height프로퍼티에서 얻어온 값을 이용해 그 크기대로 출력한다. 
+
+Stretch에 Stretch.None이외의 값을 대입하면 Image의 StretchDirection 프로퍼티도 설정할 수 있다. 기본값은 StretchDirection.Both이며, 이미지의 크기를 늘리거나 줄이거나 모두 가능하다는 의미이다. StretchDirection.DownOnly로 설정하면 이미지의 크기가 줄어 들 수는 있어도 커지지는 않는다. 반대로 StretchDirection.UpOnly는 이미지의 크기를 키우는 것만 할 수 있다. 
+
+이미지의 크기에 관계없이 이미지가 출력되는 곳은 항상 창의 중앙 부분이다.(Stretch.UniformToFill만 예외)
+
+FrameworkElement에서 상속받은 Image의 HorizontalAlignment, VerticalAlignment 프로퍼티를 설정함으로써 위치를 변경시킬 수 있다. 다음과 같이 이미지의 출력 위치를 클라이언트 영역의 우측 상단으로 변경할 수 있다. 
+
+img.HorizontalAlignment = HorizontalAlignment.Right;
+img.VerticalAlignment = VerticalAlignment.Top;
+
+HorizontalAlignment, VerticalAlignment 프로퍼티는 WPF의 레이아웃에 매우 중요한 역할을 한다. 이 프로퍼티를 앞으로도 계속 반복적으로 보게 될 것이다. Image 객체를 우측 상단에 위치시킬 때 경계에 인접하지 않기를 원한다면 다음과 같이 Image 객체에 여백을 줄 수 있다. 
+
+img.Margin = new Thickness(10);
+
+Margin은 FrameworkElement에 정의돼 있고 엘리먼트 주위에 약간의 여유 공간을 주기위해 사용된다. 여기서 Thickness 구조체는 네 경계면 모두 같은 두께로 여백을 주고 있다. 이 경우에는 10/96인치이므로 약 0.1인치다. 네 경계에 서로 다른 여백을 줄 수도 있다. 2장에서 살펴본 것처럼 네 개의 인자를 전달하는 Thickness 생성자를 사용하면 왼쪽, 위쪽, 오른쪽, 아래쪽 순서로 설정한다. 
+
+img.Margin = new Thickness(192, 96, 48, 0);
+
+이제 여백이 왼쪽은 2인치, 위쪽은 1인치, 오른쪽은 1/2인치가 됐으며, 아래쪽은 여백이 없다. 이미지와 여백 모두가 표시되지 않을 정도로 창을 아주 작게 하면, 여백이 우선시 되므로 이미지가 보이지 않게 된다. 
+
+Image 객체는 FrameworkElement 로부터 Width, Height 프로퍼티도 상속받았다. 읽기와 쓰기가 가능한 double 값인데, 그 값을 보면 숫자가 아닌(not a number)을 의미하는 NaN이므로 정의되지 않았음을 알 수 있다.(Window 객체의 경우와 같다)Stretch의 설정과 일치하지 않더라도 Image 객체의 Width, Height를 설정할 수있다. 
+
+또한 다음과 같이 이미지의 크기에 맞게 창의 크기도 조정할 수 있다. 
+
+SizeToContent = SizeToContent.WidthAndHeight;
+
+Window 객체의 Foreground 프로퍼티를 설정하는 것은 이미지 출력에 아무런 영향을 미치지 않는다. Foreground 프로퍼티는 Window 의 컨텐트가 텍스트나 텍스트를 출력하는 다른 엘리먼트 타입인 경우에만 효과가 있다. 
+
+보통 Window 객체의 Background 프로퍼티를 설정하면 클라이언트 영역 중에서 이미지가 없는 부분에 대해서만 효과가 생긴다. 그러나 다음과 같이 해보자. 
+
+img.Opacity = 0.5;
+Background = new NinearGradientBrush(Colors.Red, Colors.Blue, new Point(0, 0), new Point(1, 1));
+
+이제 배경 브러시는 이미지를 통해서도 보여진다. Opacity 프로퍼티는 기본값이 1이지만 엘리먼트를 투명하게 하기 위해 0부터 1사이의 값으로 바꿀수 있다(Window 객체 자체에서는 동작하지 않는다.)
+
+그래픽 변환에 관한 자세한 논의는 이 책의 29장으로 미룬다. 단 다음 구문을 보면 비트맵을 회전시키는 것이 얼마나 쉬운지를 알 수 있다. 
+
+img.LayoutTransform = new RotateTransform(45);
+
+Image 클래스에는 그 자체의 Background나 Foreground 프로퍼티는 없다. 
+
+이 프로퍼티는 Control 클래스에 정의돼 있지만 Image는 Control을 상속받지 않기 때문이다. 처음에는 이 점이 약간 혼돈스러울 수 있다. 이전의 윈도우 애플리케이션 프로그래밍 인터페이스에서는 화면상의 모든 것들을 컨트롤로 간주했었다. 
+
+그러나 지금은 그렇지가 않다. 컨트롤은 실제로 보이는 객체이며, 주로 사용자 입력에 대해 피드백을 준다는 특징을 갖고 있다. 물론 Image와 같은 엘리먼트는 사용자 입력을 받을 수는 있다. 모든 키보드, 마웃, 스타일러스 펜 이벤트는 UIElement 에 정의돼 있기 때문이다. 
+
+System.Windows.Shapes 네임스페이스를 살펴보자. 여기에는 Shape라는 추상 클래스와 이를 상속받은 여섯 개의 다른 클래스가 정의돼 있다.아래 계층도와 같이 이 클래스들은 FrameworkElement를 거쳐 UIElement를 상속받고 있다. 
+
+Object
+	DispatcherObject(abstract)
+		DependencyObject
+			Visual(abstract)
+				UIElement
+					FrameworkElement
+						Shape(abstract)
+							Ellipse
+							Line
+							Path
+							Polygon
+							Polyline
+
+Image는 표준 방식으로 래스터 이미지를 화면에 출력하지만 Shape 클래스는 이차원 벡터 그래픽을 구현한다. 다음 프로그램은 Ellipse 타입의 객체를 생성한다 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+class ShapAnEllipse : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ShapeAnEllipse());
+	}
+	public ShapeAnEllipse()
+	{
+		Title = "Shape an Ellipse";
+		
+		Ellipse elips = new Ellipse();
+		ellips.Fill = Brushes.AliceBlue;
+		ellipse.StrokeThickness = 24; //1/4인치
+		ellips.Stroke = new LinearGradientBrush(Colors.Blue, Colors.Chocolate, new Point(1, 0),new Point(0, 1));
+		Content = ellips;
+	}
+}
+
+
+이 프로그램은 클라이언트 영역에 타원을 그린다. 타원의 경계는 1/4인치의 두께이며 그라디언트 브러시로 칠한다. 내부는 Alice Blue라는 색의 브러시로 칠한다. 
+
+Shape 클래스나 Ellipse 클래스 모두 타원의 크기와 관련된 프로퍼티는 따로 없으나, Ellipse 클래스에는 FrameworkElement에서 상속받은 Width와 Height 프로퍼티가 있다. 다음과 같이 대입해보자. 
+
+ellips.Width = 300;
+ellips.Height = 300;
+
+Image 에서처럼 HorizontalAlignment와 VerticalAlignment프로퍼티를 설정해서 타워의 위치를 지정할 수 있다. 즉 가로는 중앙이나 왼쪽/오른쪽을, 세로는 위/아래로 정할수 있다. 
+
+다음은 이런 예를 나타낸다. 
+
+ellips.HorizontalAlignment = HorizontalAlignment.Left;
+ellips.VerticalAlignment = VerticalAlignment.Bottom;
+
+HorizontalAlignment와 VerticalAlignment 열거형에는 모두 Center란 멤버가 있고, Stretch란 멤버도 있으며, 많은 엘리먼트에서 Stretch가 기본값이다. Ellipse의 기본값도 Stretch인데, 처음에 타원이 클라이언트 영역을 가득 채운 이유가 바로 이 때문이다. 즉 엘리먼트를 컨테이너의 경계까지 늘리는 것이다. 
+
+사실 HorizontalAlignment와 VerticalAlignment 를 Stretch가 아닌 다른 값으로 설정하고 Width와 Height 프로퍼티를 특정 값으로 설정하면 타원의 직경을 1/4인치 정도로 줄일 수 있다. 
+
+Width와 Height 프로퍼티를 설정하지 않고 특정 범위의 크기로 제한하기 위해서 MinWidth, MaxWidth, MinHeight, MaxHeight 프로퍼티(모두 FrameworkElement 에서 상속)중에서 일부나 모두를 설정한다. 기본값은 정의되지 않은 상태다. Window 의 생성자 부분을 제외하면 어느 시점에라도 타원의 실제 크기를 얻을 수 있다. 이는 읽기 전용인 ActualWidth와 ActualHeight 프로퍼티를 참조하면 된다. 
+
+Window의 컨텐트에서도 그랬지만 엘리먼트의 크기에 대해서 조금 강박적으로 다루는 것처럼 보일 수 있겠으나, 그만큼 중요한 주제이기 때문이다. 아마도 기존에는 컨트롤이나 그래픽 객체에 특정한 값을 직접 할당해 왔을 것이다. 그러나 WPF에서는 그렇게 하지 않고 객체의 크기를 어떤 형태로 보여줄 것인가에 대해 느낌을 갖는 것이 중요하다. 
+
+Ellipse 클래스에는 클라이언트 영역의 특정한 곳에 타원을 위치시킬 수 있는 프로퍼티가 없다. 가장 비슷하게 할 수 있는 방법은 HorizontalAlignment와 VerticalAlignment프로퍼티를 설정하는 것이다. 
+
+2장에서 Window의 Content 프로퍼티에 텍스트 문자열을 어떻게 설정하는지, 텍스트의 폰트는 어떻게 설정하는지에 대해 살펴본 바 있다. 그러나 Content 프로퍼티에 직접 대입한 텍스트는 단일한 형식이었다. 즉 특정 단어에 대해서만 폰트를 굵게(볼)하거나 기울임꼴(이탤릭)로 할 수는 없었다 
+
+이를 가능하게 하려면 Content 프로퍼티에 문자열을 대입하는 대신에 TextBlock 타입의 객체를 대입해야 한다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Documents;
+
+class FormatTheText : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new FormatTheText());
+	}
+	public FormatTheText()
+	{
+		Title = "Format the Text";
+		
+		TextBlock txt = new TextBlock();
+		txt.FontSize = 32; // 24포인트
+		txt.Inlines.Add("This is some ");
+		txt.Inlines.Add(new Italic(new Run("italic")));
+		txt.Inlines.Add(" text, and this is some ");
+		txt.Inlines.Add(new Bold(new Run("bold")));
+		txt.Inlines.Add(" text, and let's cap it off with some ");
+		txt.Inlines.Add(new Bold(new Italic(new Run("bold italic"))));
+		txt.Inlines.Add(" text. ");
+		txt.TextWrapping = TextWrapping.Wrap;
+		Content = txt;
+	}
+}
+
+이 프로그램에서 처음으로 TextBlock 객체를 명시적으로 생성하고 있지만 사실 전에도 한번 나온 적이 있다. Content 프로퍼티에 문자열을 대입할 때 ContentControl(Window가 상속받음)이 TextBlock 타입의 객체를 생성한 것으로 화면에 문자열을 실제로 출력하기 위한 것이다. TextBlock 클래스는 FrameworkElement를 직접 상속받는다. 여기에는 InlineCollection타입의 Inlines 라는 프로퍼티가 정의돼 있는데 Inline 객체의 컬렉션이다. 
+
+TextBlock 은 System.Windows.Controls 네임스페이스에 있지만 Inline은 System.Windows.Documents에 있다. Inline은 심지어 UIElement 를 상속받지도 않는다. 다음은 Inline과 그 일부를 보여주는 클래스 계층도다. 
+
+
+Object
+	DispatcherObject(abstract)
+		DependencyObject
+			ContentElement
+				FrameworkContentElement
+				TextElement(abstract)		
+				Inline(abstract)
+					Run
+					Span
+						Bold
+						Hyperlink
+						Italic
+						Underline
+
+이 클래스 계층도를 보면 앞에서 보아온 것들보다 다소 병렬적인 구조라고 느낄 것이다. ContentElement와 FrameworkContentElement 클래스는 UIElement와 FrameworkElement 클래스와 유사하다. 그러나 ContentElement 클래스에는 OnRender 메소드가 없다. 그래서 ContentElement를 상속받은 클래스들의 객체는 화면상에서 단독적으로는 그려지지 않는다. 대신 OnRender 메소드가 제공되는 UIElement를 상속받은 클래스를 통해 화면상에 그려질 수 있는 시각적 화면(visual representation)을 얻게 된다. 
+
+더 구체적으로 말하면 Bold와 Italic 타입의 객체는 스스로 그려지지 않는다. FormatTheText 프로그램을 보면 이 Bold와 Italic 객체는 TextBlock 객체를 통해서 그려지고 있다. 
+
+ContentElement와 ContentControl을 혼동해서는 안 된다. ContentControl은 Window와 같은 컨트롤이며 Content 프로퍼티도 있다. ContentControl객체는 Content 프로퍼티가 null일지라도 화면상에 그려질 수 있다. 그러나 ContentElement 객체는 그려지는 다른 엘리먼트의 일부분이 된다(즉 Content)
+
+FormatTheText 프로그램은 TextBlock 의 Inlines 컬렉션을 추가하는 데 대부분을 할당하고 있다. InlineCollection 클래스에는 Add 메소드가 구현돼 있어서 문자열이나 Inline, UIElement 객체를 추가할 수 있다. 그러나 Bold와 Italic 의 생성자에는 문자열을 쓸 수 없고 오직 Inline 객체만을 받기 때문에 각 Bold와 Italic 객체에 대해 Run 생성자를 먼저 사용한다. 
+
+TextBlock의 FontSize 프로퍼티를 다음과 같이 지정한다. 
+
+txt.FontSize = 32;
+
+Window의 FontSize를 설정해도 똑같이 동작한다. 
+
+FontSize = 32;
+
+Window의 Foreground 프로퍼티를 설정하면 TextBlock의 텍스트가 지정된 색으로 출력된다. 
+
+Foreground = Brushes.CornflowerBlue;
+
+화면상의 엘리먼트들은 부모-자식 계층도라는 트리 형태로 존재한다. Window는 TextBlock의 부모가 되고, TextBlock은 몇 가지 Inline 엘리먼트의 부모가 된다. 
+
+이 엘리먼트들은 부모 엘리먼트에게서 Foreground 프로퍼티 값과 폰트와 관련된 모든 프로퍼티 값들을 계승한다. 단 자식 엘리먼트에서 원하는 프로퍼티를 명시적으로 설정할 수 있다. 
+이에 대해서는 8장에서 더 자세히 살펴 볼 것이다. 
+
+UIElement 클래스처럼 ContentElement 클래스에는 많은 사용자 입력 이벤트가 정의돼 있다. TextBlock 의 텍스트를 이루는 개별 Inline 엘리먼트에 이벤트 핸들러를 붙이는 것도 가능하다. 다음 프로그램에서 이런 기법을 배울 수 있다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Documents;
+
+public class ToggleBoldAndItalic : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ToggleBoldAndItalic());
+	}
+	public ToggleBoldAndItalic()
+	{
+		Title = "Toggle Bold & Italic";
+		TextBlock text = new TextBlock();
+		text.FontSize = 32;
+		text.HorizontalAlignment = HorizontalAlignment.Center;
+		text.VerticalAlignment = VerticalAlignment.Center;
+		Content = text;
+
+		string strQuote = "To be, or not to be, that is the question";
+		string[] strWords = strQuote.Split();
+
+		foreach(string str in strWords)
+		{
+			Run run = new Run(str);
+			run.MouseDown += RunOnMouseDown;
+			text.Inlines.Add(run);
+			text.Inlines.Add(" ");
+		}
+	}
+	void RunOnMouseDown(object sender, MouseButtonEventArgs args)
+	{
+		Run run = sender as Run;
+
+		if(args.ChangedButton == MouseButton.Left)
+			run.FontStyle = run.FontStyle == FontStyles.Italic ? FontStyles.Normal : FontStyles.Italic;
+		if(args.ChangedButton == MouseButton.Right)
+			run.FontWeight = run.FontWeight == FontWeights.Bold ? FontWeights.Normal : FontWeights.Bold;
+	}
+}
+
+생성자에서는 햄릿에 나오는 대사를 단어로 분리해서 각 단어로 Run 객체를 생성하고, 이를 TextBlock 객체의 Inlines 컬렉션에 추가한다. 이와 함께 각 Run 객체의 MouseDown 이벤트에 대한 RunMouseDown 핸들러를 붙인다. 
+
+Run 클래스는 TextElement 클래스에서 FontStyle과 FontWeight를 상속받는데, 마우스 버튼을 클릭하면 이벤트 핸들러에서 이 세가지 프로퍼티를 변경한다. 왼쪽 버튼을 클릭하면 FontStyle 이 FontStyles.Italic 일 경우에는 FontStyles.Normal로 바꾸고, FontStyles.Normal인 경우에는 FontStyles.Italic 으로 바꾼다. 오른쪽 클릭일 경우에는 같은 방식을 써서 FontWeight의 값을 FontWeights.Normal이나 FontWeights.Bold로 전환한다. 
+
+앞서 Content 프로퍼티에는 UIElement 를 상속한 클래스의 인스턴스가 대입돼야 한다고 언급한 적이 있다. 클래스에 OnRender라는 메소드가 정의돼야 화면상에 객체가 보일 수 있기 때문이다. 이번 장의 마지막 프로그램 이름은 RenderTheGraphic이며, 두 개의 소스 코드 파일이 있다. 첫 번째 파일은 커스텀(Custom)엘리먼트를 정의하는 클래스이고, 두 번재 파일에서는 그 클래스의 인스턴스를 Content에 설정한다. 다음의 클래스는 FrameworkElement를 상속받는다. FrameworkElement는 UIElement를 직접 상속받는 유일한 클래스다. 중요한 메소드인 OnRender 메소드를 오버라이딩해 DrawingContext객체를 얻어오며, 이 객체는 DrawEllipse 메소드를 이용해 타원을 그릴 때 사용된다. 이 클래스는 System.Windows.Shapes 네임스페이스에 있는 Ellipse 클래스를 간단하게 흉내 내고 있다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Media;
+
+class SimpleEllipse : FrameworkElement
+{
+	protected override void OnRender(DrawingContext dc)
+	{
+		dc.DrawEllipse(Brushes.Blue, new Pen(Brushes.Red, 24), new Point(RenderSize.Width / 2, RenderSize.Height /2),
+			RenderSize.Width / 2, RenderSize.Height / 2);
+	}
+}
+
+OnRender가 호출되기 전에 RenderSize 프로퍼티가 정해지는데 이는 Width와 Height 설정 클래스와 그 클래스가 나타날 컨테이너간의 조율을 통해 결정된다 
+
+예전 방식의 윈도우 프로그래밍에 경험이 있다면 이 메소드에서 화면에 직접 타원을 그릴 것이라고 추측하겠지만 그렇지 않다. 최종 시점에서 화면에 타원을 그릴수 있게 DrawEllipse의 인자들을 보관한다. 이 최종 시점 이라는 것이 바로 지금이 될 수도 있겠지만 다양한 곳에서 이 그래픽을보관하고 또 화면상에서 이를 조합하는 것이 WPF가 그래픽의 마술을 보여줄 수 있는 이유이다. 
+
+다음은 SimpleEllipse 객체를 생성해서 Content 프로퍼티에 대입하는 프로그램이다. 
+
+using System;
+using System.Windows;
+
+class RenderTheGraphic : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new RenderTheGraphic());
+	}
+	public RenderTheGraphic()
+	{
+		Title = "Render the Graphic";
+		SimpleEllipse elips = new SimpleEllipse();
+		Content = elips;
+	}
+}
+
+타원이 클라이언트 영역을 채울 것이다. 물론 SimpleEllipse의 Width와 Height 프로퍼티, HorizontalAlignment , VerticalAlignment 프로퍼티를 조정해가면서 시험해 볼 수 있다. 
+
+3장에서는 System.Windows.Control 네임스페이스의 엘리먼트들을 사용했고, Control 을 상속받는 다른 클래스(물론 Window는 예외)는 사용하지 않았다. 컨트롤은 사용자로부터 입력을 받고, 그 입력으로 무엇인가를 하기 위해 만들어졌다. 4장에서는 이에 대해 살펴볼 것이다. 
