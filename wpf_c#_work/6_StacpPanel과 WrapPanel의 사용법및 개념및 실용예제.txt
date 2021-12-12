@@ -1,0 +1,541 @@
+CHAPTER 05 : StackPanel과 WrapPanel
+
+ContentControl 클래스를 상속받은 컨트롤(Window, Button, Label, ToolTip 등)에는 Content라는 프로퍼티가 있어서 거의 모든 객체를 여기에 대입할 수 있다. 일반적으로 이 객체는 문자열 또는 UIElement 를 상속받은 클래스의 인스턴스가 된다. 그러나 문제는 Content에 오직 하나의 객체만 지정할수 있다는 것인데, 간단한 버튼이라면 몰라도 Window의 경우에는 확실히 부족하다. 
+
+다행스럽게 WPF에는 이문제를 해결하기 위해 몇 개의 클래스가 설계돼 있다. 이들을 패널(panel)이라고 부르고, 컨트롤과 엘리먼트들을 패널에 붙이는 작업은 과학이자 예술이라고 할 수있는데, 이를 레이아웃(lay out)이라고 한다. 
+
+패널은 Panel 클래스를 상속한다. 아래는 클래스 계층도의 일부로, 가장 중요한 Panel의 파생 클래스를 보여준다. 
+
+UIElement
+	FrameworkElement
+	Panel (abstract)
+		Canvas
+		DockPanel
+		Grid
+		StackPanel
+		UniformGrid
+		WrapPanel
+
+패널은 비교적 최근에 등장한 개념으로 창을 사용하는 그래픽 환경에서 사용되는 개념이다. 전통적인 윈도우 프로그램에서는 창이나 대화상자에 컨트롤을 붙일 때 크기와 위치를 구체적으로 지정했었다. 그러나 WPF에서는 동적 레이아웃(dynamic layout)에 많은 부분을 위임한다. 동적 레이아웃을 자동 레이아웃(automatic layout)이라고도 한다. 여러 레이아웃 모델에 기반해 엘리먼트들의 크기와 위치를 조정하는 것이 패널이다. Panel을 상속받은 클래스가 여러 가지인 이유는 각 클래스가 서로 다른 타입의 레이아웃을 지원하기 때문이다. 
+
+Panel에는 Children이란 프로퍼티가 있어서 자식 엘리먼트들을 저장할 수 있다. Children프로퍼티는 UIElementCollection 타입의 객체로 UIElement 객체들의 컬렉션이다. 그래서 패널의 자식으로 Image객체, Shape 객체, TextBlock 객체, Control 객체등을 모두 사용할수 있다. 또한 패널의 자식으로 다른 패널도 가능하다. 창에 다양한 엘리먼트를 넣기 위해 패널을 사용하듯이 다양한 엘리먼트를 버튼이나 그 밖의 ContentControl 객체에 넣기 위해서도 패널을 사용한다. 
+
+5장에서는 StackPanel과 WrapPanel에 대해 알아볼 것이다. StackPanel은 자식 엘리먼트를 수직이나 수평으로 정렬하며, WrapPanel은 StackPanel과 유사하지만 자식 엘리먼트가 다음 줄이나 다음 칸으로 줄 바꿈을 할 수 있다는 것에 차이가 있다. 
+
+6장에서는 DockPanel을 다루는데, 이는 엘리먼트의 위치를 그 부모의 영역 내에서 자동적으로 조정한다. Grid는 가로 세로의 그리드(grid)내에 자식들을 위치시킨다. UniformGrid는 Grid와 유사하지만 Grid와는 달리 모든 행의 높이가 같고 모든 열의 폭이 같다. 
+
+7장에서는 Canvas에 대해 살펴볼 것이다. Canvas는 엘리먼트의 위치 좌표를 직접 지정하는 방식이다. 물론 Canvas 패널은 전통적인 레이아웃에 가장 가깝지만 결과적으로 다섯 가지 중에서는 사용 빈도가 가장 적을 것이다. 
+
+자동 레이아웃이 WPF의 중요한 기능이긴 하지만 아무렇게나 막 사용하는 것은 아니다. 거의 매번 엘리먼트의 특정 프로퍼티를 조정해 미적 감각을 발휘해야 한다. 이때 자주 사용되는 프로퍼티는 HorizontalAlignment, VerticalAlignment, Margin, Padding이다. 
+
+다음 프로그램은 Content 프로퍼티에 StackPanel 을 지정한 후 10개의 버튼을 생성하고 이 버튼들을 지정된 패널의 자식이 되도록 한다. 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class StackTenButtons : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new StackTenButtons());
+	}
+	public StackTenButtons()
+	{
+		Title = "Stack Ten Buttons";
+		
+		StackPanel stack = new StackPanel();
+		Content = stack;
+
+		Random rand = new Random();
+
+		for(int i=0; i<10; i++)
+		{
+			Button btn = new Button();
+		
+			btn.Name = ((char)('A' + i)).ToString();
+			btn.FontSize += rand.Next(10);
+			btn.Content = "Button " + btn.Name + " says 'Click me'";
+			btn.Click += ButtonOnClick;
+
+			stack.Children.Add(btn);
+		}
+	}
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		Button btn = sender as Button;
+
+		MessageBox.Show("Button " + btn.Name + " has been clicked", "Button Click");
+	}
+}
+
+이 프로그램에서는 Random 타입의 객체를 생성한 후 난수를 발생시키고 이 난수를 각 버튼의 FontSize 프로퍼티에 더한다. 그리고 다음과 같이 각 버튼을 StackPanel의 Children 컬렉션에 추가한다. 
+
+stack.Children.Add(btn);
+
+각 버튼 마다 약간 다른 FontSize 를 주었는데, 서로 다른 크기의 엘리먼트에 대해 StackPanel이 어떻게 동작하는지를 보여주기 위해서다. 프로그램을 실행시키면 버튼들이 위에서 부터 Children 컬렉션에 추가된 순서대로 정렬된 모습을 볼 수 있을 것이다. 각 버튼은 컨텐트를 출력하기 알맞은 높이로 조정된다. 반면에 버튼의 폭은 StackPanel의 폭에 맞게 늘어나는데, 이는 클라이언트 영역 전체에 해당한다. 
+
+눈으로 StackPanel의 크기를 확인하고 싶으면 StackPanel의 Background 브러시를 지정해서 알 수 있다. 다음 구문으로 시험해보자. 
+
+stack.Background = Brushes.Aquamarine;
+
+기본값으로 StackPanel은 자식들을 수직 방향으로 정렬한다. Orientation 프로퍼티를 설정하면 이를 변경할 수 있다. 
+
+stack.Orientation = Orientation.Horizontal;
+
+이제 각 버튼이 컨텐트에 맞게 폭이 조정되고, 높이는 패널의 높이에 맞게 조정되는 것을 확인할 수 있다. 모니터의 크기에 따라 다르긴 하겠지만 버튼을 모두 출력하지 못할 만큼 창이 작으면 일부 버튼은 잘린 채로 출력될 것이다. 예제의 나머지 부분을 살펴보기 위해 다시 수직 방향으로 되돌리자. 물론 다음의 설명들은 Horizontal과 Vertical을 바꾸기만 하면 수직, 수평 방향 모두에 해당된다. 
+
+버튼의 폭이 창의 폭에 가득 찰만큼 늘어나는 것은 일반적이지 않다. for 루프안에 있는 각 버튼의 HorizontalAlignment 프로퍼티 설정을 다음과 같이 변경해서 폭을 줄일 수 있다. 
+
+btn.HorizontalAlignment = HorizontalAlignment.Center;
+
+StackPanel은 아직도 클라이언트 영역을 가득 채우고 있지만 각 버튼은 적당한 크기로 조정됐다. StackPanel 자체에 있는 HorizontalAlignment도 설정할 수 있다. 다음과 같이 해보자. 
+
+stack.HorizontalAlignment = HorizontalAlignment.Center;
+
+이제는 StackPanel의 크기도 포함된 버튼 중에 가장 넓은 버튼의 폭에 맞게 변경됐다. 
+
+StackPanel의 배경색을 통해 버튼의 HorizontalAlignment를 설정했을 때와 패널의 HorizontalAlignment를 설정했을 때의 미묘한 차이를 확인할수 있다. 각 버튼의 HorizontalAlignment를 Center로 했을 때는 버튼의 폭이 그 컨텐트의 내용에 맞게 결정되며, StackPanel의 HorizontalAlignment를 Center로 했을 때는 패널의 폭이 가장 긴 버튼의 폭과 같게 된다. 이때에는 각 버튼의 HorizontalAlignment 프로퍼티가 여전히 Stretch이므로 StacpPanel 만큼 폭이 늘어나게 된다. 결과적으로 모든 버튼은 같은 폭을 갖게 된다. 
+
+아마도 가장 만족할만한 해결책은 패널이나 버튼의 HorizontalAlignment 프로퍼티를 설정하는 것을 보류하고, 창의 크기를 컨텐트에 맞게 바꾸는 것이 될 수 있다. 
+
+SizeToContent = SizeToContent.WidthAndHeight;
+ResizeMode  = ResizeMode.CanMinimize;
+
+이렇게 하면 창의 크기가 컨텐트인 StackPanel 의 크기에 맞게 바뀐다. StackPanel의 크기는 가장 폭이 큰 버튼에 맞추어져 있다. 모든 버튼이 같은 폭을 가지게 하거나 컨텐트에 맞는 크기를 갖게 할 수도 있다. 이것은 미적인 결정 사항이며 각 버튼의 HorizontalAlignment프로퍼티를 어떻게 설정하는가에 따라 선택할 수 있다. 
+
+어느 쪽을 선택한다 해도 그것은 취향의 문제가 되겠지만 모든 버튼이 다닥다닥 붙어있는 것은 그리 좋아 보이지만 않는다 다음과 같이 해서 각 버튼의 주위에 여백을 줄 수 있다. 
+
+btn.Margin = new Thickness(5);
+
+훨씬 나아졌다. 각 버튼은 주위에 장치 독립적 단위로 5(약 1/20인치)만큼의 여백이 생겼다. 그럼에도 필자와 같이 깐깐한 사람들에게는 아직 만족할 수 없는 사소한 것이 남아있다. 각 버튼에는 네 경계 모두에 1/20인치의 여백이 있으므로 버튼 사이의 거리는 1/10인치가 된다. 그러나 창과 버튼 사이의 간격은 그대로 1/20인치이다. 그래서 패널 자체에 있는 여백도 설정해 균형을 맞추려 한다. 
+
+stack.Margin = new Thickness(5);
+
+이제 StackPanel의 배경 브러시를 제거하면 멋진 프로그램이 된다(비록 수행하는 것은 없지만), 각 Button의 Content에 텍스트를 지정할 때 그전에 먼저 Button의 Name 프로퍼티에 "A", "B", "C"등으로 짧은 텍스트 문자열을 대입했음을 눈여겨보자. 이 Name문자열은 나중에 FrameworkElement에 정의된 FindName 프로퍼티를 불러서 객체를 얻는데 사용할 수 있다. 다음 예를 보자. 어떤 이벤트 핸들러나 다른 메소드에서 다음과 같은 구문을 사용할 수 있다. 
+
+Button btn = FindName("E") as Button;
+
+Window의 FindName 메소드를 호출했으나 메소드에서는 Window의 Content와 StackPanel을 통해 재귀적으로 찾아낸다. 
+
+패널의 Children 프로퍼티에는 인덱스를 사용할 수 있다. 다음 표현식은 Children 컬렉션에 추가된 여섯 번째 엘리먼트를 반환한다. 
+
+stack.Children[5]
+
+UIElementCollection 클래스에는 자식 엘리먼트를 처리하는데 도움이 되는 몇 가지 메소드가 있다. 이 el이 컬렉션에 있는 엘리먼트라면 다음의 표현식은 컬렉션에 있는 엘리먼트의 인덱스를 반환한다. 
+
+stack.Children.IndexOf(el)
+
+컬렉션에 없는 엘리먼트라면 -1이 반환된다. 또한 UIElementCollection에는 특정 인덱스에 엘리먼트를 추가하거나 엘리먼트를 삭제하는 메소드도 있다. 
+
+StackTenButtons 프로그램의 ButtonOnClick과 같은 이벤트 핸들러에서는 때로 그 이벤트를 발생시킨 객체를 얻어야 할 필요가 있다. 지금까지 사용한 기법은 전통적인 .NET 접근법이었다. 이벤트 핸들러의 첫 번째 인자(보통 이름이 sender)는 다음과 같이 정확한 타입의 객체로 형 변환해야 한다. 
+
+Button btn = sender as Button;
+
+그러나 StackTenButtons에서는 sender 인자를 무시하고, 이벤트 핸들러의 두 번째 인자인 RoutedEventArgs 객체의 프로퍼티를 이용했다. 
+
+Button btn = args.Source as Button;
+
+예제 프로그램에서는 이렇게 해도 문제가 되지 않는다. RoutedEventArgs의 Source프로퍼티로 얻을 수 있는 Click 이벤트의 출처와 실제 이벤트를 보내는 객체가 같기 때문이다. 즉 이벤트 핸들러를 붙인 객체와 sender 인자를 통해 얻는 객체가 일치한다는 의미이다. 이벤트를 일으키는 엘리먼트에 이벤트 핸들러를 붙인다면 이 두 값은 같게 된다. 
+
+그러나 이벤트 처리를 다르게 하면 이 두 값이 달라진다. 이를 시험해 보기 위해 먼저 for 루프에서 각 버튼의 Click 이벤트에 이벤트 핸들러를 설정하는 부분을 주석 처리한다. 그리고 for 루프의 바깥인 생성자의 가장 마지막 부분에 다음 구문을 추가해보자. 
+
+stack.AddHandler(Button.ClickEvent, new RoutedEventHandler(ButtonOnClick));
+
+AddHandler 메소드는 UIElement에 정의돼 있다. 첫번째 인자는 RoutedEvent 타입의 객체여야 한다. ClickEvent는 ButtonBase에 정의돼 있는 RoutedEvent타입의 정적 읽기 전용 필드다. Button은 ButtonBase를 상속받는다. 두번째 인자는 이 이벤트에 붙이고 싶은 이벤트 핸들러를 가리킨다. 단 이벤트 핸들러의 위임자를 생성자 형태로 지정해야 한다. 이 경우에는 RoutedEventHandler이다. 
+
+이렇게 AddHandler를 호출하면 StackPanel이 그 모든 자손들에 대해 Button.ClickEvent타입의 이벤트 발생을 감시하게 되며, 이벤트 핸들러로는 ButtonOnClick를 사용하게 된다. 다시 컴파일 해서 실행하면 이벤트 핸들러를 통해 약간 다른 정보가 들어온다는 점을 제외하고는 동일한 동작을 수행한다. 즉 RoutedEventArgs의 Source 프로퍼티는 여전히 Button객체이지만 sender인자는 이제 StackPanel 객체가 된다. 
+
+StackPanel의 AddHandler를 호출하지 안혹 다음과 같은 방법으로 window 자체의 AddHandler를 호출할 수도 있다 
+
+AddHandler(Button.ClickEvent, new RoutedEventHandler(ButtonOnClick));
+
+이렇게 하면 같은 이벤트 핸들러가 Window의 자손에 해당하는 모든 Button 객체에 적용될 것이다. 이벤트 핸들러의 sender 인자는 이제 Window 객체가 된다. 
+
+이벤트의 라우팅에 대해서는 9장에서 더 자세히 살펴볼 것이다. 
+
+패널은 중첩될 수 있다. 다음은 30개의 버튼을 3칸 10줄로 출력하는 프로그램이다. 여기에서 는 4개의 StackPanel 객체를 사용한다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class StackThirtyButtons : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new StackThirtyButtons());
+	}
+	public StackThirtyButtons()
+	{
+		Title = "Stack Thirty Buttons";
+		SizeToContent = SizeToContent.WidthAndHeight;
+		ResizeMode = ResizeMode.CanMinimize;
+		AddHandler(Button.ClickEvent, new RoutedEventHandler(ButtonOnClick));
+		StackPanel stackMain = new StackPanel();
+		stackMain.Orientation = Orientation.Horizontal;
+		stackMain.Margin = new Thickness(5);
+		Content = stackMain;
+
+		for(int i=0; i<3; i++)
+		{
+			StackPanel stackChild = new StackPanel();
+			stackMain.Children.Add(stackChild);
+			for(int j=0; j<10; j++)
+			{
+				Button btn = new Button();
+				btn.Content = "Button No. " + (10 * i + j + 1);
+				btn.Margin = new Thickness(5);
+				stackChild.Children.Add(btn);
+			}
+		}
+	}
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		MessageBox.Show("You clicked the button labeled " + (args.Source as Button).Content);
+	}
+}
+
+생성자의 앞부분에서 AddHandler를 호출했음을 확인하자. 모든 버튼은 같은 Click 이벤트 핸들러를 공유한다. 생성자에서 클라이언트 영역을 가득 채우는 수평 방향인 1개의 StackPanel을 생성하며, StackPanel은 다른 3개의 StackPanel의 부모가 된다. 이 자식 StackPanel은 수직 방향이며, 각기 10개의 버튼을 가진다. 버튼과 처음의 StackPanel은 장치 독립적 단위 5의 Margin을 주었고 창은 이들 결과에 맞게 크기가 조정된다. 
+
+더 많은 버튼을 추가해야할 때면 난처해하며 이렇게 말할 것이다. 이런 버튼이 많이 필요한데 화면이 너무 부족해요. 이 시점에서는 스크롤바가 필요할 것이다. 
+
+구체적으로 말하면 스크롤바보다는 ScrollViewer 클래스의 인스턴스라는 표현이 더 정확하다. Window나 ButtonBase처럼 ScrollViewer도 ContentControl을 상속받는다. 차이점은 ScrollViewer의 컨텐트가 너무 커서 그 컨트롤에 모두 출력하지 못할 경우 스크롤이 가능해진다는 점이다. 
+
+다음 프로그램에서는 Window의 Content 프로퍼티에 ScrollViewer 타입의 객체를 넣고, ScrollViewer의 Content 프로퍼티에는 50개의 버튼이 있는 StackPanel을 대입한다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class ScrollFiftyButtons : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ScrollFiftyButtons());
+	}
+	public ScrollFiftyButtons()
+	{
+		Title = "Scroll Fifty Buttons";
+		SizeToContent = SizeToContent.Width;
+		AddHandler(Button.ClickEvent, new RoutedEventHandler(ButtonOnClick));
+		ScrollViewer scroll = new ScrollViewer();
+		Content = scroll;
+
+		StackPanel stack = new StackPanel();
+		stack.Margin = new Thickness(5);
+		scroll.Content = stack;
+
+		for(int i=0; i< 50; i++)
+		{
+			Button btn = new Button();
+			btn.Name = "Button" + (i+1);
+			btn.Content = btn.Name + " says 'Click me'";
+			btn.Margin = new Thickness(5);
+
+			stack.Children.Add(btn);
+		}
+	}
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		Button btn = args.Source as Button;
+		if(btn != null)
+			MessageBox.Show(btn.Name + " has been clicked", "Button Click");
+	}
+}
+
+창(또는 모니터)이 50개의 버튼을 모두 출력할 정도로 크지 않다면 세로 스크롤바를 이용해 스크롤을 할 수 있다. VerticalScrollBarVisibility 프로퍼티의 기본값은 ScrollBarVisibility.Visible 이라는 열거형 멤버로서 스크롤바가 항상 표시되게 함을 의미한다. 단, 스크롤바가 필요하지 않을 경우에는 비활성화 된다. 
+
+HorizontalScrollBarVisibility 프로퍼티의 기본 설정은 ScrollBarVisibility.Disabled 이며, 이는 스크롤바를 표시하지 않겠다는 의미이다. 
+
+대입할 수 있는 또다른 값으로는 ScrollBarVisibility.Auto가 있는데, 필요할 경우에만 스크롤바가 표시된다. VerticalScrollBar 프로퍼티에 이 멤버를 대입하고 버튼의 개수도 한 화면에 표시될 정도로 적당히 줄여보자. 스크롤바가 사라질 정도로 창의 크기를 늘려놓으면 모든 버튼의 폭이 늘어난다. 늘어날 수 있는 추가적인 공간이 생겼기 때문이다(물론 버튼의 HorizontalAlignment 프로퍼티를 HorizontalAlignment.Center로 설정하면 이런 현상이 일어나지 않는다)
+
+HorizontalScrollBarVisibility 프로퍼티에 ScrollBarVisibility.Visible이나 ScrollBarVisibility.Auto를 설정해보자. 그리고 창을 좁게 만들어 보면 가로 스크롤바가 생겨 오른쪽으로 스크롤이 가능할 것이다. 가로 스크롤바가 없는 상태에서 창이 좁아질 때는 ScrollViewer가 StacpPanel의 폭도 같이 줄인다. 이렇게 되면 StackPanel에 있는 버튼의 폭도 줄어들고버튼의 컨텐트도 잘리게 된다. 가로 스크롤바가 있는 경우에는 StackPanel에 필요한 폭이 확보되므로 폭이 줄어들지 않게 된다. 
+
+각 버튼의 Margin 프로퍼티에 5를 대입했고, StackPanel에도 같은 여백을 주었다. ScrollViewer의 Margin 프로퍼티는 설정하지 않았는데, 설정하면 스크롤바와 창에 여백이 생겨 매우 어색해 보이기 때문이다. 
+
+생성자의 시작 부분으로 돌아가서 SizeToContent 프로퍼티를 다음과 같이 설정해서 창의 크기를 컨텐트의 폭의 너비에만 맞추고 있음을 확인하자
+
+SizeToContent = SizeToContent.Width;
+
+SizeToContent.WidthAndHeight 로 설정하면 50개 버튼이 모두 출력되게 창의 크기를 조정하기 때문에 바람직하지 않다. 또한 ResizeMode 프로퍼티를 ResizeMode.CanMinimize로 설정하지 않았다. 그 값으로 설정하면 크기 조절 경계가 사라지며 창의 크기도 조절할 수 없게 된다. 
+
+Click 이벤트 핸들러는 기존과 약간 다른 것을 볼 수 있다. RoutedEventArgs의 Source 프로퍼티를 Button 객체로 형 변환한 후 그 결과가 null인지를 검사한다. Source가 실제 Button 객체가 아닌 경우는 결과가 null이 될 것이다. 이와 같은 검사가 없다면 어떻게 될까? 다음과 같이 해보자. if문을 주석 처리하고 다시 컴파일한다. 그리고 스크롤바의 끝에 있는 화살표를 클릭해보자. 프로그램이 Null 참조 예외 상황(Null Reference Exception)을 내면서 비 정상적으로 종료될 것이다. 
+
+이 문제를 조사해보면 RoutedEventArgs의 Source 프로퍼티가 ScrollBar 객체를 가리키기 때문에 발생한 문제임을 알게 될 것이다. ScrollBar 타입의 객체는 Button 타입의 객체로 형 변환될 수 없다. ScrollBar 컨트롤 관련 문서화 내용을 보면 심지어 Click 이벤트가 구현돼 있지도 않다는 사실을 알 수 있다. 그런데 왜 이 이벤트 핸들러에 ScrollBar 타입의 객체가 나타날까?
+
+RoutedEventArgs의 다른 프로퍼티인 OriginalSource를 검사하면 그 답을 알 수 있다. 때로 컨트롤은 다른 컨트롤들로 구성되기도 하는데, ScrollBar가 그 좋은 예다. 스크롤바의 양끝단 화살표는 RepeatButton 객체이며, 이 객체가 Click 이벤트를 발생한다. RoutedEventArgs의 OriginalSource 프로퍼티에는 실제 RepeatButton 타입의 객체가 저장돼 있다. 
+
+이벤트 핸들러를 부모 객체에 붙일 경우에는 이 예제를 기억해야 한다. 즉 이벤트 핸들러에 서 몇 가지 검사를 추가적으로 할 필요가 있다. 예제 프로그램에서의 또 다른 해결책은 Window가 아닌 StackPanel의 AddHandler를 호출하는 것이다. 
+
+스크롤바는 공간이 가진 크기보다 더 많은 엘리먼트를 수용하게 해주는 전통적인 해결법이었다. WPF에는 Viewbox라 부르는 또 하나의 해결책이 있다. 이를 시도해 보기 위해 ScrollFiftyButtons 프로그램에서 ScrollViewer와 관련된 세줄을 모두 주석 처리한다. 그리고 다음과 같이 Viewbox 타입의 객체를 생성하고, 생성한 객체의 Child 프로퍼티에 StackPanel을 대입해보자. 
+
+Viewbox view = new Viewbox();
+Content = view;
+view.Child = stack;
+
+이렇게 하면 StackPanel과 50개의 버튼 모두가 창의 크기에 맞게 줄어든다. 버튼 위의 텍스트도 줄게 되므로 최선의 방법이라고 할 수는 없지만 이런 방법도 있다는 것을 알아두자.
+
+지금까지는 창에 여러 개의 버튼을 넣는 방법에 대해 살펴보았다. StackPanel은 여러 개의 엘리먼트를 버튼에 넣을 때도 유용하다. 다음 프로그램은 하나의 버튼을 생성하는데, 그 버튼은 StackPanel 하나만 갖게 된다. 그 StackPanel에는 Image와 Label, 두 개의 Polyline객체 등을 자식으로 갖는다(Polyline은 Shape을 상속받는다.)
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+
+public class DesignAButton : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new DesignAButton());
+	}
+	public DesignAButton()
+	{
+		Title = "Design a Button";
+
+		//Button 을 생성하고, 컨텐트로 설정
+		Button btn = new Button();
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.VerticalAlignment = VerticalAlignment.Center;
+		btn.Click += ButtonOnClick;
+		Content = btn;
+		//StackPanel을 생성하고, Button의 컨텐트로 설정
+		StackPanel stack = new StackPanel();
+		btn.Content = stack;
+
+		//StackPanel에 Polyline을 추가
+		stack.Children.Add(ZigZag(10));
+
+		//StackPanel에 Image를 추가
+		Uri uri = new Uri("pack://application:,,/BOOK06.ICO"); //32픽셀
+		BitmapImage bitmap = new BitmapImage(uri);
+		Image img = new Image();
+		img.Margin = new Thickness(0, 10, 0, 0);
+		img.Source = bitmap;
+		img.Stretch = Stretch.None;
+		stack.Children.Add(img);
+
+		//StackPanel에 Label을 추가
+		Label lbl = new Label();
+		lbl.Content = "_Read books!";
+		lbl.HorizontalContentAlignment = HorizontalAlignment.Center;
+		stack.Children.Add(lbl);
+	
+		//StackPanel에 또 하나의 Polyline을 추가
+		stack.Children.Add(ZigZag(0));
+	}
+	Polyline ZigZag(int offset)
+	{
+		Polyline poly = new Polyline();
+		poly.Stroke = SystemColors.ControlTextBrush;
+		poly.Points = new PointCollection();
+
+		for(int x= 0; x <= 100; x += 10)
+			poly.Points.Add(new Point(x, (x + offset) % 20));
+		return poly;
+	}
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		MessageBox.Show("The button has been clicked", Title);
+	}
+}
+
+2개의 Polyline 객체는 ZigZag 메소드에서 생성된다. 두 객체 모두 지그재그의 같은 모양이 지만 방향은 반대이다. Image 엘리먼트는 책 모양의 작은 그림으로 비주얼 스튜디오 2005에서 배포되는 아이콘과 비트맵 모음에서 찾아낸 것이다. Image 엘리먼트에는 Polyline이 위치하는 위 방향에 대해서만 Margin 10으로 주었다. 
+
+Label 컨트롤에는 "Read books!"라는 텍스트가 있는데, R자 앞에 밑줄이 있음을 확인하자. Label 컨트롤은 버튼의 네 가지 엘리먼트 중 하나일 뿐이고, 심지어 제일 앞에 나오지도 않지만 이 밑줄 때문에 Alt + R 키를 누르면 버튼을누르는 효과가 생긴다. 
+
+50개나 30개, 심지어 10개의 버튼을 하나의 스택에다 만드는 것에 회의감이 들지도 모르겠다. 그런데 스택에 거의 항상 등장하는 타입의 버튼이 하나 있다 바로 라디오 버튼이다. 
+
+전통적으로 한 그룹으로 돼 있는 라디오 버튼들은 그룹 박스(group box)의 자식으로 지정하는데 그룹 박스란 단순하게경계선과 제목 텍스트로 구성된 컨트롤이다. WPF에서는 GroupBox컨트롤이고 HeaderedContentControl을 상속받는 세 클래스 중 하나다.다음의 계층도를 살펴보자. 
+
+Control
+	ContentControl
+		HeaderedContentControl
+			Expander
+			GroupBox
+			Tabitem
+
+HeaderedContentControl이 ContentContrl을 상속받았기 때문에 세 컨트롤 모두에는 Content 프로퍼티가 있다. 컨트롤에는 Header도 있는데, Content처럼 object 타입이다. GroupBox에는 HeaderContentControl에서 정의된 것 외에 추가적으로 정의된 것은없다. GroupBox의 상단에 잇는 제목은 Header 프로퍼티를 이용해 설정한다. 이 제목은 보통은 텍스트지만 원하는 무엇이라도 올 수 있다. GroupBox 의 내부는 Content 를 이용해 설정한다. 여기에 StackPanel을 넣으면 된다 
+
+TuneTheRadio 프로그램에서 네 개의 라디오 버튼을 StackPanel 형태로 그룹 박스에 넣는 방법을 배울 수 있다. 
+
+예제에서의 라디오 버튼은 Window의 WindowStyle 프로퍼티를동적으로 변경시키는 동작을 한다. 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class TuneTheRadio : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new TuneTheRadio());
+	}
+	public TuneTheRadio()
+	{
+		Title = "Tune the Radio";
+		SizeToContent = SizeToContent.WidthAndHeight;
+
+		GroupBox group = new GroupBox();
+		group.Header = "Window Style";
+		group.Margin = new Thickness(96);
+		group.Padding = new Thickness(5);
+		Content = group;
+
+		StackPanel stack = new StackPanel();
+		group.Content = stack;
+
+		stack.Children.Add(CreateRadioButton("No border or caption", WindowStyle.None));
+		stack.Children.Add(CreateRadioButton("Single-border window", WindowStyle.SingleBorderWindow));
+		stack.Children.Add(CreateRadioButton("3D-border window", WindowStyle.ThreeDBorderWindow));
+		stack.Children.Add(CreateRadioButton("Tool window", WindowStyle.ToolWindow));
+
+		AddHandler(RadioButton.CheckedEvent, new RoutedEventHandler(RadioOnChecked));
+	}
+	RadioButton CreateRadioButton(string strText, WindowStyle winstyle)
+	{
+		RadioButton radio = new RadioButton();
+		radio.Content = strText;
+		radio.Tag = winstyle;
+		radio.Margin = new Thickness(5);
+		radio.IsChecked = (winstyle == WindowStyle);
+
+		return radio;
+	}
+	void RadioOnChecked(object sender, RoutedEventArgs args)
+	{
+		RadioButton radio = args.Source as RadioButton;
+		WindowStyle = (WindowStyle)radio.Tag;
+	}
+}
+
+GroupBox에는 1인치의 여백(amrgin)을 주어 창의 배경이 조금 더 나타날 수 있게 했다. GroupBox에는 1/20인치의 패딩(padding)도 주었으며 (StackPanel의 Margin 프로퍼티에 같은 값을 주어도 된다) 라디오 버튼의 여백으로도 같은 값을 주었다. GroupBox 내에서 라디오 버튼끼리는 이제 1/10인치의 간격을 갖게 된다. CreateRadioButton 메소드를 통해 각 버튼의 Content에 텍스트 문자열을 주고 Tag 프로퍼티에는 문자열에 대응하는 WindowStyle 열거형의 멤버를 대입한다. 또한 라디오 버튼의 IsChecked 프로퍼티도 현재 WindowStyle 프로퍼티와 대응되게 설정하고 있음을 확인하자. 
+
+마우스나 키보드를 통해 라디오 버튼을 선택하면 다른 라디오 버튼은 자동으로 해제된다. 키보드를 사용한다면 커서 이동 키로 입력 포커스를 변경시킬 수 있고, Space Bar로 현재 포커스에 있는 버튼을 선택할 수 있다. 프로그램에서 해주어야 하는 것은 어떤 버튼이 선택됐는지를 계속 주시하는 것이다( 어떤 프로그램에서는 버튼이 해제된 시점을 알아야 할 필요도 있을 것이다)보통 가장 편리한 방법은 그룹 내의 라디오 버튼에 대해 같은 이벤트 핸들러를 사용하는 것이다. 이벤트 핸들러를만들때 IsChecked 프로퍼티가 이미 설정돼 있음을 기억하자. 
+
+라디오 버튼들은 둘이나 그 이상의 그룹으로 구성할 수 있다. 각 그룹에 대해서 하나의 라디오 버튼만이 선택될 수 있다. 이렇게 그룹을 구별하기 위해서는 RadioButton에 정의된 GroupName 프로퍼티를 사용해야 한다. GroupName에 각 그룹의 고유한 문자열을 지정하면 여러 개의 그룹은 선택과 해제의 동작이 자동으로 이루어진다. 이벤트 핸들러에서도 어떤 그룹에 영향을 미칠 것인지를 결정할 때 GroupName 프로퍼티를 사용할 수 있다. 
+
+StackPanel과 가장 유사한 패널은 WrapPanel 이다. WPF가 만들어지고 설계되는 여러 해동안 사실 WrapPanel이 StackPanel보다 먼저 만들어졌다. WrapPanel은 엘리먼트를 가로나 세로로 출력하며, 공간이 부족하면 자동적으로 다음 줄(다음 열)로 줄 바꿈을 한다. 매우 유용하게 들리지만 개발자들이 대부분 줄 바꿈 없이 WrapPanel을 사용하는 것으로 밝혀졌다. 이때 개발자들은 정말 필요한 것이 StackPanel이라는 사실을 알게 된 것이다. 
+
+WrapPanel은 출력해야 할 항목의 수를 미리 알 수 없을 때 유용하다.(윈도우 탐색기의 아이콘으로 보기가 좋은 예)이때 모든 항목은 같은 크기가 될 것이다. WrapPanel에서는 필수적이진 않지만 ItemHeight와 ItemWidth 프로퍼티가 있어서 강제로 균일한 크기를 지정할 수 있다. WrapPanel 의 마지막 프로퍼티는 Orientation이며, StackPanel과 같은 방식으로 사용한다. 
+
+ScrollViewer없이 WrapPanel을 사용한다는 것은 상상하기 어렵다. ScrollViewer를 사용해 몇 개의 버튼을 구성해서 윈도우 탐색기의 오른쪽 영역을 비슷하게 흉내 내어보자. 이 프로그램을 ExploreDirectories라 부르기로 하며 여기에는 두 개의 클래스가 있다. 다음은 그 첫번째 클래스다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class ExploreDirectories : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ExploreDirectories());
+	}
+	public ExploreDirectories()
+	{
+		Title = "Explore Directories";
+		ScrollViewer scroll = new ScrollViewer();
+		Content = scroll;
+		WrapPanel wrap = new WrapPanel();
+		scroll.Content = wrap;
+		wrap.Children.Add(new FileSystemInFoButton());
+	}
+}
+
+매우 단순해 보이지 않는가? Window의 컨텐트는 ScrollViewer가 되는 것이며, ScrollViewer의 컨텐트는 WrapPanel이 되고, WrapPanel은 하나의 자식을 갖는다. 바로 FileSystemInfoButton 타입의 객체다. 이버튼은 정말이지 뛰어난 역할을 한다. 
+
+System.IO의 FileSystemInfo 객체에 대해 FileSystemInfoButton이라고 이름 지었다. FileSystemInfo를 상속받은 두 클래스는 FileInfo와 DirectoryInfo다. FileSystemInfo 타입의 어떤 객체가 있을 때 그것이 파일인지 디렉토리인지는 is 연산자를 사용해 판별해 낼 수 있다. 
+
+FileSystemInfoButton 클래스는 Button을 상속받으며, 필드로 FileSysteminfo 객체를 갖고 있다. 또한 이 클래스에는 세 종류의 생성자가 있다. 단일 인자를 받는 것이 가장 많이 사용되는데, 필드에 저장될 FileSystemInfo 타입의 인자를 받는다. 생성자에서는 버튼의 Content를 이 객체의 Name 프로퍼티로 설정한다. 디렉토리 이름이나 파일 이름이 되며 이 객체가 DirectoryInfo라면 굵은 글꼴의 텍스트가 된다. 
+
+인자가 없는 생성자는 프로그램이 시작되어 WrapPanel의 첫 자식으로 추가될 때에만 사용된다. 이 생성자는 My Documents 디렉토리에 대한 DirectoryInfo 객체를 단일 인자 생성자로 넘긴다. 
+
+using System;
+using System.Diagnostics; //Process 클래스가 여기에 있음
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class FileSystemInfoButton : Button
+{
+	FileSystemInfo info;
+
+	//파라미터가 없는 생성자는 My Documents 버튼을 만든다. 
+	public FileSystemInfoButton() : this(new DirectoryInfo(Environment.GetFolderpath(Environment.SpecialFolder.MyDocuments)))
+	{
+	}
+	//인자 1개를 받는 생성자는 디렉토리 버튼이나 파일 버튼을 만든다. 
+	public FileSystemInfoButton(FileSystemInfo info)
+	{
+		this.info = info;
+		Content = info.Name;
+		if( info is DirectoryInfo)
+			FontWeight = FontWeights.Bold;
+		Margin = new Thickness(10);
+	}
+	//인자 2개를 받는 생성자는 상위 디렉토리 버튼을 만든다. 
+	public FileSystemInfoButton(FileSystemInfo info, string str) : this(info)
+	{
+		Content = str;
+	}
+	//OnClick을 오버라이딩해서 나머지 부분들을 처리
+	protected override void OnClick()
+	{
+		if(info is FileInfo)
+		{
+			Process.Start(info.FullName);
+		} else if(info is DirectoryInfo)
+		{
+			DirectoryInfo dir = info as DirectoryInfo;
+			Application.Current.MainWindow.Title = dir.FullName;
+		
+			Panel pnl = Parent as Panel;
+			pnl.Children.Clear();
+
+			if(dir.Parent != null)
+				pnl.Children.Add(new FileSystemInfoButton(dir.Parent, ".."));
+			foreach(FileSystemInfo inf in dir.GetFileSystemInfos())
+				pnl.Children.Add(new FileSystemInfoButton(inf));
+		}
+		base.OnClick();
+	}
+}	
+
+프로그램을 실행시키면 My Documents라는 하나의 버튼을 볼 수 있을 것이다. 디렉토리의 내용을 보려면 이 버튼을 클릭한다. 파일 이름이 쓰인 버튼을 클릭하면 연결된 프로그램이 실행된다. 최초 디렉토리 이후의 디렉토리 대부분에서는 점 두 개(..)로 된 버튼이 보일 것이다. 이 버튼을 누르면 상위 디렉토리로 이동된다. 이 버튼이 보이지 않는다면 현재 위치가 최상위(루트 디렉토리)여서 위로 더 이상 갈 수 없기 때문이다. 
+
+모든 동작은 OnClick을 오버라이딩해 처리한다. 먼저 info 객체가 FileInfo 타입의 객체로 저장됐는지를 검사한다. 그렇다면 정적 Process.Start 메소드(System.Diagnostics 네임스페이스에 있음)에서 애플리케이션을 실행시킨다. 
+
+info 객체가 디렉토리를 의미한다면 새로운 디렉토리 이름을 Title 에 지정해 창의 제목에 출력한다. 그 후 OnClick 메소드에서는 WrapPanel 의 자식으로 설정된것을 삭제한다. 새로운 디렉토리에 부모 디렉토리가 있다면 두 개의 인자를 받는 생성자를 호출해 점 두 개의 버튼을 생성한다. 그리고 GetFileSystemInfos로부터 디렉토리의 내용을 얻어서 각 FileSystemInfoButton 객체를 생성하는 것으로 끝마친다. 
+
+많은 파일들이 있는 디렉토리로 이동해서 ScrollViewer가 어떻게  WrapPanel의 나머지 부분을 스크롤 하는지를 시험해보기 바란다. 
