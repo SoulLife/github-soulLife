@@ -1,0 +1,336 @@
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class SplitNine : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new SplitNine());
+	}
+	public SplitNine()
+	{
+		Title = "Split Nine";
+		
+		Grid grid = new Grid();
+		Content = grid;
+
+		//열과 행을 정의
+		for(int i=0;i < 3; i++)
+		{
+			grid.ColumnDefinitions.Add(new ColumnDefinition());
+			grid.RowDefinitions.Add(new RowDefinition());
+		}
+		//9개 버튼을 생성
+		for(int x = 0; x< 3; x+++)
+		{
+			for(int y = 0; y < 3; y++)
+			{
+				Button btn = new Button();
+				btn.Content = "Row " + y + " and column + x;
+				grid.Children.Add(btn);
+				grid.SetRow(btn, y);
+				grid.SetColumn(btn, x);
+			}
+			//스플리터 생성
+			GridSplitter split = new GridSplitter();
+			split.Width = 6;
+			split.Children.add(split);
+			Grid.SetRow(split, 1);
+			Grid.SetColumn(split, 1);
+		}
+	}
+}
+
+
+프로그램을 실행하면 가운데 셀의 오른쪽 부분에서 버튼의 오른쪽을 조금 덮고 있는 스플리터를 확인할 수 있다. 버튼에 약간의 여백을 주어 스플리터를 잘 보이게 해보자. 
+
+btn.Margin = new Thickness(10);
+
+그러나 이렇게 해도 역시 조금 이상해 보인다. 스플리터가 단 하나의 셀에서만 보인다 해도 스플리터를 움직이면 모든 행에 있는 열의 폭이 변경된다. 그래서 스플리터가 그리드의 높이만 큼 길어지는 게 더 직관적으로 이해될 수 있다. 다음 구문으로 스플리터의 길이를 늘려보자. 
+
+Grid.SetRow(split, 0);
+Grid.SetColumn(split, 1);
+Grid.SetRowSpan(split, 3);
+
+결과를 확인한 후에 다른 시험을 위해 다시 되돌려 놓자. GridSplitter에 있는 중요한 프로퍼티는 HorizontalAlignment와 VerticalAlignment다. 이들 프로퍼티는 스플리터가 수평이냐 수직이냐의 여부, 스플리터가 셀에서 보여지는 위치, 어떤 행과 열에 영향을 미치는지를 결정한다. 기본 설정(HorizontalAlignment은 Right, VerticalAlignment은 stretch)으로는 GridSplitter가 셀의 오른쪽 옆면에 붙게 된다. 
+
+스플리터를 움직이면 스플리터가 있는 열과 스플리터의 오른쪽 열의 공간이 조정된다. 
+
+다음 구문을 넣어 HorizontalAlignment를 Left로 변경해보자. 
+
+split.HorizontalAlignment = HorizontalAlignment.Left;
+
+이제는 스플리터가 있는 열과 그 왼쪽 열 사이에서 공간이 조정된다. 다음과 같이 해보자. 
+
+split.HorizontalAlignment = HorizontalAlignment.Center;
+
+이렇게 하면 스플리터는 버튼의 가운데에 생기게 되며, 움직이면 중앙 열의 폭은 변경되지 않고 양쪽에 있는 두열에 영향을 미치게 된다. 지금까지 사용된 것 중에 가장 이상하게 보이겠지만 실제로는 정상적으로 사용하는 것이다. 
+
+이렇게 가정해보자. 가운데 열의 셀에 버튼이 없고 비어있다고 하고, 셀의 폭은 GridLength.Auto라고 하면 스플리터는 잘 보이고 동작 방법도 정상적이다. 
+
+HorizontalAlignment를 Right나 Left, Center로 설정했을 때 두 열의 폭이 어떻게 변화하는지에 대해 살펴보았다. GridSplitter의 ResizeBehavior프로퍼티를 재정의할 수도 있다. 이 프로퍼티에는 GridResizeBehavior 열거형의 멤버로 대입하며, 스플리터에 의해 어떤 열이 영향을 바게 되는지를 지정한다. GridResizeBehavior 열거형의 멤버로는 CurrentAndNext(스플리터가 오른쪽에 있을 때의 기본 동작)와 PreviousAndCurrent(스플리터가 왼쪽에 있을 때의 기본 동작), PreviousAndNext(스플리터가 중앙에 있을 떄의 기본 동작)가 있다. 네번째의 멤버는 기본값인 BaseOnAlignment인데, 이는 따로 재정의하지 않겠다는 의미다. 
+
+HorizontalAlignment를 Stretch로, VerticalAlignment을 Top이나 Center, Bottom으로 설정해서 스플리터를 수평으로 만들 수도 있다. 다음과 같은 설정은 셀의 상단에 스플리터를 만든다. 
+
+split.HorizontalAlignment = HorizontalAlignment.Stretch;
+split.VerticalAlignment = VerticalAlignment.Top;
+split.Height = 6;
+
+스플리터를 움직여 보면 스플리터가 있는 행과 그 위에 있는 행 사이의 공간을 배분시킬수 있다. 
+
+살펴보았듯이 VerticalAlignment를 Stretch로 하면 GridSplitter는 수직 모양이 되고, HorizontalAlignment를 Stretch로 하면 GridSplitter는 수평 모양이 된다. 수직 스플리터는 열의 폭에 영향을 주며, 수평 스플리터는 행의 높이에 영향을 끼친다. 스플리터의 모양과 그 기능의 관계도 ResizeDirection 프로퍼티를 이용해 변경시킬 수 있다. 이 프로퍼티에는 GridResizeDirection 열거형의 멤버로 대입하는데, Columns, Rows, Auto(기본값)가 있다. 
+
+다음과 같이 해보자.
+split.HorizontalAlignment = HorizontalAlignment.Stretch;
+split.VerticalAlignment = VerticalAlignment.Top;
+split.ResizeDirect = GridResizeDirection.Columns;
+
+이제 스플리터는 수평이지만 위와 아래로 움직여지지 않는다. 대신 좌우로 움직이므로 열의 폭을 바꿀 수 있다. 
+
+GridSplitter는 사실 이보다 더 다양하게 쓸 수 있다. HorizontalAlignment와 VerticalAlignment모두를 Stretch로 하면 스플리터는 셀을 가득 채운다(Width와 Height를 지정하지 않을 경우)또한 HorizontalAlignment나 VerticalAlignment에 Stretch를 쓰지 않으면 스플리터는 상자처럼 보이게 되며, 크기는 Width와 Height로 조정할 수 있다. 
+
+다음은 권장할만한 스플리터 사용법이다. 다른 엘리먼트가 있는 셀에 GridSplitter를 넣지 않고 Grid 전체에 스플리터의 기능을 할당하자. 수평 스플리터가 필요하면 세 개의 행이 있는 Grid를 만들자. 가운데 행의 Height를 GridLength.Auto로하고, 여기에 스플리터를 넣는다. 두 개의 바깥 행에는 다른 Grid 패널을 포함해 원하는 무엇이든 넣을 수 있다. 
+
+다음 프로그램은 3개의 열이 있는 Grid를 생성해서 여기에 버튼, 수직 스플리터, 세 개의 행이 있는 다른 Grid를 넣는다. 세 개의 행이 있는 Grid는 다른 버튼과 수평 스플리터, 세 번째 버튼 등을 넣는다. 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class SplitTheClient : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new SplitTheClient());
+	}
+	public SplitTheClient()
+	{
+		Title = "Split the Client";
+	
+		//수직 스플리터가 있는 Grid
+		Grid grid1 = new Grid();
+		grid1.ColumnDefinitions.Add(new ColumnDefinition());
+		grid1.ColumnDefinitions.Add(new ColumnDefinition());
+		grid1.ColumnDefinitions.Add(new ColumnDefinition());
+		grid1.ColumnDefinitions[1].Width = GridLength.Auto;
+		Content = grid1;
+
+		//수직 스플리터의 왼쪽에 있는 버튼
+		Button btn = new Button();
+		btn.Content = "Button No. 1";
+		gird1.Children.Add(btn);
+		Grid.SetRow(btn, 0);
+		Grid.SetColumn(btn, 0);
+
+		//수직 스플리터
+		GridSplitter split = new GridSplitter();
+		split.ShowsPreview = true;
+		split.HorizontalAlignment = HorizontalAlignment.Center;
+		split.VerticalAlignment = VerticalAlignment.Stretch;
+		split.Width = 6;
+		grid1.Children.Add(split);
+		Grid.SetRow(split, 0);
+		Grid.SetColumn(split, 1);
+
+		//수평 스플리터가 있는 Grid
+		Grid grid2 = new Grid();
+		grid2.RowDefinitions.Add(new RowDefinition());
+		grid2.RowDefinitions.Add(new RowDefinition());
+		grid2.RowDefinitions.Add(new RowDefinition());
+		grid2.RowDefinitions[1].Height = GridLength.Auto;
+		grid1.Children.Add(grid2);
+		Grid.SetRow(grid2, 0);
+		Grid.SetColumn(grid2, 2);
+	
+		//수평 스플리터 위에 있는 버튼
+		btn = new Button();
+		btn.Content = "Button No. 2";
+		grid2.Children.Add(btn);
+		Grid.SetRow(btn, 0);
+		Grid.SetColumn(btn, 0);
+
+		//수평 스플리터
+		split = new GridSplitter();
+		split.ShowsPreview = true;
+		split.HorizontalAlignment = HorizontalAlignment.Stretch;
+		split.VerticalAlignment = VerticalAlignment.Center;
+		split.Height = 6;
+		grid2.Children.Add(split);
+		Grid.SetRow(split, 1);
+		Grid.SetColumn(split, 0);
+
+		//수평 스플리터 아래에 있는 버튼
+		btn = new Button();
+		btn.Content = "Button No. 3";
+		grid2.Children.Add(btn);
+		Grid.SetRow(btn, 2);
+		Grid.SetColumn(btn, 0);
+	}
+}
+
+이 프로그램에서는 GridSplitter의 ShowsPreview 프로퍼티를 true로 설정했다. 이렇게 하면 스플리터를 움직일 때 마우스 버튼을 놓을 때까지는 실제 셀의 크기가 변하지 않는다. TAB 키를 사용해서 스플리터에 입력 포커스를 줄 수 있고, 커서 키로 스플리터를 움직일수 있다는 사실에 주목하자. 커서 키로 움직일 때 그 이동 거리가 맘에 들지 않으면 스플리터의 KeyboardIncrement 프로퍼티에 다른 값을 주면 된다. 
+
+SplitNine이나 SplitTheClient 프로그램에서 창의 크기를 변경하면 행의 높이와 열의 높이도 비례해서 바뀌게 된다. 한 행이나 열을 고정된 크기로 만드는 것도 가능하다(윈도우 탐색기에서 이런 방식을 볼 수 있다. 창의 크기를 바꿔도 스플리터 왼쪽의 크기는 고정돼 있다)행이나 열의 Height나 Width가 GridLengthType.Star라면 공간이 동등하게 분배된다. 창의 크기를 변경해도 한행이나 열을 고정시키려면 GridLengthType.Pixel을 사용하거나 GridLengthType.Auto(분명히 더 일반적)를 사용한다. 
+
+다음 프로그램은 이런 기법을 보여준다. 이 프로그램의 최초 버전은 윈도우 1.0에서 돌아가게 만들었고, 마이크로소프트 시스템 저널의 1987년 5월호에서 게재됐다. 회상해보면 이 프로그램이 자동 레이아웃에 대한 선구적인 연구라 할 수 있다. 최초의 프로그램은 여섯 개의 레이블과 세 개의 스크롤바로 이루어져 빨간색, 녹색, 파란색의 값을 조절해 그 결과를 볼 수 있다. 창을 크게 하거나 작게 만들어도 그 크기에 맞게 레이블과 스크롤바도 크기가 조정되며 재배치되지만 이 계산이 매우 복잡하고 난해했다. 
+
+WPF의 ScrollBar는 RangeBase를 거쳐서 Control을 상속받는다(RangeBase는 추상 클래스이며 ProgressBar와 Slider의 부모이기도 하다)
+
+스크롤바는 Orientation 프로퍼티 값을 이용해 가로나 세로로 배치할 수 있다. Value 프로퍼티는 Minimum 프로퍼티부터 Maximum 프로퍼티에 지정된 값만큼 Value가 바뀐다. 다른 영역을 클릭하면 LargeChange 값만큼 변경된다. 이 모든 수치들은 double 값이다. 
+
+다시 반복하지만 ScrollBar의 Value 프로퍼티를 포함한 모든 프로퍼티는 double 값이므로 정수 값이 아닌 것에 당황하지 말아야 한다. 정수형의 값이 필요하면 스크롤바가 넘기는 값을 변환해야 한다. 
+
+ScrollBar  클래스는 RangeBase에서 ValueChanged라는 이벤트를 상속받으며, Scroll 이벤트도 정의돼 있다. Scroll 이벤트는 추가적인 정보와 함께 전달되는데, 이 정보는 ScrollEventType 열거형의 멤버 형태이며, 사용자가 조작하는 것이 스크롤바의 어떤 상황인지를 알려준다. 예를 들어 스크롤바의 손잡이(thumb)를 더 이상 움직이면 안되는 상황이라면 ScrollEventType.ThumbTrack 타입의 모든 이벤트를 무시하고 ScrollEventType.EndScroll 타입의 이벤트로 최종 손잡이 위치를 얻으면 될 것이다. 
+
+ScrollCustomColors 프로그램에서는 두 개의 Grid 패널을 생성한다. 처음의 Grid는 gridMain으로 수직 스플리터를 구현하기 위해 존재한다. 첫 번째 셀에는 두 번째 Grid 패널(단순히 grid라 부르겠다)이 들어가는데, 6개월 레이블과 3개의 스크롤바가 들어간다. GridMain의 가운데 셀에는 GridSplitter가 들어가며, 마지막 셀에는 StackPanel이 들어간다. StackPanel은 단순히 Background 색상을 보여주기 위해 사용된다. 
+
+이 프로그램에서 창의 최초 크기는 장치 독립적 단위 500으로 설정했다. gridMain의 3개열을 정의할 때는 스크롤바와 레이블이 들어갈 셀은 200단위의 폭을 지정했으며, StackPanel이 들어갈 셀은 그 폭을 GridUnitType.Star로 설정했다. 따라서 창을 크게 하거나 작게 하면 StackPanel의 크기만 영향을 받게 된다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class ColorScroll : Window
+{
+	ScrollBar[] scrolls = new ScrollBar[3];
+	TextBlock[] txtValue = new TextBlock[3];
+	Panel pnlColor;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ColorScroll());
+	}
+	public ColorScroll()
+	{
+		Title = "Color Scroll";
+		Width = 500;
+		Height = 500;
+
+		//GridMain은 수직 스플리터가 포함됨
+		Grid gridMain = new Grid();
+		Content = gridMain;
+
+		//GridMain의 열 정의
+		ColumnDefinition coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(200, GridUnitType.Pixel);
+		gridMain.ColumnDefinitions.Add(coldef);
+
+		coldef = new ColumnDefinition();
+		coldef.Width = GridLength.Auto;
+		gridMain.ColumnDefinitions.Add(coldef);
+
+		coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(100, GridUnitType.Star);
+		gridMain.ColumnDefinitions.Add(coldef);
+
+		//수직 스플리터
+		GridSplitter split = new GridSplitter();
+		split.HorizontalAlignment = HorizontalAlignment.Center;
+		split.VerticalAlignment = VerticalAlignment.Stretch;
+		split.Width = 6;
+		gridMain.Children.Add(split);
+		Grid.SetRow(split, 0);
+		Grid.SetColumn(split, 1);
+
+		//색을 출력하기 위해 스플리터의 오른쪽 면에 패널 생성
+		pnlColor = new StackPanel();
+		pnlColor.Background = new SolidColorBrush(SystemColors.WindowColor);
+		gridMain.Children.Add(pnlColor);
+		Grid.SetRow(pnlColor, 0);
+		Grid.SetColumn(pnlColor, 2);
+
+		//스플리터의 왼쪽에 두 번째 그리드
+		Grid grid = new Grid();
+		gridMain.Children.Add(grid);
+		Grid.SetRow(grid, 0);
+		Grid.SetColumn(grid, 0);
+
+		//세 개의 행 정의(레이블, 스크롤, 레이블)
+		RowDefinition rowdef = new RowDefinition();
+		rowdef.Height = GridLength.Auto;
+		grid.RowDefinitions.Add(rowdef);
+
+		rowdef = new RowDefinition();
+		rowdef.Height = new GridLength(100, GritUnitType.Star);
+		grid.RowDefinitions.Add(rowdef);
+
+		rowdef = new RowDefinition();
+		rowdef.Height = GridLength.Auto;
+		grid.RowDefinitions.Add(rowdef);
+
+		//Red, Green, Blue에 대한 세 개의 열
+		for(int i=0; i< 3; i++)
+		{
+			coldef = new ColumnDefinition();
+			coldef.Width = new GridLength(33, GridUnitType.Star);
+			grid.ColumnDefinitions.Add(coldef);
+		}
+		for(int i=0; i< 3; i++)
+		{
+			Label lbl = new Label();
+			lbl.Content = new string[] { "Red", "Green", "Blue"}[i];
+			lbl.HorizontalAlignment = HorizontalAlignment.Center;
+			grid.Children.Add(lbl);
+			Grid.SetRow(lbl, 0);
+			Grid.SetColumn(lbl, i);
+
+			scrolls[i] = new ScrollBar();
+			scrolls[i].Focusable = true;
+			scrolls[i].Orientation = Orientation.Vertical;
+			scrolls[i].Minimum = 0;
+			scrolls[i].Maximum = 255;
+			scrolls[i].SmallChange = 1;
+			scrolls[i].LargeChange = 16;
+			scrolls[i].ValueChanged += ScrollonValueChanged;
+			grid.Children.Add(scrolls[i]);
+			Grid.SetRow(scrolls[i], 1);
+			Grid.SetColumn(scrolls[i], i);
+
+			txtValue[i] = new TextBlock();
+			txtValue[i].TextAlignment = TextAlignment.Center;
+			txtValue[i].HorizontalAlignment = HorizontalAlignment.Center;
+			txtValue[i].Margin = new Thickness(5);
+			grid.Children.Add(txtValue[i]);
+			Grid.SetRow(txtValue[i], 2);
+			Grid.SetColumn(txtValue[i], i);
+		}
+		//스크롤바 초기화
+		Color clr = (pnlColor.Background as SolidColorBrush).Color;
+		scrolls[0].Value = clr.R;
+		scrolls[1].Value = clr.G;
+		scrolls[2].Value = clr.B;
+
+		//입력 포커스 설정
+		scrolls[0].Focus();
+	}
+	void ScrollOnValueChanged(object sender, RoutedEventArgs args)
+	{
+		ScrollBar scroll = sender as ScrollBar;
+		Panel pnl = scroll.Parent as Panel;
+		TextBlock txt = pnl.Children[1+ pnl.Children.IndexOf(scroll)] as TextBlock;
+		txt.Text = String.Format("{0}\n0x{0:X2}", (int)scroll.Value);
+		pnlColor.Background = new SolidColorBrush(Color.FromRgb( (byte) scrolls[0].Value,(byte) scrolls[1].Value,
+									(byte) scrolls[2].Value));
+	}
+}
+
+ScrollBar가 업데이트되면 ValueChanged 이벤트 핸들러에서 ScrollBar와 연결된 TextBlock을 갱신하고 3개의 스크롤바 설정에 근거해서 새로운 Color를 계싼한다.
+
+Grid 패널과유사한 것으로 UniformGrid가 있다. 이 그리드는 열이 모두 같은 폭을 가지며 행도 모두 같은 높이를 갖는다. UniformGrid와 연계되는 RowDefinition이나 ColumnDefinition 객체도 없다. 대신 행과 열의 수를 Rows와 Columns 프로퍼티에 단순히 지정할 뿐이다. 또한 첨부 프로퍼티도 없다. UniformGrid에 자식을 추가하면 첫 번째 행의 셀을 차지하며, 그 다음은 두 번째 행에 차례로 들어간다. Rows와 Columns 프로퍼티는 둘 중 하나 아니면 둘다 0 이 될 수 있는데, 이때는 UniformGrid 의 자식 수에 따라 적정한 값이 자동으로 할당된다. 
+
+7장에서 UniformGrid의 예제를 다룰 것인데, 유명한 14-15 퍼즐을 구현하기 위해 사용할 것이다. 이 퍼즐은 쥬 드 타킨(Jeu de Tacquin)이라고도 부른다. 
