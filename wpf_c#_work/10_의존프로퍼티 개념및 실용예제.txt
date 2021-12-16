@@ -1,0 +1,497 @@
+CHAPTER 08 : 의존 프로퍼티
+다음 프로그램은 2행 3열로 된 Grid에 여섯 개의 버튼을 만든다. 각 버튼을 누르면 그 버튼에 쓰인 텍스트 값으로 FontSize 프로퍼티를 바꾼다. 상단에 있는 세 개의 버튼은 Window의 FontSize 프로퍼티를 바꾸지만 하단의 버튼들은 클릭된 버튼의 FontSize 프로퍼티를 바꾼다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.WIndows.Documnets;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class SetFontSizeProperty : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new SetFontSizeProperty());
+	}
+	public SetFontSizeProperty()
+	{
+		Title = "Set FontSize Property";
+		SizeToContent = SizeToContent.WidthAndHeight;
+		ResizeMode = ResizeMode.CanMinimize;
+		FontSize = 16;
+		double[] fontsizes = {8 , 16, 32};
+
+		//Grid 패널 생성
+		Grid grid = new Grid();
+		Content = grid;
+
+		//행 과 열 정의
+		for(int i=0; i<2; i++)
+		{
+			RowDefinition row = new RowDefinition();
+			row.Height = GridLength.Auto;
+			grid.RowDefinitions.Add(row);
+		}
+		for(int i=0; i<fontsizes.Length; i++)
+		{
+			ColumnDefinition col = new ColumnDefinition();
+			col.Width = GridLength.Auto;
+			grid.ColumnDefinitions.Add(col);
+		}
+		//여섯 개의 버튼 생성
+		for(int i=0; i<fontsizes.Length; i++)
+		{
+			Button btn = new Button();
+			btn.Content = new TextBlock(new Run("Set window FontSize to " + fontsizes[i]));
+			btn.Tag = fontsizes[i];
+			btn.HorizontalAlignment = HorizontalAlignment.Center;
+			btn.VerticalAlignment = VerticalAlignment.Center;
+			btn.Click += WindowFontSizeOnClick;
+			grid.Children.Add(btn);
+			Grid.SetRow(btn, 0);
+			Grid.SetColumn(btn, i);
+			
+			btn = new Button();
+			btn.Content = new TextBlock(new Run("Set button FontSize to " + fontsizes[i]));
+			btn.Tag = fontsizes[i];
+			btn.HorizontalAlignment = HorizontalAlignment.Center;
+			btn.VerticalAlignment = VerticalAlignment.Center;
+			btn.Click += ButtonFontSizeOnClick;
+			grid.Children.Add(btn);
+			Grid.SetRow(btn, 1);
+			Grid.SetColumn(btn, i);
+		}
+	}
+	void WindowFontSizeOnClick(object sender, RoutedEventArgs args)
+	{
+		Button btn = sender as Button;
+		FontSize = (double)btn.Tag;
+	}
+	void ButtonFontSizeOnClick(object sender, RoutedEventArgs args)	
+	{
+		Button btn = args.Source as Button;
+		btn.FontSize = (double)btn.Tag;
+	}
+}
+
+생성자에서는 FontSize 프로퍼티를 장치 독립적 단위 16으로 초기화한다. 그리고 Grid를 생성하고 여기에 6개의 버튼을 추가하며, 모든 버튼은 TextBlock 을 컨텐트로 지정해 출력한다(각 버튼의 Content 프로퍼티에 문자열을 바로 대입해도 동일하게 동작한다)상단에 있는 3개의 버튼은 Window의 FontSize프로퍼티를 각각 8, 16, 32단위로 변경하며 하단에 있는 3개의 버튼은 눌려진 버튼의 FontSize프로퍼티를 변경한다. 
+
+프로그램이 실행되면 모든 버튼은 16단위로 폰트로 출력된다. 최초 Window에 설정한 FontSize 프로퍼티는 Grid와 버튼에도 적용되어 TextBlock 엘리먼트에도 영향을 끼친다. 상단의 각 버튼을 클릭하면 모든 버튼에도 새로운 Window의 FontSize 설정이 반영된다. 
+
+그러나 하단의 버튼을 클릭하면 이벤트 핸들러에서 클릭된 버튼의 FontSize 프로퍼티만 설정하기 때문에 그 버튼만 변경된다. 개별적으로 FontSize 를 설정한 버튼은 더 이상 Window의 FontSize가 바뀌어도 이에 반응하지 않는다. Button에 대해 FontSize를 지정하는 것이 Window에서 상속한 FontSize보다 우선시 된다는 걸 알 수 있다. 
+
+Window와 Grid, 6개의 Button 객체와 6개의 TextBlock 객체는 아래와 같은 엘리먼트 트리로 나타낼수 있다. 
+
+
+					Window
+					Grid
+Button		Button		Button		Button		Button		Button
+TextBlock		TextBlock		TextBlock		TextBlock		TextBlock		TextBlock
+
+이 엘리먼트 트리는 프로그램에서 명시적으로 생성된 모든 비주얼 객체(visual object)로 구성된다. 비주얼 객체란 실제로 화면에서 볼 수 있는 객체라는 의미로, 화면에 보여질 가능성이 있는 경우도 비주얼 객체에 해당된다. 예를 들어 TextBlock 에 텍스트가 없거나 Grid에 자손이 없더라도 비주얼 객체로 간주돼야 할 것이다. 더 형식적으로 표현하면 비주얼 클래스에서 파생된 클래스에 근거한 객체를 말하는 것으로, 이런 클래스들은 일반적으로 UIElement나 FrameworkElement를 거치게 된다. 
+
+이 작은 트리는 WPF 문서에 나오는 논리 트리(logical tree)라고 할 수는 없다. 이 프로그램에서 의 논리 트리에는 Grid와 관련된 RowDefinition, ColumnDefinition 객체, TextBlock 과 관련된 Run 객체가 포함되어야 한다. 이런 객체들은 비주얼 객체는 아니다. 대신 이들은 FrameworkContentElement를 거쳐 ContentElement를 상속받은 클래스에서 만들어졌다. 
+
+이 트리를 WPF 문서에서의 비주얼 트리(visual tree)라고 할 수도 없다. 비주얼 트리에는 프로그램에서 명시적으로 생성하지 않은 비주얼 객체도 포함된다. 예를 들면 경계나 배경을 출력하기 위해 Button 객체가 ButtonChrome 타입(Microsoft.Windows.Themes 네임스페이스 정의)의 객체를 생성한다. ButtonChrome은 Decorator를 거쳐 Visual, UIElement, FrameworkElement를 상속받는다. ButtonChrome 타입의 객체는 비주얼 트리의 일부가 되며 우리가 아직 모르는 다른 것들도 비주얼 트리에 포함된다. 
+
+앞서 보인 트리는 FontSize와 같은 프로퍼티가 어떻게 처리되는지 이해하는데 도움이 된다. 
+비주얼 트리상의 어떤 객체에 대해 명시적으로 FontSize 프로퍼티를 설정하면 트리에서 그 아래에 있는 모든 객체들은 같은 FontSize를 얻게 된다. 이렇게 트리에서 아래에 있는 객체들은 부모로부터 프로퍼티를 상속받았다거나 계승했다 라고 표현한다(단 클래스 상속에서의 상속 개념과 혼동하면 안 된다) 그러나 특정 객체가 FontSize를 명시적으로 설정하면 이런 계승이 이루어지지 않는다. 
+
+그래서 상단의 행에 있는 버튼 중의 하나를 클릭하면 이벤트 핸들러에서 Window에 대한 FontSize 프로퍼티를 설정하게 되고, 내부에서는 보이지 않는 작업들이 추가적으로 진행되어 지정된 FontSize 프로퍼티를 모든 Window의 자손에 적용시킨다. 단 그전에 미리 자신의 FontSize 프로퍼티로 설정한 자손은 여기에서 제외된다. 한 가지 흥미로운 것은 Grid에는 FontSize 프로퍼티가 아예 없다는 점이다. 확실히 트리를 통해 FontSize 프로퍼티를 전파하는 것은 단순히 부모에서 자식으로 이관되는 것보다는 다소 복잡하다. Grid 자체에 FontSize프로퍼티가 없지만 그 자식에게는 새로운 FontSize가 적용된다. 
+
+아래 행에 있는 버튼을 클릭하면 이벤트 핸들러에서 Button의 FontSize 프로퍼티를 설정하게 되고, 이 새로운 값이 TextBlock 에 계승된다. for 루프에서 Content프로퍼티를 설정하는 부분에 다음과 같이 넣어보자. 
+
+(btn.Content as TextBlock).FontSize = 12;
+
+TextBlock에 명시적으로 FontSize를 설정한 다음에는 어떤 값도 계승되지 않음을 확인할 수 있다. 
+
+프로그램에서 FontSize 프로퍼티가 명시적으로 정의되지 않으면 이 프로퍼티를 갖는 객체는 기본값을 갖게 된다 
+
+FontSize 프로퍼티에 대해 이런 규칙을 일반화할 수 있다. FontSize에는 기본값이 있지만 이 기본값은 우선순위가 낮다. 엘리먼트 트리에서의 조상으로부터 계승된 값은 기본값보다는 우선순위가 높고, 객체에 명시적으로 설정된 값은 가장 높은 우선 순위를 가진다. 
+
+이런 식으로 동작하는 프로퍼티는 FontSize 외에도 몇 가지가 더 있다. UIElement에 엘리먼트 트리를 통해 계승되는 네 가지의 프로퍼티(AllowDrop, IsEnabled, IsVisible, SnapToDevicePixels)가 있다. FrameworkElement에 정의된 CultureInfo, FlowDirection, InputScope 프로퍼티도 트리를 통해 계승되며, Control에 정의된 FontFamily, FontSize, FontStretch, FontStyles, FontWeight, Foreground 프로퍼티도 마찬가지다(Background 프로퍼티는 트리를 통해 계승되지 않지만, 기본값이 null이여서 투명하게 그려지므로 자손은 그 부모로부터 Background를 계승한 것처럼 보일 수 있다)
+
+잠시 동안 WPF와 같은 시스템을 설계한다고 상상해보자. 엘리먼트 트리를 통해 프로퍼티를 계승하는 구조를 구현한다고 가정하자. 일관된 방식을 사용해 최소한의 코드로 이를 구현하는 방법을 모색할 것이다. 
+
+SetFontSizeProperty 프로그램에서 버튼을 클릭하면 새로운 FontSize 값이 적용되어 크기가 동적으로 변하는 것을 볼 수 있고, 버튼 크기가 변하면 Grid와 Window 자체의 크기에도 영향을 미친다. 분명히 FontSize 프로퍼티가 변하면 Grid의 초기 레이아웃도 변경된다. WPF설계자라면 FontFamily나 다른 폰트 프로퍼티가 변해도 같은 방식으로 영향을 줄것이라 생각할 것이다. 그렇지만 Foreground가 바뀐다 해서 Grid의 레이아웃을 강제로 바꾸는 것까지 원하지는 않을 것이다. Foreground가 변경되어 필요한 것은 버튼이 다시 그려지는 것뿐이다. 
+
+앞부분에서 Brush나 Shape 같은 클래스의 인스턴스에서 그 인스턴스의 프로퍼티가 바뀔 때 어떻게 동적으로 반응하는지를 살펴보았다. 이 개념은 WPF 애니메이션 시스템의 기초가 된다. 4장에서는 버튼이 어떻게  Window의 프로퍼티로 바인딩되는지 살펴보았고, 그 뒤에 객체의 프로퍼티가 템플릿과 스타일에 영향을 받을수 있다는 것도 알아보았다. WPF와 같은 시스템을 설계한다고 하면 이런 모든 특성들을 일관된 방법으로 처리하고 싶을 것이다. 
+
+WPF를 설계한다면 아마도 의존 프로퍼티(dependency properties)라고 부르는 개념을 우연하게라도 발견할 수 있을지 모른다. 의존 프로퍼티라 부르는 이유는 이 프로퍼티가 몇 개의 다른 프로퍼티와 외부의 영향에 의존적인 프로퍼티이기 때문이다. 
+
+.NET 프로그래밍의 관습상 객체의 폰트 크기 값은 private 필드로 저장되며 다음과 같이 기본값으로 초기화시킬 것이다. 
+
+double fntsize = 11;
+
+이 private 필드는 FontSize 프로퍼티로서, 외부에 공개된다. 
+
+public double FontSize
+{
+	get
+	{
+		return fntsize;
+	}
+	set
+	{
+		fntsize = value;
+	}
+}
+
+set 접근자에 있는 생략 표시는 여기에 실행돼야 할 코드가 더 많이 있음을 뜻한다. 설정된 값을 컨트롤에서 필요로 할 수도 있으며, 새로운 크기로 다시 그려야 할 것이다. FontSizeChanged 이벤트를 발생시켜야 할 수도 있으며, 엘리먼트 트리의 자손으로 FontSize를 계승해야 할 수도 있다. 
+
+WPF에서 의존 프로퍼티를 사용하면 공통된 시나리오를 통해 많은 통지 작업을 자동으로 수행할 수 있다. Control 클래스에는 double 타입의 FontSize 프로퍼티가 정의되어 있고, DependencyProperty 타입의 FontSizeProperty라는 이와 관련된 필드도 정의되어 있다. 
+
+public class Control : FrameworkElement
+{
+	...
+	public static readonly DependencyProperty FontSizeProperty;
+	...
+}
+
+이 필드를 의존 프로퍼티라 부른다. public이며 정적이므로 객체 이름이 아닌 클래스 이름으로 참조된다. 정적 읽기 전용 필드는 필드 자체의 정의 부분이나 정적 생성자에서만 설정할 수 있다. 일반적으로 클래스에서는 정적 DependencyProperty.Register 메소드를 호출해서 DependencyProperty 타입의 객체를 생성한다. 이는 다음과 같은 형태가 된다. 
+
+FontSizeProperty = DependencyProperty.Register("FontSize", typeof(double),typeof(Control));
+
+인자는 의존 프로퍼티와 관련된 프로퍼티의 텍스트 이름과 프로퍼티의 타입, 이 프로퍼티를 등록하는 클래스 타입 등이다. 사실 통상적으로 더많은 코드가 포함된다. DependencyProperty 객체에는 가끔 프로퍼티의 중요한 특성을 나타내는 메타 데이터를 포함한다. 다음 구문은 FontSizeProperty 가 실제로 Control 클래스에 어떻게 등록되는지를 조금 더 자세히 보여준다. 
+
+public class Control : FrameworkElement
+{
+	...
+	public static readonly DependencyProperty FontSizeProperty;
+	...
+	static Control()
+	{
+		FrameworkPropertyMetadata metadata = new FrameworkPropertyMetadata();
+		metadata.DefaultValue = 11;
+		metadata.AffectsMeasure = true;
+		metadata.Inhreits = true;
+		metadata.IsDataBindingAllowed = true;
+		metadata.DefaultUpdateSourceTrigger = UpdateSourceTrigger.PeropertyChanged;
+
+		FontSizeProperty = DependencyProperty.Register("FontSize", typeof(double), typeof(Control), metadata, ValidateFontSize);
+	}
+	static bool ValidateFontSize(object obj)
+	{
+		double dFontSize = (double)obj;
+		return dFontSize > 0 && dFontSize <= 35791;
+	}
+}
+
+메타 데이터의 기본값이 11임을 알 수 있다. FontSize 프로퍼티는 엘리먼트의 크기에 영향을 주므로 AffectMeasure를 true로 설정한다. 이미 살펴보았지만 프로퍼티는 엘리먼트 트리를 통해 계승되므로 Inherits 프로퍼티를 true로 설정해 이런 특성을 지정한다. 그리고 데이터 바인딩이 허용되는 것을 알 수 있으며, DefaultUpdateSourceTrigger는 데이터 바인딩이 어떻게 이루어지는 지를 나타낸다(데이터 바인딩에 대한 더 자세한 내용은 23장에서 다룬다). DependencyProperty.Register를 호출할 때 인자에는 메타 데이터가 포함되고, FontSize 값을 검정하는 메소드도 인자에 포함된다. 이 메소드는 Control 클래스에 있고 값이 0보다 크거나 같으며 특정 최대값보다는 작을 때 true를 반환한다(FontSize 에 대해 상한 값이 논리 단위 35,791라는 것을 실험을 통해 알아냈다)
+
+이런 모든 준비 절차는 실제 FontSize 프로퍼티를 정의하는 순간이 될 때 효과가 나타난다. 
+다음은 Contrl 클래스가 어떻게 이를 수행하는지를 보여준다. 
+
+public class Control : FrameworkElement
+{
+	...
+	public double FontSize
+	{
+		set
+		{
+			SetValue(FontSizeProperty, value);
+		}
+		get
+		{
+			return (double) GetValue(FontSizeProperty);
+		}
+	}
+	...
+}
+
+SetValue와 GetValue 메소드는 어디에서 나왔을까? 이 메소드들은 Dependencyobject 클래스에 정의되어 있다. 다음에서 보는 바와 같이 WPF의 많은 부분들은 여기서 파생되었다. 
+
+Object
+	DispatcherObject(abstract)
+		DependencyObject
+			Visual(abstract)
+				UIElement
+					FrameworkElement
+						Control
+
+유사한 이름에 주의하자. DependencyObject와 DependencyProperty는 둘 다 클래스다. WPF의 많은 클래스들은 DependencyObject의 자손이며, 그래서 SetValue와 GetValue 메소드가 있는 것이다. 이런 메소드는 정적 DependencyProperty 객체로 정의된 필드를 다룬다. 
+
+SetValue와 GetValue메소드에 넘기는 DependencyProperty 객체는 정적이지만 SetValue와 GetValue는 인스턴스 메소드다. 그리고 이 메소드는 특정 인스턴스와 관련된 값을 얻거나 설정한다. DependencyObject는 현재의 값을 그대로 유지하며, 모든 루틴들도 처리한다. 예를 들어 특정 Control 인스턴스에 대해 아직 SetValue가 호출되지 않았으면 GetValue는 FontSizeProperty의 메타 데이터에 있는 DefaultValue 프로퍼티를 반환한다. 
+
+SetFontSizeProperty 같은 프로그램에서 FontSize 프로퍼티를 설정하면 SetValue 메소드에서 해야 될 일들이 있다. 이 메소드에서는 반드시 그 값이 적절한지 확인하기 위해 검증하는 메소드를 호출해야 한다. 적절하지 않은 값이라면 예외 상황을 던진다. FontSizeProperty에 대한 AffectMeasure 플래그 가 true이므로 SetValue 메소드에서는 반드시 컨트롤에서 크기를 다시 계산해야 하며, 또한 컨트롤이 다시 그려지도록 해야 한다. 다시 그리는 부분에서는 텍스트를 출력할 때 새로운 FontSize를 사용한다(Foreground와 같은 프로퍼티는 AffectMeasure 플래그가 false로 되어 있지만 AffectRender 플래그는 true다. 즉 컨트롤의 크기는 변경되지 않지만 다시 그려지기는 한다.)또한 SetValue 메소드에서는 Inherits 플래그가 true면 반드시 새 값을 트리를 통해 아래로 전달해야 한다. 트리의 엘리먼트는 새로운 값을 받아들이지 만 자신의 FontSize 프로퍼티가 명시적으로 설정되어 있다면 그 값은 거부될 것이다. 
+
+FontSize 프로퍼티가 어떻게 동작하는지 살펴보면 확실히 의존 프로퍼티를 이해하는 데 도움이 될 것이다. 다만 직접 의존 프로퍼티를 정의하는 경우에 자세히 볼 필요가 있다. 
+
+다음에 나오는 클래스는 Button을 상속하지만 새로운 의존 프로퍼티를 포함한다. 이 클래스를 SpaceButton이라고 부르자. 이름 때문에 버튼을 궤도로 쏘아올린다는 생각이 들 수 있겠지만 SpaceButton은 각 글자 사이에 공간이 추가된 텍스트를 출력할 뿐이다. SpaceButton에는 두 개의 프로퍼티가 추가된다. 이는 보통의 Button 클래스에는 없는 것으로 Text와 Space다. Text 프로퍼티는 전통적인 .NET 프로퍼티로 구현한 반면에 Space 프로퍼티는 의존 프로퍼티로 구현되었다. SpaceButton은 Content 프로퍼티를 Text 문자열로 설정하는데, 여기에는 Space 프로퍼티의 값으로 지정되는 만큼의 빈칸이 글자마다 삽입된다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.WIndows.Documnets;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class SpaceButton : Button
+{
+	//전통적인 .NET 방법 - private 필드와 public 프로퍼티
+	string txt;
+
+	public string Text
+	{
+		set
+		{
+			txt = value;
+			Content = SpaceOutText(txt);
+		}
+		get
+		{
+			return txt;
+		}
+	}
+	//DependencyProperty와 public 프로퍼티
+	public static readonly DependencyProperty SpaceProperty;
+
+	public int Space
+	{
+		set
+		{
+			SetValue(SpaceProperty, value);
+		}		
+		get
+		{
+			return (int)GetValue(SpaceProperty);
+		}
+	}
+
+	//정적 생성자
+	static SpaceButton()
+	{
+		//metadata의 정의
+		FrameworkPropertyMetadata metadata = new FrameworkPropertyMetadata();
+		metadata.DefaultValue = 1;
+		metadata.AffectsMeasure = true;
+		metadata.Inherits = true;
+		metadata.PropertyChangedCallback += OnSpacePropertyChanged;
+
+		//DependencyProperty를 등록
+		SpaceProperty = DependencyProperty.Register("Space", typeof(int), typeof(SpaceButton), metadata, ValidateSpaceValue);
+	}
+	//값 검증을 위한 콜백(Callback)메소드
+	static bool ValidateSpaceValue(object obj)
+	{
+		int i = (int)obj;
+		return i >= 0;
+	}
+	//프로퍼티가 변경됐을 때의 콜백 메소드
+	static void OnSpacePropertyChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
+	{
+		SpaceButton btn = obj as SpaceButton;
+		btn.Content = btn.SpaceOutText(btn.txt);
+	}
+	//텍스트에 빈칸을 넣는 메소드
+	string SpaceOutText(string str)
+	{
+		if(str == null)
+			return null;
+		StringBuilder build = new StringBuilder();
+		foreach(char ch in str)
+			build.Append(ch + new string(' ', Space));
+		return build.ToString();
+	}
+}
+
+Text 프로퍼티는 기존 방법으로 구현한다. 문자열 그 자체는 private 필드인 txt에 저장된다. 때론 전통적인 .NET 프로퍼티에서 set 접근자에 코드를 추가할 필요가 있다. 클래스가 새로운 프로퍼티로 실제 무엇인가를 하기 위해서다. Text 프로퍼티에서는 SpaceOutText 메소드를 호출해 텍스트에 빈칸을 추가하고, 그로부터 Content 프로퍼티를 설정한다. 
+
+파일의 나머지 부분에서는 Space 프로퍼티에 대한 내용이다. 클래스에서 정적 public 의 읽기 전용 필드인 SpaceProperty를 정의하고 Space 프로퍼티의 set과 get 접근자를 구현했는데, 이 접근자에서는 DependencyObject에 정의된 SetValue와 GetValue를 호출한다. 
+
+클래스의 정적 생성자에서는 metadata를 구성하고, 의존 프로퍼티를 등록한다. 이 프로퍼티에 두 개의 콜백(callback)메소드가 관련되어 있음을 유념하자. ValidateSpaceValue 프로퍼티는 값이 받아들여질 때 true를 반환한다. 빈칸의 개수가 음수일 수는 없기 때문에 음수에 대해서 ValidateSpaceValue는 false를 반환한다
+
+OnSpacePropertyChanged 메소드는 프로퍼티가 변경될 때마다 호출된다. Text 프로퍼티에서 set 접근자와 같이 이 메소드는 SpaceOutText의 결과 값으로 버튼의 Content프로퍼티를 설정한다. SpaceOutText 메소드는 원하는 빈칸의 개수를 얻기 위해 Space 프로퍼티를 참조한다. 
+
+두 콜백 메소드는 모두 정적으로 정의돼야 한다. ValidateSpaceValue 메소드에서는 크게 주의할게 없으나 OnSpacePropertyChanged는 첫 번째 인자를 SpaceButton으로 형 변환할 필요가 있다. 그래야 필요한 객체를 모두 참조할 수 있다. 이 메소드는 기본적으로 Text 프로퍼티의 set 접근자와 동일하다. 
+
+SpaceButton 클래스에서 metadata의 AffectsMeasure와 Inhreits 프로퍼티를 true로 설정했음을 확인하자. 이 특성을 구현하는 코드는 포함되지 않았지만 모든 것이 자동으로 수행된다. 
+
+이전에 살펴본 FontSize 프로퍼티는 Control에 정의되어 있으며 Button과 Window 모두가 이를 상속받는다. Button에 추가한 새로운 Space 프로퍼티는 엘리먼트 트리를 통해 계승되지만 다른 어디에도 정의된 곳이 없다. 
+
+프로퍼티 계승에 대해 설명하기 위해 같은 의존 프로퍼티를 구현한 SpaceWindow라는 클래스를 만들어보자. SpaceWindow 그 자체는 프로퍼티를 가지고 아무런 일도 하지 않는다. 그래서 클래스가 SpaceButton 보다는 단순하다. 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.WIndows.Documnets;
+using System.Windows.Input;
+
+public class SpaceWindow : Window
+{
+	//DependencyProperty와 프로퍼티
+	public static readonly DependencyProperty SpaceProperty;
+
+	public int Space
+	{
+		set
+		{
+			SetValue(SpaceProperty, value);
+		}
+		get
+		{
+			return (int)GetValue(SpaceProperty);
+		}
+	}
+	//정적 생성자
+	static SpaceWindow()
+	{
+		//metadata의 정의
+		FrameworkPropertyMetadata metadata = new FrameworkPropertyMetadata();
+		metadata.Inherits  = true;
+		//SpaceProperty에 소유자를 추가하고, metadata를 오버라이딩
+		SpaceProperty = SpaceButton.SpaceProperty.AddOwner(typeof(SpaceWindow));
+		SpaceProperty.OverrideMetadata(typeof(SpaceWindow), metadata);
+	}
+}
+
+SpaceButton과 같이 SpaceWindow 이 클래스에는 SpaceProperty 필드와 Space 프로퍼티 모두를 정의했다. 정적 생성자에서는 새로운 Space 프로퍼티를 등록하지 않는다. 그러나 대신에 SpaceButton 클래스에서 등록된 Space 프로퍼티에 다른 소유자를 추가한다. 이전에 등록된 의존 프로퍼티에 새로운 소유자를 추가할 때 원래의 metadata가 적용되지 않으므로 반드시 그 자신의 metadata를 생성해야 한다. SpaceWindow는 Space 프로퍼티로 별다른 일을 하지 않기 때문에 단지 Inherits플래그를 설정하는 것만 필요하다. 
+
+이 프로젝트의 마지막 클래스의 이름은 SetSpaceProperty로서, SetFontSizeProperty와 아주 비슷하다. 
+
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.WIndows.Documnets;
+using System.Windows.Input;
+
+public class SetSpaceProperty : SpaceWindow
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new SetSpaceProperty());
+	}
+	public SetSpaceProperty()
+	{
+		Title = "Set Space Property";
+		SizeToContent = SizeToContent.WidthAndHeight;
+		ResizeMode = ResizeMode.CanMinimize;
+		int[] iSpaces = { 0, 1, 2};
+
+		Grid grid = new Grid();
+		Content = grid;
+
+		for(int i=0; i<2; i++)
+		{
+			RowDefinition row = new RowDefinition();
+			row.Height = GridLength.Auto;
+			grid.RowDefinitions.Add(row);
+		}
+		for(int i=0;i < Spaces.Length; i++)
+		{
+			ColumnDefinition col = new ColumnDefinition();
+			col.Width = GridLength.Auto;
+			grid.ColumnDefinitions.Add(col);
+		}
+		for(int i=0;i < iSpaces.Length; i++)
+		{
+			SpaceButton btn = new SpaceButton();
+			btn.Text = "Set window Space to " + iSpaces[i]);
+			btn.Tag = iSpaces[i];
+			btn.HorizontalAlignment = HorizontalAlignment.Center;
+			btn.VerticalAlignment = VerticalAlignment.Center;
+			btn.Click += WindowPropertyOnClick;
+			grid.Children.Add(btn);
+			Grid.SetRow(btn, 0);
+			Grid.SetColumn(btn, i);
+
+			btn = new SpaceButton();
+			btn.Text = "Set button Space to " + iSpaces[i];
+			btn.Tag = iSpaces[i];
+			btn.HorizontalAlignment = HorizontalAlignment.Center;
+			btn.VerticalAlignment = VerticalAlignment.Center;
+			btn.Click += ButtonPropertyOnClick;
+			grid.Children.Add(btn);
+			Grid.SetRow(btn, 1);
+			Grid.SetColumn(btn, i);
+		}
+	}
+	void WindowPropertyOnCLick(object sender, RoutedEventArgs args)
+	{
+		SpaceButton btn = sender as SpaceButton;
+		Space = (int)btn.Tag;
+	}
+	void ButtonPropertyOnClick(object sender, RoutedEventArgs args)
+	{
+		SpaceButton btn = sender as SpaceButton;
+		Space = (int)btn.Tag;
+	}
+}
+
+이 클래스는 Window가 아니라 SpaceWindow를 상속받았음을 눈여겨 봐야 한다. 이전 프로그램처럼 여섯 개의 버튼을 생성하지만 버튼들은 SpaceButton 타입이다. 이 버튼은 각 글자마다 하나의 빈칸이 들어간 텍스트와 함께 표시된다. 기본값이 1이기 때문이다. 이전 프로그램에서처럼 상단에 있는 버튼을 클릭하면 모든 버튼들이 바뀌고 하단의 버튼을 클릭하면 해당 버튼만 변경되고 그 뒤로는 변경되지 않은 채로 남게 된다. SpaceButton 클래스는 의존 프로퍼티를 구현함으로써 데이터 바인딩, 스타일, 애니메이션 등 모든 종류의 신기한 것들을 할 준비가 된 것이다. 
+
+또 하나의 의문점도 이제 풀릴 것이다. 5장에서 DockPanel과 이의 정적 메소드인 SetDock과 GetDock에 대해 언급했었다. 그 후에도 Grid와 Canvas에서 유사한 프로퍼티를 살펴보았다. SetDock 프로퍼티는 확실히 이상한 문법이었다. 
+
+DockPanel.SetDock(ctrl, Dock.Right);
+
+이렇게 하지 않고 UIElement에 Dock 프로퍼티를 정의해서 다음과 같이 프로퍼티를 설정하는 것도 가능할 법하다. 
+
+ctrl.Dock = Dock.Right; //WPF에서는 수행되지 않음
+
+윈도우 폼에서는 이렇게 동작할 수 있지만 WPF에서 이 Dock 프로퍼티는 컨트롤이 DockPanel의 자식인 경우에만 의미가 있다. 패널은 다른 형태도 많으며 심지어 직접 생성할 수도 있다. 이런 패널은 각기 다른 프로퍼티가 필요할 것이다. 그런데 다른 타입의 패널에 대한 모든 프로퍼티를 UIElement가 처리하도록 하는 것은 그다지 좋은 생각이 아닌 것 같다. 
+
+Children 프로퍼티의 Add 메소드를 확장하는 방법을 생각해 볼 수 있으며, 다음과 같은 형태가 될 것이다. 
+
+dock.Children.Add(ctrl, Dock.Right); //WPF에서는 수행되지 않음
+
+그러나 Children 프로퍼티는 실제 UIElementCollection 타입의 객체이며 DockPanel 전용이 아니라 모든 패널에서 사용되는 것이다. 다른 방법으로 DockPanel의 인스턴스 프로퍼티를 포함시키는 것도 생각해 볼 수 있다. 다음과 같이 사용할 수 있을 것이다. 
+
+dock.SetDock(ctrl, Dock.Right); //WPF에서는 수행되지 않음
+
+물론 동작은 하겠지만 DockPanel에서 Dock 멤버와 관련된 컨트롤의 컬렉션을 하나 더 만들어 관리해야 한다. DockPanel이 레이아웃을 수행할 때는 Children 컬렉션의 모든 엘리먼트를 나열할 것이며, 두 번째 컬렉션에서 해당 엘리먼트의 Dock 멤버를 찾아야 한다. 실제 문법을 살펴보자. 
+
+DockPanel.SetDock(ctrl, Dock.Right);
+
+이 구문은 컨트롤과 그와 연관된 Dock 값을 어떤 컬렉션에 저장한다. 그러나 DockPanel의 SetDock과 GetDock은 실제로  다음과 같이 구현된다. 
+
+public class DockPanel : Panel
+{
+	...
+	public static readonly DependencyProperty DockProperty;
+	...
+	public static void SetDock(UIElement el, Dock dck)
+	{
+		el.SetValue(DockProperty, dck);
+	}
+	public static Dock GetDock(UIElement el)
+	{
+		return (Dock)el.GetValue(DockProperty);
+	}
+}
+
+DockPerty는 DependencyProperty로 정의되었지만 DependencyProperty.RegisterAttached 메소드로 등록한다. 그래서 이를 첨부 프로퍼티(attached property)라고 부른다. 보통의 의존 프로퍼티라면 DockProperty는 SetValue와 GetValue의 호출을 통해 Dock이라는 프로퍼티와 연결될 것이다. 그러나 Dock이라는 프로퍼티는 없다. 대신 DockPanel에 정의된 두 개의 정적 메소드인 SetDock과 GetDock이 DockProperty를 참조한다. 이 메소드는 SetValue와 GetValue를 호출하면서 엘리먼트(또는 컨트롤)를 인자로 넘긴다. 이는 DependencyObject에 정의된 SetValue와 GetValue에 대해서도 동일하며 의존 프로퍼티와 연결되어 사용된다(그러나 첨부 프로퍼티를 구현한 클래스는 자신의 SetValue와 GetValue를 호출하지 않는 다는 것에 주의해야 한다)이런 이유로 첨부 프로퍼티를 구현하는 클래스는 DependencyObject를 상속받을 필요가 없다. 
+
+다시 SetDock을 호출하는 부분을 살펴보자. 
+
+DockPanel.SetDock(ctrl, Dock.Right);
+
+이 호출은 결국다음 호출과 같다
+
+ctrl.SetValue(DockPanel.DockProperty, Dock.Right);
+
+SetDock을 SetValue로 바꿔서 확인해 볼 수 있다. 
+
+ctrl 객체가 DockPanel.DockProperty를 인자로 하는 SetValue 메소드를 호출할 때 프로퍼티가 저장될 것이며 특정 컬렉션에 값이 저장될 것이다. 그러나 이 컬렉션은 자식 엘리먼트의 일부이지 DockPanel 객체의 일부는 아니다. 
+
+DockPanel 객체가 엘리먼트를 레이아웃할 때 정적 GetDock 메소드를 호출해서 컨트롤과 연결된 Dock값을 얻을 수 있다. 
+
+Dock dck = DockPanel.GetDock(ctrl);
+
+이 호출은 다음과 같은 효과를 낸다.
+
+Dock dck = (Dock)ctrl.GetValue(DockPanel.DockProperty);
+
+첨부 프로퍼티는 일반적인 의존 프로퍼티에 비해 일반적인 경우는 아니지만 가장 중요한 내용중의 많은 부분을 이미 접해왔다. 
+
+클래스 문서에서 Fields 부분을 살펴보면 RoutedEvent 타입의 KeyDownEvent란 정적 필드도 볼 수 있다. 이 필드의 역할에 대해서는 이어지는 9장에서 알아보자. 
