@@ -1,0 +1,240 @@
+CHAPTER 10장 : 커스텀 엘리먼트
+이번 장의 제목은 사실 커스텀 컨트롤이 돼야겠지만 WPF에서는 엘리먼트와 컨트롤의 차이가 다소 비정형적이다. 심지어 엘리먼트가 아닌 커스텀 컨트롤을 만들게 되더라도 그 컨트롤을 생성할 때 대부분 커스텀 엘리먼트를 사용하게 될 것이다. 10장과 11장, 12장에서는 C#과 같은 코드에 가장 적합한 형태의 커스텀 엘리먼트와 컨트롤을 만드는 기법에 대해 살펴볼 것이다. 이 책의 2부에서는 커스텀 컨트롤을 만드는 다른 방법으로 XAML을 사용하는 법에 대해 배우게 될 것이며, 컨트롤을 커스터마이징하는 데 도움이 될 스타일링과 템플릿 기능에 대해서도 배우게 될 것이다. 
+
+커스텀 엘리먼트를 만들 때는 Image나 Panel, TextBlock, Shape이 그랬던 것과 같이 거의 매번 FrameworkElement를 상속받을 것이다(대신 UIElement를 상속할 수도 있지만 지금 살펴볼 절차와는 다소 다르다)커스텀 컨트롤을 만들 때는 Control을 상속받거나 또는 ContentControl과 같이 Control에서 파생된 클래스 중 하나를 상속받을 것이다. 
+
+새로운 엘리먼트를 설계할 때 다음과 같은 질문은 약간 까다로울 수 있다. FrameworkElement또는 Control을 반드시 상속받아야만 할까? 객체 지향 설계에서는 필요한 것을 제공하는 클래스를 상속받을 때는 클래스 계층도의 가장 아래에 있는 클래스를 상속받아야 한다고 제안하고 있다. 몇 가지 경우에는 그 가장 아래에 있는 클래스는 명백히 FrameworkElement가 될 것이다. 그렇지만 Control 클래스에는 FrameworkElement의 프로퍼티 외에 몇 가지 중요한 프로퍼티가 더 추가되어 있다. 여기에는 Background, Foreground, 폰트와 관련된 모든 프로퍼티 등이 포함된다. 텍스트를 출력하고자 할 때는 확실히 이 프로퍼티들이 유용하다. 다만 Control에는 무시해 버리고 싶지만 의무적으로 구현해야 된다고 느낄만한 프로퍼티가 몇 가지 더 있다. 바로 HorizontalContentAlignment, VerticalContentAlignment, BorderBrush, BorderThickness, Padding이다. 예를 들어 Control을 상속하고 그 Content의 출력 방법이 수직이냐 수평이냐에 따라 차이가 생긴다면 HorizontalContentAlignment와 VerticalContentAlignment을 이용해 무엇인가를 해야 할 것이다. 
+
+엘리먼트와 컨트롤의 차이에 관해 가장 큰 힌트를 주는 프로퍼티는 Focusable이다. UIElement에 이 프로퍼티가 정의되어 있지만 기본값은 false다. Control 클래스에는 기본 값이 true로 재정의되어 있어서 컨트롤은 키보드 입력 포커스를 받을 수 있는 엘리먼트라는 사실이 강하게 암시되어 있다. FrameworkElement를 상속받고도 Focusable을 true로 설정하거나, Control을 상속받고 Focusable을 false로 설정할 수도 있겠지만 (일부 컨트롤은 실제로 이렇다)그래도 엘리먼트와 컨트롤을 구별하는 흥미롭고 편리한 방법이다. 
+
+3장의 끝부분에서 FrameworkElement를 상속받은 클래스가 포함된 RenderTheGraphic이라는 프로그램을 선보인 적이 있다. 다음은 그 클래스다. 
+
+using System;
+using System.Windows;
+using System.Windows.Media;
+
+class SimpleEllipse : FrameworkElement
+{
+	protected override void OnRender(DrawingContext dc)
+	{
+		dc.DrawEllipse(Brushes.Blue, new Pen(Brushes.Red, 24), new Point(RenderSize.Width / 2, RenderSize.Height  / 2),
+				RenderSize.Width / 2, RenderSize.Height / 2);
+	}
+}
+
+가상 OnRender 메소드는 UIElement에 정의되어 있다. 인자는 DrawingContext 타입의 객체다(필자와 같은 예전의 윈도우 프로그래머라면 이 객체를 디바이스 컨텍스트[Device Context]에 경의를 표하는 의미로 dc라고 이름 짓는 것에 수긍할 것이다. 디바이스 컨텍스트란 Win16과 Win32 프로그램에서 화면 출력에 사용되는 데이터 구조체다. 이 둘 모두가 기능적으로 동등하지는 않지만 유사한 용도로 사용된다.)
+DrawingContext 클래스에는 가장 낮은 수준의 그리기와 관련된 메소드들이 정의되어 있다. 그럼에도 순수 WPF 애플리케이션이라고 할 수 있다. 다음 두 장에서 이와 관련된 몇 가지 메소드에 대해서 논의할 것이다. 단 이 책의 후반에서는 다른 메소드를 사용한다. 
+
+OnRender 메소드의 코드는 그릴 표면(Surface)이 있다고 가정한다. 이 표면은 원점이(0, 0)이며, 높이와 폭은 RenderSize 프로퍼티(UIElement에 정의됨)에 선언된다. SimpleEllipse 클래스의 OnRender 메소드에서 DrawEllipse의 첫 번째 인자는 타원의 내부를 칠하게 될 파란색 브러시이며, 두 번째 인자는 타원의 경계선을 그리는데 사용될 24단위(1/4인치)의 빨간색 펜이다. 세 번째 인자는 타원의 중심을 가리키는 Point 객체이며, 마지막 인자 두 개는 수평 반경과 수직 반경이다. 
+
+물론 OnRender 메소드에서 그리는 내용이 바로 화면에 보이는 것은 아니다. OnRender에 정의된 그래픽 객체는 WPF 그래픽 시스템에 의해 출력이 보류되며, 다른 비주얼 객체들과 조합해 함께 출력된다. 그래픽 객체는 다음에 호출되는 OnRender에 의해 대체될 때까지 보류된다. 시스템이 엘리먼트의 모습을 새로 갱신해야 한다는 것을 탐지하면 OnRender가 언제든지 호출될 수 있다. 보통 Win32에서의 WM_PAINT 메시지 또는 윈도우 폼 프로그램에서의 Paint 이벤트보다는 덜 발생하는데, 그래픽이 보류되기 때문이다. 예를 들어 다른 창을 움직이는 동안 비주얼 객체가 노출될 때에는 OnRender가 호출될 필요가 없다. 그러나 엘리먼트의 크기가 변경된다면 OnRender가 호출된다. InvalidateVisual 메소드를 명시적으로 호출해도 OnRender가 호출된다. 
+
+OnRender에서 그려지는 그래픽 객체는 마우스 이벤트를 처리하는 역할도 한다. 예를 들어 내부를 null 브러시로 사용한 타원을 그린다면 그 내부는 마우스에 대해 반응하지 않을 것이다. 
+
+OnRender 메소드에서는 그리기를 위해서 아니면 적어도 그릴 크기를 결정하기 위해서 RenderSize 프로퍼티를 사용한다. 이 프로퍼티는 어디에서 왔을까? 이 장과 11장에서 더 자세히 보겠지만 RenderSize는 UIElement에 의해 몇 가지 요소로 계산된다. RenderSize의 크기는 엘리먼트의 protected로 된 ActualWidth와 ActualHeight 프로퍼티로 복사된다. 
+
+RenderTheGraphic 프로그램으로 돌아가 시험을 해보거나, 이전 장들에서 엘리먼트 크기를 가지고 시험했던 것들을 떠올려보면 RenderSize는 엘리먼트가 나타날 컨테이너의 크기와 가장 밀접한 관련이 있음을 알 수 있다. RenderTheGraphic 프로그램에서 이 컨테이너는 창의 클라이언트 영역이었으나, 다른 요소도 RenderSize에 영향을 줄 수 있다. 타원에 대해 Margin 프로퍼티를 설정한다면 RenderSize는 그 여백만큼 줄게 된다. 
+
+프로그램에서 명시적으로 엘리먼트의 Width나 Height 프로퍼티를 설정하면 이 프로퍼티가 RenderSize를 계산할 때 컨테이너의 크기보다 높은 우선순위를 갖게 된다. Width를 NaN이 아닌 값으로 설정하면 RenderSize.Width는 Width와 같게 되며, 이 Width는 OnRender에서 타원을 그릴 때 사용하는 폭이 된다. 그 후에 컨테이너가 Width보다 좁아진다면 타원의 일부가 잘려지게 된다. 프로그램에서 MinWidth, MaxWidth, MinHeight, MaxHeight중 일부를 설정하는 경우에는 다음과 같은 효과가 생긴다. 컨테이너가 MaxWidth나 MaxHeight보다 큰 경우 엘리먼트는 MaxWidth나 MaxHeight의 크기로 출력된다. 컨테이너가 MaxWidth나 MaxHeight보다 작아지면 엘리먼트의 크기는 컨테이너의 크기를 따르게 된다. 그러나 컨테이너가 MinWidth나 MinHeight보다 작아지면 타원의 크기는 더 이상 줄어들지 않으며, 그 일부가 잘려진다. 
+
+또한 엘리먼트의 크기는 HorizotalAlignment와 VerticalAlignment 프로퍼티에도 영향을 받는다. RenderTheGraphic에서 다음처럼 설정해보자. 
+
+elips.HorizontalAlignment = HorizontalAlignment.Center;
+elips.VerticalAlignment = VerticalAlignment.Center;
+
+타원이 1/4인치 지름의 작은 공 모양으로 줄어드는 것을 볼 수 있다. 이제 RenderSize에는 Width와 Height 프로퍼티가 0이 되었고, 유일하게 볼 수 있는 것은 타원 주위에 있는 1/4인치 두께 경계선의 일부뿐이다. 
+
+크기가 0임에도 불구하고 약간의 모양을 볼 수 있는데, 이는 타원의 경계를 선으로 그리는 DrawEllipse의 논리 때문이다. 이 선은 DrawEllipse 메소드에 넘기는 중심과 반경 값에 의해 위치를 갖게 된다. 그런데 이 경계선이 24단위의 폭이라면 타원 주위에 1/4인치 두께의 선이 실제 타원의 기하학적 경계선이 24단위의 폭이라면, 타원 주위에 1/4인치 두께의 선이 실제 타원의 기하학적 경계선에 위치한다. 선 두께의 절반은 타원의 기하학적 경계선 안쪽에 위치하고, 나머지 절반은 바깥쪽에 위치한다. 두 가지 방법으로 이를 확인해 볼 수 있다. RenderTheGraphic에서 모든 여분의 코드를 제거하면 클라이언트 영역의 4개의 면에서 잘려진 선을 보게 될 것이다. 이제는 타원의 크기를 다음과 같이 설정해 보자. 
+
+elips.Width = 26;
+elips.Height = 26;
+
+이렇게 하면 타원은 가운데에 작은 점이 있고, 24단위의 폭으로 된 빨간 경계선을 갖는다. 실제 출력되는 타원의 크기는 50단위의 폭과 50단위의 높이가 된다. Width와 Height 프로퍼티를 26으로 지정했으며, 경계선 주위의 선으로 각 면에 12가 더해진다. 
+
+셰이프 라이브러리(Shapes library)의 Ellipse 클래스와 유사한 것을 만들기 위한 첫 단계가 이 SimpleEllipse 클래스가 될 것이다. 이제 이 클래스에 무엇이 더 필요할까?
+
+가장 중요한 것은 타원을 그리거나 칠할 때 사용될 브러시와 경계선의 두께에 대한 몇 가지 의존 프로퍼티를 정의해야 한다. 또한 타원을 출력하는 것이 실제 Ellipse 메소드와 더 비슷해지게 하기 위해 약간 조정하는 것을 고려해야 할 것이다. 그리고 3장에서의 ShapeTheEllipse 프로그램으로 돌아가 그 동작을 분석해보자. 여기에서 알아낼 수 있는 사실들은 다음과 같다. 
+
+* 타원이 클라이언트 영역 전체를 차지할 때 그 경계선이 잘리지 않는다. 
+
+* RenderTheGraphic에서 SimpleEllipse의 Width와 Height 프로퍼티를 26으로 했을 때 보았던 것과 동일한 형태의 이미지를 얻기 위해서는 Ellipse의 Width와 Height 프로퍼티를 모두 50으로 설정할 필요가 있다. 
+
+* 그러나 타원의 HorizontalAlignment와 VerticalAlignment를 Center로 설정하면 Ellipse 객체는 1/4인치의 공 모양 즉, SimpleEllipse와 정확히 같은 크기로 줄어든다. 
+
+일반적으로 엘리먼트에는 출력에 필요한 크기를 어떻게든 알려주는 방법이 제공된다. 그러나 SimpleEllipse에서는 그렇게 하고 있지 않으므로 그리 일반적이라 할 수 없다. 엘리먼트에는 출력할 때 특정한 최소 크기가 거의 항상 필요하다. TextBlock 을 예로 들면 그 텍스트를 출력할 수 있을 정도의 크기가 필요하다. 
+
+엘리먼트에 필요한 최소 크기를 요구 크기(desired size)라고 부른다. 
+
+커스텀 엘리먼트 클래스에서 요구 크기를 정의하기 위해 아무 public 프로퍼티나 사용해서는 안 되며, 또한 커스텀 엘리먼트 클래스에서 Width, Height, MinWidth, MaxWidth, MinHeight, MaxHeight 프로퍼티를 설정해서도 안 된다. 이 프로퍼티들은 커스텀 엘리먼트 클래스의 인스턴스를 만드는 클래스에서 사용하는 프로퍼티들이어서 그대로 유지해야 한다. 
+
+대신 커스텀 엘리먼트 클래스에서는 FrameworkElement에 정의된 MeasureOverride 메소드를 오버라이딩해서 요구 크기를 선언한다. MeasureOverride 메소드는 확실히 이상한 이름인데, 여기엔 이유가 있다. MeasureOverride는 UIElement에 정의된 MeasureCore라는 메소드와 비슷하다. 그런데 FrameworkElement에는 sealed된 채로 MeasureCore가 재정의되어 있다. sealed의 의미는 FrameworkElement를 상속받은 클래스가 그것을 오버라이딩할 수 없다는 의미이다. 그래서 FrameworkElement에는 MeasureCore의 대체로써 MeasureOverride가 정의되어 있다. FrameworkElement에는 Margin 프로퍼티가 포함되어 있으므로 엘리먼트의 크기를 정하는 데 UIElement와는 다른 접근법이 필요하다. 엘리먼트에는 여백이 필요하지만 실제로 그 여백을 사용하지는 않는다. 
+
+FrameworkElement를 상속받은 클래스는 다음과 같이 MeasureOverride를 오버라이딩한다. 
+
+protected override Size MeasureOverride(Size sizeAvailable)
+{
+	Size sizeDesired;
+	...
+	return sizeDesired;
+}
+
+MeasureOverride가 호출되면 항상 그 뒤에 OnRender가 한번 호출된다. 그 후에 엘리먼트가 갱신돼야 할 필요가 있다면 추가적으로 OnRender가 호출된다. 단 엘리먼트의 크기에 영향을 미칠 경우에 한해서다. 엘리먼트에 대해 InvalidateMeasure를 호출하면 강제적으로 MeasureOverride가 호출된다. sizeAvailable 인자는 유효한 엘리먼트의 크기를 가리킨다. 이 Size 객체의 Width와 Height는 0부터 양의 무한대까지의 범위를 가질 수 있다. 
+
+예를 들어 Content 프로퍼티를 엘리먼트로 설정한 Window 객체에서 sizeAvailable는 단순히 그 Window 객체의 클라이언트 크기가 된다. 그러나 SizeToContent 프로퍼티를 SizeToContent.WidthAndHeight로 설정하면 창이 엘리먼트가 필요한 크기로 커질 수 있다는 가정하에 sizeAvailable 인자는 Width와 Height가 모두 Double.PositiveInfinity가 된다. SizeToContent가 SizeToContent.Width라면 sizeAvailable.Width는 무한대가 될 것이며, sizeAvailable.Height는 클라이언트 영역의 높이가 된다(그러나 사용자가 그 후에 창의 크기를 변경하면 sizeAvailable은 실제 클라이언트 영역의 크기로 돌아간다)
+
+엘리먼트가 수직 방향 StackPanel의 자식이라고 가정해보자. 이 경우에 sizeAvailable.Width는 StackPanel의 폭이 되며(물론 보통의 경우는 그 컨테이너의 폭이 될 것이다), sizeAvailable.Height는 무한대가 된다. 
+
+이번에는 엘리먼트가 Grid자식이며, 300픽셀의 GridLength인 열에 그 엘리먼트가 있다고 가정하자. 이 경우에 sizeAvailable.Width는 300이 된다. 열의 폭이 GridLength.Auto로 되어 있다면 열이 엘리먼트에 맞게 늘어날 수 있기 때문에 sizeAvailable.Width는 무한대가 된다. GridLength의 폭이 GridUnitType.Star라면 sizeAvailable.Width는 이 열에 사용가능한 공간의 폭만큼을 가리킬 것이다. 
+
+엘리먼트의 Margin 프로퍼티가 설정되어 있다면 그 여백만큼 약간의 공간이 필요하며, 엘리먼트가 사용할 수 있는 크기는 줄어든다. sizeAvailable.Width 프로퍼티는 그 여백의 Left와 Right 프로퍼티의 합만큼 줄어들며, sizeAvailable.Height는 Top과 Bottom 프로퍼티의 합만큼 줄어든다. 물론 무한대인 크기는여백에 관계없이 무한대가 된다. 여백이 있다 해도 sizeAvailable의 크기는 절대 음수가 되지는 않는다. 
+
+엘리먼트의 Width, MinWidth, MaxWidth, Height, MinHeight, MaxHeight 프로퍼티 중 하나라도 설정한다면 지금까지 언급한 내용 모두가 변경돼야 한다. 이 프로퍼티는 엘리먼트를 사용할 때 지정되는 프로퍼티다. 이 프로퍼티의 기본값은 NaN임을 기억하자. 이 프로퍼티를 설정한 경우에는 엘리먼트 크기의 결정과 레이아웃에 다른 효과가 생긴다. 
+
+Width가 설정되면 sizeAvailable.Width는 Width가 되며, Height에 대해서도 동일하다. MinWidth이 설정되었다면 sizeAvailable.Width는 MinWidth와같거나 크게 된다(여전히 무한대가 될 수 있음을 의미한다)MaxWidth가 설정되었다면 sizeAvailable.Width는 MaxWidth보다 작거나 같게 된다. 
+
+엘리먼트의 자연스럽고 적절한 크기를 지정하기 위해서는 클래스에서 MeasureOverride 메소드를 오버라이딩해 사용해야 한다. 이 크기는 TextBlock이나 구체적인 크기로 비트맵을 출력하는 Image 엘리먼트의 경우는 너무나 명확하다. 엘리먼트에 이런 당연한 크기가 없다면 엘리먼트가 최소한의 적정 크기를 반환해야 한다. 이 최소의 크기는 0이 될 수 있으며, 아주 작은 값이 될 수도 있다. 
+
+MeasureOverride를 오버라이딩 하지 않는다면 FrameworkElement의 구현에서는 0을 반환한다. MeasureOverride에서 0이 반환된다는 것이 엘리먼트가 0의 크기로 그려진다는 것을 의미하지는 않는다. 이 점은 RenderTheEllipse 프로그램을 통해 명확히 알 수 있다. 이 프로그램에서는 SimpleEllipse가 MeasureOverride를 오버라이딩하지 않아 0이 반환되지만 대부분의 경우 충분한 타원이 출력된다. 
+
+엘리먼트가 0의 크기로 그려지지 않는 것은 HorizontalAlignment와 VerticalAlignment의 기본값이 Stretch이기 때문이다. 이런 설정이 MeasureOverride의 sizeAvailable인자에 반영되는 것은 아니지만, 이 설정을 이용해서 RenderSize가 계산된다. 
+
+자식이 없는 단순한 엘리먼트를 정의한다면 MeasureOverride 메소드의 sizeAvailable 인자를 살펴볼 필요도 없다(11장에서 보겠지만 자식이 있을 때는 모든 것이 바뀐다)엘리먼트가 특정한 가로 세로 비율을 유지해야 한다면 예외적인 경우가 된다. 예를 들어 Image 클래스는 비트맵의 크기와 Stretch 프로퍼티에 따라 MeasureOverride로부터 값이 반환된다. Stretch 프로퍼티는 비트맵이 어떻게 출력되는지를 가리킨다. Stretch가 Stretch.None이라면 Image의 MeasureOverride에서는 비트맵의 실제 크기가 반환된다. 기본 설정인 Stretch.Uniform이 라면 MeasureOverride에서의 sizeAvailable 인자는 정확한 가로 세로 비율을 유지할수 있게 크기가 계산된다. 단 sizeAvailable의 Width나 Height중 하나는 유지가 될 것이다. sizeAvailable의 크기 중 하나가 무한대라면 다른 크기는 이미지가 출력되는 크기를 계산해 정한다. 둘 모두가 무한대이면 비트맵의 실제 크기가 반환된다. Stretch.Fill의 경우는 두 프로퍼티 모두가 무한대가 아니라면 단순히 sizeAvailable 인자가 반환된다. 어느 하나나 둘 모두가 무한대라면 Stretch.Uniform의 경우를 따른다. 
+
+그러나 Image는 정말 예외적인 경우다. 대부분의 엘리먼트는 적절한 크기를 가지지 않기 때문에 0이나 작은 값이 반환된다. MeasureOverride는 무한대 크기의 Size 객체를 반환하지 않는다. 심지어 MeasureOverride의 인자가 무한대인 경우도 그렇다(시도해 본 결과 InvalidOperationException 메시지로 이렇게 나온다. "크기를 무한대로 넘길지라도 엘리먼트에서 DesiredSize를 PositiveInfinity를 반환해서는 안됩니다. 이 오버라이딩의 구현을 수정해 주십시오")
+
+MeasureOverride 메소드를 처리하는 동안 Width와 Height(또한 관련 프로퍼티)를 사용해서는 안 된다. MeasureOverride가 호출될 때 이 프로퍼티가 이미 참조되었다 전에 언급했지만 엘리먼트는 그 자신의 Width와 Height 프로퍼티를 설정해서는 안 된다. 이 프로퍼티는 엘리먼트를 사용하는 곳에서 필요한 것이다. 
+
+셰이프 라이브러리(더 엄밀히 말하면 Ellipse가 상속한 Shape 클래스)의 일반 Ellipse 클래스는 Thickness 프로퍼티의 값으로 설정된 Size 객체를 반환함으로써 MeasureOverride 메소드를 처리한다. 
+
+다음 클래스는 Ellipse의 동작에 더 근접해졌다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+public class BetterEllipse : FrameworkElement
+{
+	//의존 프로퍼티
+	public static readonly DependencyProperty FillProperty;
+	public static readonly DependencyProperty StrokeProperty;
+
+	//의존 프로퍼티에 대한 public 인터페이스
+	public Brush Fill
+	{
+		set { SetValue(FillProperty, value);
+		get { return (Pen)GetValue(FillProperty); }
+	}
+	public Pen Stroke
+	{
+		set { SetValue(StrokeProperty, value); }
+		get { return (Pen)GetValue(StrokeProperty); }
+	}
+	//정적 생성자
+	static BetterEllipse()
+	{
+		FillProperty = DependencyProperty.Register("Fill", typeof(Brush), typeof(BetterEllipse), new FrameworkPropertyMetadata(null,
+								FrameworkProperty.MetadataOptions.AffectsRender));
+		StrokeProperty = DependencyProperty.Register("Stroke", typeof(Pen), typeof(BetterEllipse), new FrameworkPropertyMetadata(null,
+								FrameworkPropertyMetadataOptions.AffectsMeasure));
+	}
+	//MeasureOverride의 오버라이딩
+	protected override Size MeasureOverride(Size sizeAvailable)
+	{
+		Size sizeDesired = base.MeasureOverride(sizeAvailable);
+		if(Stroke != null)
+			sizeDesired = new Size(Stroke.Thickness, Stroke.Thickness);
+		return sizeDesired;
+	}
+	//OnRender 의 오버라이딩
+	protected override void OnRender(DrawingContext dc)
+	{
+		Size size = RenderSize;
+		
+		//펜의 두께로 RenderSize 조정
+		if( Stroke != null)
+		{
+			size.Width = Math.Max(0, size.Width - Stroke.Thickness);
+			size.Height = Math.Max(0, size.Height - Storke.Thickness);
+		}
+
+		//타원 그리기
+		dc.DrawEllipse(Fill, Stroke, new Point(RenderSize.Width / 2, RenderSize.Height / 2), size.Width / 2, size.Height / 2);
+	}
+}
+
+일반 Shape 클래스를 살펴보면 Stroke라는 단어로 시작되는 몇 개의 프로퍼티가 정의되어 있음을 알 수 있다. 이 프로퍼티들은 Ellipse의 경계선과 같은 선들의 모양을 결정한다. 클래스에서는 이런 모든 다양한 Stroke 프로퍼티들을 구현하지는 않고 Pen 타입의 Stroke라는 프로퍼티 단 하나만을 정의한다. Pen 클래스는 기본적으로 Shape에서 명시적으로 정의된 모든 프로퍼티들을 캡슐화했기 때문이다. MeasureOverride는 Pen 객체의 두께에 근거해서 크기를 반환하며, OnRender 에서 Thickness 프로퍼티만큼 타원의 직경을 줄인다. 
+
+클래스가 애니메이션에 사용될 수 있게 Fill과 Stroke가 FillProperty와 StrokeProperty의존 프로퍼티로 지원돼야 한다. 정적 생성자의 FrameworkPropertyMetadata의 정의를 살펴보자. Fill 프로퍼티에는 AffectsRender 플래그가 있고, Stroke 프로퍼티에는 AffectsMeasure 플래그가 있다. Fill프로퍼티가 변경되면 실제로 InvalidateVisual 메소드가 호출되어 OnRender의 호출로 이어진다. 반면에 Stroke 프로퍼티가 변하면 InvalidateMeasure가 호출되며, 이는 MeasureOverride의 호출로 이어지고 그 후에 OnRender의 호출이 뒤따른다. 차이점은 MeasureOverride에 지정된 엘리먼트의 크기는 Brush가 아니라 Pen에 의해 영향을 받는다는 것이다. 
+
+RenderTheBetterEllipse 프로그램을 실행시키면 볼 수 있듯이, 타원의 경계선은 창의 클라이언트 영역에 딱 맞게 되어 있다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class RenderTheBetterEllipse : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new RenderTheBetterEllipse());
+	}
+	public RenderTheBetterEllipse()
+	{
+		Title = "Render the Better Ellipse";
+
+		BetterEllipse elips = new BetterEllipse();
+		elips.Fill = Brushes.AliceBlue;
+		elips.Stroke = new Pen(new LinearGradientBrush(Colors.CadetBlue, Colors.Chocolate, new Point(1, 0),new Point(0, 1)), 24); //1/4인치
+		Content = elips;
+	}
+}
+
+이제 BetterEllipse에 코드를 추가해 엘리먼트 내의 중앙에 텍스트를 출력해야 한다고 가정하자. 이미 MeasureOverride와 OnRender 메소드를 구현했기 때문에 단순히 OnRender 메소드에 DrawingContext의 DrawText를 호출하는 코드를 추가해야 한다고 느낄지 모르겠다. DrawText 메소드 그 자체는 꽤 단순하게 보인다. 
+
+dc.DrawText(formtxt, pt);
+
+두 번째 인자는 텍스트가 시작될 위치를 가리키는 Point다(기본값으로 영어나 다른 서양 언어의 경우에 텍스트의 원점은 텍스트의 좌측 상단이다)DrawText의 첫 번째 인자는 FormattedText 타입이다. 가장 간단한 생성자에도 6개의 인자가 있다. 첫 번째 인자는 텍스트 문자열이고, 나머지 인자들은 이 문자열이 출력되는 특성에 관한 정보들이다. 이 인자들 중 하나는 Typeface객체로 ,다음과 같이 생성할 수 있다. 
+
+new Typeface(new FontFamily("Times New Roman"), FontStyles.Italic, FontWeights.Normal, FontStretchs.Normal);
+
+또는 아래와 같이 더 간단하게할 수도 있다. 
+new Typeface("Times New Roman Italic");
+
+그러나 FormattedText 는 생성자에서 암시된 것보다 더 유연하게 사용할수 있다. FormattedText 객체는 텍스트의 일부에 서로 다른 서식을 적용할 수 있다. SetFontSize나 SetFontStyle과같은 FormattedText에 정의된 메소드에서는 서식이 적용될 텍스트 문자열의 위치와 글자의 수를 지정할 수 있다. 
+
+여하튼 다음 구문을 BetterEllipse의 OnRender 메소드 끝부분에 삽입해 작은 텍스트를 추가할 수 있다. 
+
+FormattedText formtxt = new FormattedText("Hello, ellipse!", CultureInfo.CurrentCulture, FlowDirection, new Typeface("Times New Roman Italic"), 24,
+					Brushes.DarkBlue);
+Point ptText = new Point((RenderSize.Width.Width - formtxt.Width) / 2, (RenderSize.Height - formtxt.Height) / 2);
+dc.DrawText(formtxt, ptText);
+
+CultureInfo.CurrentCulture 정적 프로퍼티를 참조하기 위해서는 System.Globalization에 대한 using 문을 사용해야 한다. 편리하게도 FlowDirection은 FrameworkElement의 프로퍼티다. ptText는 텍스트가 타원의 중심에 출력될 수 있게 텍스트의 좌측 상단 위치를 계산해 결정 한다. 
+
+텍스트를 출력하는 코드는 DrawEllipse가 호출된 후에 실행돼야 할 것이다. 그렇지 않으면 타원이 텍스트 위에 보이게 되고 텍스트의 일부가 타원에 가려져 안보일 수 있다. 그런데 텍스트가 타원보다 앞쪽에 있더라도 타원의 크기가 작을 경우에는 문제가 생긴다. 다음 구문을 넣어보자. 
+
+elips.Width = 50;
+
+이렇게 하면 텍스트가 타원의 크기를 넘어서 출력된다. 실제로 이 구문을 추가해서 실행해보면 OnRender에서 RenderSize의 크기에 맞게 텍스트를 클리핑(clipping, 불필요한 부분이 출력되지 않게 잘라내는 것)하지는 않는다. OnRender에서는 MeasureOverride에서 반환되는 sizeDesired의 어느 한쪽 값이 이에 대응하는 sizeAvailable(MeasureOverride의 인자)의 값을 초과할 경우에만 클리핑이 수행된다. 클리핑은 sizeAvailable을 기준으로 수행된다. OnRender 메소드에서 RenderSize 크기를 넘어서서 그려지지 않게 하기 위해 다음과 같이 DrawingContext를 이용해 클리핑 영역을 설정할 수 있다. 
+
+dc.PushClip(new RectangleGeometry(new Rect(new Point(0, 0), RenderSize)));
+
+그러나 정말로 수행될 필요가 있는 것은 MeasureOverride가 호출되기 전에 FormattedText를 결정하는 것이다. 그 후 MeasureOverride에서 요구하는 엘리먼트의 크기를 결정할 때 텍스트의 크기를 이용할 수 있다. 
+
+물론 이런 텍스트가 포함된 타원 클래스를 만들 때 문자열의 크기를 측정하는 것은 첫 단계일 뿐이다. 텍스트뿐만 아니라 FormattedText에 필요한 모든 폰트 프로퍼티도 정의해야 한다. 
+
+타원에 텍스트를 넣어봤는데, 대신에 버튼과 같이 좀 더 형식화된 곳에 텍스트를 넣어보자. Control을 상속받은 클래스(버튼이 될 것이다)는 Control에 정의된 모든 폰트 프로퍼티에 접근할 수 있다. 클래스들을 FormattedText 생성자에 바로 전달할 수 있다. 
+
+다음은 MedievalButton 클래스로 텍스트를 출력하는 버튼을 정의하기 위해 Control을 상속받는다. 이 클래스에는 Text 프로퍼티가 있어서 버튼에 출력될 텍스트를 설정할 수 있고, TextProperty라는 의존 프로퍼티로 지원한다. 또한 이 클래스에는 Knock과 PreviewKnock이라는 2개의 라우팅 이벤트가 정의되어 있다(9장에서 Knock과 PreviewKnock 이벤트를 위한 코드를 보인 바 있다)
+
+이 클래스에서보인 의존 프로퍼티와 라우팅 이벤트의 구현은 최신의 기법이나, 이름은 중세풍의 버튼이란 의미로 MedievalButton으로 지었다. 모든 것을 OnRender 메소드에서 그리기 때문이다. 앞으로 살펴보겠지만 , 커스텀 컨트롤을 정의하는 더 좋은 방법도 있다.
