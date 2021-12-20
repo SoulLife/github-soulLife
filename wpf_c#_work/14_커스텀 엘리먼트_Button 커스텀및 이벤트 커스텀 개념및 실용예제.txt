@@ -1,0 +1,280 @@
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class MedievalButton : Control
+{
+	//2개의 private 필드
+	FormattedText formtxt;
+	bool isMouseReallyOver;
+
+	//정적 읽기 전용 필드
+	public static readonly DependencyProperty TextProperty;
+	public static readonly RoutedEvent KnockEvent;
+	public static readonly RoutedEvent PreviewKnockEvent;
+
+	//정적 생성자
+	static MedievalButton()
+	{
+		//의존 프로퍼티 등록
+		TextProperty = DependencyProperty.Register("Text", typeof(string), typeof(MedievalButton),new FrameworkPropertyMetadata(" ",
+							FrameworkPropertyMetadataOptions.AffectsMeasure));
+		//라우팅 이벤트 등록
+		KnockEvent = EventManager.RegisterRoutedEvent("Knock", RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(MedievalButton));
+		PreviewKnockEvent = EventManager.RegisterRoutedEvent("PreviewKnock",RoutingStrategy.Tunnel,
+					typeof(RoutedEventHandler), typeof(MedievalButton));
+	}
+	//의존 프로퍼티의 public 인터페이스
+	public string Text
+	{
+		set { SetValue(TextProperty, value == null ? " ": value);	}
+		get { return (string)GetValue(TextProperty); }
+	}
+	//라우팅 이벤트의 Public 인터페이스
+	public event RoutedEventHandler Knock
+	{
+		add { AddHandler(KnockEvent, value); }
+		remove {RemoveHandler(KnockEvent, value); }
+	}
+	public event RoutedEventHandler PreviewKnock
+	{
+		add { AddHandler(PreviewKnockEvent, value); }
+		remove{ RemoveHandler(PreviewKnockEvent, value); }
+	}
+	//버튼의 크기가 변경될 때 MeasureOverride가 호출됨
+	protected override Size MeasureOverride(Size sizeAvailable)
+	{
+		formtxt = new FormattedText( Text, CultureInfo.CurrentCulture, FlowDirection, new Typeface(FontFamily, FontStyle,
+					FontWeight, FontStretch), FontSize, Foreground);
+
+		//크기를 계산할 때 Padding을 사용
+		Size sizeDesired = new Size(Math.Max(48, formtxt.Width) + 4, formtxt.Height + 4);
+		sizeDesired.Width += Padding.Left + Padding.Right;
+		sizeDesired.Height += Padding.Top + Padding.Bottom;
+
+		return sizeDesired;
+	}
+	//버튼을 다시 그리기 위해 OnRender 호출
+	protected override void OnRender(DrawingContext dc)
+	{
+		//배경색 결정
+		Brush brushBackground = SystemColors.ControlBrush;
+		if(isMouseReallyOver && IsMouseCaptured)
+			brushBackground = SystemColors.ControlDarkBrush;
+
+		//펜의 두께 결정
+		Pen pen = new Pen(Foreground, IsMouseOver ? 2 : 1);
+		//둥근 모서리의 사각형을 그림
+		dc.DrawRoundedRectangle(brushBackground, pen, new Rect(new Point(0, 0), RenderSize), 4, 4);
+		//전경색 결정
+		formtxt.SetForegroundBrush(IsEnabled ? Foreground : SystemColors.ControlDarkBrush);
+		//텍스트의 시작점 결정
+		Point ptText = new Point(2, 2);
+		switch(HorizontalContentAlignment)
+		{
+			case HorizontalAlignment.Left:
+				ptText.X += Padding.Left;
+				break;
+			case HorizontalAlignment.Right:
+				ptText.X += RenderSize.Width - formtxt.Width - Padding.Right;
+				break;
+			case HorizontalAlignment.Center:
+			case HorizontalAlignment.Stretch:
+				ptText.X += (RenderSize.Width - formtxt.Width - Padding.Left - Padding.Right) / 2;
+				break;
+		}
+		switch(VerticalContentAlignment)
+		{
+			case VerticalAlignment.Top:
+				ptText.Y += Padding.Top;
+				break;
+			case VerticalAlignment.Bottom:
+				ptText.Y += RenderSize.Height - formtxt.Height - Padding.Bottom;
+				break;	
+			case VerticalAlignment.Center:
+			case VerticalAlignment.Stretch:
+				ptText.Y += (RenderSize.Height - formtxt.Height - Padding.Top - Padding.Bottom) / 2;
+				break;
+		}
+		//텍스트 출력
+		dc.DrawText(formtxt.ptText);
+	}
+	//버튼의 모습에 영향울 주는 Mouse 이벤트
+	protected override void OnMouseEnter(MouseEventArgs args)
+	{
+		base.OnMouseEnter(args);
+		InvalidateVisual();
+	}
+	protected override void OnMouseLeave(MouseEventArgs args)
+	{
+		base.OnMouseLeave(args);
+		InvalidateVisual();
+	}
+	protected override void OnMouseMove(MouseEventArgs args)
+	{
+		base.OnMouseMove(args);
+
+		//Determine if mouse has really moved inside or out
+		Point pt = args.GetPosition(this);
+		bool isReallyOverNow = (pt.X >= 0 && pt.X < ActualWidth && pt.Y >= 0 && pt.Y < ActualHeight);
+		if(isReallyOverNow != isMouseReallyOver)
+		{
+			isMouseReallyOver = isReallyOverNow;
+			InvalidateVisual();
+		}
+	}
+	// "Knock" 이벤트를 발생시키는 작업의 시작
+	protected override void OnMouseLeftButtonDown(MouseButtonEventArgs args)
+	{
+		base.OnMouseLeftButtonDown(args);
+		CaptureMouse();
+		InvalidateVisual();
+		args.Handled = true;
+	}
+	// 이 이벤트가 실제로 Knock 이벤트 발생
+	protected override void OnMouseLeftButtonUp(MouseButtonEventArgs args)
+	{
+		base.OnMouseLeftButtonUp(args);
+		if(IsMouseCaptured)
+		{
+			if(isMouseReallyOver)
+			{
+				OnPreviewKnock();
+				OnKnock();
+			}
+			args.Handled = true;
+			Mouse.Capture(null);
+		}
+	}
+	//마우스 캡처가 종료되면 다시 그림
+	protected override void OnLostMouseCapture(MouseEventArgs args)
+	{
+		base.OnLostMouseCapture(args);
+		InvalidateVisual();
+	}
+	//Space bar 또는 Enter 키를 눌러도 버튼을 누르는 효과
+	protected override void OnKeyDown(KeyEventArgs args)
+	{
+		base.OnKeyDown(args)
+		if(args.Key == Key.Space || args.Key == Key.Enter)
+			args.Handled = true;
+	}
+	protected override void OnKeyUp(KeyEventArgs args)
+	{
+		base.OnKeyUp(args);
+		if(args.Key == Key.Space || args.Key == Key.Enter)
+		{
+			OnPreviewKnock();
+			OnKnock();
+			args.Handled = true;
+		}
+	}
+	//OnKnock 메소드에서 Knock 이벤트 발생
+	protected virtual void OnKnock()
+	{
+		RoutedEventArgs argsEvent = new RoutedEventArgs();
+		argsEvent.RoutedEvent = MedievalButton.KnockEvent;
+		argsEvent.Source = this;
+		RaiseEvent(argsEvent);
+	}
+	//OnPreviewKnock 메소드에서 PreviewKnco 이벤트 발생
+	protected virtual void OnPreviewKnock()
+	{
+		RoutedEventArgs argsEvent = new RoutedEventArgs();
+		argsEvent.RoutedEvnet = MedievalButton.PreviewKnockEvent;
+		argsEvent.Source = this;
+		RaiseEvent(argsEvent);
+	}
+}
+
+
+
+
+이 클래스에는 확실히 많은 메소드가 있긴 하지만 (대부분은 UIElement나 FrameworkElement에 정의된 메소드의 오버라이딩이다)이 메소드 들이 낯설지는 않을 것이다. 정적 생성자에서 Text 의존프로퍼티와 Knock과 PreviewKnock 라우팅 이벤트를 등록하고 있으며, public 프로퍼티와 이벤트들은 정적 생성자 바로 다음에 정의되어 있다. 
+
+MeasureOverride 메소드에서는 FormattedText 타입의 객체를 생성해서 필드에 저장하고 있다. FormattedText에 대한 인자와 FormattedText의 네 번째 인자인 Typeface 생성자에 대한 인자 거의 대부분은 FrameworkElement와 Control, MedievalButton에 정의된 프로퍼티다. FormattedText 생성자는 복잡하게 보일지 모르지만 Control을 상속받은 클래스에서는 쉽게 채울 수 있다. 
+
+MeasureOverride 메소드의 마지막 부분에서 버튼의 요구 크기를 계산한다. 이 크기는 FormattedText 객체의 폭과 높이에 4단위를 더해 경계를 고려하고 있다. 짧은 텍스트 문자열의 경우 너무 작은 버튼이 되는 것을 방지하기 위해 버튼의 폭은 최소 1/2인치가 되게 했다. MeasureOverride 메소드의 마지막을 보면 Control에 정의된 Padding 프로퍼티도 고려하고 있음을 알 수 있다. 
+
+MeasureOverride 메소드에서 엘리먼트의 Margin이나 HorizontalAlignment, VerticalAlignment 프로퍼티를 이용해서는 안 된다. 컨트롤에서 BorderBrush와 BorderThickness프로퍼티를 구현하려면 이용할 수도 있겠지만 그렇지 않은 경우 이 프로퍼티들은 효과가 없다. 이 프로퍼티를 구현하는 컨트롤은 BorderThickness를 MedievalButton 에서 처리했던 방식과 같은 방법으로 처리할 것이다. 
+
+OnRender에서는 버튼을 그리는 작업을 수행한다. 이를 위해 단 2개의 메소드를 호출하는데, 버튼의 경계와 배경을 그리기 위해 DrawRoundedRectangle를 호출하며, 버튼 안의 텍스트를 출력하기 위해서 DrawText를 호출한다. 다만 실제 색과 각 항목의 위치를 결정하기 위해서 많은 준비 작업이 필요하다. 
+
+버튼이 눌린 상태이고 마우스 포인터가 계속 버튼 위에 있을 때는 배경 브러시가 조금 어두워져야 한다. 또 마우스 포인터가 버튼 위에 위치하면 버튼의 외곽선을 조금 굵게 만들기로했다. 텍스트의 색깔은 보통의 경우 Control에 정의된 Foreground 프로퍼티를 따른다. 그러나 버튼이 비활성화 된다면 조금 달라져야 할 것이다. 2개의 switch문에서 HorizontalContentAlignment와 VerticalContentAlignment, Padding을 가지고 텍스트의 시작점을 계산한다. ptText라는 Point 객체를(2, 2)로 초기화한 것은 Rectangle의 호출로 경계선이 그려질 때 여유가 생기게 한 것이다. 
+
+클래스의 나머지 부분은 입력 이벤트를 처리한다. OnMouseEnter와 OnMouseLeave에서 해야할 일은 InvalidateVisual을 호출해서 버튼이 다시 그려지게 하는 것이 전부다. 처음에는 OnRender에서 IsMouseOver프로퍼티를 확인해 마우스가 버튼 위에 위치하는지를 결정하려고 했으나, 마우스가 캡쳐되면 IsMouseOver는 마우스 위치에 상관없이 true를 반환한다. OnRender에서 버튼 배경색을 정확하게 지시하기 위해 OnMouseMove를 오버라이딩해서 IsMouseReallyOver라고 부르는 필드의 값을 계산한다. 
+
+OnMouseLeftButtonDown이 호출되면 먼저 마우스를 캡쳐한다. 그리고 InvalidateVisual를 호출해 버튼의 모습을 적절하게 그리며, MouseButtonEventArgs의 Handled 프로퍼티를 true로 설정한다. Handled를 true로 설정하는 것은 MouseLeftButtonDown 이벤트가 Window객체까지 버블업되는 것을 막기 위한 것이다. 일반 Button 클래스가 Click 이벤트를 처리하는 것과 같은 방법을 사용해 일관성을 유지하는 것이다. 
+
+OnMouseLeftButtonUp가 호출되면 OnPreviewKnock과 OnKnock이 호출되어 실제로 PreviewKnock과 Knock 이벤트가 발생된다. 이 두 메소드는 Button에서 구현된 인자가 없는 protected의 가상 OnClick 메소드를 본떠 만들었다. 비슷한 방법으로 OnKeyDown과 OnKeyUp의 오버라이딩에서는 사용자가 Space Bar나 Enter 키를 눌렀을 때 PreviewKnock과 Knock 이벤트를 발생시킨다. 
+
+다음은 GetMedieval이란 프로그램으로 MedievalButton의 인스턴스를 생성한다. 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class GetMedieval : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new GetMedieval());
+	}
+	public GetMedieval()
+	{
+		Title = "Get Medieval";
+
+		MedievalButton btn = new MedievalButton();
+		btn.Text = "Click this button";
+		btn.FontSize = 24;
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.VerticalAlignment = VerticalAlignment.Center;
+		btn.Padding = new Thickness(5, 20, 5, 20);
+		btn.Knock += ButtonOnKnock;
+
+		Content = btn;
+	}
+	void ButtonOnKnock(object sender, RoutedEventArgs args)
+	{
+		MedievalButton btn = args.Source as MedievalButton;
+		MessageBox.Show("The button labeled \"" + btn.Text + "\" has been knocked.", Title);
+	}
+}
+
+이 버튼이 일반 버튼과 얼마나 유사하게 동작하는 지를 확인하기 위해 버튼의 HorizontalAlignment, VerticalAlignment, HorizontalContentAlignment, VerticalContentAlignment, Margin, Padding 프로퍼티를 변경시켜가면서 실험해보자. 그러나 아래와 같이 명시적으로 MedievalButton을 매우 좁게 만들면 버튼의 오른쪽이 잘리게 된다. 
+
+btn.Width = 50;
+
+버튼의 크기가 작더라도 그 외곽선이 항상 출력되는 것이 좋을 것이다. MeasureOverride에 서 반환되는 크기를 다음과 같이 sizeAvailable 인자보다 작거나 같게 함으로써 그렇게 할 수 있다. 
+
+sizeDesired.Width = Math.Min(sizeDesired.Width, sizeAvailable.Width);
+sizeDesired.Height = Math.Min(sizeDesired.Height, sizeAvailable.Height);
+
+그러나 sizeDesired 반환값의 크기 중 어떤 것이라도 sizeAvailable을 초과하지 않는 한 OnRender에서 클리핑을 수행하지 않는다(Math.Min을 사용하는 코드에서 sizeDesired의 크기는 항상 sizeAvailable의 크기보다 작거나 같을 것이다) 그래서 버튼의 경계를 넘어서는 긴 텍스트는 여전히 출력된다. 강제로 클리핑하기 위한 2가지 방법이 있다. sizeDesired에 작은 값을 추가하거나(단 0.1이라도), OnRender의 시작 부분에서 다음과 같이 RenderSize를 이용해 클리핑 영역을 설정하면 된다. 
+
+dc.PushClip(new RectangleGeometry(new Rect(new Point(0, 0), RenderSize)));
+
+MedievalButton에서 라우팅 이벤트의 구현을 자세히 조사하기 위해서 9장의 ExamineRoutedEvents 프로젝트에 MedievalButton.cs 파일을 포함시킬 수 있다. 그리고 이 프로그램에서의 Button을 MedievalButton으로 대체한다. 이를 위해서는 Petzold.GetMedieval에 대해 using 문을 포함시킬 필요가 있으며, 몇 가지 변경이 더필요하다. 아래 구문을 찾아보자. 
+
+btn.Content = text;
+
+그리고 이를 다음 구문으로 대체하자. 
+
+btn.Text = text.Text;
+
+또한 Button.ClickEvent를 참조하는 구문을 MedievalButton.KnockEvent를 참조하게 변경하자. PreviewKnock 이벤트에 대해서도 관찰하려면 이 이벤트에 대한 또 하나의 Add Handler를 추가해야 한다. 
+
+Button 클래스가 아닌 MedievalButton 클래스를 사용한다고 가정하자. 그런데 버튼의 텍스트에서 한 두 단어만을 기울임꼴로 하고 싶다면 어떻게 해야 할까? 다행히도 FormattedText클래스에는 SetFontStyle이나 SetFontWeight 같은 메소드가 있어서 텍스트의 일부에 서식을 줄 수 있다. 그래서 MedievalButton의 Text 프로퍼티를 FormattedText 프로퍼티로 대체할 수 있고, 출력을 위해 버튼에 원하는 FormattedText 객체를 주면 된다. 
+
+물론 나중에 언젠가는 비트맵을 출력하는 MedievalButton이 필요할 수도 있다. 이번에는 DrawingContext에 ImageSource 타입(Image 엘리먼트에서 사용했던 것과 동일한 타입)의 인자를 받는 DrawImage 메소드가 있음을 찾을 수 있어야 한다. 그래서 MedievalButton에 ImageSource라는 이름의 새로운 프로퍼티를 추가할 수 있으며, OnRender에서 DrawImage를 호출해 출력한다. 그런데 이 시점에서 비트맵이 텍스트를 대체할 지 혹은 텍스트와 같이 출력할지를 결정할 필요가 있다. 그리고 어쩌면 다른 배치가 필요할 수도 있다. 
+
+물론 일반 Button 클래스에 Content란 이름의 프로퍼티가 있으며 Content는 어떤 객체라도 될 수 있기 때문에 더 좋은 방법을 생각할 수 있다. 그런데 Button과 ButtonBase 관련 문서를 보면 이 클래스들은 OnRender를 오버라이딩할 수 없음을 알 수 있다. 이 클래스들은 실제 렌더링을 다른 클래스에게 이관한다. 9장의 ExamineRoutedEvents 프로그램에서 Button은 실제로 ButtonChrome 클래스와 버튼의 컨텐트가 되는 엘리먼트(이 경우에는 TextBlock)임을 알 수 있었다. 
+
+구조적으로 SimpleEllipse와 BetterEllipse, MedievalButton 클래스는 클래스가 FrameworkElement나 Control을 상속받을 수 있는 가장 간단한 방법을 보여준다. 실제로 필요한 것은 OnRender를 오버라이딩하는 것 뿐이며, 이때 MeasureOverride의 오버라이딩을 수반하기도 한다(물론 OnRender와 MeasureOverride 메소드는 다소 복잡할 수 있겠지만 전체적인 구조는 단순하다)그럼에도 불구하고 엘리먼트는 자식들을 갖는 것이 훨씬 일반적이다. 자식들로 인해 엘리먼트의 구조가 복잡하게 되긴 하지만 더 유연함을 얻게 된다. 
