@@ -1,0 +1,569 @@
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class BuildButtonFactory : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new BuildButtonFactory());
+	}
+	public BuildButtonFactory()
+	{
+		Title = "Build Button Factory";
+	
+		//Button 객체를 위한 ControlTemplate을 생성
+		ControlTemplate template = new ControlTemplate(typeof(Button));
+
+		//Border 클래스에 대해 FrameworkElementFactory를 생성
+		FrameworkElementFactory factoryBorder = new FrameworkElementFactory(typeof(Border));
+
+		//나중에 참조하기 위해 이름을 정함
+		factoryBorder.Name = "border";
+
+		//기본 프로퍼티들을 설정
+		factoryBorder.SetValue(Border.BorderBrushProperty, Brushes.Red);
+		factoryBorder.SetValue(Border.BorderThicknessProperty, new Thickness(3));
+		factoryBorder.SetValue(Border.BackgroundProperty, SystemColors.ControlLightBrush);
+
+		//ContentPreesnter 클래스에 대해 FrameworkElementFactory를 생성
+		FrameworkElementFactory factoryContent = new FrameworkElementFactory(typeof(ContentPressenter));
+
+		//나중에 참조하기 위해 이름을 정함
+		factoryContent.Name = "content";
+
+		//몇 가지 ContentPresenter 프로퍼티를 Button 프로퍼티에 바인딩
+		factoryContent.SetValue(ContentPresenter.ContentProperty, new TemplateBindingExtension(Button.ContentProperty));
+
+		//버튼의 Padding은 컨텐트의 Margin임
+		factoryContent.SetValue(ContentPresenter.MarginProperty, new TemplateBindingExtension(Button.PaddingProperty));
+		//ContentPresenter를 Border의 자식으로 만듦
+		factoryBorder.AppendChild(factoryContent);
+
+		//Border를 비주얼 트리의 루트 엘리먼트로 만듦
+		template.VisualTree = factoryBorder;
+
+		//IsMouseOver가 true가 될 때의 Trigger를 정의
+		Trigger trig = new Trigger();
+		trig.Property = UIElement.IsMouseOverProperty;
+		trig.Value = true;
+
+		//이 트리거와 연관된 Setter를 정의, border 엘리먼트의 CornerRadius 프로퍼티를 변경
+		Setter set = new Setter();
+		set.Property = Border.CornerRadiusProperty;
+		set.Value = new CornerRadius(24);
+		set.TargetName = "border";
+
+		//Trigger의 Setter 컬렉션에 Setter를 추가
+		trig.Setters.Add(set);
+
+		//비슷한 방법으로 FontStyle을 변경시키는 Setter를 정의 (버튼의 프로퍼티이므로 TargetName은 불필요함)
+		set = new Setter();
+		set.Property = Control.FontStyleProperty;
+		set.Value = FontStyles.Italic;
+
+		//전과 같은 방법으로 이 Setter를 트리거의 Setter 컬렉션에 추가
+		trig.Setters.Add(set);
+
+		//트리거를 템플릿에 추가
+		template.Triggers.Add(trig);
+
+		//비슷한 방법으로 IsPressed에 대한 트리거를 정의
+		trig = new Trigger();
+		trig.Property = Button.IsPressedProperty;
+		trig.Value = true;
+		set = new Setter();
+		set.Property = Border.BackgroundProperty;
+		set.Value = SystemColors.ControlDarkBrush;
+		set.TargetName = "border";
+
+		//Trigger의 Setters 컬렉션에 Setter를 추가
+		trig.Setters.Add(set);
+
+		//트리거를 템플릿에 추가
+		template.Triggers.Add(trig);
+
+		//마지막으로 Button을 생성
+		Button btn = new Button();
+
+		//템플릿 지정
+		btn.Template = template;
+
+		//기타 프로퍼티 정의
+		btn.Content = "Button with Custom Template";
+		btn.Padding = new Thickness(20);
+		btn.FontSize = 48;
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.VerticalAlignment = VerticalAlignment.Center;
+		btn.Click += ButtonOnClick;
+		Content = btn;
+	}
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		MessageBox.Show("You clicked the button", Title);
+	}
+}
+Template 프로퍼티를 Control 클래스에 정의했는데 커스텀 컨트롤에서 이 기법을 사용할 수 있다. 사실 이 방법을 사용해서 완전한 커스텀 컨트롤을 정의할 수 있다. 이 책의 2부에서는 XAML의 예제를 살펴볼 것이다. 
+
+Measure와 Arrange 메소드가 UIElement 클래스에 정의되었다는 것을 이미 알고 있겠지만 VisualChildrenCount와 GetVisualChild는 Visual 클래스에 정의되어 있다. Object에서 Control 까지의 클래스 계층도를 다시 한번 살펴보자.
+
+
+Object 
+	DispatcherObject( abstract)
+		DependencyObject
+			Visual(abstract)
+				UIElement
+					FrameworkElement
+						Control
+
+엘리먼트의 자식들은 보통 다른 엘리먼트지만 자식 중에는 비주얼(Visual)도 있다. 비주얼이란 Visual에서 아래에 위치한 클래스의 인스턴스를 말한다. 이런 비주얼들이 비주얼 트리를 구성한다. 
+
+다음 클래스 계층도는 FrameworkElement의 자손을 제외한 Visual의 모든 자손을 보여준다. 
+
+Object
+	DispatcherObject(abstract)
+		DependencyObject
+		Visual(abstract)
+			ContainerVisual
+				DrawingVisual
+				HostVisual
+			Viewport3DVisual
+			UIElement
+				FrameworkElement
+
+여기에서는 DrawingVisual 에 특히 관심을 갖고 살펴보자. 이미 논의한 바 있지만, UIElement에서 파생된 클래스는 OnRender 메소드를 오버라이딩해서 DrawingContext를 얻을 수 있고, 이를 이용해 화면에 그래픽 객체들을 그릴 수 있다. DrawingContext 객체를 얻을 수 있는 다른 곳은 DrawingVisual 뿐이다. 
+
+DrawingVisual drawvis = new DrawingVisual();
+DrawingContext dc = drawvis.RenderOpen();
+// dc에 그리기
+...
+dc.Close();
+
+이 구문을 실행한 다음에는 DrawingVisual 객체를 소유하게 된다. DrawingVisual 객체를 다른 말로 하면 특정한 이미지가 저장되는 비주얼이다. DrawingContext의 그리기 함수에 전달하는 인자로 이 비주얼의 위치와 크기를 지정한다. 여기서의 위치는 아직 존재하지 않는 어떤 부모 엘리먼트에 대한 상대 좌표다. 화면에 비주얼을 출력하려면 해당 엘리먼트에서 VisualChildrenCount와 GetVisualChild의 반환 값을 통해 자식 비주얼의 존재를 명시해 주면 된다. 이 비주얼들에 대해서는 Measure나 Arrange 를 호출할 수 없는데, 이 메소드는 UIElement에 정의되어 있기 때문이다. 비주얼은 부모 엘리먼트에 대해 상대 좌표로 출력되며, OnRender가 수행될 때 엘리먼트가 그리는 것보다 위에 나타난다. 엘리먼트에서 다른 자식들의 순서는 GetVisualChild에 의해 설정되는 순서에 따른다. 뒤에 있는 비주얼이 앞에 있는 비주얼보다 더 위에 출력된다. 
+
+이 비주얼이 이벤트 라우팅이 참가하게 하려면(한 예로 마우스 이벤트가 비주얼의 부모 엘리먼트에게로 라우팅되기를 원할 때)AddVisualChild를 호출해서 비주얼을 엘리먼트의 비주얼 트리에 추가해야 한다. 
+
+다음의 클래스는 ColorCell 이라고 하며,  FrameworkElement에서 파생되었다. 이 클래스는 사각형의 엘리먼트를 항상 장치 독립적 단위 20으로 그리는 역할을 한다. 이 엘리먼트의 중앙은 색깔이 있는 12단위만큼의 사각형이 있다. 이 작은 사각형은 DrawingVisual타입의 객체로 클래스 생성자에서 만들어진다. 이 생성자에는 Color 인자를 받으며, 그 인자를 필드에 저장한다. 
+
+
+
+sing System;
+using System.Windows;
+using System.Windows.Media;
+
+class ColorCell : FrameworkElement
+{
+	//Private 필드
+	static readonly Size sizeCell = new Size(20 ,20);
+	DrawingVisual visColor;
+	Brush brush;
+
+	//의존 프로퍼티
+	public static readonly DependencyProperty IsSelectedProperty;
+	public static readonly DependencyProperty IsHighlightedProperty;
+
+	static ColorCell()
+	{
+		IsSelectedProperty = DependencyProperty.Register("IsSelected", typeof(bool), typeof(ColorCell), new FrameworkPropertyMetadata(false,
+									FrameworkPropertyMetadataOptions.AffectRender));
+		IsHighlightedProperty = DependencyProperty.Register("IsHighlighted", typeof(bool), typeof(ColorCell), 
+						new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectRender));
+	}
+	//프로퍼티
+	public bool IsSelected
+	{
+		set { SetValue(IsSelectedProperty, value); }
+		get { return (bool)GetValue(IsSelectedProperty); }
+	}
+	public bool IsHighlighted
+	{
+		set { SetValue(IsHighlightedProperty, value); }
+		get { return (bool)GetValue(IsHighlightedProperty); }
+	}
+	Public Brush Brush
+	{
+		get{ return brush; }
+	}
+	//Color를 인자로 하는 생성자
+	public ColorCell(Color clr)
+	{
+		//DrawingVisual을 생성해 필드에 저장
+		visColor = new DrawingVisual();
+		DrawingContext dc = visColor.RenderOpen();
+
+		//Color 인자를 가지고 사각형 그리기
+		Rect rect = new Rect(new Point(0, 0), sizeCell);
+		rect.Inflate(-4, -4);
+		Pen pen = new Pen(SystemColors.ControlTextBrush, 1);
+		brush = new SolidColorBrush(clr);
+		dc.DrawRectangle(brush, pen, rect);
+		dc.Close();
+
+		//AddVisualChild는 이벤트 라우팅에 필요함
+		AddVisualChild(visColor);
+		AddLogicalChild(visColor);
+	}
+	//VisualChild에 관련된 protected 프로퍼티와 메소드를 오버라이딩
+	protected override int VisualChildrenCount
+	{
+		get
+		{
+			return 1;
+		}
+	}
+	protected override Visual GetVisualChild(int index)
+	{
+		if (index > 0)
+			throw new ArgumentOutOfRangeException("index");
+		return visColor;
+	}
+	//엘리먼트의 크기와 렌더링과 관련된 protected 메소드를 오버라이딩
+	protected override Size MeasureOverride(Size sizeAvailable)
+	{
+		return sizeCell;
+	}
+	protected override void OnRender(DrawingContext dc)
+	{
+		Rect rect = new Rect(new Point(0, 0), RenderSize);
+		rect.Inflate(-1, -1);
+		Pen pen = new Pen(SystemColors.HighlightBrush, 1);
+
+		if(IsHighlighted)
+			dc.DrawRectangle(SystemColors.ControlDarkBrush, pen, rect);
+		else if(IsSelected)
+			dc.DrawRectangle(SystemColors.ControlLightBrush, pen, rect);
+		else
+			dc.DrawRectangle(Brushes.Transparent, null, rect);
+	}
+}
+
+VisualChildrenCount 프로퍼티는 이 비주얼의 존재를 지시하기 위해 1을 반환하고 GetVisualChild는 비주얼 그 자체를 반환한다. MeasureOverride는 단순히 전체 엘리먼트의 크기를 반환하며, OnRender에서는 비주얼 아래에 나타나는 사각형을 출력한다. DrawRectangle에서 사용되는 브러시는 IsSelected와 IsHighlighted라는 2개의 프로퍼티에 의해 결정된다. 이 두 프로퍼티는 의존 프로퍼티로 지원된다. 
+
+40개의 ColorCell 객체는 ColorGrid라는 컨트롤의 한 부분이다. ColorGrid에서는 VisualChildrenCount를 오버라이딩해서 1을 반환하며, GetVisualChild에서는 Border 타입의 객체를 반환한다. 이때 이 Border 객체의 Child 프로퍼티에는 UniformGrid 패널을 할당하며, UniformGrid 패널에는 다양한 색상의 ColorCell 인스턴스 40개로 채운다. 
+
+
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+class ColorGrid : Control
+{
+	//행과열의 수
+	const int yNum = 5;
+	const int xNum = 8;
+	//출력할 색상들
+	string[,] strColors = new string[yNum, xNum]{
+						{"Black", "Brown", "DarkGreen", "MidnightBlue", "Navy", "DarkBlue", "Indigo", "DimGray" },
+						{"DarkRed", "OrangeRed", "Olive", "Green", "Teal", "Blue", "SlateGray", "Gray"}, 
+						{"Red", "Orange", "YellowGreen", "SeaGreen", "Aqua", "LightBlue", "Violet", "DarkGray" },
+						{"Pink", "Gold", "Yellow", "Lime", "Turquoise", "SkyBlue", "Plum", "LightGray" },
+						{"LightPink", "Tan", "LightYellow", "LightGreen", "LightCyan", "LightSkyBlue", "Lavender", "White"}};
+
+	//ColorCell 객체 생성
+	ColorCell[,] cells = new ColorCell[yNum, xNum];
+	ColorCell cellSelected;
+	ColorCell cellHighlighted;
+
+	//이 컨트롤을 구성할 엘리먼트
+	Border bord;
+	UniformGrid unigrid;
+
+	//현재 선택된 색상
+	Color clrSelected = Colors.Black;
+
+	// Public "Changed 이벤트
+	public event EventHandler SelectedColorChanged;
+
+	//Public 생성자
+	public ColorGrid()
+	{
+		//컨트롤의 Border 생성
+		bord = new Border();
+		bord.BorderBrush = SystemColors.ControlDarkDarkBrush;
+		bord.BorderThickness = new Thickness(1);
+		AddVisualChild(bord); //이벤트 라우팅에 필요
+		AddLogicalChild(bord);
+
+		//UniformGrid을 생성해 Border 의 자식으로 지정
+		unigrid = new UniformGrid();
+		unigrid.Background = SystemColors.WindowBrush;
+		unigrid.Columns = xNum;
+		bord.Child = unigrid;
+
+		//UniformGrid에서 ColorCell 객체들을 채움
+		for(int y=0; y<yNum; y++)
+		for(int x = 0; x<xNum; x++)
+		{
+			Color clr = (Color)typeof(Colors).GetProperty(strColors[y, x]).GetValue(null, null);
+
+			cells[y, x] = new ColorCell(clr);
+			unigrid.Children.Add(cells[y, x]);
+			
+			if(clr == SelectedColor)
+			{
+				cellSelected = cells[y, x];
+				cells[y, x].IsSelected = true;
+			}
+			ToolTip tip = new ToolTip();
+			tip.Content = strColors[y, x];
+			cells[y, x].ToolTip = tip;
+		}
+	}
+	//Public SelectedColor 프로퍼티 get만 지원
+	public Color SelectedColor
+	{
+		get { return clrSelected; }
+	}
+
+	//VisualChildrenCount 오버라이딩
+	protected override int VisualChildrenCount
+	{
+		get { return 1; }
+	}
+	//GetVisualChild 오버라이딩
+	protected override Visual GetVisualChild(int index)
+	{
+		if( index > 0)
+			throw new ArgumentOutOfRangeException("index");
+		return bord;
+	}
+	//MeasureOverride 오버라이딩
+	protected override Size MeasureOverride(Size sizeAvailable)
+	{
+		bord.Measure(sizeAvailable);
+		return bord.DesiredSize;
+	}
+	//ArrangeOverride 오버라이딩
+	protected override Size ArrangeOverride(Size sizeFinal)
+	{
+		bord.Arrange(new Rect(new Point(0, 0), sizeFinal));
+		return sizeFinal;
+	}
+	//마우스 이벤트 처리
+	protected override void OnMouseEnter(MouseEventArgs args)
+	{
+		base.OnMouseEnter(args);
+
+		if(cellHighlighted != null)
+		{
+			cellHighlighted.IsHighlighted = false;
+			cellHighlighted = null;
+		}
+	}
+	protected override void OnMouseMove(MouseEventArgs args)
+	{
+		base.OnMouseMove(args);
+		ColorCell cell = args.Source as ColorCell;
+
+		if(cell != null)
+		{
+			if(cellHighlighted != null)
+				cellHighlighted.IsHighlighted = false;
+			cellHighlighted = cell;
+			cellHighlighted.IsHighlighted = true;
+		}
+	}
+	protected override void OnMouseLeave(MouseEventArgs args)
+	{
+		base.OnMouseLeave(args);
+
+		if(cellHighlighted != null)
+		{
+			cellHighlighted.IsHighlighted = false;
+			cellHighlighted = null;
+		}
+	}
+	protected override void OnMouseDown(MouseButtonEventArgs args)
+	{
+		base.OnMouseDown(args);
+		ColorCell cell = args.Source as ColorCell;
+	
+		if(cell != null)
+		{
+			if(cellHighlighted != null)
+				cellHighlighted.IsSelected = false;
+			cellHighlighted = cell;
+			cellHighlighted.IsSelected = true;
+		}
+		Focus();
+	}
+	protected override void OnMouseUp(MouseButtonEventArgs args)
+	{
+		base.OnMouseUp(args);
+		ColorCell cell = args.Source as ColorCell;
+
+		if(cell != null)
+		{
+			if(cellSelected != null)
+				cellSelected.IsSelected = false;
+			cellSelected = (cellSelected.Brush as SolidColorBrush).Color;
+			OnSelectedColorChanged(EventArgs.Empty);
+		}
+	}
+	//키보드 이벤트 처리
+	protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs args)
+	{
+		base.OnGotKeyboardFoucs(args);
+
+		if(cellHighlighted == null)
+		{
+			if(cellSelected != null)
+				cellHighlighted = cellSelected;
+			else
+				cellHighlighted = cells[0, 0];
+			cellHighlighted.IsHighlighted = true;
+		}
+	}
+	protected override void OnLostKeyboardFoucs(keyboardFocusChangedEventArgs args)
+	{
+		base.OnGotKeyboardFocus(args);
+
+		if(cellHighlighted != null)
+		{
+			cellHighlighted.IsHighlighted = false;
+			cellHighlighted = null;
+		}
+	}
+	protected override void OnKeyDown(KeyEventArgs args)
+	{
+		base.OnKeyDown(args);
+
+		int index = unigrid.Children.IndexOf(cellHighlighted);
+		int y = index / xNum;
+		int x = index % xNum;
+
+		switch(args.Key)
+		{
+			case Key.Home:
+				y = 0;
+				x = 0;
+				break;
+			case Key.End:
+				y = yNum - 1;
+				x = xNum - 1;
+				break;
+			case Key.Down:
+				if((y = (y +1) % yNum) == 0)
+					x++;
+				break;
+			case Key.Up:
+				if((y = (y + yNum-1) % yNum) == yNum - 1)
+					x--;
+				break;
+			case Key.Right:
+				if((x = (x + 1) % xNum) == 0)
+					y++;
+				break;
+			case Key.Left:
+				if((x=(x + xNum - 1) % xNum) == xNum - 1)
+					y--;
+				break;
+			case Key.Enter:
+			case Key.Space:
+				if(cellSelected != null)
+					cellSelected.IsSelected = false;
+
+				cellSelected = cellHighlighted;
+				cellSelected.IsSelected = true;
+				clrSelected = (cellSelected.Brush as SolidColorBrush).Color;
+				OnSelectedColorChanged(EventArgs.Empty);
+				break;
+			default:
+				return;
+		}
+		if(x >= xNum || y >= yNum)
+			MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+		else if(x < 0 || y < 0)
+			MoveFocus(new TraversalRequest(FocusNaviqationDirection.Previous));
+		else
+		{
+			cellHighlighted.IsHighlighted = false;
+			cellHighlighted = cells[y, x];
+			cellHighlighted.IsHighlighted = true;
+		}
+		args.Handled = true;
+	}
+	//SelectedColorChanged 이벤트를 발생시 Protected 메소드
+	protected virtual void OnSelectedColorChanged(EventArgs args)
+	{
+		if(SelectedColorChanged != null)
+			SelectedColorChanged(this, args);
+	}
+}
+
+ColorGrid는 마이크로소프트 워드에 있는 컨트롤을 흉내 내었다. 워드에서 서식의 배경 메뉴나 서식 툴바의 글꼴 색에서 이 컨트롤을 본 적이 있을 것이다. 1개 칸은 항상 선택된 상태가 된다. 읽기 전용의 SelectedColor 프로퍼티를 통해 이 색을 가져올 수 있다(이 프로퍼티를 읽기 전용으로 만든 이유는 그리드에 없는 다른 임의의 색을 지정할 수 없기 때문이다.)선택된 색상을 배경색으로 지정해서 표현되게 했으며, 마우스를 사용해 다른 색상을 선택할 수 있다. 
+
+ColorGrid에 입력 포커스가 있을 때 사각형 배경이 어둡게 표시된 하일라이팅 상태의 칸도 있다. 화살표 키를 사용해 이 하일라이팅된 칸을 변경시킬 수 있다. 그리드의 처음과 마지막에서 화살표 키를 누르면 MoveFocus 메소드를 이용해 입력 포커스를 이전이나 다음 컨트롤로 변경한다. 하일라이팅된 칸에서 Space Bar나 Enter 키를 누르면 선택된 상태가 된다. 
+
+선택된 색상이 바뀔 때마다 OnSelectedColorChanged 메소드가 호출되고, SelectedColorChanged 이벤트를 발생시킨다. 
+
+다음 프로그램은 ColorGrid 타입의 객체를 생성해 2개의 테스트 버튼 사이에 배치한다. 그래서 입력 포커스가 어떻게 동작하는지를 알 수 있다. SelectedColorChanged 이벤트에 대한 이벤트 핸들러를 설치하고, 여기에서 컨트롤의 SelectedColor 프로퍼티를 사용해 창의 배경색을 변경한다. 
+
+
+
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class SelectColor : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new SelectColor());
+	}
+	public SelectColor()
+	{
+		Title = "Select Color";
+		SizeToContent = SizeToContent.WidthAndHeight;
+
+		//StackPanel을 생성해 Window의 컨텐트로 지정
+		StackPanel stack = new StackPanel();
+		stack.Orientation = Orientation.Horizontal;
+		Content = stack;
+
+		//테스트용 버튼 생성
+		Button btn = new Button();
+		btn.Content = "Do-nothing button\nto test tabbing";
+		btn.Margin = new Thickness(24);
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.VerticalAlignment = VerticalAlignment.Center;
+		stack.Children.Add(btn);
+
+		//ColorGrid 컨트롤 생성
+		ColorGrid clrgrid = new ColorGrid();
+		clrgrid.Margin = new Thickness(24);
+		clrgrid.HorizontalAlignment = HorizontalAlignment.Center;
+		clrgrid.VerticalAlignment = VerticalAlignment.Center;
+		clrgrid.SelectedColorChanged += ColorGridOnSelectedColorChanged;
+		stack.Children.Add(clrgrid);
+
+		//또 다른 테스트용 버튼 생성
+		btn = new Button();
+		btn.Content = "Do-nothing button\nto test tabbing";
+		btn.Margin = new Thickness(24);
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.VerticalAlignment = VerticalAlignment.Center;
+		stack.Children.Add(btn);
+	}
+	void ColorGridOnSelectedColorChanged(object sender, EventArgs args)
+	{
+		ColorGrid clrgrid = sender as ColorGrid;
+		Background = new SolidColorBrush(clrgrid.SelectedColor);
+	}
+}
+
+ListBox 컨트롤에 대해서는 이미 잘 알고 있을 것이다. 이 컨트롤은 여러 개의 항목(일반적으로 텍스트 항목)을 세로로 된 목록 형태로 출력하고, 사용자가 그 중 하나를 선택할 수 있게 한다. ColorGrid와 ListBox는 무엇이 닮아 있을까? 두 컨트롤의 외형은 분명히 다르게 보이지만 더 추상적 개념으로 생각해보자. 둘 모두 여러 항목 중에서 하나를 선택할수 있게 하는 컨트롤이다. 
+
+13장에서는 ColorGrid와 매우 유사한 컨트롤을 만드는 방법에 대해 살펴볼 것이다. 이 컨트롤은 대부분의 키보드와 마우스 , ListBox에 이미 내장된 선택 기능을 이용한다. 
