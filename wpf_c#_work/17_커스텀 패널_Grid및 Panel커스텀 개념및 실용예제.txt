@@ -1,0 +1,426 @@
+CHAPTER 12장 : 커스텀 패널
+
+FrameworkElement 자손의 일부는 자식들을 가질 수 있고, 일부는 그렇지 않다. 자식들을 가질 수 없는 클래스에는 Image와 Shape의 자손들 모두가 포함된다. FrameworkElement의 다른 자손들인 ContentControl이나 Decorator에서 파생된 모든 클래스 등은 하나의 자식을 가질 수 있다. 물론 자식을 중첩시키게 만들 수는 있다. FrameworkElement를 상속받는 클래스 중의 일부는 여러 자식을 가질 수도 있는데, 그런 엘리먼트 범주 중에서 중요한 하나는 Panel의 자손이다. 그러나 여러 개의 자식을 갖기 위해서 반드시 Panel을 상속해야 할 필요는 없다. 예를 들어 InkCanvas는 FrameworkElement를 직접 상속받지만 여러 자식을 관리할 수 있다. 
+
+12장에서는 Panel을 상속하는 방법과 Panel을 상속하지 않고서 여러 개의 자식을 지원하는 방법에 대해 소개하려고 한다. Panel을 상속하는 방법이 왜 더 쉬운지 이해하게 될 것이다 Panel을 상속하는 방법이 왜 더 쉬운지 이해하게 될 것이다. Panel의 가장 큰 선물은 자식들을 저장할 수 있는 Children 프로퍼티가 정의되어 있다는 점이다. 이 프로퍼티는 UIElementCollection타입이며, 이 컬렉션에서 자식들이 컬렉션에 추가되거나 삭제될 때 AddVisualChild, AddLogicalChild, RemoveVisualChild, RemoveLogicalChild의 호출을 처리한다. UIElementCollection은 부모 엘리먼트에 대한 정보를 알고 있기 때문에 이런 기능을 수행할 수 있다. UIElementCollection의 생성자는 2개의 인자가 필요한데, 그 인자는 UIElement 타입의 비주얼 부모와 FrameworkElement 타입의 논리적 부모다. 2개의 인자는 서로 같을 수 있으며, 보통의 경우도 두 인자는 서로 같다. 
+
+Panel 관련 문서를 통해 알 수 있지만, Panel 클래스에서는 VisualChildCount와 GetVisualChild를 오버라이딩해서 필요에 맞게 처리한다. Panel 을 상속받을 때 일반적으로 OnRender를 오버라이딩하는 것이 필수는 아니다. Panel 클래스에는 Background 프로퍼티가 정의되어 있으며, 이 배경 브러시를 이용해 OnRender의 오버라이딩에서 간단히 DrawRectangle을 호출한다. 
+
+새로운 Panel 클래스에서 반드시 구현해야 할 2개의 필수적인 메소드는 MeasureOverride와 ArrangeOverride다. Panel 관련 문서에서 이 메소드를 구현하는 것에 관해 약간의 조언을 얻을 수 있다. 그 조언은 자식 컬렉션을 얻기 위해서 Children보다는 InternalChildren을 사용할 것을 권고하는 것이다. InternalChildren 프로퍼티(이 역시 UIElementCollection 타입의 객체다)에는 보통의 Children 컬렉션에 있는 모든 것이 있고, 거기에 덧붙여 데이터 바인딩을 통해 추가된 자식들이 있다. 
+
+패널의 가장 간단한 타입은 UniformGrid일 것이다. 이 그리드는 동일한 높이로 된 몇 개의 행과 동일한 폭으로 된 몇 개의 열로 구성된다. 패널을 구현할 때 무엇이 필요한지를 알아보기 위해서 UniformGrid의 기능을 거의 흉내 낸 UniformGridAlmost 클래스를 만들어보자. 이 클래스에는 Columns라는 프로퍼티가 정의되어 있고, 기본값이 1인 의존 프로퍼티에 의해 지원한다. UniformGridAlmost는 자식의 수에 근거해서 행과 열의 수를 계산하지는 않는다. Columns 프로퍼티를 명시적으로 설정하는 것이 필요하며, Columns 프로퍼티와 자식의 수를 이용해 행의 수를 계산한다. 이렇게 계산된 Rows 값은 읽기 전용 프로퍼티다. UniformGridAlmost에는 FirstColumn 프로퍼티는 포함되지 않았다(Almost라는 이름을 붙인 이유다)
+
+
+
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+
+class UniformGridAlmost : Panel
+{
+	//Public 읽기 전용 정적 의존 프로퍼티
+	public static readonly DependencyProperty ColumnsProperty;
+
+	//정적 생성자에서 의존 프로퍼티를 등록
+	static UniformGridAlmost()
+	{
+		ColumnsProperty = DependencyProperty.Register("Columns", typeof(int), typeof(UniformGridAlmost),
+					new FrameworkPropertyMetadata(1, FrameworkPropertyMetadataOptions.AffectMeasure));
+	}
+	//Columns 프로퍼티
+	public int Columns
+	{
+		set { SetValue(ColumnsProperty, value);	}
+		get { return (int)GetValue(ColumnsProperty);	}
+	}
+	//읽기 전용 Rows 프로퍼티
+	public int Rows
+	{
+		get { return (InternalChildren.Count + Columns - 1) / Columns;	}
+	}
+	//MeasureOverride 오버라이딩해서 공간을 할당
+	protected override Size MeasureOverride(Size sizeAvailable)
+	{
+		//행과 열을 고려해서 자식의 크기를 계산
+		Size sizeChild = new Size(sizeAvailable.Width / Columns, sizeAvailable.Height / Rows);
+
+		//최대 폭과 높이를 누적시키기 위한 변수
+		double maxWidth = 0;
+		double maxHeight = 0;
+
+		foreach(UIElement child in InternalChildren)
+		{
+			//각 자식마다 Measure 를 호출
+			child.Measure(sizeChild);
+
+			//그리고 자식의 DesiredSize 프로퍼티를 이용
+			maxWidth = Math.Max(maxWidth, child.DesiredSize.Width);
+			maxHeight = Math.Max(maxHeight, child.DesiredSize.Height);
+		}
+		//그리드 자체의 요구 크기를 계산
+		return new Size(Columns * maxWidth, Rows * maxHeight);
+	}
+	//ArrangeOverride 오버라이딩에서 자식을 배치
+	protected override Size ArrangeOverride(Size sizeFinal)
+	{
+		//행과 열을 고려해서 자식의 크기를 계산
+		Size sizeChild = new Size(sizeFinal.Width / Columns, sizeFinal.Height / Rows);
+		for(int index = 0; index < InternalChildren.Count; index++)
+		{
+			int row = index / Columns;
+			int col = index % Columns;
+			//sizeFinal내에서 각 자식의 사각형을 계산
+			Rect rectChild = new Rect(new Point(col * sizeChild.Width , row * sizeChild.Height), sizeChild);
+			//자식에 대해 Arrange를 호출
+			InternalChildren[index].Arrange(rectChild);
+		}
+		return sizeFinal;
+	}
+}
+
+
+MeasureOverride에서는 각 자식에 대해 사용 가능한 크기를 먼저 계산한다. 이 영역은 행과 열로 동일하게 나누는 것으로 가정한다(sizeAvailable는 어느 한쪽이나 양쪽 모두가 무한대가 될 수 있음을 기억하자. 이 경우 sizeChild도 한쪽이나 양쪽이 무한대가 될 것이다.)이 메소드에서 각 자식에 대해 Measure가 호출되고, 그 후 DesiredSize를 이용한다. 실행이 계속되면서 그리드에 있는 가장 폭이 큰 엘리먼트와 가장 높이가 큰 엘리먼트를 알게 되며, 가급적 그리드의 모든 칸을 이 높이와 폭으로 조정한다. 
+
+ArrangeOverride 메소드를 통해 패널은 모든 자식을 그리드에 배치한다. 메소드의 인자를 가지고 각 셀의 폭과 높이, 각 자식의 위치를 게산하는 것은 쉬운 일이다. 그리고 각 자식에 대해 Arrange를 호출한다. 
+
+DuplicateUniformGrid 프로젝트는 UniformGridAlmost 클래스와 다음의 DuplicateUniformGrid 클래스로 구성된다. 
+
+
+
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class DuplicateUniformGrid : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new DuplicateUniformGrid());
+	}
+	public DuplicateUniformGrid()
+	{
+		Title = "Duplicate Uniform Grid";
+
+		//UniformGridAlmoust를 생성해서 Window의 컨텐트로 지정
+		UniformGridAlmost unigrid = new UniformGridAlmost();
+		unigrid.Columns = 5;
+		Content = unigrid;
+
+		//UniformGridAlmost에 임의의 크기를 가진 버튼을 채용
+		Random rand = new Random();
+
+		for(int index = 0; index < 48; index++)
+		{
+			Button btn = new Button();
+			btn.Name = "Button" + index;
+			btn.Content = btn.Name;
+			btn.FontSize += rand.Next(10);
+			unigrid.Children.Add(btn);
+		}
+		AddHandler(Button.ClickEvent, new RoutedEventHandler(ButtonOnClick));
+	}
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		Button btn = args.Source as Button;
+		MessageBox.Show(btn.Name + " has been clicked", Title);
+	}
+}
+
+이 프로그램에서는 UniformGridAlmost 객체를 생성하고 열을 5개로 설정하며 그 후 여기에 다양한 크기를 가진 48개의 버튼들을 채운다. 다음은 수행해 볼만한 몇 가지 실험거리들이다. 
+
+* Window의 SizeToContent를 SizeToContent.WidthAndHeight로 설정해보자. 이제 창과 그리드는 작아지는데, 모든 칸의 크기는 가장 큰 버튼의 크기가 된다. 
+
+* 그리드의 HorizontalAlignment와 VerticalAlignment를 Center로 설정해보자. 창은 기본 크기를 유지하지만 그리드는 작아져서 모든 칸의 크기는 가장 큰 버튼의 크기가 된다. 
+
+* 각 버튼의 HorizontalAlignment와 VerticalAlignement를 Center로 설정해보자. 그리드는 클라이언트 영역과 같은 크기가 되고, 그리드의 모든 칸도 동일한 크기가 된다. 그러나 버튼들은 모두 해당 컨텐트의 크기에 맞추어 진다. 
+
+* 그리드의 Height와 Width 프로퍼티에 모든 버튼이 들어갈 수 없을 정도의 작은 값으로 설정해보자. 그러면 모든 버튼이 그리드에 맞게 작아지겠지만 그리드의 일부가 잘려질 것이다. 
+
+달리 표현하면 우리가 원하고 기대하는 대로 그리드가 동작한다. 더 심험해 보려면 11장의 ColorGrid 컨트롤에서 UniformGrid를 UniformGridAlmost로 바꿔보자. 
+
+흔히 패널에서 첨부 프로퍼티의 개념을 처음 접하게 된다. DockPanel, Grid, Canvas에는 모두 첨부 프로퍼티가 있다. 다시 기억을 떠올려 보자. Canvas에 엘리먼트를 추가할 때 그 엘리먼트를 적용하기 위해 다음과 같이 2개의 첨부 프로퍼티도 설정했다. 
+
+canv.Children.Add(el);
+Canvas.SetLeft(el, 100);
+Canvas.SetRight(el, 150);
+
+첨부 프로퍼티를 처음 소개했을 때 이 첨부 프로퍼티는 자식을 배치할 때 사용된다고 언급한바 있다. 이제는 어떻게 이런 일이 수행되는지를 살펴볼 차례다. 
+
+다음에 있는 CanvasClone 클래스는 Canvas와 매우 닮았다. 다만 Left와 Top 첨부 프로퍼티만 구현되어 있고 Right와 Bottom은 없다. 
+
+
+
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class CanvasClone : Panel
+{
+
+	//2개의 의존 프로퍼티 생성
+	public static readonly DependencyProperty LeftProperty;
+	public static readonly DependencyProperty TopProperty;
+
+	static CanvasClone()
+	{
+		//의존 프로퍼티를 첨부 프로퍼티로 등록, 기본값은 0이며, 변경이 되면 부모의 배치에 영향을 줌
+		LeftProperty = DependencyProperty.RegisteAttached("Left", typeof(double), typeof(CanvasClone),
+				new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsParentArrange));
+		TopProperty = DependencyProperty.ReigsteAttached("Top", typeof(double), typeof(CanvasClone),
+				new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsParentArrange));
+	}
+	//첨부 프로퍼티를 얻어오고 설정하는 정적 메소드
+	public static void SetLeft(DependencyObject obj, double value)
+	{
+		obj.SetValue(LeftProperty, value);
+	}
+	public static double GetLeft(DependencyObject obj)
+	{
+		return (double)obj.GetValue(LeftProperty);
+	}
+	public static void SetTop(DependencyObject obj, double value)
+	{
+		obj.SetValue(TopProperty, value);
+	}
+	public static double GetTop(DependencyObject obj)
+	{
+		return (double)obj.GetValue(TopProperty);
+	}
+	//MeasureOverride 오버라이딩에서는 자식의 Measure를 호출
+	protected override Size MeasureOverride(Size sizeAvailable)
+	{
+		foreach(UIElement child in InternalChildren)
+			child.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+		//기본값 {0, 0}을 반환
+		return base.MeasureOverride(sizeAvailable);
+	}
+	//ArrangeOverride 오버라이딩에서 자식을 배치
+	protected override Size ArrangeOverride(Size sizeFinal)
+	{
+		foreach(UIElement child in InternalChildren)
+			child.Arrange(new Rect(new Point(GetLeft(child), GetTop(child), child.DesiredSize));
+		return sizeFinal;
+	}
+}
+
+실제로 이 클래스에서 Left와 Top 이란 이름의 프로퍼티는 존재하지 않는다. 정적 읽기 전용 필드인 LeftProperty와 TopProperty는 일반적인 의존 프로퍼티와 동일하게 정의되었다. 그러나 정적 생성자에서 이 프로퍼티는 정적 메소드인 DependencyProperty.RegisterAttached로 등록되었다. 메타 데이터의 옵션으로 FrameworkPropertyMetadataOptions.AffectsParentArrange를 사용했음을 주의 깊게 살펴보자. 이 첨부 프로퍼티는 항상 캔버스의 자식에 첨부되므로 프로퍼티가 변경될 때마다 부모의 배치 즉, 캔버스의 배치에 영향을 준다. 캔버스는 자식을 배치하는 책임이 있기 때문이다. 유사한 플래그 이름으로 AffectsParentMeasure이 있는데, 이는 첨부 프로퍼티가 변경될 때 부모의 배치가 아닌 크기에 영향을 준다. 
+
+그 다음은 첨부 프로퍼티를 얻어오고 설정하는 4개의 정적 메소드가 정의되었다. 이 메소드가 호출되면 첫 번째 인자는 캔버스의 자식 또는 곧 캔버스의 자식이 될 엘리먼트가 될 것이다. Set 메소드에서는 자식의 SetValue 메소드를 호출해서 프로퍼티를 저장하고 있는 것을 눈여겨 보자. 
+
+MeasureOverride에서 하는 일의 전부는 무한대 크기로 각 자식의 Measure를 호출하는 것이다. 이는 Canvas와 일치한다. 일반적으로 ,캔버스에 위치하는 엘리먼트는 명시적으로 위치를 지정하거나, 아니면 고정된 크기를 갖고 있다(비트맵 이미지나 플리라인 같은 경우)Measure를 호출하는 것이 필요한 이유는 자식이 DesiredSize 프로퍼티를 계산할 수 있게 하기 위해서다. 이 프로퍼티는 ArrangeOverride가 호출될 때 사용된다. MeasureOverride는 베이스 클래스에 구현된 메소드의 값을 반환한다. 이 크기는(0, 0)이다. 
+
+ArrangeOverride 메소드는 단순히 각 자식에 대해 Arrange를 호출해 각 자식을 배치한다. 이때 GetLeft와 GetTop 메소드를 통해 얻어진 위치를 이용한다. 이 메소드는 자식의 GetValue를 호출한다( 이 시점에서 의존 프로퍼티를 정의한 클래스와 첨부 프로퍼티만 정의한 클래스와의 차이가 명확해진다. 의존 프로퍼티를 정의한 클래스는 반드시 DependencyObject를 상속받아야 한다. DependencyObject에서 상속되는 SetValue와 GetValue메소드가 호출되기 때문이다. 그러나 첨부 프로퍼티가 정의된 클래스는 DependencyObject를 상속할 필요가 없는데,그 자신의 SetValue와 GetValue를 호출할 필요가 없기 때문이다)
+
+다음은 CanvasClone이 실제로 엘리먼트를 표면에 위치시킬 수 있음을 설명해 주는 간단한 프로그램이다. 
+
+
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+public class PaintOnCanvasClone : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new PaintOnCanvasClone());
+	}
+	public PaintonCanvasClone()
+	{
+		Title = "Paint on Canvas Clone";
+
+		CanvanClone canv = new CanvasClone();
+		Content = canv;
+
+		SolidColorBrush[] brushes = {Brushes.Red, Brushes.Green, Brushes.Blue};
+		for(int i=0; i<brushes.Length; i++)
+		{
+			Rectangle rect = new Rectangle();
+			rect.Fill = brushes[i];
+			rect.Width = 200;
+			rect.Height = 200;
+			canv.Children.Add(rect);
+			CanvasClone.SetLeft(rect, 100 * (i + 1));
+			CanvasClone.SetTop(rect, 100 * (i + 1));
+		}
+	}
+}
+
+실제로 CanvasClone을 활용해보려면 9장의 DrawCircles 프로그램에 이를 추가시켜 볼 수 있다(DrawCircles에 CanvasClone을 적용한 직후에야 첨부 프로퍼티 메타 데이터의 AffectsParentArrange플래그의 중요성을 깨닫게 되있다)Canvas가 있는 곳을 모두 Petzold.PaintOnCanvasClone.CanvasClone으로 변경하자. 몇 개의 메소드에서 Left와 Top 첨부 프로퍼티를 사용하므로 이들도 CanvasClone을 사용하게 변경해야 한다. 첨부 프로퍼티를 설정하거나 얻어올 때 Canvas 클래스의 메소드를 사용해도 에러가 발생하지는 않는다. 그러나 CanvasClone의 첨부 프로퍼티 접근 메소드를 사용해야만 정상적으로 동작한다. 
+
+Panel을 상속하지 않고 여러 개의 자식을 지원하는 클래스를 만들려면 UIElementCollection타입의 Children 이라는 프로퍼티와 Brush타입의 Background 프로퍼티를 정의해야 할 것이다. 이 방법으로 Panel에 근접해진다. 
+
+한편으론 FrameworkElement을 직접 상속하고 직접 자식 컬렉션을 구현함으로써 패널을 닮은 엘리먼트를 만드는 것도 유익할 것 같다. 이때 자식 컬렉션을 UIElementCollection 타입으로 하지말자(어떤 문제가 있는지 알아보기 위해)
+
+이 자식 컬렉션을 다음과 같이 private 필드를 정의해서 구현할 수 있다. 
+
+List<UIElement> children = new List<UIElement>();
+
+그런 후 public 프로퍼티를 통해 이 컬렉션을 노출 시킬수 있다. 
+
+public List<UIElement> Children
+{
+	get { return children; }
+}
+
+이렇게 하면 일반 패널에 자식을 추가하는 것과 같은 방식으로 이 컬렉션에 자식을 추가할 수 있다. 
+
+pnl.Children.Add(btn);
+
+그러나 놓친게 있다. children 필드와 Children 프로퍼티를 정의한 이 클래스에는 컬렉션에 무엇이 추가되거나 삭제될 때 이를 알 수 있는 방법이 없다. 컬렉션에 무엇이 추가되고 삭제 되는지를 정확히 알아야만 AddVisualChild, AddLogicalChild, RemoveVisualChild, RemoveLogicalChild를 적절하게 호출할 수 있다. 
+
+UIElementCollection과  비슷한 클래스를 만드는 방법으로는 이런 일들을 스스로 수행되게 하거나, 자식이 컬렉션에 들어오거나 나갈 때 패널 클래스에 이를 통지하게 하는 것이다. 
+
+또는 private children 필드를 유지하고, 다음과 같은메소드를 정의한다. 
+
+public void Add(UIElement el)
+{
+	children.Add(el);
+	AddVisualChild(el);
+	AddLogicalChild(el);
+}
+
+그리고 삭제하는 메소드는 다음과 같다 
+public void Remove(UIElement el)
+{
+	children.Remove(el);
+	RemoveVisualChild(el);
+	RemoveLogicalChild(el);
+}
+
+패널에 자식 엘리먼트를 추가할 때 다음과 같이 했었다. 
+
+pnl.Children.Add(btn);
+
+그러나 정의한 메소드를 이용해 다음과 같이 호출한다
+
+pnl.Add(btn);
+
+이런 식으로 만들어야할 메소드가 얼마나 될까? Add는 물론 필수적이고, Remove, IndexOf, Count, 애플리케이션에 따라 인덱서(Indexer)도 필요할 수 있다. 
+
+다음은 FrameworkElement를 상속받는 클래스로 자식의 컬렉션을 직접 관리하고, 좌측 상단에서부터 우측 하단까지의 대각선으로 자식을 배치한다. 
+
+
+
+sing System;
+using System.Collections.Generic;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class DiagonalPanel : FrameworkElement
+{
+	// Private Chidren 컬렉션
+	List<UIElement> children = new List<UIElement>();
+
+	//Private 필드
+	Size sizeChildrenTotal;
+
+	//의존 프로퍼티
+	public static readonly DependencyProperty BackgroundProperty;
+
+	//정적 생성자에서 Background 의존 프로퍼티 등록
+	static DiagonalPanel()
+	{
+		BackgroundProperty = DependencyProperty.Register("Background", typeof(Brush), typeof(DiagonalPanel),
+					new FrameworkPropertyMetadata(null,FrameworkPropertyMetadaOptions.AffectRender));
+	}
+	//Background 프로퍼티
+	public Brush Background
+	{
+		set { SetValue(BackgroundProperty, value);	}
+		get { return (Brush)GetValue(BackgroundProperty); }
+	}
+	//자식 컬렉션에 접근하는 메소드
+	public void Add(UIElement el)
+	{
+		children.Add(el);
+		AddVisualChild(el);
+		AddLogicalChild(el);
+		InvalidateMeasure();
+	}
+	public void Remove(UIElement el)
+	{
+		children.Remove(el);
+		RemoveVisualChild(el);
+		RemoveLogicalChild(el);
+		InvalidateMeasure();
+	}
+	public int IndexOf(UIElement el)
+	{
+		return children.IndexOf(el);
+	}
+	//오버라이딩 하는 프로퍼티와 메소드
+	protected override int VisualChildrenCount
+	{
+		get { return children.Count; }
+	}
+	protected override Visual GetVisualChild(int index)
+	{
+		if( index >= children.Count)
+			throw new ArgumentOutOfRangeException("index")
+		return children[idex];
+	}
+	protected override Size MeasureOverride(Size sizeAvailable)
+	{
+		sizeChildrenTotal = new Size(0, 0);
+
+		foreach(UIElement child in children)
+		{
+			//각 자식에 대해 Measure를 호출
+			child.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+			// ...그후 자식의 DesiredSize 프로퍼티를 이용
+			sizeChildrenTotal.Width += child.DesiredSize.Width;
+			sizeChildrenTotal.Height += child.DesiredSize.Height;
+		}
+		return sizeChildrenTotal;
+	}
+	protected override Size ArrangeOverride(Size sizeFinal)
+	{
+		Point ptChild = new Point(0, 0);
+
+		foreach(UIElement child in children)
+		{
+			Size sizeChild = new Size(0, 0);
+
+			sizeChild.Width = child.DesiredSize.Width * (sizeFinal.Width / sizeChildrenTotal.Width);
+			sizeChild.Height = child.DesiredSize.Height * (sizeFinal.Height / sizeChildrenTotal.Height);
+
+			child.Arrange(new Rect(ptChild, sizeChild);
+
+			ptChild.X += sizeChild.Width;
+			ptChild.Y += sizeChild.Height;
+		}
+		return sizeFinal;
+	}
+	protected override void OnRender(DrawingContext dc)
+	{
+		dc.DrawRectangle(Background, null, new Rect(new Point(0, 0), RenderSize));
+	}
+}
+
+
+이 클래스에는 Background 프로퍼티가 정의되어 있고(의존 프로퍼티로 지원됨), Onrender에서는 이 배경 브러시로 전체 표면을 칠한다. 앞서 설명한 것처럼 Add와 Remove, IndexOf 메소드를 구현했다. 또한 VisualChildrenCount와 GetVisualChild를 매우 간단하게 오버라이딩 했다. 
+
+MeasureOverride가 호출될 때 자식의 Measure 메소드에 어떤 Size값을 넘겨야 할지 명확하지가 않다. 먼저 UniformGridAlmost와 비슷해야 한다는 생각이 들었다. 즉 패널이 7개의 자식을 가진다면 Measure의 인자로 MeasureOverride에 넘긴 sizeAvailable 인자의 1/7이 되어야 한다. 그러나 이는 정확하지 못하다. 하나의 자식이 다른 것보다 크다면 그 자식은 더 많은 공간이 필요하다. 그래서 이는 정확하지 못하다. 하나의 자식이 다른 것보다 크다면 그 자식은 더 많은 공간이 필요하다. 그래서 sizeAvailable 인자 전체를 각 자식의 Measure 메소드에 넘기기로 결정했다. 그러나 이 역시 납득하지 못할 만한데, 한 자식이 모든 공간을 독점적으로 사용할 가능성이 있기 때문이다. 
+
+유일한 대안은 Measure에 무한대 크기의 Size 인자를 주는 것이며, 자식이 그 크기를 직접 결정하게 하는 것이다. Grid를 생성하고 그 행과 열에 Auto의 GridLength를 주는 것과 같다. 그후 대각선의 칸에 자식들을 배치한다. 
+
+그러나 ArrangeOverride에서는 약간 다르게 처리하기로 했다. MeasureOverride가 호출될 때 계산된 sizeChildrenTotal 값은 필드로 클래스에서 계속 유지된다. 그 후에 이 값을 패널의 최종 크기로 자식을 확대시키는 데 사용한다. 이때 ArrangeOverride의 인자 sizeFinal과 각 자식의 DesiredSize 프로퍼티를 이용한다. MeasureOverride의 호출이 항상 ArrangeOverride을 일으키므로, MeasureOverride가 호출되는 동안 계산되는 모든 것은 나중에 ArrangeOverride에서 사용할 수 있다는 것을 기억하자. 
+
+DiagonalizeTheButtons 프로그램은 DiagonalPanel 타입의 패널을 생성하고 다양한 크기를 가진 5개의 버튼을 배치한다. 패널은 언제나 5개 버튼 모두를 수용하는 데 필요한 최소한의 크기가 된다. 패널이 그 크기보다 크다면 버튼들이 더 커지게 된다. 
