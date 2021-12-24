@@ -1,0 +1,273 @@
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class DiagonalizeTheButtons : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new DiagonalizeTheButtons());
+	}
+	public DiagonalizeTheButtons()
+	{
+		Title = "Diagonalize the Buttons";
+		
+		DiagonalPanel pnl = new DiagonalPanel();
+		Content = pnl;
+
+		Random rand = new Random();
+
+		for(int i=0; i< 5; i++)
+		{
+			Button btn = new Button();
+			btn.Content = "Button Number " + (i + 1);
+			btn.FontSize += rand.Next(20);
+			pnl.Add(btn);
+		}
+	}
+}
+
+
+12장의 마지막 예제는 방사형의 패널 즉, 자식을 원형으로 배열하는 패널이다. 그러나 이런 패널을 코딩하기 전에 몇 가지의 개념적인 주제에 대해 확실하게 해둘 필요가 있다. 
+
+원은 파이 조각 모양 즉, 부채꼴 모양으로 나누어 질 수 있다. 그리고 원에 엘리먼트를 배열하는 간단한 방법은 각 엘리먼트를 이부채꼴에 배치하는 것이다. 부채꼴에서 사용가능한 공간을 극대화시키기 위해서 아래와 같이 부채꼴의 외곽 부분인 원의 경계에 엘리먼트가 있어야한다. 원의 가장 오른쪽에 위치하는 부채꼴이 있는데, 이 경우 엘리먼트의 방향은 정상적이다. 그러나 다른 부채꼴의 경우에는 엘리먼트가 회전된 형태로 부채꼴에 들어가야 한다. 
+
+패널의 높이와 폭은 반지름인 R에 2를 곱한 것과 같고, 모든 각 a를 합하면 360도가 된다. 자식 엘리먼트의 크기가 같다면 반지름이 커질수록 각이 작아질 것이다. 자식의 크기를 배분하는 방법에는 2가지가 있다. 패널의 크기가 고정되어 있다면 각 엘리먼트의 크기를 고려해 각을 배분하는 방법이 있다. 자식들의 크기가 다양하다면 이 방법이 최선이다. 
+
+그러나 모든 자식이 같은 크기라면 각 엘리먼트에 대해 같은 각도를 주는 것이 합리적이다. 즉 a는 360을 자식의 수로 나눈 값이 된다. 반지름 R은 가장 큰 자식을 기준으로 해서 계산된다. 여기에서는 이 방법을 선택했다. 
+
+고정된 각  a와 자식 엘리먼트의 폭(W)과 높이(H)를 이용해 반지름 R을 계산하는 것은 꽤 수월하다. 먼저 아래처럼 각 a를 이분하는 선 A를 자식의 변까지 긋자.
+
+A의 길이는 다음과 같이 계산할 수 있다. 
+        H/2
+     ---------
+A = tan(a/2)
+방사형 패널의 코드에서 길이 A는 innerEdgeFromCenter이며, 엘리먼트 내부의 변과 원의중심을 참조해서 계산한다. 또한 outerEdgeFromCenter도 계산하는데, 아래와 같이 innerEdgeFromCenter에 엘리먼트의 폭인 W를 더한다. 
+
+중심에서부터 엘리먼트의 우측 상단까지 그려지는 다른 선을 주목하자. 이 역시 반지름이다. 이제 피타고라스의 원리를 이용해 이 선의 길이를 계산할 수 있다. 
+		     H)
+		     --)
+R = 루트(A+W)2제곱 + (2)2제곱
+
+파이 모양의 부채꼴 그림에서 보인 엘리먼트는 거의 정사각형이다. 그러나 많은 엘리먼트는 버튼이나 텍스트 블록처럼 세로보다 가로가 더 긴 형태다. 가로와 세로 모두 반지름을 결정하는 역할을 하겠지만 그림에서 볼 때 엘리먼트의 방향은 세로 크기가 주도함을 알 수 있다. 그리고 이런 엘리먼트 컬렉션은 패널에서 다음과 같이 배치될 것이다. 
+
+또한 버튼의 방향을 가로 크기가 주도할 수 있게 아래와 같이 배치할 수도 있다. 
+
+이러한 2가지 방법을 각기 ByHeight와 ByWidth로 부를 것이며, 열거형의 두 가지 멤버로 표현한다. 
+
+public enum RadialPanelOrientation
+{
+	ByWidth, ByHeight
+}
+
+RadialPanel 클래스에 RadialPanelOrientation 타입의 Orientation 프로퍼티를 정의하고, 의존 프로퍼티로 지원한다. 기본값은 ByWidth로 한다(앞에서 원형에 버튼을 배치한 두 그림 중 두 번째에 해당한다)클래스가 Panel을 상속받았으므로, Children과 InternalChildren 컬렉션, Background 프로퍼티를 사용할 수 있다. 
+
+RadialPanel에 ShowPieLines라는 또 다른 프로퍼티도 추가한다. Grid에서의 ShowGridLines 프로퍼티와 유사하며, 단지 실험을 목적으로 만든 것이다. 
+
+
+
+
+
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+public class RadialPanel : Panel
+{
+	//의존 프로퍼티
+	public static readonly DependencyProperty OrientationProperty;
+
+	//Private 필드
+	bool showPieLines;
+	double angleEach; //각 자식의 각도
+	Size sizeLargets; //가장 큰 자식의 크기	
+	double radius; //원의 반지름
+	double outerEdgeFromCenter;
+	double innerEdgeFromCenter;
+
+	//정적 생성자에서 Orientation 의존 프로퍼티를 생성
+	static RadialPanel()
+	{
+		OrientationProperty = DependencyProperty.Register("Orientation", typeof(RadialPanelOrientation), typeof(RadialPanel),
+					new FrameworkPropertyMetadata(RadialPanelOrientation.ByWidth,
+					FrameworkPropertyMetadataOptions.AffectsMeasure));
+	}
+	//Orientation 프로퍼티
+	public RadialPanelOrientation Orientation
+	{
+		set { SetValue(OrientationProperty, value);	}
+		get { return (RadialPanelOrientation)GetValue(OrientationProperty);	}
+	}
+	//ShowPieLines 프로퍼티
+	public bool ShowPieLines
+	{
+		set
+		{
+			if(value != showPieLines)
+				InvalidateVisual();
+			showPieLines = value;
+		}
+		get
+		{
+			return showPieLines;
+		}
+	}
+	//MeasureOverride 오버라이딩
+	protected override Size MeasureOverride(Size sizeAvailable)
+	{
+		if(InternalChildren.Count == 0)
+			return new Size(0, 0);
+		angleEach = 360.0 / InternalChildren.Count;
+		sizeLargest = new Size(0, 0);
+
+		foreach(UIElement child in InternalChildren)
+		{
+			//각 자식에 대해 Measure를 호출
+			child.Measure(new Size(double.PositiveInfinity, Double.PositiveInfinity));
+			// ... 그리고 각 자식의 DesiredSize 프로퍼티를 활용
+			sizeLargest.Width = Math.Max(sizeLargest.Width, child.DesiredSize.Width);
+			sizeLargest.Height = Math.Max(sizeLargest.Height, child.DesiredSize.Height);
+		}
+		if(Orientation == RadialPanelOrientation.ByWidth)
+		{
+			//중심에서 엘리먼트 변까지의 거리를 계산
+			innerEdgeFromCenter = sizeLargest.Width / 2 / Math.Tan(Math.PI * angleEach / 360);
+			outerEdgeFromCenter = innerEdgeFromCenter + sizeLargest.Height;
+			//가장 큰 자식을 기준으로 원의 반지름을 계산
+			radius = Math.Sqrt(Math.Pow(sizeLargest.Width / 2, 2 ) + Math.Pow(outerEdgeFromCenter, 2));
+		}else
+		{
+			//중심에서 엘리먼트 변까지의 거리를 계산
+			innerEdgeFromCenter = sizeLargest.Height / 2 / Math.Tan(Math.PI * angleEach / 360);
+			outerEdgeFromCenter = innerEdgeFromCenter + sizeLargest.Width;
+			//가장 큰 자식을 기준으로 원의 반지름을 계산
+			radius = Math.Sqrt(Math.Pow(sizeLargest.Height / 2, 2) + Math.Pow(outerEdgeFromCenter, 2));
+		}
+		//원의 크기를 반환
+		return new Size(2 * radius, 2 * radius);
+	}
+	//ArrageOverride 오버라이딩
+	protected override Size ArrangeOverride(Size sizeFinal)
+	{
+		double angleChild = 0;
+		Point ptCenter = new Point(sizeFinal.Width / 2, sizeFinal.Height /2 );
+		double multiplier = Math.Min(sizeFinal.Width / (2 * radius), sizeFinal.Height / (2 * radius));
+
+		foreach(UIElement child in InternalChildren)
+		{
+			//RenderTransform을 리셋
+			child.RenderTaansform = Transform.Identity;
+
+			if(Orientation == RadialPanelOrientation.ByWidth)
+			{
+				//상단에 자식을 위치
+				child.Arrange(new Rect(ptCenter.X - multipliter * sizeLargest.Width / 2, ptCenter.Y - multiplier * outerEdgeFromCenter,
+					multiplier * sizeLargest.Width,multiplier * sizeLargest.Height));
+			}else
+			{
+				//오른쪽에 자식을 위치
+				child.Arrange(new Rect(ptCenter.X + multiplier * innerEdgeFromCenter, ptCenter.Y - multiplier * sizeLargest.Height / 2,
+							multiplier * sizeLargest.Width, multiplier * sizeLargest.Height));
+			}
+			//원 주위로 자식을 회전( 자식에 대해 상대적)
+			Point pt = TranslatePoint(ptCenter, child);
+			child.RenderTransform = new RotateTransform(angleChild, pt.X, pt.Y);
+			//각도 증가
+			angleChild += angleEach;
+		}
+		return sizeFinal;
+	}
+	//OnRender 오버라이딩, 선택 사항인 선을 출력
+	protected override void OnRender(DrawingContext dc)
+	{
+		base.OnRender(dc);
+		
+		if(ShowPieLines)
+		{
+			Point ptCenter = new Point(RenderSize.Width / 2, RenderSize.Height /2 );
+			double multiplier = Math.Min(RenderSize.Width / (2 * radius), RenderSize.Height / (2 * radius));
+			Pen pen = new Pen(SystemColors.WindowTextBrush, 1);
+			pen.DashStyle = DashStyles.Dash;
+
+			//원을 출력
+			dc.DrawEllipse(null, pen, ptCenter, multiplier * radius, multiplier * radius);
+			//각도를 초기화
+			double angleChild = -angleEach / 2;
+	
+			if(Orientation == RadialPanelOrientation.ByWidth)
+				angleChild += 90;
+
+			//각 자식에 대해 중심에서부터 방사 형태의 선을 출력하는 루프
+			foreach(UIElement child in InternalChildren)
+			{
+				dc.DrawLine(pen, ptCenter, new Point(ptCenter.X + multiplier * radius * Math.Cos(2 * Math.PI * angleChild / 360),
+					ptCenter.Y + multiplier * radius * Math.Sin(2 * Math.PI * angleChild / 360)));
+				angleChild += angleEach;
+			}
+		}
+	}
+}
+
+MeasureOverride 메소드에서 단순히 360에서 자식의 수를 나누어서 angleEach를 계산한다. 그리고 루프에서 모든 자식에 대해 무한대 크기의 인자로 Measure를 호출한다. foreach 루프에서 각 자식의 크기를 검사하고 가장 큰 가로와 세로 길이를 찾는다. 그리고 이를 sizeLargestChild 변수에 저장한다. 
+
+MeasureOverride 메소드의 나머지 부분은 Orientation에 따라 분기한다. 이 메소드에서 innerEdgeFromCenter와 outerEdgeFromCenter라는 2개의 필드와 원의 반지름을 계산한다. MeasureOverride가 반환하는 가로, 세로의 크기 모두는 원의 반지름에 2를 곱한 값이다. 
+
+ArrangeOverride의 시작 부분에서는 sizeFinal의 중심과 multiplier라는 값을 계산한다. multiplier는 MeasureOverride가 호출되어 계산된 항목(구체적으로 sizeLargest와 innerEdgeFromCenter, outerEdgeFromCenter)에 곱하게 될 값으로 sizeFinal의 크기로 원을 확장시키기 위해 필요하다. RadialPanelOrientation.ByWidth인 경우는 Arrange메소드에서 자식을 원의 상단에 배치하고, ByHeight의 경우에는 자식을 원의 오른쪽에 배치한다. 그 후에 RenderTransform메소드에서 자식을 sizeFinal의 중심을 따라 angleChild 각도만큼 회전 시킨다(angleChild는 0에서 시작해서 매번 angleEach만큼 증가된다)RenderTransform의 두 번째와 세 번째 인자는 자식에 대해 상대적인 sizeFinal의 중심을 가리킨다. 
+
+RenderTransform은 FrameworkElement에서 지원되는 2개의 그래픽 변환 중 하나다. 3장에서 LayoutTransform을 설명했었다. 이름에서 알 수 있듯이 LayoutTransform은 레이아웃에 영향을 준다. Measure 메소드에서 변환되는 DesiredSize값이 서로 다르기 때문이다. 예를 들어 엘리먼트의 DesiredSize가 정상적으로 계산되어 가로 100단위, 세로 25단위라고 가정하자. LayoutTransform으로 90도를 회전시키면 DesiredSize는 가로 25단위와 세로 100단위가 될 것이다. 
+
+반면에 RenderTransform은 대부분 변환이 레이아웃에 영향을 주지 않는다. 관련 문서에도 나와있지만 RenderTransform은 전형적으로 애니메이션에 사용하거나 엘리먼트에 임시적인 효과를 적용할 때 사용하라고 제안하고 있다. 분명 RadialPanel 클래스는 더 근원적인 효과를 위해 RenderTransform을 사용한다. 단 레이아웃이 수행되는 동안 LayoutTransform처럼 엘리먼트의 크기에 영향을 주는 무엇인가가 값을 엉망으로 만들어서는 안 된다. 
+
+다음은 RadialPanel을 이용해 실험해 볼 수 있는 프로그램이다. 약간씩 다른 크기를 가진 10개의 버튼을 배열하며, 이때의 Orientation은 ByWidth다. 
+
+
+
+sing System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class CircleTheButtons : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new CircleTheButtons());
+	}
+	public CircleTheButtons()
+	{
+		Title = "Circle the Buttons";
+
+		RadialPanel pnl = new RadialPanel();
+		pnl.Orientation = RadialPanelOrientation.ByWidth;
+		pnl.ShowPieLines = true;
+		Content = pnl;
+
+		Random rand = new Random();
+
+		for( int i=0; i< 10; i++)
+		{
+			Button btn = new Button();
+			btn.Content = "Button Number " + (i + 1);
+			btn.FontSize += rand.Next(10);
+			pnl.Children.Add(btn);
+		}
+	}
+}
+
+ArrangeOverride메소드에서의 multiplier 값의 결과에 의해 패널은 컨테이너의 크기만큼 확장되고, 버튼들도 비례해서 확장된다(multiplier를 1로 하면 버튼이 확장되지 않게 된다)이제 몇 가지의 실험을 시도해보자. Window 객체의 SizeToContent를 WidthAndHeight로 설정하거나, 패널의 HorizontalAlignment와 VerticalAlignment프로퍼티를 Stretch가 아닌 다른 값으로 지정해보자. 모든 버튼의 가장 큰 버튼의 크기로 될 것이고, 패널은 그에 맞는 크기만큼만 차지될 것이다. 각 버튼의 Margin을 0이 아닌 값으로 설정하거나, 버튼의 HorizontalAlignment이나 VerticalAlignment에 Stretch외의 값을 지정해보자. 
+
+그리고 RadialPanel의 Orientation을 ByHeight로 설정하고, 버튼의 수를 40개 정도로 바꾸어 보자. 
+
+패널은 대부분 창의 레이아웃이나 대화상자에 사용되지만, 컨트롤 내에서 레이아웃하는 데도 사용될 수 있다. 이런 예를 11장의 ColorGrid 컨트롤에서 다루었다. ListBox와 같은 더 일반 적인 목적을 가진 컨트롤을 한번 고려해보자. ListBox는 기본적으로 Border에서 시작하며, Border에는 ScrollViewer라는 자식이 있고 ScrollViewer는 StackPanel의 자식이 있다. 그리고 ListBox에 있는 항목들은 StackPanel의 자식들이다. 
+
+ListBox에서의 StackPanel을 RadialPanel과 같은 다른 종류의 패널로 대체하는 것도 가능하다면 어떨까? ListBox는 완전히 다른 모습을 보이겠지만 여전히 같은 방식으로 동작할 것이다. 13장에서는 이에 도전해보고 RadialPanel이 들어간 ListBox를 만들어보자. 
