@@ -1,0 +1,150 @@
+CHAPTER 13장 : 리스트 박스
+지금까지 이 책에서 설명한 많은 컨트롤들은 ContentControl에서 파생되었으며, ContentControl에는 Window, Label, Button, ScrollViewer, ToolTip등이 있다.이 컨트롤들에는 문자열이나 다른 엘리먼트로 설정할 수 있는 Content프로퍼티가 있다. Content 프로퍼티를 패널로 설정한다면 여러 엘리먼트를 패널에 놓을 수 있다. 
+
+보통 라디오 버튼과 함께 사용하는 GroupBox는 ContentControl과 HeadredContentControl로부터 파생되었다. 그래서 GroupBox에는 Content 프로퍼티도 있지만 박스 상단에 보이는 Header 프로퍼티도 있다. 
+
+TextBox와 RichTextBox 컨트롤은 ContentControl에서 파생되지 않았다. 이 컨트롤은 사용자가 텍스트를 수정하고 입력할 수 있게 하는 TextBoxBase라는 추상 클래스로부터 파생되었다. ScrollBar 클래스도 ContentControl로부터 파생되지 않았다. 추상 클래스인 RangeBase를 상속받았는데, 이 RangeBase 클래스에는 Minimum과 Maximum프로퍼티가 있으며, 이 범위 안에 올 수 있는 double 타입의 Value 프로퍼티가 있다. 
+
+이번 장을 시작하면서 Control 구조에서 중요한 부분을 차지하는 ItemsControl에 대해 설명할 것이다. ItemsControl 클래스는 Control에서 직접 파생되었다. ItemsControl에서 파생된 컨트롤들은 보통, 리스트나 트리 같은 구조로 여러 항목들을 정렬해 보여준다. 이런 컨트롤에는 메뉴, 툴바, 상태바, 트리 뷰, 리스트 뷰가 있다. 
+
+13장에서는 특히 ListBox를 집중적으로 다루어 볼 것이다. ListBox는 ItemsControl에서 파생된 Selector를 상속받는 세 개의 컨트롤 중 하나다. 
+
+Control
+	ItemsControl
+		Selector (abstract)
+			ComboBox
+			ListBox
+			TabControl
+
+
+ListBox는 사용자가 여러 항목에서 한 항목(혹은 여러 항목)을 선택할 수 있게 해준다. ListBox의 기본적인 형태는 간단하고 간결하다. 항목은 수직으로 나타나며, 항목이 너무 길거나 항목이 너무 넓으면 자동으로 스크롤바가 생긴다. 선택한 항목은 ListBox에서 강조되어 표시되고 키보드와 마우스 인터페이스를 지원한다(ComboBox도 ListBox와 유사하지만 항목의 리스트가 계속보이지 않는 것이 다르다. ComboBox는 15장에서 다룬다)
+
+ListBox의 프로퍼티 중에는 ItemsControl을 상속받는 Items가 중요하다. ItemsCollection 타입인 Items는 object 타입 항목의 컬렉션이기 때문에 ListBox에 어떤 객체도 담을수 있다. 리스트 박스 항목을 위해 ListBoxItem 클래스가 있긴 하지만 반드시 이를 사용할 필요는 없다. 가장 손쉬운 것은 ListBox에 문자열을 넣는 것이다. 
+
+ListBox 객체는 다음과 같은 방식으로 생성한다. 
+
+ListBox lstbox = new ListBox();
+
+ListtBox는 항목들의 컬렉션이다. 이 항목들을 Items 컬렉션에 넣는 것을 "ListBox"를 채운다 라고 부른다. 
+
+lstbox.Items.Add("Sunday");
+lstbox.Items.Add("Monday");
+lstbox.Items.Add("Tuesday");
+lstbox.Items.Add("Wednesday");
+
+물론 리스트 박스에 항목을 채우기 위해 매번 Add 메소드를 호출할 필요는 없다. 배열을 사용하는 방법도 자주 사용한다. 
+
+string[] strDayNames = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thuresday", "Friday", "Saturday" };
+foreach(string str in strDayNames) list.Items.Add(str);
+
+요일에 대해 자국의 언어를 지원할 수 있게 System.Globalization 네임스페이스에는 DateTimeFormatInfo 클래스가 있다. 
+
+string[] strDayNames = DateTimeFormatInfo.CurrentInfo.DayNames;
+
+아니면 영어와 같이 여러 나라에서 공용어로 사용되는 언어를 쓸 수 도 있다. 
+
+string[] strDayNames = DateTimeFormatInfo.InvariantInfo.DayNames;
+
+ListBox를 채우는 다른 방법은 ItemsControl 타입인 ItemsSource 프로퍼티에 설정하는 것이다. 그리고 ItemsSource에는 IEnumerable을 구현한 객체는 어떤 것이든 설정할 이 때문에 ItemSource에 설정된 컬렉션은 foreach 에서도 역시 사용할수 있다. 예를 들어 다음과 같다. 
+
+lstbox.ItemsSource = DateTimeFormatInfo.CurrentInfo.DayNames;
+
+ListBox를 채우는 이 두 가지 방법(Items 프로퍼티에 Add 메소드로 항목을 추가하는 방법과 ItemSoure에 설정하는 방법)은 상호 베타적이다. 
+
+Items와 ItemsSource 프로퍼티는 모두 ItemssControl 클래스로 정의한다. ListBox 프로퍼티 중에 다른 유용한 것으로 Selector로 정의된 두 개의 프로퍼티가 있다. 이 두 가지는 SelectedIndex와 SelectedItem이며, ListBox에서 현재 선택된 항목을 나타내고 ListBox에는 특별한 색상의 배경색(기본색은 파란색)으로 표시된다. 
+
+어떤 항목도 선택하지 않은 경우 기본값으로 SelectedIndex는 -1, SelectedItem은 null이 된다. ListBox는 Items 컬렉션 중 특정 항목을 자동으로 선택하지 않는다. 프로그램이 특정 항목을 명시하지 않으면 컨트롤의 항목을 사용자가 직접 선택하기 전까지 SelectedIndex는 -1, SelectedItem은 null로 남아있다. 
+
+사용자가 ListBox를 보기 전에 항목을 선택하게 하고 싶으면 SelectedIndex나 SelectedItem을 설정한다. 예를 들어 다음의 구문은 Items 컬렉션에서 여섯 번째 항목을 선택한다. 
+
+lstbox.SelectedIndex = 5;
+
+SelectedIndex의 범위는 -1부터 Items에 있는 항목의 개수 -1까지가 된다. 항목이 선택되면 아래 두 구문은 같은 항목을 가리키게 된다. 
+
+lstbox.SelectedItem
+lstbox.Items[lstbox.SelectedIndex]
+
+다른 항목을 선택하면 ListBox에서는 Selector에 정의된 SelectionChanged 이벤트가 발생한다. 사례 연구에서 ListBox로 색상을 선택해보자. 이런 예제는 사실 흔하지만 확실히 유용하다(언젠가 누군가가 1,700페이지에 달하는 색상 선택 컨트롤의 짤막한 역사라는 제목의 책을 쓸지 모른다)
+
+이미 알고 있듯이 System.Windows.Media 네임스페이스에는 Colors 클래스가 있고 이 클래스에는 AliceBlue에서부터 YellowGreen까지의 이름을 나타내는 141개의 정적 프로퍼티가 있다. 이 정적 프로퍼티는 Color 타입의 객체를 반환한다. 배열에 아래와 같이 정의하고 리스트 박스를 이 배열로 채울 수 있다. 
+
+Color[] clrs = {Colors.AliceBlue, Colors.AntiqueWhite, ... };
+
+141개의 색상 명을 입력하기보다는 리플렉션을 사용하는 것이 낫다. 2장에서 배운 것처럼 Colors에 정의된 모든 Color 객체를 구하기 위해 리플렉션을 사용할 수 있다. typeof(Colors)라고 쓰게 되면 객체의 타입을 Type으로 돌려주는데, 여기에는 GetProperties라는 이름의 메소드가 정의되어 있다. 이 메소드는 Colors 클래스의 속성에 해당하는 PropertyInfo 객체 배열을 반환한다. 프로퍼티의 이름을 얻기 위해 PropertyInfo의 Name 프로퍼티를 사용할 수 있으며 실제 Color 값을 얻기 위해서는 GetValue 메소드를 사용한다. 
+
+여기서의 최종 목적은 ListBox에 실제 색상을 보여주는 것이지만 일단 색상명만을 보여주는 단순한 것으로 시작한다. 
+
+
+
+sing System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class ListColorNames : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListColorNames());
+	}
+	public ListColorNames()
+	{
+		Title = "List Color Names";
+	
+		//윈도우의 목록처럼 ListBox 를 생성
+		ListBox lstbox = new ListBox();
+		lstbox.Width = 150;
+		lstbox.Height = 150;
+		lstbox.SelectionChanged += ListBoxOnSelectionChanged;
+		Content = lstbox;
+		//색상 명으로 ListBox를 채움
+		PropertyInfo[] props = typeof(Colors).GetProperties();
+		foreach(PropertyInfo prop in props)
+			lstbox.Items.Add(prop.Name);
+	}
+	void ListBoxOnSelectionChanged(object sender, SelectionChangeEventArgs args)
+	{
+		ListBox lstbox = sender as ListBox;
+		string str = lstbox.SelectedItems as string;
+		if( str != null)
+		{
+			Color clr = (Color)typeof(Colors).GetProperty(str).GetValue(null, null);
+			Background = new SolidColorBrush(clr);
+		}
+	}
+}
+
+프로그램의 인터페이스를 다루기 전에 ListBox와 같은 사용자 인터페이스를 다루는 것이 도움이 된다. 이 프로그램은 ListBox에 입력 포커스를 설정하지 않았고 선택된 항목도 없는데, 마우스로 ListBox 항목 중 하나를 클릭함으로써 윈도우의 배경색을 선택한 색으로 바꿀수 있다. 마우스로 다른 항목을 계속 클릭할 수 있다. 스크롤바를 클릭하면 항목들은 스크롤 된다. ListBox에서 현재 선택된 항목은 항상 특별한 배경색(기본색은 파란색)으로 보여진다. 배경색이 파란색이 되면서 선택한 항목의 텍스트 색상이 검은색에서 흰색으로 반전됨에 주목하자. 
+
+물론 ListBox를 키보드로도 완전히 제어할 수 있다. 프로그램을 처음 실행한 다음 TAB키를 눌러서 ListBox에 입력 포커스가 가게 한다. 첫 번째 항목을 점선으로 된 사각형(포커스 상자)이 감싸는 것을 볼 수 있다. 이 시점에서는 아직 항목이 선택된 것이 아니다. Space Bar를 누르면 항목이 선택되고 포커스 상자가 나타나서 이를 가리킨다. 위나 아래 방향 키를 누르면 선택된 항목이 바뀐다. ListBox는 Page Up, Page Down, Home, End 키에도 반응한다. 특정 문자로 시작하는 항목으로 바로 이동하려면 그 문자를 입력하면 된다. 
+
+Ctrl 키를 누르고 현재 선택된 항목을 마우스로 클릭하면, 항목이 선택해제 된다(프로그램이 이를 예외로 무시하기 때문에 윈도우 배경색은 그대로 남아있다)Ctrl 키를 누르고 위와 아래 방향 키를 누르게 되면 현재 선택된 항목을 변경하지 않고 포커스 상자를 옮길 수 있다. 그러고 나서 Space Bar로 항목을 선택하거나 선택 해제할 수 있다. 다시 ListBox를 현재 선택된 항목이 없는 상태로 되돌리는 것이 가능하다. 
+
+이제 코드를 살펴보자. 윈도우 생성자는 ListBox를 생성하고 장치 독립적인 단위로 그 크기를 명시한다 ListBox의 경우 명시적으로 크기를 설정하는 것이 일반적이다. 선택한 크기는 ListBox의 컨텐트와 내용에 따라 달라진다. 
+
+ListBox에 특정 크기를 명시하지 않으면 컨트롤은 가능한 전 영역을 채우게 된다. HorizontalAlignment와 VerticalAlignment를 Center로 설정하는 대신에 ListBox는 가능한 많은 항목을 보여주기 위해 수직으로 늘어나고 폭은 현재 보이는 항목을 기반으로 설정된다. 항목을 스크롤하면 ListBox에 보이는 항목에 따라 폭이 넓어지거나 좁아지게 된다. 
+
+프로그램은 ListBox를 색상명으로 채우고 SelectionChanged 이벤트에 대한 핸들러를 설정한다. 이벤트 핸들러는 ListBox에서 SelectedItem 프로퍼티를 통해 선택된 항목을 얻는다. (이벤트 핸들러는 현재 선택된 항목이 있는지 검사하고, 선택된 항목이 없으면(값이 null이면)아무런 동작도 하지 않는다는 점에 주의하자)이 프로그램에서 ListBox 항목은 문자열이므로 이를 Color 객체로 변경해야 한다. 이 문자열을 Colors 객체로 변경해야 하는데, 리플렉션을 사용하면 가능하다. 
+GetProperty 메소드는 Colors의 정적 프로퍼티와 연결되는 PropertyInfo 객체를 구해주지만 GetValue 메소드는 Colors 의 정적 프로퍼티와 연결되는 Color 객체를 구해준다. 
+
+프로그램이 시작될 때 ListBox에 입력 포커스가 이동해 항목이 선택되게 하려면 윈도우 생성자 하단에 아래와 같은 구문을 추가하면 된다. 
+
+lstbox.SelectedItem = "Magenta";
+lstbox.ScrollIntoView(lstbox.SelectedItem);
+lstbox.Focus();
+
+선택한 항목이 나타나게 하려면 ListBox를 스크롤해주는 ScrollIntoView를 호출해야 한다는데 주목하자. 
+
+Selector 클래스가 단지 한 개 항목만 선택하는 것으로 구현하고 있지만 ListBox 클래스는 여러 항목을 선택할 수 있게 하는 것도 가능하다. SelectionMode 프로퍼티는 SelectionMode의 열거형 멤버인 Single, Exntended, Multiple로 설정한다. 
+
+SelectionMode.Multiple로 설정하면 마우스 왼쪽 버튼으로 각 항목을 선택하거나 선택해제할 수 있다. 아니면 방향 키로 포커스 상자를 움직인 다음 Space Bar로 각 항목을 선택하거나 해제할 수 있다. 
+
+SelectionMode.Extended로 설정하면 Ctrl 키가 눌렸을 때만 마우스로 각 항목을 선택하거나 해제할 수 있다. 아니면 Shift 키와 각 항목을 클릭함으로서 특정 범위의 항목을 선택할수 있다. Shift 키나 Ctrl 키를 누르지 않은 채 마우스를 클릭하면 이전에 선택한 모든 항목이 선택 해제된다. 마우스 대신 키보드를 이용할 때는 Ctrl 키를 누른 채 포커스 사각형을 움직인 다음 Space Bar로 각 항목을 선택하면 된다. 아니면 Shift 키와 화살표 키로 연속되는 항목을 그룹으로 선택할 수 있다. 
+
+ListBox에서 다중 선택 모드를 이용할 때 SelectedItems 프로퍼티(복수형임에 주의)를 이용하는데 이 프로퍼티는 여러 항목의 컬렉션을 가리킨다. ListBox 클래스가 다중 선택 박스를 지원해야 하는 경우가 있기 때문에 Selector 클래스에 정의되어 있는 SelectionChanged 이벤트가 이를 지원한다. 이 이벤트는 객체 타입의 SelectionChangedEventArgs를 인자로 갖는다. SelectionChangedEventArgs는 AddedItems와 RemovedItems라는 두 개의 프로퍼티를 갖고 있다. 이 두개의 프로퍼티는 선택된 항목을 저장하는 컬렉션에 새로 추가되거나 제거된 항목에 대한 리스트를 갖고 있다. 단일 선택 모드로 ListBox를 사용한다면 이 두 개의 프로퍼티는 사용할 필요가 없다. 
+
+ListBox의 Items 컬렉션은 object 타입의 객체 컬렉션이다. 그래서 ListBox에 직접 Color객체를 넣는 것도 가능하다. 
