@@ -1,0 +1,513 @@
+02 인터페이스 활용
+
+
+
+2.1 열거하기
+
+닷넷 라이브러리에도 많은 인터페이스들이 제공되는데 레퍼런스에서 I로 시작되는 것들이 모두 인터페이스이다. 각 인터페이스에는 해당 기능을 구현하는데 필수적인 메서드들이 잘 구비되어 있다. 물론 구현은 없고 메서드 목록만 있을 뿐이다. 닷넷 매뉴얼을 보면 종종 다음과 같은 문구를 볼 수 있다.
+
+
+
+S 기능을 구현하고 싶어?
+
+그럼 T 인터페이스를 상속받아 X, Y, Z 메서드를 구현해봐
+
+
+
+이 지시대로 클래스를 만들면 이 클래스는 S 기능을 보유하게 된다. 닷넷 라이브러리는 이 객체의 S 기능이 필요할 때 X, Y, Z 메서드를 호출하며 이 호출은 항상 성공할 것이다. 왜냐하면 클래스 제작자는 계약대로 클래스를 구현했고 닷넷 라이브러리는 계약대로 이 객체의 메서드를 호출하기 때문이다. 만약 약속을 지키지 않으면 컴파일 단계에서 타입이 불일치한다는 에러가 발생한다. 이런 계약이 인터페이스에 의해 정형화 된다.
+
+
+
+여기서는 인터페이스 활용예로 열거가 가능한 클래스를 만들어 보자. foreach 구문을 사용하면 객체가 가지고 있는 멤버들을 순서대로 순회할수 있는데 배열이나 컬렉션처럼 정보의 집합을 관리하는 클래스가 순회 기능을 제공한다. 이 기능이 동작하기 위해서는 처음과 끝은 어디인지, 어떤 순서로 순회할 것인지를 클래스가 내부적으로 구현해야 한다. 이 구현만 있으면 사용자 정의 클래스도 열거 가능하며 foreach 구문과 함께 사용할 수 있다.
+
+
+
+클래스에 열거 기능을 작성하려면 두 개의 인터페이스를 구현해야 한다. 열거 대상 클래스는 IEnumerable 인터페이스를 구현하는데 이 인터페이스는 열거자 객체를 구하는 GetEnumerator 메서드를 가진다. 자신을 열거하는 별도의 도우미 클래스를 준비해두고 GetEnumerator 메서드에서 이 도우미 객체를 생성하여 리턴하면 된다. 실제 열거는 도우미 객체가 수행한다.
+
+
+
+도우미 객체는 IEnumerator 인터페이스를 상속받아 구현한다. IEnumerator 인터페이스에는 다음 세 개의 멤버가 포함되어 있는데 Current는 프로퍼티이고 나머지 둘은 메서드이다. foreach문은 열거 중에 이 메서드들을 호출하도록 되어 있으므로 각 메서드는 약속에 따라 그리고 클래스의 내부 구조에 맞게 구현되어야 한다.
+
+ 멤 버
+
+ 설명
+
+ object Current
+
+ 현재 값을 구한다. 열거 대상이 임의 타입이므로 object를 리턴한다.
+
+ bool MoveNext()
+
+ 다음 값으로 이동하며 끝에 도달하면 false를 리턴한다
+
+ void Reset
+
+ 열거를 처음 상태로 돌린다. 최초 아무것도 가리키지 않는 상태여야 한다.
+
+
+
+foreach 구문은 이 인터페이스를 구현하고 있는 객체에 대해서만 동작한다. 즉 처음부터 끝까지 순서대로 순회할 수 있는 능력이 있어야만 foreach 구문을 쓸 수 있다. 열거가 필요한 대표적인 타입은 역시 배열이다. 배열에는 순서가 있는 요소들이 모여 있으므로 차례대로 순회할 일이 굉장히 많다. 임의의 클래스도 열거할 대상이 있다면 이 인터페이스를 구현하면 되는데 Time 클래스에 대해 열거를 해보자. 시,분,초 세 개의 요소들로 구성되고 이 요소들은 일종의 순서 있는 집합으로 간주할수 있으며 따라서 열거의 대상이다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Program
+    {
+        static void Main()
+        {
+            Time now = new Time(18, 25, 55);
+            foreach (int hms in now)
+                Console.WriteLine("{0}", hms);
+        }
+       
+    }
+    class Time : IEnumerable
+    {
+        public int hour, min, sec;
+        public Time(int h, int m, int s) { hour = h; min = m; sec = s; }
+        public IEnumerator GetEnumerator()
+        {
+            return new TimeEnum(this);
+        }
+    }
+    class TimeEnum : IEnumerator
+    {
+        private Time t;
+        private int element;
+        public TimeEnum(Time aT)
+        {
+            t = aT;
+            Reset();
+        }
+
+        public bool MoveNext()
+        {
+            if (element < 2)
+            {
+                element++;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public object Current
+        {
+            get
+            {
+                switch (element)
+                {
+                    case 0: return t.hour;
+                    case 1: return t.min;
+                    case 2: return t.sec;
+                    default: return null;
+                }
+            }
+        }
+
+​
+
+        public void Reset()
+        {
+            element = -1;
+        }
+    }
+   
+}
+
+
+
+Time 클래스는 IEnumerable 인터페이스를 상속받으며 따라서 GetEnumerator 라는 메서드를 구현해야 한다. GetEnumerator 에서는 TimeEnum 타입의 객체를 하나 생성해서 리턴하는데 이 객체가 바로 실제 열거를 담당하는 열거자이다. hour, min, sec 생성자 같은 나머지 멤버들은 지금까지 지겹게 봐오던 평범한 것들이다.
+
+
+
+TimeEnum 클래스는 IEnumerator 인터페이스로부터 상속받은 메서드와 프로퍼티를 구현한다. 물론 상속받은 멤버들 외에 추가로 필요한 멤버들을 더 선언할 수 있다 T필드는 열거 대상 시간 객체이며 생성자에서 전달된 인수로 초기화된다. element 필드는 시간 객체의 어떤 요소를 가리키고 있는지를 기억하는 일종의 첨자값이다. Reset 에서 -1로 초기화하며 생성자에서 Reset을 호출하므로 최초 아무 요소도 가리키고 있지 않은 상태이다.
+
+
+
+MoveNext 메서드는 element를 1증가시켜 다음 요소를 가리키도록 조정하되 2가되면 false를 리턴하여 마지막 요소라는 것을 알린다. element는 최초 -1이었다가 MoveNext가 호출되면 0, 1, 2로 증가할 것이다. Current 프로퍼티는 element에 따라 시간 요소를 리턴하는데 0,1,2에 대해 각각 시, 분, 초를 리턴했다. 큰 단위부터 작은 단위로 순회하는 것이 자연스럽다. 물론 요소의 순서는 클래스가 마음대로 결정하는 것이므로 시, 분,초 가 아닌 초, 분, 시로 리턴할 수도 있다.
+
+
+
+Main에서는 TIme형 객체를 하나 생성하고 foreach 문으로 이 객체를 순회하며 열거되는 값들을 hms 지역 변수에 순서대로 대입한다. 열거된 값은 여러 가지 방식으로 사용될 수 있는데 여기서는 확인을 위해 화면으로 출력하기만 했다. Current 메서드가 시, 분, 초순으로 시간 요소를 리턴하므로 이 순서대로 출력될 것이다.
+
+
+
+실행 결과 : 18:
+
+25:
+
+55:
+
+
+
+foreach 구문을 이해하고 있고 위 예제의 각 메서드가 어떤 역할을 한다는 것을 안다면 이제 내부에서 무슨일이 일어나는지 대충 짐작될 것이다 foreach는 미리 정해진 약속에 따라 Time 객체의 열거 관련 메서드를 호출하여 열거되는 값을 hms에 차례대로 대입한다. foreach 구문의 내부는 아마 도 다음과 같이 되어 있을 것이다. 소스가 공개되어 있지 않아 정확하게 알수는 없지만 나의 뛰어난 상상력으로 대충 추측해 보았다. Main의 foreach를 다음 코드로 바꿔도 잘 동작한다. 실제 라이브러리의 코드는 이보다 훨씬 더 정교하고 예외처리도 잘 되어 있을 것이다.
+
+
+
+static void Main()
+
+{
+
+    Time now = new Time(18, 25, 55);
+            IEnumerator e = now.GetEnumerator();
+            e.Reset();
+            while (e.MoveNext())
+            {
+                Console.WriteLine("{0}:", (int)e.Current);
+            }
+
+}
+
+
+
+Time 객체의 GetEnumerator 메서드를 호출하여 열거자 객체를 먼저 구한다. 그리고 열거자의 Reset 메서드를 호출하여 순회 준비를 하며 MoveNext 메서드를 호출하여 다음 요소로 이동하면서 Current 프로퍼티를 읽어 현재 요소를 조사한다. 이 과정을 MoveNext가 false를 리턴할 때까지, 즉 모든 요소를 다 순회할 때까지 반복하는 것이다.
+
+
+
+foreach가 이런식으로 동작하기 위해서는 열거 대상 객체가 GetEnumerator라는 메서드를 구현하고 적절한 열거자 객체를 리턴해야 한다. Time에 이 메서드가 없으면 순회를 시작할 수 없으므로 에러 처리된다. 또 열거자 객체는 IEnumerator로부터 상속받아야 하며 열거에 꼮 필요한 세 개의 멤버를 구현해야 한다. 열거 방식은 클래스가 마음대로 결정할 수 있지만 열거 능력 자체는 꼭 있어야 한다.
+
+
+
+이 조건들 중 하나라도 약속대로 되어있지 않으면 foreach는 이 객체를 열거할 수없다. 과연 그런지 테스트해 보고싶으면 GetEnumerator 메서드를 주석 처리해보아라. 인터페이스의 메서드가 구현되지 않았다는 에러 메시지가 번쩍 나타날 것이다. 다음은 TIme 클래스 선언문의 IEnumerable을 빼 보자. Time 클래스 자체는 잘 컴파일되지만 foreach에서 자격 미달인 객체는 열거할 수 없다고 징징대며 파업해 버린다. 왜 인터페이스를 계약이라고 하는지 이해가 될 것이다.
+
+
+
+이 에제에서 TimeEnum 클래스는 오로지 Time 객체의 열거를 위해서만 사용되며 다른 목적으로는 사용되지 않는다. 예제에서는 소스 분석의 편의를 위해 외부에 따로 선언해 두었지만 좀 더 형식성을 따진다면 Time 클래스의 안쪽에 내부 타입으로 선언하고 외부에서는 함부로 액세스하지 못하도록 private 지정자로 숨기는 것이 좋다. 다음과 같이 작성해도 똑같이 잘 동작하며 Time이 필요한 타입을 내부에 품고 있으므로 훨씬 더 기동성이 좋아진다.
+
+
+
+class Time : IEnumerable
+
+{
+
+      private class TimeEnum : IEnumerator
+
+      {
+
+               ............
+
+      }
+
+}
+
+
+
+그런데 열거에 필요한 인터페이스는 왜 두개나 될까? 열거자라는 중간 객체를 따로 만들어야 하므로 무척 번거롭게 보이며 난이도도 더 높아진다. Time이 직접 IEnumerator 인터페이스를 상속받아 열거관련 메서드를 구현하는 식으로 약속할수도 있으며 그렇게 하는 것이 훨씬 더 간단하다. 인터페이스는 약속이기 때문에 쌍방이 잘 지키기만 하면 문제가 없다. 하지만 아무 이유없이 복잡하게 만들어 놓았을 리는 없을 것이고 중간에 열거 객체라는 것을 두는 데는 나름대로 다른 이유가 있을 것이다.
+
+
+
+열거자가 필요한 이유는 이중 루프도 지원해야 하기 때문이다. 이중 루프를 돌려면 각 루프가 어디쯤 순회 중인지를 따로 기억해야 하며 그러기 위해서는 두 개의 열거 도우미 객체가 필요하다. Time 클래스가 직접 순회를 하면 열거 중에 재초기화되어 버리므로 바깥쪽 루프는 순회 위치를 제대로 기억할 수 없다. 중간에 열거자를 두면 순회를 할 때마다 새로운 열거자를 매번 생성할 수 있으므로 각 루프의 상태를 따로 관리할 수 있다. 그래서 다음과 같은 구문이 가능해진다.
+
+
+
+foreach(int hms in Now)
+
+{
+
+     foreach(int hms2 in Now)
+
+     {
+
+           .........
+
+
+
+각 foreach문에서 새로운 열거자를 만들고 각 열거자는 자신의 고유한 element 필드로 현재 위치를 기억한다. 매 루프마다 새로운 열거자가 만들어지므로 10중 루프를 만들수도 있다. 만약 이게 잘 이해가 안된다면 단순한 for문을 생각해 보아라 for(a) for(b)이렇게 되면 분명히 이중 루프이지만 for(a) for (a)이렇게 되면 정상적인 이중 루프가 아니다. 열거 대상은 하나이지만 이중 루프를 위해서는 제어 변수가 루프 수만큼 필요하므로 중간에 열거자를 두는 것이다.
+
+
+
+
+
+2.2 반복기
+
+인터페이스로 열거 기능을 작성하는 것은 약속된 인터페이스를 상속받아 필요한 메서드를 구현하면 되므로 어렵거나 난해하지는 않다. 구현만 해 놓으면 foreach가 필요할 때마다 이 메서드들을 호출하여 요소들을 순서대로 구하도록 되어 있다. 그러나 작성해야할 코드의 양이 많아 번거롭다는 단점이 있다. TimeEnum 예제를 보면 고작 세 개의 요소를 순회하는데 꽤 긴 코드가 필요하며 여기 저기 잔손질이 많이가는 편이다.
+
+
+
+그래서 C# 2.0에서는 반복기(Iterator)라는 새로운 열거 방법을 도입했다. 반복기는 열거 대상요소들을 순서대로 생성하는 구문이다. 메서드나 인터페이스를 직접 구현하는 것이 아니라 열거 대상을 생성하는 코드만 규칙대로 작성하면 나머지는 컴파일러가 뒤처리를 하므로 훨씬 더 간편하다. 열거 방법보다는 열거 대상 그 자체에 초점을 두는 방법이라 할 수 있다. 다음은 TimeEnum 예제와 똑같은 동작을하는 반복기 예제인데 코드가 훨씬 더 짧고 간단하다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Program
+    {
+        static void Main()
+        {
+            Time now = new Time(18, 25, 55);
+            foreach (int hms in now)
+                Console.WriteLine("{0}:", hms);
+        }
+       
+    }
+    class Time
+    {
+        public int hour, min, sec;
+        public Time(int h, int m, int s) { hour = h; min = m; sec = s; }
+        public IEnumerator GetEnumerator()
+        {
+            yield return hour;
+            yield return min;
+            yield return sec;
+        }
+    }
+   
+}
+
+
+
+TIme 클래스는 IEnumerable 인터페이스를 상속받지는 않았지만 GetEnumerator 메서드가 구현되어 있으며 이 메서드의 본체 안에 반복기 블록이 작성되어 있다. 길이는 훨씬 더 짧아졌지만 foreach로 Time 객체를 순회할 수 있으며 출력 결과는 완전히 동일하다.
+
+
+
+실행 결과 : 18:
+
+25:
+
+55:
+
+
+
+이 예제가 어떻게 TimeEnum 예제와 똑같은 동작을 할 수 있는지 코드만 봐서는 직관적으로 이해 하기 어려울 것이다. 이 코드가 열거 기능을 가지는 이유는 컴파일러가 내부적으로 필요한 코드를 자동으로 생성하기 때문이다. 반복기 블록은 문법적으로 정의된다기보다는 의미론적으로 정의된다.
+
+
+
+메서드나 연산자, get 접근자가 반복기 블록이 되는데 다음 조건을 만족하면 컴파일러는 이 함수들을 반복기 블록으로 인정한다.
+
+
+
+1. 내부에 값을 생성하는 yield 명령이 있어야 한다. yield 명령은 열거되는 값을 생성하거나 열거를 끝내는데 두 가지 형태로 사용된다.
+
+
+
+* yield return 값 : 열거 값을 생성한다. 생성하는 요소의 타입은 동일해야 한다.
+
+* yield break : 값 생성을 종료한다.
+
+
+
+2. yield 명령은 이 두 가지 형태로만 사용되며 그 외의 경우에 yield라는 명칭은 키워드가 아닌 일반적인 명칭으로 인식된다. yield를 쓸 수 있는 위치에는 제약 사항이 많은데 finally 블록이나 catch 가 있는 try 블록, 익명 메서드, 안전하지 않은 코드에서는 사용할 수 없다.
+
+
+
+3. 함수의 리턴 타입은 다음 4가지 중 하나여야 한다. 제네릭 버전과 비 제네릭 버전의 인터페이스중 하나를 리턴한다.
+
+
+
+System.Collections.IEnumerator
+
+System.Collections.Generic.IEnumerator<T>
+
+System.Collections.IENumerable
+
+System.Collections.Generic.IEnumeraable<T>
+
+
+
+비 제네릭 버전이 리턴하는 타입은 object이며 제네릭 버전이 리턴하는 타입은 타입 인수인 T이다.
+
+
+
+4. 필요할 경우 열거 범위나 방법을 전달받기 위한 인수를 취할 수는 있지만 사용자가 직접 호출하는 메서드가 아니므로 ref, out 인수는 취할수 없다. 직접 실행하는 것이 아니라 컴파일러가 단계적으로 실행하므로 return 문을 쓸 수 없으며 안전하지 않은 코드 블록을 포함할 수도 없다. 오로지 yield 문으로 열거 대상 값을 생성하는 코드만 있어야 한다.
+
+
+
+예제의 GetEnumerator 메서드는 IEnumerator 타입을 리턴하며 시간 요소 세 가지를 yield 명령으로 차례대로 리턴함으로써 요소들을 열거했다. 이 yield 명령은 한꺼번에 실행되는 것이 아니라 컴파일러에 의해 순서대로 호출되며 이때 다음 호출 위치를 기억해 두기도 한다. 인수를 취하지 않았고 안전하지 않은 코드도 없으므로 이 메서드는 반복기 블록으로 인정된다.
+
+
+
+이런 조건을 만족하는 반복기 블록이 발견되면 컴파일러는 컴파일 중에 열거 클래스를 자동으로 정의한다. 이 클래스는 private 액세스 속성을 가지는 내부 타입으로 정의되며 필요할때 컴파일러가 열거자 객체를 생성하고 이 객체를 관리한다. 이 클래스에는 foreach 문이 요구하는 Current프로퍼티, MoveNext, Dispose 메서드 등이 포함된다. 단 Reset 메서드는 제공되지 않으므로 순차 순회만 가능하다. 컴파일러는 위 예제를 다음과 같이 변형한 후 컴파일 한다.
+
+
+
+class Time
+    {
+        public int hour, min, sec;
+        public Time(int h, int m, int s) { hour = h; min = m; sec = s; }
+        public IEnumerator GetEnumerator()
+        {
+            return new __Enumerator();
+        }
+        private class __Enumerator()    // 컴파일러가 생성하는 클래스
+        {
+            int __state;
+            object __current;
+            public object Current{...}
+            public bool MoveNext{...}
+            public void Dispose{...}
+        }
+    }
+
+
+
+__Enumerator 라는 이름의 내부 클래스를 정의하고 GetEnumerator 메서드는 이 클래스의 객체인 열거자를 생성하여 리턴한다. 열거자 클래스는 스스로의 상태를 관리하는 __state라는 필드를 가지며 before, suspended, running, after 네 가지 상태중 하나의 상태를 유지한다. MoveNext나 Current는 이 상태 값에 따라 다음 동작을 결정하며 스스로 상태를 변경하여 다음 호출 가능한 명령을 구분하기도 한다.
+
+
+
+컴파일러에 의해 내부적으로 생성되는 열거자가 어떤 식으로 상태를 관리하고 요소값들을 리턴하는가는 스펙 문서에 자세하게 기술되어 있다. 하지만 우리가 이 규칙들을 속속들이 이해할 필요는 없으며 알아서 잘 만들어놨겠거니 생각해도 무방하다. 우리는 규칙에 맞게 반복기 블록만 작성해 놓으면 되고 foreach는 컴파일러가 만든 열거자 객체를 생성하여 MoveNext, Current를 호출하여 요소들을 순서대로 구할 것이다. 각 열거 객체는 자신의 고유 상태를 저장하므로 이중 루프를 돌리는 것도 가능하다.
+
+
+
+foreach(int hms in Now)
+
+{
+
+     foreach(int hms2 in Now)
+
+            Console.WriteLine("{0} - {1}",hms,hms2);
+
+}
+
+별 의미는 없지만 이 코드는 시간 객체 하나의 시,분, 초 각각에 대해 시, 분, 초를 다시 순회하는 이중 루프를 돈다. 첫 번째 foreach문은 Now 객체를 열거하는 열거자를 생성할 것이고 두 번째 foreach문도 새로운 열거자 객체를 생성할 것이다. 두 객체는 각각 따로 생성된 것이므로 고유의 상태나 열거 위치를 기억하며 열거 중에 서로를 방해하지 않는다.
+
+
+
+다음 예제는 한강의 다리들을 동쪽에서 서쪽으로 열거한다. Time 클래스는 열거할 요소가 세 개 밖에 없으므로 yield return을 각각 사용했다. 그러나 이 예제는 열거할 요소 수가 많기 때문에 정적 배열에 다리 이름을 저장해 두고 첨자로 루프를 돌며 하나씩 값을 리턴한다. 한강 다리에 무슨 번호가 붙어있는 것은 아니므로 순서대로 배열에 몰아 놓고 돌리는 수밖에 없다. 열거자 객체는 루프의 첨자 i도 필드로 포함하여 다음 반복 대상을 기억한다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Program
+    {
+        static void Main()
+        {
+            HanBridge hb = new HanBridge();
+            foreach (string b in hb)
+                Console.WriteLine(b);
+        }
+       
+    }
+    class HanBridge
+    {
+        static string[] Brdge = {"팔당","강동","광진","천호","올림픽","잠실",
+                                    "청담","영동","성수","동호","한남","반포","동작","한강","원효",
+                                    "마포","서강","양화","성산","가양","방화","행주","김포","일산"};
+        public IEnumerator GetEnumerator()
+        {
+            for (int i = 0; i < Brdge.Length; i++)
+            {
+                yield return Brdge[i];
+            }
+        }
+    }
+   
+}
+
+
+
+실행해 보면 한강 다리 이름이 순서대로 순회될 것이다. 이름 있는 반복기는 IEnumerable인터페이스를 리턴하는 메서드이다. 객체 자체가 아닌 메서드 하나로도 반복기를 구현할 수 있다. 메서드는 인수를 받아 값을 순환하는 방법을 결정할 수 있고 오름차순, 내림차순 등 여러 가지 방식으로 열거하는 반복기를 각각 만들어 놓고 번갈아 가며 사용할 수 있다. 다음 예제는 한강 다리 이름을 열거하는 두 개의 반복기 메서드를 정의한다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Program
+    {
+        static void Main()
+        {
+            HanBridge hb = new HanBridge();
+            foreach (string b in hb.EastToWest())
+                Console.WriteLine(b);
+            Console.WriteLine();
+            foreach (string b in hb.WestToEast())
+                Console.WriteLine(b);
+        }
+       
+    }
+    class HanBridge
+    {
+        static string[] Brdge = {"팔당","강동","광진","천호","올림픽","잠실",
+                                    "청담","영동","성수","동호","한남","반포","동작","한강","원효",
+                                    "마포","서강","양화","성산","가양","방화","행주","김포","일산"};
+        public IEnumerable EastToWest()
+        {
+            for (int i = 0; i < Brdge.Length; i++)
+            {
+                yield return Brdge[i];
+            }
+        }
+        public IEnumerable WestToEast()
+        {
+            for (int i = Brdge.Length - 1; i >= 0; i--)
+            {
+                yield return Brdge[i];
+            }
+        }
+    }
+   
+}
+
+
+
+foreach 문에서 이름 있는 반복기를 컬렉션처럼 지정하여 열거한다. 한강 다리 이름이 동에서 서로, 서에서 동으로 두번 출력될 것이다. 다음 예제는 이름 있는 반복기로 구구단 예제를 만든 것이다.
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Program
+    {
+        public static IEnumerable IntIterator(int s, int e)
+        {
+            for (int i = s; i <= e; i++) yield return i;
+        }
+        static void Main()
+        {
+            foreach (int x in IntIterator(2, 9))
+            {
+
+                foreach (int y in IntIterator(1, 9))
+                    Console.WriteLine("{0} * {1} = {2}", x, y, (x * y));
+                Console.WriteLine();
+            }
+        }
+       
+    }
+   
+   
+}
+
+
+
+IntIterator 메서드는 s~e 사이의 정수를 열거하는 정수 열거자이다. foreach에서 이 메서드가 리턴하는 객체를 열거하면 1~9사이를 두번 순회하면서 각 수의 곱을 출력할 수 있다. 이런 식이라면 소수만 리턴하는 반복기나 피보나치 수열을 열거하는 반복기도 만들 수 있을 것이다.
+
+
+
+열거 인터페이스는 그럭저럭 이해는 되지만 구현해야 할 메서드가 많아 쓰기에 번거로운 면이 있다. 그나마 새로 도입된 반복자는 길이는 짧지만 솔직히 처음 보면 무척 헷갈리는 구조라서 얼른 이해 되지 않을 것이다. 그러나 이런 약속들에 의해 foreach라는 일관적이고도 편리한 구문이 가능해진다는 것을 알아야 한다. 클래스를 만드는 개발자는 인터페이스 구현하랴 반복기 만들랴 힘들겠지만 최종 사용자는 foreach로 한방에 순회 가능하다.
+
+
+
+다행히 반복기는 최종 개발자들에게 사용 대상이지 직접 만들어야 하는 경우가 그리 흔치 않다. 만약 자신의 클래스에 열거 기능을 꼭 넣고 싶다면 아주 쉬운 방법이 있다. 별 대단한건 아니고 위예제의 코드 중 비슷한 것을 복사해 붙인후 조금만 뜯어 고치면 된다. 인터페이스라는 게 약속이다보니 구현틀도 거의 비슷비슷하므로 완전히 새로 구현할 필요가 별로 없다. 인터페이스 상속해 놓고 복사해 붙이기 내공으로 구현 상속하는 작전이 때로는 굉장히 잘 먹혀 든다.
