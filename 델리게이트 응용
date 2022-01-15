@@ -1,0 +1,433 @@
+1.3 델리게이트 활용
+
+
+
+델리게이트 자체는 클래스이지만 델리게이트 객체는 변경 가능한 변수이다. 앞 항의 예제에서 dele는 특정 메서드를 가리킬수 있는 타입에 대한 선언이고 dele 타입으로 생성된 d는 실제로 메서드를 가리키는 객체이다. int i; 선언문과 dele d; 선언문에서 int에 대응되는 것이 dele이고 i에 대응되는 것이 d이다. 공식 문서에서도 델리게이트라는 용어를 별 구분없이 사용하고 있는데 dele는 정확하게 말해 델리게이트 타입이라고 칭해야 옳고 d는 델리게이트 객체라고 칭해야 옳다
+
+
+
+아무튼 중요한 것은 d가 실행 중에 언제든지 변경될수 있는 변수라는 점이다. 그래서 미리 계산된 값을 대입해 놓을 수 있으며 메서드의 인수로도 전달할 수 있다. 변수가 할수 있는 일은 델리게이트 객체도 다 할수 있다. 이점을 이용하면 호출할 메서드를 미리 결정해 놓을수 있으며 메서드가 호출 할 다른 메서드를 인수로 전달할 수 있다. 다음 예제는 정수 연산을 하는 두 가지 메서드를 정의하고 사용자의 선택에 따라 원하는 메서드를 호출한다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+   
+    class Program
+    {
+        public static int Add(int a, int b) { return a + b; }
+        public static int Mul(int a, int b) { return a * b; }
+        static void Main()
+        {
+            int a = 3, b = 5;
+            int o;
+            Console.Write("어떤 연산을 하고싶습니까?(1:덧셈,2:곱셈)");
+            o = Convert.ToInt32(Console.ReadLine());
+            switch (o)
+            {
+                case 1:
+                    Console.WriteLine("결과는 {0} 입니다", Add(a, b));
+                    break;
+                case 2:
+                    Console.WriteLine("결과는 {0} 입니다", Mul(a, b));
+                    break;
+            }
+        }
+       
+    }
+   
+   
+}
+
+
+
+두 수루를 더하는 Add 메서드와 두 수를 곱하는 Mul 메서드가 정의되어 있으며 두 메서드는 연산 코드가 다를 뿐 인수와 리턴 타입이 동일하다. 사용자에게 어떤 메서드를 호출할 것인가를 키보드로 입력받아 switch문으로 두 메서드 중 하나를 선택하여 호출한다. 너무 너무 간단한 예제라 읽어만 봐도 결과를 금방 알 수 있을 것이다.
+
+
+
+실행 결과 : 어떤 연산을 하고 싶습니까? (1:덧셈, 2:곱셈)1
+
+결과는 8 입니다.
+
+
+
+선택해야 할 메서드가 두 개 정도라면 switch문도 쓸만하고 if문이나 삼항 조건 연산자로 더 짧게 만들수도 있다. 그러나 수십 개의 메서드 중 하나를 호출해야 한다면 switch문의 case를 일일이 작성하는 것은 속도도 느릴 뿐만 아니라 프로그램도 비대해지고 보기에도 좋지 않다. 이럴 때 델리게이트를 사용하면 미리 선택해 놓을 수 있으며 배열로 작성해 놓으면 첨자만으로 호출할 메서드를 빠르게 선택할 수 있다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    delegate int IntOp(int a,int b);
+    class Program
+    {
+        public static int Add(int a, int b) { return a + b; }
+        public static int Minus(int a, int b) { return a - b; }
+        public static int Nanugi(int a, int b) { return a / b; }
+        public static int Mul(int a, int b) { return a * b; }
+        static void Main()
+        {
+            int a = 3, b = 5;
+            int o;
+            IntOp[] arOp = { Add, Minus, Nanugi, Mul };
+            Console.Write("어떤 연산을 하고싶습니까?(1:덧셈,2:뺄셈,3:나눗셈,4:곱셈)");
+            o = Convert.ToInt32(Console.ReadLine());
+            Console.WriteLine("결과는 {0} 입니다", arOp[o-1](a, b));
+        }
+       
+    }
+   
+   
+}
+
+
+
+Add메서드와 Mul 메서드는 두 개의 정수 인수를 취하고 정수를 리턴한다. 형태가 똑같기 때문에 하나의 델리게이트로 두 메서드를 번갈아 가리킬 수 있다. 이두 메서드를 가리킬 수 있는 IntOp 델리게이트를 선언하고 arOp 객체 배열에 두 메서에 대한 참조를 저장해 두었다. 이렇게 해 두면 사용자로부터 입력받은 첨자를 arOp에 바로 적용하여 호출 가능하다.
+
+
+
+첨자 연산은 굉장히 고속으로 수행되므로 선택 속도가 빠르다. 그 뿐만 아니라 호출할 메서드를 한번만 선택해 두면 다시 선택하지 않고 계속 호출 가능하므로 호출할 때마다 매번 선택할 필요도 없다. 긴 switch문이 필요 없어 보기에도 깔끔하며 메서드가 아무리 많아도 배열만 늘리면 되므로 코드를 관리하기도 쉽다. 메서드를 배열에 넣어 두고 필요한 메서드를 꺼내 호출하는 것이다.
+
+
+
+델리게이트는 변수이므로 메서드의 인수로도 전달할 수 있다. 이 기능을 사용하면 메서드에게 메서드를 전달하여 실행 중에 호출하도록 할 수있는데 이런 기법을 콜백(CallBack)이라고 한다. 예를 들어 정렬 루틴에서 값 비교를 직접 하지않고 별도의 메서드를 호출하여 비교를 전담시킬 수 있으며 아주 오래 걸리는 작업 중간 중간에 특정한 작업을 한다거나 작업이 완료되었음을 알리기 위해 지정한 메서드를 호출 할 수 있다.
+
+
+
+다음은 압축 프로그램을 모형화한 것이다. Archive 클래스의 Compress 메서드는 인수로 전달받은 개수 만큼의 파일들을 압축하는데 파일 전체에 대해 복잡한 알고리즘을 적용해야 하므로 꽤 오랜 시간이 걸린다. 실제 로는 파일의 목록을 받아야겠지만 편의상 개수만 전달받았고 압축을 하는 흉내만 낸다. 압축은 시간이 오래 걸리는 연산이므로 비슷하게 흉내내기 위해 Sleep 메서드로 적당히 시간을 끌었다. 아무튼 시간이 오래 걸리는 상황을 간단하게 만들어 본것이다.
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Archive
+    {
+        public static void Compress(int nFile)
+        {
+            for (int i = 0; i < nFile; i++)
+            {
+                Console.WriteLine("{0}번째 파일을 압축하는 중이다...", i + 1);
+                System.Threading.Thread.Sleep(500);
+            }
+        }
+    }
+    class Program
+    {
+       
+        static void Main()
+        {
+            Archive.Compress(10);
+            Console.WriteLine("모든 파일을 압축 했습니다.");
+        }
+       
+    }
+   
+   
+}
+
+
+
+비록 가짜이기는 하지만 실행해 보면 멋지게 동작한다. 파일 압축이 필요한 프로젝트에서 Archive 클래스를 가져가 재사용할수도있으며 인기가 좋으면 라이브러리로 만들어 돈받고 팔 수도 있다. 그러나 완전한 재사용성을 확보하는데는 몇 가지 아쉬운 점이 있다. 압축 진행 과정을 알리는 메시지가 반말이라 사용자에 따라서는 기분이 상할 수도 있을 것이다. 이뿐만 아니라 진행과정 출력 형태가 문자열로 고정되어 있어 왠지 구닥다리 같아 보이스 소스를 바꾸지 않는 한 변화를 줄 방법도 없다.
+
+
+
+압축 진행 과정을 출력하는 방법을 Archive 클래스를 사용하는 쪽에서 직접 지정할수 있다면 훨씬 더 활용성이 높아질 것이다. 메시지를 좀 더 공손하게 수정할 수도있고 그래픽 환경이라면 멋있는 그래픽으로 그럴듯한 압축 진행 과정을 보일 수도 있다. 이렇게 하려면 Compress 메서드에서 직접 진행 경과를 출력하지 말고 사용자가 제공한 메서드를 전달받아 주기적으로 호출하면 된다. 사용자 는 Compress가 호출하는 메서드에서 진행 방식을 원하는 대로 프로그래밍 할 수 있다.
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+   
+    class Archive
+    {
+        public delegate void CompProg(int nFile);
+        public static void Compress(int nFile,CompProg prog)
+        {
+            for (int i = 0; i < nFile; i++)
+            {
+                prog(i);
+                System.Threading.Thread.Sleep(500);
+            }
+        }
+    }
+    class Program
+    {
+        public static void Progress(int nFile)
+        {
+            Console.WriteLine("{0}번째 파일을 압축하는 중입니다.", nFile + 1);
+        }
+        public static void EngProgress(int nFile)
+        {
+            Console.WriteLine("Now Compressing {0} File. Wait please", nFile + 1);
+        }
+        static void Main()
+        {
+            Archive.Compress(10,Progress);
+            Console.WriteLine("모든 파일을 압축 했습니다.");
+        }
+       
+    }
+   
+   
+}
+
+
+
+Compress 메서드에 CompProg 델리게이트 타입의 Prog 인수가 추가되었다. CompProg 는 압축 중인 파일의 번호인 정수형 인수 하나를 취하는 메서드를 가리킨다. Compress 메서드는 압축 진행 과정을 직접 출력하지 않고 대신 Prog로 전달된 메서드를 호출하며 이때 인수로 현재 압축 중인 파일의 번호를 전달한다.
+
+
+
+이 클래스의 사용자는 Compress 메서드를 호출 하기전에 CompProg 델리게이트 타입과 일치하는 진행 과정 출력 메서드는 미리 준비해 두어야 한다. 예제에서는 Progress, EngProgress라는 두 개의 정적 메서드를 미리 정의해 두었다. 두 메서드는 한글과 영문으로 메시지를 출력한다. Compress 메서드를 호출하여 압축을 할 때 이 두 메서드 중 하나를 전달하면 매 파일을 압축할 때마다 호출되어 진행 과정을 출력할 것이다.
+
+
+
+예제에서는 Progress를 넘겼으므로 한글로 공손한 메시지가 출력되는데 EngProgress로 변경하면 영문으로 된 메시지가 출력된다. 그래픽 환경이라면 이보다 훨씬 더 멋진 방법으로 출력할 수도 있다. Compress 메서드는 단지 압축만 할 뿐이며 진행 과정 출력에 대해서는 사용자가 마음대로 프로그래밍 할수 있게 된것이다. 델리게이트를 사용했을 떄와 그렇지 않을 때를 그림으로 비교해 보자.
+
+
+
+델리게이트를 쓰지 않을 때는 Compress 메서드가 혼자 북치고 장구 치고 다해 버리므로 호출원에서는 메서드의 동작을 통제할 방법이 전혀 없다. 일단 부르면 리턴할 때까지 잠자코 기다렸다가 결과만 받을 수 있을 뿐이다. 그러나 델리게이트를 전달하면 중간에 어떤 메서드를 호출할 것인지를 호출원에서 선택할 수 있으며 Compress는 주기적으로 이 메서드를 호출하여 호출원에게도 압축 과정에 개입할 기회를 준다.
+
+
+
+또 다른 문제는 일단 압축을 시작하면 멈출 방법이 없다는 점이다. 압축은 꽤 오랜 시간이 걸리는 복잡한 연산이므로 파일이 많으면 분 단위를 넘을 수도 있다. 메서드는 호출되면 임무를 다하기 전에는 리턴하지 않으며 따라서  Compress 메서드를 호출했으면 이 메서드가 작업을 끝낼 때까지 무작정 대기하는 수밖에 없다. 이렇게 긴 작업에 대해서는 중간에 취소할 수 있는 방법이 제공되어야 한다. 예제를 조금 더 수정해 보자.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+   
+    class Archive
+    {
+        public delegate bool CompProg(int nFile);
+        public static bool Compress(int nFile,CompProg prog)
+        {
+            for (int i = 0; i < nFile; i++)
+            {
+                if (prog(i) == false)
+                {
+                    return false;
+                }
+                System.Threading.Thread.Sleep(500);               
+            }
+            return true;
+        }
+    }
+    class Program
+    {
+        public static bool Progress(int nFile)
+        {           
+            Console.WriteLine("{0}번째 파일을 압축하는 중입니다(취소시 Esc).", nFile + 1);
+            if (Console.KeyAvailable)
+            {
+                ConsoleKeyInfo cki;
+                cki = Console.ReadKey(false);
+                if (cki.Key == ConsoleKey.Escape)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+       
+        static void Main()
+        {
+            if (Archive.Compress(10, Progress) == true)
+            {
+                Console.WriteLine("모든 파일을 압축 했습니다.");
+            }
+            else
+            {
+                Console.WriteLine("취소되었습니다.");
+            }
+        }
+       
+    }
+   
+   
+}
+
+
+
+CompProg 델리게이트 타입이 bool을 리턴하도록 수정되었는데 이 리턴값은 압축을 계속 진행할 것인가를 지시하는 것이다. 경과 표시 메서드가 true를 리턴하면 압축을 계속 진행하고 false를 리턴하면 압축을 즉시 중단한다. Compress 메서드는 취소 여부를 리턴하기 위해 bool을 리턴하며 매주기마다 Prog를 호출만 하는 것이 아니라 리턴값을 점검하여 계속 여부를 결정한다. 즉 매 파일을 압축할 때마다 호출원의 의향을 감시하는 것이다.
+
+
+
+Compress 를 호출하는 쪽에서는 경과 출력 메서드를 CompProg 타입에 맞게 작성해야 하며 경과만 출력하는 것이 아니라 사용자의 입력을 점검하여 취소 명령이 들어올 경우 false를 리턴하여 취소 하라는 신호를 보내야 한다. 여기서는 키 입력을 감시하여 Esc키가 눌러지면 false를 리턴했는데 취소 방식도 호출원에서 자유롭게 선택할 수 있다. 그래픽 환경에서는 [취소]버튼을 배치해 놓고 이 버튼을 누를떄 취소하는 것이 일반적이다.
+
+
+
+예제를 실행해 보자. 압축이 진행될 때 가만히 보고만 있으면 끝까지 압축이 잘 진행된다. 하지만 중간에 언제든지  Esc만 누르면 압축을 즉시 중단하고 리턴할것이다. Compress로 전달한 메서드를 통해 압축 경과를 보고 받을뿐만 아니라 취소 여부까지도 제어할 수 있다. 이렇게 되면 Archive 클래스는 더 이상 손볼 필요가 없으므로 재사용성이 훨씬 더 높아진다. 호출 하는 쪽에서 델리게이트로 전달되는 메서드를 통해 경과 출력 방식이나 취소 시점을 원하는 대로 프로그래밍 할 수 있다.
+
+
+
+
+
+
+
+
+
+02 이벤트
+
+
+
+2.1 멀티 캐스트
+
+델리게이트는 System.Delegate로부터 파생되는 클래스이며 이 클래스의 객체는 하나의 메서드를 가리킬 수 있다. 이 외에 둘 이상의 메서드를 가리킬 수 있는 델리게이트도 있는데 이 타입은 System.MulticastDelegate로부터 파생된다. 멀티캐스트 델리게이트는 내부에 호출할 메서드의 목록을 가지고 있으므로 여러 개의 메서드를 등록할 수 있다. 델리게이트를 선언할 때 둘중 어떤 클래스로부터 파생할 것인가는 컴파일러가 델리게이트에 취해지는 연산을 보고 자동으로 결정한다.
+
+
+
+멀티캐스트 델리게이트에 호출할 메서드를 추가할 때는  + 연산자나 += 연산자를 사용하며 반대로 제거할때는 -나 -=연산자를 사용한다. 통상 자기 자신의 목록에메서드를 추가, 삭제하므로 +=, -= 연산자가 사용된다. 멀티캐스트 델리게이트를 호출하면 등록된 메서드를 순서대로 호출한다. 간단한 예제를 만들어 보자.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    delegate void dele(int a);
+    class Program
+    {
+        public static void Method1(int a) { Console.WriteLine("Method1 " + a); }
+        public static void Method2(int a) { Console.WriteLine("Method2 " + a); }
+        static void Main()
+        {
+            dele d = Method1;
+            d += Method2;
+            d(34);
+        }
+       
+    }
+   
+   
+}
+
+
+
+처음 만들었던 델리게이트 예제와 비슷한데 d를 Method2로 바꾸는 대신  += 로 추가했다. 이런 추가 연산자를 한번이라도 사용하면 컴파일러가 d를 멀티캐스트 델리게이트로 생성한다. += 연산에 의해 d 객체에는 Method1과 Method2 두개의 메서드가 동시에 등록되며 d를 호출하면 두 메서드가 순서대로 호출된다. 메서드를 처음 추가할 때는 대입하고 두 번째부터는 += 연산자로 추가해야 하므로 일관성이 없어 보이는데 최초 null로 초기화하면 항상 += 연산자만으로 메서드를 추가할 수 있다.
+
+
+
+dele d = null;
+
+d += Method1;
+
+d += Method2;
+
+
+
+멀티캐스트 델리게이트는 여러 개의 메서드를 한꺼번에 호출하므로 리턴 타입은 void 여양 한다.
+
+만약 리턴값이 있는 복수 개의 메서드를 가리키고 있다면 이 델리게이트로 호출한 결과는 마지막 메서드의 리턴값만 유효할 것이다. 멀티 캐스트 델리게이트가 리턴값이 있는 메서드를 가리키는 것이 문법적으로 금지되어 있지는 않다. 그러나 델리게이트가 여러 개의 메서드를 가리킬 수 있다고 하더라도 호출문은 하나이므로 리턴값도 하나밖에 인정되지 않으며 이는 논리적으로 문제가 될 것이다.
+
+같은 이유로 인수 중에 출력용(out) 인수가 존재해서는 안 된다.
+
+
+
+멀티캐스팅은 하나의 사건을 여러 개의 객체에 동시에 전달하고 싶을떄 사용한다. 실제 프로그래밍 환경에서 이런 상황을 만들려면 굉장히 복잡해지므로 실생활에서 간단하게 비유를 들어 보도록 하자. 비디오 대여점이 있고 여기서 비디오를 빌려보는 고객들이 10명정도 있다. 고객들은 원하는 비디오를 알아서 골라 보지만 아직 출시되지 않은 최신작의 경우 주인에게 출시되면 좀 알려달라고 부탁할 것이다. 주인은 매출 극대화를 위해 부탁한 고객의 명단을 잘 기록해 두었다가 출시되면 고객 들에게 알려주는 친절한 서비스를 한다.
+
+
+
+이럴때 멀티 캐스팅이 필요하다. 최신작 비디오가 출시되는 것은 하나의 사건이고 이사건을 기다리는 고객은 여러 명이다. 사건 발생후 고객들에게 일괄적으로 통지를 보내려면 미리 목록을 작성해두어야 한다. 예를 들어 문자 메시지 리스트를 만들어 한 번의 전송으로 기다리는 모든 고객들에게 출시 사실을 알린다. 물론 그 중에 동작이 가장 빠른 손님만 비디오를 빌려갈 수 있을 것이다. 다음 예제는 이 상황을 코드로 구현해 본 것이다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    delegate void Notice(string Movie);
+    class Mania
+    {
+        private int id;
+        public Mania(int aid)
+        {
+            id = aid;
+        }
+        public void RendMe(string Movie)
+        {
+            Console.WriteLine("{0}번 고객이 {1}을 빌려간다.", id, Movie);
+        }
+    }
+    class Program
+    {
+        static void Main()
+        {
+            Mania[] arMania = new Mania[10];
+            for (int i = 0; i < arMania.Length; i++)
+            {
+                arMania[i] = new Mania(i);
+            }
+            Notice RentCall = null;
+            RentCall += arMania[1].RendMe;
+            RentCall += arMania[4].RendMe;
+            RentCall += arMania[6].RendMe;
+            RentCall += arMania[9].RendMe;
+            RentCall("염소부인");
+
+        }
+
+    }
+   
+   
+}
+
+
+
+고객은 고유의 ID를 가지며 비디오를 빌려서 보는 RendMe 동작을 한다. Main에서는 10명의 고객객체를 생성해 놓았다. Notice 델리게이트 타입은 비디오를 빌려보는 메서드의 목록을 가리키는 타입이며 Notice 타입의 RentCall 객체는 최신작을 기다리는 고객들의 목록에 비유할 수 있다. RentCall 객체는 고객들의 RendMe 메서드 목록을 가진다.
+
+
+
+고객들은 최신작이 나오면 알려달라고 주인에게 부탁해 놓는데 코드에서는 RentCall 델리게이트에 자신의 RendMe 메서드를 등록하는 것으로 표현되어 있다. RentCall에 자신의 메서드를 등록하는 것은 "최신작이 나오면 저한테 좀 빌려주세요"라고 미리 부탁해 놓는 것이다. 이 상황에서 최신작 비디오가 출시되었을 때 주인은 RentCall 델리게이트를 호출하기만 하면 된다. RentCall은 누가 이비디오를 간절히 원하는지에 대한 목록을 가지고 있으며 순서대로 호출하여 빌려가도록 할 것이다.
+
+
+
+실행 결과 : 1번 고객이 염소 부인을 빌려간다.
+
+4번 고객이 염소 부인을 빌려간다.
+
+6번 고객이 염소 부인을 빌려간다.
+
+9번 고객이 염소 부인을 빌려간다.
+
+
+
+만약 멀티캐스트 델리게이트라는 장치가 없다면 별도의 자료 구조를 만들어 최신작을 원하는 고객의 목록을 작성해 두어야 하며 최신작 발표 사실을 고객들에게 알리기 위해 루프를 돌아야 할 것이다.
+
+기술적으로 별로 어려운 일은 아니지만 직접 하기에는 상당히 귀찮은 작업이다. 이 작업을 대신해 주는 것이 바로 멀티캐스트 델리게이트인 것이다.
+
+
+
+멀티캐스팅의 개념을 설명하기 위해 의도적으로 만든 비유적인 예제라 조금 억지스러운 면이 있고 순차적으로 실행되는 텍스트환경 이다보니 다소 매끄럽지 못하다. 그래픽 환경이라면 각각의 객체  들을 비주얼하게 생성하여 고객별로 최신작을 신청하는 기능을 넣어 정말 그럴듯하게 만들어 볼수 있을것 같은데 이렇게 되면 불가피하게 복잡도가 높아진다. 모형적인 예제이기는 하지만 멀티캐스팅이 어떤 용도로 사용되는지 이해하기에는 부족하지 않을 것이다. 이벤트 드리븐 환경에서는 멀티 캐스팅이 필요한 경우가 꽤 많다.
