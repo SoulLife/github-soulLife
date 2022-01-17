@@ -1,0 +1,405 @@
+CHAPTER 09 델리게이트
+
+
+
+01 델리게이트
+
+
+
+1.1 메서드 참조
+
+델리게이트(Delegate)는메서드를 가리키는 참조형으로서 메서드의 번지를 저장하거나 다른 메서드의 인수로 메서드 자체를 전달하고 싶을떄 사용한다. 메서드의 코드들도 메모리상에 존재하므로 그 시작 위치를 가리킬 수 있다. C++식으로 얘기하자면 함수 포인터에 대응되는 타입이며 사용용도도 거의 동일하다. 그러나 함수 포인터에 비해 타입 체크가 훨씬 더 엄격해서 안전하며 클래스에 속한 메서드도 가리킬수 있어 객체 지향적인 특성을 가진다. 선언 형식은 다음과 같다.
+
+
+
+형식 : 지정자 delegate 리턴타입 이름(인수목록);
+
+
+
+키워드 delegate로 선언하며 클래스에 소속되는 델리게이트인 경우 앞에 액세스 지정자를 붙일수 있다. 이름은 명칭일 뿐이므로 원하는 대로 붙이고 리턴 타입이나 인수 목록등 가리키고자 하는 메서드의 형태에 대한 모든 정보를 다 포함해야 한다. 그래야 정확한 타입의 메서드만 안정적으로 가리킬 수 있다. 인수 목록의 형식 인수 이름은 사실 별 의미가 없지만 생략할 수는 없다.
+
+
+
+delegate void deleA(int ,string, double);                                       //에러
+
+delegate void deleA(int a,string b, double c);                               //형식 인수의 이름이 필요하다.
+
+
+
+C++의 함수 포인터는 인수의 타입만 지정하면 되지만 C#의 델리게이트는 완전한 형식을 요구하므로 형식 인수 이름도 일단은 지정해야 하는데  a,b,c처럼 아무 이름이나 지정해도 상관없다. 델리게이트는 System.Delegate로부터 파생되는 하나의 클래스 타입이다. 그래서 꼮 클래스에 소속되지 않아도 상관없으며 네임스페이스에 바로 소속될 수 있다. 클래스와 대등한 하나의 타입으로 인정되므로 클래스가 선언될 수 있는 모든 곳에 델리게이트도 선언할 수 있다. 클래스 선언문 내부에 선언될 때는 일종의 내부 타입으로 취급되며 적당한 액세스 지정자를 붙여야 한다
+
+
+
+델리게이트는 타입이므로 그 자체만으로 메서드를 가리킬 수는 없으며 인스턴스를 생성한 후 메서드를 가리키도록 초기화해야 한다. Human자체가사람이 아니고 Human타입의 Kim, Lee객체를 생성 및 초기화해야 온전한 사람이 되는 것과 마찬가지다. 델리게이트를 초기화할 때는 생성자의 인수로 가리키고자하는 메서드를 전달한다. 이때 대상 메서드는 델리게이트의 타입과 정확하게 일치해야 하며 인수 목록이나 리턴 타입중 하나라도 틀리면 컴파일 에러로 처리된다.
+
+
+
+델리게이트가 특정 메서드를 가리키고 있다면 델리게이트를 통해 가리키고 있는 대상 메서드를 호출할 수 있다. 델리게이트 이름 다음에 인수목록을 넘기면 메서드가호출되며 메서드의 리턴값은 델리게이트의 리턴값으로 돌아온다. 델리게이트를 마치 메서드인 것처럼 사용하면 된다. 델리게이트는 변수이므로 실행 중에 다른 메서드를 번갈아가며 가리킬 수도 있는데 이때도 생성자로 타입이 일치하는 메서드를 대입하면 된다. 다음 에제는 두 개의 메서드를 번갈아 가리키며 차례대로 호출한다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    delegate void Dele(int a);
+    class Program
+    {
+        public static void Method1(int a) { Console.WriteLine("Method1 " + a); }
+        public static void Method2(int a) { Console.WriteLine("Method2 " + a); }
+        static void Main()
+        {
+            Dele d = new Dele(Method1);
+            d(12);
+            d = new Dele(Method2);
+            d(34);
+        }
+       
+    }
+
+   
+}
+
+
+
+dele 타입은 정수 인수 하나를 취하고 리턴값이 없는 메서드를 가리키는 타입으로 정의되었다. dele 자체가 클래스 선언문과 대등한 자격을 가지므로 네임스페이스에 곧바로 선언할 수 있다. 물론 필요하다면 CSTest 안쪽에 선언하여 내부 타입으로 선언하는 것도 가능하며 액세스 지정자를 붙여 숨길수도 있다. CSTest 클래스에는 dele와 타입이 일치하는 두 개의 메서드가 선언되어 있으며 자신이 호출되었음을 표시하기 위해 메서드의 이름만 출력한다.
+
+
+
+Main에서 dele 타입의 d 객체를 선언하고 생성자로 Method1을 가리키도록 초기화했다. 이 상태에서 d로 Method1을 호출할 수있다. 이때 대상 메서드로 전달될 인수도 델리게이트 다음에 괄호와 함께 전달한다. d 자체는 변수이므로 실행 중에 다른 메서드를 가리킬수도있는데 이때는 생성자를 다시 호출하여 다른 메서드를 대입하면 된다. 예제에서는 Method2를 가리키도록 다시 대입하여 호출했다.
+
+
+
+실행 결과 : Method1 12
+
+Method2 34
+
+
+
+Method1과 Method2 메서드가 차례대로 호출되었는데 직접적으로 호출한 것이 아니라 델리게이트를 통해 간접적으로 호출한 것이다. d는 실행 중에 언제든지 변할수 있는 값이므로 타입만 일치한다면 여러 개의 메서드를 번갈아 가리킬 수 있다.
+
+
+
+위 에제에서는 델리게이트에 메서드를 대입할 때마다 매번 생성자를 호출하는데 이렇게 해도 별 문제가 없다. 매번 생성되더라도 어차피 참조되지 않는 객체는 가비지 컬렉터가 알아서 지우도록 되어 있기 때문이다. 생성자를 호출하는 방법이 번거롭다면 다음과 같이 직접 대입하는 좀 더 간단한 형식을 쓸 수도 있다. 단 이경우도 대입되는 타입이 델리게이트의 타입과 정확하게 일치해야 한다.
+
+
+
+static void Main()
+
+{
+
+     Dele d = Method1;
+
+     d(12);
+
+     d = Method2;
+
+     d(34);
+
+}
+
+
+
+특정 형태의 메서드를 가리킬 수 있는 델리게이트는 다음 공식을 따르면 쉽게 선언할 수 있다. 대상 메서드를 적어 놓고 다음 순서대로 델리게이트 선언문으로 바꾼다.
+
+
+
+1. 리턴 타입과 인수는 그대로 옮겨적고
+
+2. 메소드 이름을 델리게이트 이름으로 바꾸고
+
+3. 앞에 delegate 키워드를 붙인다.
+
+
+
+키워드 delegate를 앞에 붙이고 메서드 이름을 델리게이트 이름으로 바꾸기만 하면된다. 물론 메서드에 붙어 있는 지정자와 델리게이트의 지정자는 필요에 따라 제거하거나 추가한다. 좀 복잡해 보이지만 몇번 실습해 보면 금방 익숙해질 것이다. 다음은 이 공식대로 여러 가지 형태의 델리게이트를 만들어 본 것이다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    delegate int Delea(string s);
+    delegate double Deleb(int i, long l);
+    delegate void Delec(char ch);
+    class Program
+    {
+        public static int a(string s) { Console.WriteLine(s); return 0; }
+        public static double b(int i, long l) { Console.WriteLine(i); return 1.0; }
+        public static void c(char ch) { Console.WriteLine(ch); }
+        static void Main()
+        {
+            Delea da = a;
+            Deleb db = b;
+            Delec dc = c;
+            da("a 메서드");
+            db(1234, 5678);
+            dc('델');
+        }
+       
+    }
+
+   
+}
+
+
+
+형태가 다른 세 개의 메서드가 선언되어 있고 이 메서드들을 가리키는 델리게이트를 선언했다. Main에서는 델리게이트로 메서드를 가리킨후 호출했는데  메서드를 직접 호출하는 것과 효과는 같다.
+
+
+
+실행 결과 : a 메서드
+
+1234
+
+델
+
+
+
+델리게이트에 타입이 다른 메서드를 대입하면 에러로 처리된다. Main의 첫 줄을 다음과 같이 수정해 보자.
+
+
+
+Delea da = b;
+
+
+
+Delea 델리게이트는 string형 인수 하나를 취하고 int 를 리턴하는 메서드를 가리키도록 선언되었는데 b는 int, long 두 개의 인수를 취하고  double을 리턴하므로 타입이 맞지않다. 인수 목록과 리턴 타입이 정확하게 일치해야 하며 하나라도 틀리면 대입할 수 없다. 그래서 델리게이트는 타입 안정성이 높다. C의 함수 포인터는 임의 캐스팅이 가능해서 원형이 틀린 함수뿐만 아니라 아무 번지라도 강제 캐스팅할 수 있어 위험한데 비해 델리게이트는 이런 위험이 없다.
+
+
+
+델리게이트는 타입에 안전할 뿐만 아니라 객체 지향적이다. C의 함수 포인터는 전역 함수만 가리킬수 있는데 비해 델리게이트는 클래스에 속한 메서드를 가리킬수 있다. 하긴 C#에는 전역함수라는 것이 없으므로 모든 메서드는 클래스 소속일 수밖에 없지만 말이다. 델리게이트가 객체 지향적이라고 하는 진짜 이유는 소속된 클래스를 가리지 않으며 정적, 비정적도 구분하지 않기 때문이다. 타입만 호환된다면 만사 OK다. 다음 예제로 테스트해 보자.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    delegate void Dele(string s);
+    class Program
+    {
+        public static void m1(string s) { Console.WriteLine(s); }
+        public void m2(string s) { Console.WriteLine(s); }
+        static void Main()
+        {
+            Dele d = m1;
+            d("정적 메서드");
+            Program p = new Program();
+            d = p.m2;
+            d("인스턴스 메서드");
+            d = Outer.m3;
+            d("외부 정적 메서드");
+            Outer ot = new Outer();
+            d = ot.m4;
+            d("외부 인스턴스 메서드");
+
+        }
+       
+    }
+    class Outer
+    {
+        public static void m3(string s) { Console.WriteLine(s); }
+        public void m4(string s) { Console.WriteLine(s); }
+    }
+   
+}
+
+
+
+Dele 타입은 문자열 하나를 인수로 취하고 리턴값이 없는 메서드를 가리키는 델리게이트 타입이다. 이런 타입의 메서드를 클래스 내, 외부에 정적, 비정적으로 4개 정의해놓고 dele 타입의 d로 차례대로 호출해 보았다.
+
+
+
+실행 결과 : 정적 메서드
+
+인스턴스 메서드
+
+외부 정적 메서드
+
+외부 인스턴스 메서드
+
+
+
+m1은 클래스에 속한 정적 메서드이므로 객체가 없어도 메서드 이름만으로 가리킬수 있다. 원칙적으로 Program.m1이라고 써야 하지만 이코드가 Program 클래스 내부에 있으므로 소속 클래스를 생략할 수 있다. 정적 메서드를 가리킬 떄는 객체가 없어도 델리게이트로 바로 호출할 수 있다. 반면 m2는 인스턴스 메서드이므로 객체가 있어야만 호출할 수 있다. Program 객체 p를 하나 생성한 후 p.m2를 d에 대입하면 d가 이 메서드를 가리키고 호출할 수 있다.
+
+
+
+외부 클래스의 메서드도 타입만 맞으면 소속에 상관없이 가리킬 수 있다. m3는 정적 메서드이므로 클래스 이름으로 칭하고 m4는 인스턴스 메서드이므로 객체를 생성 한 후 객체와 함께 가리키면 된다. 델리게이트 객체 d가 선언된 클래스에 같이 소속되지 않은 외부 클래스의 메서드이지만 타입이 일치하므로 가리킬수 있고 호출할 수도 있다. 단, 외부 클래스의 메서드는 반드시 public 액세스 속성을 가져 델리게이트가 속한 클래스에서 접근 가능해야 한다.
+
+
+
+소속 클래스와 메서드의 정적 속성에 상관없이 가리킬수 있다는 점이 C++의 함수포인터와 근본적으로 다른 점이다. 함수 포인터는 주소를 저장하는 단순한 변수이지만 델리게이트는 객체이므로 주소뿐만 아니라 메서드가 속한 객체에 대한 정보와 호출 방법까지도 기억할수 있다. C++에도 멤버 포인터라는 것이 있어 멤버 함수를 가리킬수 있지만 특정 클래스의 멤버에만 국한된다는 점에서 델리게이트와는 다르다.
+
+
+
+
+
+
+
+1.2 공변성
+
+델리게이트와 메서드의 타입은 정확하게 일치해야 하는 것이 원칙이다. 그러나 상속 관계에 있어서는 약간의 융통성이 있어 부모 자식 관계가 성립하면 타입이 일치하지 않더라도 호환성이 인정된다. 부모 타입의 변수는 자식 객체를 가리킬 수 있다는 법칙이 델리게이트에도 그대로 적용되는 것이다.
+
+
+
+메서드의 리턴 타입이 델리게이트의 리턴 타입보다 더 자식 타입일 때 이 메서드를 델리게이트가 가리킬수 있다. 델리게이트의 이런 성질을 공변성(Covariance)이라고 한다. 실제 예를 들자면 너무 복잡해지므로 모형화된 계층에서 간단하게 테스트해 보자. 명칭을 상징적으로 작성하여 가급적 읽기 쉽도록 했는데 그대로 상당히 복잡해 보인다. 다음 예제의 주석 처리된 부분은 에러 처리된다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Base { }
+    class Derived : Base { }
+
+    delegate Base dBase();
+    delegate Derived dDervied();
+    class Program
+    {
+        public static Base GetBase() { return new Base(); }
+        public static Derived GetDerived(){return new Derived();}
+        static void Main()
+        {
+            dBase db = GetBase;
+            db = GetDerived;
+
+            dDervied dd;
+            //dd = GetBase;
+            dd = GetDerived;
+        }
+       
+    }
+   
+   
+}
+
+
+
+Base로부터 Derived가 파생되었으므로 두 클래스는 부모 자식 관계이다. dBase 델리게이트는 Base 타입을 리턴하는 메서드를 가리키며 dDerived 델리게이트는 Derived 타입을 리턴하는 메서드를 가리킨다. Main에서 두 타입을 리턴하는 GetBase, GetDerived메서드를 준비해 놓고 각 델리게이트 변수에 대입해 보았다.
+
+
+
+dBase 타입의 db는 GetBase를 가리킬 수 있는데 메서드와 델리게이트의 시그니처가 정확하게 일치하므로 당연하다. 그런데 공변성에 의해 db에 GetDerived를 대입해도 잘 대입된다. 왜냐하면 자식은 부모의 일종이며 암시적으로 변환되기 때문이다. db 델리게이트로 호출된 결과는 Derived 객체인데 이 객체를 Base 타입의 변수로 대입받을 것이다. 부모 타입의 변수가 자식 객체를 대입받았으므로 이 대입은 항상 안전하다.
+
+
+
+반대의 경우는 성립하지 않는다. dDerived 타입의 dd는 시그니처가 일치하는 GetDerived를 가리킬수 있다. 그러나 부모타입을 리턴하는 GetBase는 가리킬수 없다. 자식은 부모의 일종이지만 부모는 일종의 자식이 아니기 때문이다. dd의 호출 결과는 Derived 타입의 변수에 대입되는데 만약 이 변수에 GetBase가 리턴한 Base 객체가 대입되도록 허락된다고 해보자. 이 상태에서 dd 타입의 변수로 Derived 클래스의 멤버를 호출하면 Base 객체가 이 호출을 제대로 처리하지 못할 것이다.
+
+
+
+이번에는 인수의 경우를 보자. 메서드의 인수가 델리게이트의 인수보다 더 부모 타입일 때 이 메서드를 델리게이트가 가리킬 수 있다. 델리게이트의 이런 성질을 반공변성(Contravariance)이라고 한다. 역시 간단한 예제로 테스트해 보자.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Base { }
+    class Derived : Base { }
+
+    delegate void dBase(Base a);
+    delegate void dDerived(Derived a);
+    class Program
+    {
+        public static void GetBase(Base a) { }
+        public static void GetDerived(Derived a) { }
+        static void Main()
+        {
+            dBase db;
+            db = GetBase;
+            //db = GetDerived;
+
+            dDerived dd;
+            dd = GetBase;
+            dd = GetDerived;
+        }
+       
+    }
+   
+   
+}
+
+
+
+dBase는 Base 타입을 인수로 취하는 델리게이트 타입이고  dDervied는 Derived 타입을 인수로 취하는 델리게이트 타입이다. Main에서는 이 두 타입과 일치하는 두 개의 메서드가 선언되어 있으며 서로 교차 대입해 보았다.
+
+
+
+dBase 타입의 ㅣ변수 db에 GetBase를 대입하는 것은 당연히 가능하다. 그러나 자식 타입을 취하는 GetDerived는 대입할 수 없다. GetDerived의 본체에서는 인수로 받은 a 객체를 Derived 타입으로 인식하지만 호출하는 쪽에서는 Base 타입의 객체를 넘기므로 암시적으로 변환되지 않는다. 자식 타입의 변수가 부모를 가리킬수는 없다.
+
+
+
+이번에는 반대의 경우를 보자. dDerived 타입의 변수 dd에는 GetBase와 GetDerived를 모두 대입할수 있다. GetBase를 dd에 대입해도 안전한 이유는 dd로 호출할 때 Derived 타입의 객체를 넘길 것이고 GetBase 의 본체에서는 Base 타입으로 받으므로 이 호출은 항상 안전하다. 부모 타입의 변수는 자식을 가리킬 수 있기 때문이다.
+
+
+
+공변성, 반공변성 따위의 용어 자체가 무척 어렵게 보이고 짧은 예제지만 상황이 복잡해서 상당히 헷갈릴 것이다. 인수가 다른 경우와 리턴값이 다른 경우에 반대 규칙이 적용되는 것 같지만 원칙은 딱 하나 뿐이다. "부모는 자식을 가리킬 수 있다." 이 원칙만 이해하면 공변성, 반 공변성은 너무 너무 당연한, 어찌보면 잔소리 같은 규칙일 뿐이다. 델리게이트를 통한 호출문에서 대입을 받는 쪽이 대입을 하는 쪽보다 더 상위 클래스이면 아무 문제가 없는 것이다.
+
+
+
+그림으로 설명하면 좀 더 쉽게 이해할수 있다. 사실 굉장히 간단한 규칙인데 이걸 말로 설명하려고 하다보니 어렵게 느껴지는 것이다 그렇다면 이런 규칙이 클래스타입이 아닌 기본 타입에도 적용되는지 테스트해보자.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    delegate void dLong(long a);
+    delegate void dInt(int a);
+    class Program
+    {
+        public static void GetLong(long a) { }
+        public static void GetInt(int a) { }
+        static void Main()
+        {
+            dLong dl;
+            dl = GetLong;
+            // dl = GetInt;
+
+            dInt di;
+            // di = GetLong;
+            di = GetInt;
+        }
+       
+    }
+   
+   
+}
+
+
+
+long과 int는 부모, 자식 관계는 아니지만 암시적으로 변환되는 관계이다. int 타입의 변수는 어떠한 값 손실없이 long 타입으로 변환될 수 있으므로 long이 더 부모 타입이라고 할 수 있다. 그래서 int와 long 타입에 대해 반공변성이 성립하는지 테스트해 보았는데 직접 컴파일해보면 알겠지만 성립하지 않는다. 기본 타입의 인수는 델리게이트와 메서드의 시그니처가 정확하게 일치해야만 호환된다.
+
+
+
+dl = GetInt가 에러인 것은 이해가 되지만 di = GetLong이 에러인 것은 조금 이상하다. di로는 int 타입의 인수만 전달할 수 있고 GetLong은 long 타입을 받으므로 얼마든지 int 타입을 받을수 있는데 말이다. int는 암시적으로 long 으로 변환 가능하므로 이 대입을 허락해도 위험하지는 않다. 그러나 컴파일러는 int와 long을 부모 자식 관계로 인정하지 않기 때문에 기본 타입끼리는 공변성, 반공변성이 성립하지 않는다.
+
