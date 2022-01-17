@@ -1,0 +1,449 @@
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class ListColorValues : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListColorValues());
+	}
+	public ListColorValues()
+	{
+		Title = "List Color Values";
+		//윈도우 Content 를 위한 리스트 박스 생성
+		ListBox lstbox = new ListBox();
+		lstbox.Width = 150;
+		lstbox.Height = 150;
+		lstbox.SelectionChanged += ListBoxOnSelectionChanged;
+		Content = lstbox;
+
+		//리스트 박스를 Color 값으로 채움
+		PropertyInfo[] props = typeof(Colors).GetProperties();
+		foreach( PropertyInfo prop in props)
+			lstbox.Items.Add(prop.GetValue(null, null));
+	}
+	void ListBoxOnSelectionChanged(object sender, SelectionChangedEventArgs args)
+	{
+		ListBox lstbox = sender as ListBox;
+		
+		if(lstbox.SelectedIndex != -1)
+		{
+			Color clr = (Color)lstbox.SelectedItem;
+			Background = new SolidColorBrush(clr);
+		}
+	}
+}
+
+
+이런 식으로 접근하면 SelectedItem을 Color 타입의 객체로 형 변환하면 되기 때문에 이벤트 핸들러는 단순해진다. 그렇지 않으면 더 어려워 진다. ListBox는 Color의 ToString  메소드가 반환하는 #FFF0F8FF 같은 문자열을 출력한다. 프로그래머가 손가락이 8개씩이라 하더라도 목록 상자에 16진수 색상 값을 보여주려 하지는 않을 것이다. 여기서 문제는 Color 구조체에 대해서 Colors 라는 클래스 이름을 빼고는 아는 바가 없다는 것이다. Colors 클래스 전체가 아래와 같은 프로퍼티로 구현되었다. 하더라도 별로 놀랄 일은 아니다
+
+public static Color AliceBlue
+{
+	get{ return Color.FromRgb(0xF0, 0xF8, 0xFF); }
+}
+
+어쨌든 위 구문은 Color 클래스에 대한 필자의 추측일 뿐이다. 
+
+Color가 ListBox에 들어가는 객체 중에 가장 대표적인 타입은 아니다. 그보다는 사용자에게 해당 내용을 정확히 출력하는 ToString 메소드가 있는 객체가 훨씬 더 대표적이라 할 수 있다. 물론 이런 것이 항상 가능한 것은 아니다. ToString 이 컴퓨터가 읽기 쉬운 형태보다 사람이 읽을 수 있는 형태의 문자열을 반환해야 한다는 데에는 논쟁의 여지가 남아있다. 어찌 됐든 Color 의 경우에는 ToSTring이 색상명을 반환하게 변경하는 것이 중요하다. 
+
+여기 더 바람직한 형태의 NamedColor 클래스가 있다. 이 클래스는 ListBox에서 사용이 가능하다. 
+
+
+using System;
+using System.Reflection;
+using System.Windows.Media;
+
+class NamedColor
+{
+	static NamedColor[] nclrs;
+	Color clr;
+	string str;
+
+	//Static 생성자
+	static NamedColor()
+	{
+		PropertyInfo[] props = typeof(Colors).GetProperties();
+		nclrs = new NamedColor[props.Length];
+
+		for(int i=0; i<props.Length; i++)
+		{
+			nclrs[i] = new NamedColor(props[i].Name, (Color)props[i].GetValue(null, null));
+		}
+	}
+	//Private 생성자
+	private NamedColor(string str, Color clr)
+	{
+		this.str = str;
+		this.clr = clr;
+	}
+	//Static 읽기 전용 프로퍼티
+	public static NamedColor[] All
+	{
+		get { return nclrs;	}
+	}
+	//읽기 전용 프로퍼티
+	public Color Color
+	{
+		get { return clr;	}
+	}
+	public string Name
+	{
+		get
+		{
+			string strSpaced = str[0].ToString();
+			
+			for(int i=1; i< str.Length; i++)
+				strSpaced += (char.IsUpper(str[i]) ? " ": "") + str[i].ToString();
+			return strSpaced;
+		}
+	}
+	//ToString 메소드 오버라이딩
+	public override string ToString()
+	{
+		return str;
+	}
+}
+
+
+NamedColor 클래스는 Color 값과 AliceBlue 같은 색상명에 해당하는 문자열이 들어가는 clr과 str 이라는 두 개의 private 인스턴스를 갖는다. 이 필드들은 private NamedColor 생성자에서 설정한다. 이 필드들은 Color 프로퍼티로 사용가능하며, ToString 프로퍼티를 오버라이딩한다. 
+
+
+Name 프로퍼티는 색상명 사이에 공백을 추가해 실제 단어처럼 바꾼 것만 제외하면 ToString 과 유사하다. 예를 들어 AliceBlue는 Alice Blue가 된다.
+
+정적 생성자는 이 클래스에서 매우 중요한 기능을 담당한다. 정적 생성자는 Colors 클래스에 접근하기 위해 리플렉션을 사용한다. 정적 NamedColor 생성자는 Color 객체 내의 프로퍼티별로 NamedColor 타입의 객체 생성을 위해 인스턴스 생성자를 호출한다. 이렇게 생성된 NamedColor 객체들을 배열 필드로 저장했고, 정적 프로퍼티인 All로 접근할수 있게 했다. 
+
+NamedColor 클래스를 Colors 대신 ListBox를 채우는 데 사용하면 다음과 같이 코드가 간단해진다. 
+
+foreach(NamedColor nclr in NamedColor.All)
+	lstbox.Items.Add(nclr);
+
+ListBox는 항목을 보여주기 위해 ToString 에서 반환된 결과를 이용한다. 이벤트 핸들러는 SelectedItem을 NamedColor 객체 타입으로 형 변환한 다음 Color 프로퍼티에 접근한다. 
+
+Color clr = (lstbox.SelectedItem as NamedColor).Color;
+
+이것은 하나의 구현 방식일 뿐 더 쉬운 대안이 있을 수 있다. ListBox를 foreach 루프로 채우지 않고 ListBox의 ItemSource 프로퍼티에 직접 NamedColor 값에 대한 배열을 넘길 수도 있다. 
+
+lstbox.ItemSource = NamedColor.All;
+
+이 구문으로 foreach 문을 대체해도 프로그램은 동일하게 동작한다. 
+
+foreach 루프나 ItemSource 중 무엇을 사용하던 간에 ListBox의 모든 항목은 NamedColor 타입으로 동일하다. 이 때문에 ListBox의 다른 세 개 프로퍼티인 DisplayMemberPath, SelectedValuePath, SelectedValue도 이용할수 있다. 
+
+DisplayMemberPath 프로퍼티는 ItemControl에 의해 정의된다. 이 프로퍼티에 ListBox에 서 항목을 나타내기 위해 사용할 프로퍼티 이름을 문자열로 설정할 수 있다. Named Color 타입의 항목의 경우 이 프로퍼티는 Name이다. 
+
+lstbox.DisplayMemberPath = "Name";
+
+이제 ListBox에서 각 항목을 나타내기 위해 ToString을 이용하는 대신에 각 항목의 Name 프로퍼티를 이용할 것이다. 그러면 색상은 AliceBlue 대신에 Alice Blue로 나타난다. 
+
+Selector 클래스에 의해 정의된 다른 두 개의 프로퍼티도 관련이 있다. SelectedValuePath 프로퍼티는 항목의 값을 나타내는 프로퍼티 이름을 가리킨다. NameColor 클래스에서 이 프로퍼티는 Color 이므로 SelectedValuePath를 다음과 같이 설정할 수 있다. 
+
+
+lstbox.SelectedValuePath = "Color";
+
+이제 이벤트 핸들러에서 현재 선택된 항목을 얻기 위해 SelectedIndex나 SelectedItem을 이용하는 대신에 SelectedValue를 이용할 수 있다. SelectedValue 프로퍼티는 선택된 항목의 Color 프로퍼티를 구해준다. 여전히 형 변환을 해야 하지만 코드는 조금 더 단순 해진다. 
+
+Color clr = (Color)lstbox.SelectedValue;
+
+요약하면 DisplayMemberPath와 SelectedValuePath에 할당된 문자열은 ListBox 항목의 타입 클래스(혹은 구조체)에 정의된 프로퍼티 이름이 된다. DisplayMemberPath는 ListBox에서 항목을 보여주기 위해 어느 프로퍼티를 사용해야 하는지 ListBox에 알려준다. SelectedValuePath는 ListBox에게 사용자가 SelectedValue를 참조했을 때 어떤 프로퍼티를 반환해야 할지 알려준다(Display MemberPath와 SelectedValuePath에서 다른 프로퍼티에 중첩되는 프로퍼티를 사용할 수 있기에 paths라고 부른다. 이때 프로퍼티명을 마침표로 분리해 전체 패스를 명시할 수 있다.)
+
+ListNamedColors는 NamedColor 클래스로 ListBox를 채우는 프로그램이다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class ListNamedColors : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListNamedColors());
+	}
+	public ListNamedColors()
+	{
+		Title = "List Named Colors";
+		//윈도우 Content 를 위한 리스트 박스 생성
+		ListBox lstbox = new ListBox();
+		lstbox.Width = 150;
+		lstbox.Height = 150;
+		lstbox.SelectionChanged += ListBoxOnSelectionChanged;
+		Content = lstbox;
+
+		//항목과 프로퍼티 패스 설정
+		lstbox.ItemsSource = NamedColor.All;
+		lstbox.DisplayMemberPath = "Name";
+		lstbox.SelectedValuePath = "Color";
+	}
+	void ListBoxOnSelectionChanged(object sender, SelectionChangedEventArgs args)
+	{
+		Listbox lstbox = sender as ListBox;
+	
+		if(lstbox.SelectedValue != null)
+		{
+			Color clr = (Color)lstbox.SelectedValue;
+			Background = new SolidColorBrush(clr);
+		}
+	}
+}
+
+
+전체를 클래스 하나로 만들어서 ListBox를 채우게 하는 것은 약간 지나쳐 보이지만 클래스를 사용하는 코드를 일관되게 정리했다. 
+
+그러면 무엇을 더 정리해야 하는가? ListBox가 SelectedValue를 Color 타입으로 받는 것도 나쁘지 않지만 윈도우의 배경색 프로퍼티를 설정할 때 필요한 것은 Brush 타입 객체다. ListBox가 Brush 프로퍼티 객체를 갖는다면 ListBox의 SelectedValue 프로퍼티를 윈도우의 배경색 프로퍼티와 직접 바인딩할 수 있을 것이다. 
+
+
+이번에는 그렇게 변경해보자. 이 클래스는 Color와 Colors 에 대한 참조를 Brush와 Brushes에 대한 참조로 대체한 것만 빼면 사실상 NamedColor 클래스와 같다. 
+
+
+using System;
+using System.Reflection;
+using System.Windows.Media;
+
+
+public class NamedBrush
+{
+	static NamedBrush[] nbrushes;
+	Brush brush;
+	string str;
+
+	//Static 생성자
+	static NamedBrush()
+	{
+		PropertyInfo[] props = typeof(Brushes).GetProperties();
+		nbrushes = new NamedBrush[props.Length];
+		
+		for(int i=0; i<props.Length; i++)
+			nbrushes[i] = new NamedBrush(props[i].Name, (Brush)props[i].GetValue(null, null));
+	}
+	//Private 생성자
+	private NamedBrush(string str, Brush brush)
+	{
+		this.str = str;
+		this.brush = brush;
+	}
+	//Static 읽기 전용 프로퍼티
+	public static NamedBrush[] All
+	{
+		get { return nbrushes;	}
+	}
+	//읽기 전용 프로퍼티
+	public Brush Brush
+	{
+		get { return brush; }
+	}
+	public string Name
+	{
+		get
+		{
+			string strSpaced = str[0].ToString();
+
+			for(int i=1; i<str.Length; i++)
+				strSpaced += (char.IsUpper(str[i]) ? " " : "") + str[i].ToString();
+			return strSpaced;
+		}
+	}
+	//ToString 메소드 오버라이딩
+	public override string ToString()
+	{
+		return str;
+	}
+}
+
+
+ListBox 에 NamedBrush 객체를 넣으려면 SelectedValuePath를 Brush로 설정해야 한다. 이벤트 핸들러는 SelectedValue를 형 변환해서 배경색 프로퍼티에 설정하면 된다. 
+
+Background = (Brush)lstbox.SelectedValue;
+
+그러나 이벤트 핸들러가 간단해졌어도 한꺼번에 묶여있는 부분이 사라진 것은 아니다. 데이터 바인딩을 바꿔보자. 
+
+lstbox.SetBinding(ListBox.SelectedValueProperty, "Background");
+lstbox.DataContext = this;
+
+이 바인딩은 ListBox의 SelectedValue 프로퍼티 객체가 윈도우의 배경색 프로퍼티와 바인딩되게 한다. NamedBrush를 이용하는 ListNamedBrushes 프로그램을 살펴보자. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class ListNamedBrushes : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListNamedBrushes());
+	}
+	public ListNamedBrushes()
+	{
+		Title = "List Named Brushes";
+
+		//윈도우 Content를 위한 리스트 박스 생성
+		ListBox lstbox = new ListBox();
+		lstbox.Width = 150;
+		lstbox.Height = 150;
+		Content = lstbox;
+
+		//항목과 프로퍼티 패스를 설정
+		lstbox.ItemsSource = NamedBrush.All;
+		lstbox.DisplayMemberPath = "Name";
+		lstbox.SelectedValuePath = "Brush";
+
+		//SelectedValue와 윈도우 배경색을 바인딩
+		lstbox.SetBinding(ListBox.SelectedValueProperty, "Background");
+		lstbox.DataContext = this;
+	}
+}
+
+
+이 프로그램에서 멋진 부분은 이벤트 핸들러를 더 이상 사용하지 않는 다는 것이다. 늘 이벤트 핸들러를 제거해야 할 부분으로 생각해왔는데, 이를 제거했으니 이제는 더 이상 제거할 부분이 없는것 같다(물론 뒤에서 더 나올 수도 있지만 그건 문제가 되지 않는다.)
+
+다행스러운 것은 ListBox에 선택된 항목이 없어서 윈도우의 배경색 프로퍼티가 null로 설정되더라도 그리 걱정할 필요가 없다는 것이다. 클라이언트 영역은 검정색으로 나타나고 다음 동작을 기다리게 된다. 
+
+이제 ListBox에 실제 색상을 나타내 보자. 색상과 색상명을 보여주는 게 더 좋을 것 같아 보이지만 일단 간단한 것부터 살펴보자. 지금까지 ListBox에 보이는 항목은 텍스트 문자열이었다. ListBox에 Shape 객체를 넣는 것이 가능하다. 다음 프로그램을 살펴보자. 
+
+
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+class ListColorShapes : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListColorShapes());
+	}
+	public ListColorShapes()
+	{
+		Title = "List Color Shapes";
+
+		//윈도우 Content를 위한 리스트 박스 생성
+		ListBox lstbox = new ListBox();
+		lstbox.Width = 150;
+		lstbox.Height = 150;
+		lstbox.SelectionChanged += ListBoxOnSelectionChanged;
+		Content = lstbox;
+
+		//리스트 박스를 Ellipse 객체로 채움
+		PropertyInfo[] props = typeof(Brushes).GetProperties();
+		foreach( PropertyInfo prop in props)
+		{
+			Ellipse ellip = new Ellipse();
+			ellip.Width = 100;
+			ellip.Height = 25;
+			ellip.Margin = new Thickness(10, 5, 0, 5);
+			ellip.Fill = prop.GetValue(null, null) as Brush;
+			lstbox.Items.Add(ellip);
+		}
+	}
+	void ListBoxOnSelectionChanged(object sender, SelectionChangedEventArgs args)
+	{
+		ListBox lstbox = sender as ListBox;
+	
+		if(lstbox.SelectedIndex != -1)
+			Background = (lstbox.SelectedItem as Shape).Fill;
+	}
+}
+
+
+윈도우의 생성자는 Brushes 클래스의 각 프로퍼티에 대해 Ellipse 객체를 생성한다. 그리고 Shape 객체의 Fill 프로퍼티에 Brush 객체를 할당한다. 이벤트 핸들러는 아주 간단하다. SelectedItem의 Fill 프로퍼티를 윈도우의 배경색 프로퍼티에 할당하는 것이 전부다. 
+
+이 프로그램을 실행해보면 왜 Rectange 대신에 Ellipse를 사용하고 각 항목마다 충분한 여백을 줬는지 알게 될 것이다. ListBox 는 현재 선택된 항목을 배경색(기본값은 파란색)으로 표시하는데, 위와 같이 하게 되면 배경색이 항목의 전 영역을 모두 덮어 안보이게 되는 것을 피할 수 있다. 
+
+이 프로그램에 바인딩을 이용할 수도 있다. 이벤트 핸들러를 이용하기보다는 선택 값이 항목의 Fill 프로퍼티가 되게 하고 선택 값을 윈도우의 배경색 프로퍼티와 연결해준다. 
+
+lstbox.SelectedValuePath = "Fill";
+lstbox.SetBinding(ListBox.SelectedValueProperty, "Backgroud");
+lstbox.DataContext = this;
+
+색상과 색상명을 보여주는 것은 어떻게 해야 할까? 한 가지 방법은 ListBox 항목으로 Label 컨트롤을 이용하는 것이다. Label 텍스트는 색상명을 제공할 수 있고 레이블의 배경색은 색상을 나타내는 게 가능하다. 물론 레이블 텍스트의 색상은 배경색과 뒤섞이지 않게 표시해야 하고 레이블에는 충분한 여백을 줘서 ListBox에서 선택한 색상을 보여줄 수 있게 해야 한다. 
+
+
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+class ListColoredLabels : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListColoredLables());
+	}
+	
+	public ListColoredLabels()
+	{
+		Title = "List Colored Labels";
+
+		//윈도우 Content를 위해 리스트 박스 생성
+		ListBox lstbox = new ListBox();
+		lstbox.Height = 150;
+		lstbox.Width = 150;
+		lstbox.SelectionChanged += ListBoxOnSelectionChanged;
+		Content = lstbox;
+
+		//label 컨트롤로 리스트 박스를 채움
+		PropertyInfo[] props = typeof(Colors).GetProperties();
+
+		foreach(PropertyInfo prop in props)
+		{
+			Color clr = (Color)prop.GetValue(null, null);
+			bool isBlack = .222 * clr.R + .707 * clr.G + .071 * clr.B > 128;
+
+			Label lbl = new Label();
+			lbl.Content = prop.Name;
+			lbl.Background = new SolidColorBrush(clr);
+			lbl.Foreground = isBlack ? Brushes.Black: Brushes.White;
+			lbl.Width = 100;
+			lbl.Margin = new Thickness(15, 0, 0, 0);
+			lbl.Tag = clr;
+			lstbox.Items.Add(lbl);
+		}
+	}
+	void ListBoxOnSelectionChanged(object sender, SelectionChangedEventArgs args)
+	{
+		ListBox lstbox = sender as ListBox;
+		Label lbl = lstbox.SelectedItem as Label;
+
+		if( lbl != null)
+		{
+			Color clr = (Color)lbl.Tag;
+			Background = new SolidColorBrush(clr);
+		}
+	}
+}
+
+
+삼원색의 표준 가중 평균값인 휘도(luminance)에 기반해 bool 타입의 isBlack 값을 계산하고 있다. IsBlack 은 텍스트가 배경색을 기준해 흰색으로 보일지 아니면 검은색으로 보일지를 결정한다. 
+
+이벤트 핸들러는 윈도우 Background 브러시를 Label의 Background 프로퍼티로 설정할 수 도 있으나, 약간 수정을 가해 Tag 프로퍼티를 이용했다(대신 SelectedValuePath를 Background로 설정하고, SelectedValue로 윈도우의 Background를 설정하거나 바인딩을 이용할 수도 있다)
+
+프로그램은 잘 작동하지만 그리 좋아 보이지는 않는다. 파란색으로 밝게 보이게 하기 위해 레이블의 폭을 100, 왼쪽 여백을 15, ListBox 자체의 폭에서 오른쪽에 추가 공간을 둔다. 이제 좀 나아 보일 것이다. 
+
+이번 장의 앞부분에서 언급한 것처럼 ListBoxItem 클래스는 ContentControl로부터 파생되었다. 확실히 리스트 박스에서 이 클래스를 반드시 사용하지 않아도 된다는 것을 보여줬다. 그러나 이전 프로그램에서 ListBoxItem을 Label로 대체하면서 약간 불편한 부분이 생겨났다. ListBox는 선택 항목을 두드러지게 보이게 ListBoxItem의 배경색 프로퍼티를 이용하는데, 이 때문에 선택 항목이 드러나지 않는 경우가 생긴다. 
+
+여전히 선택 항목을 표시하는 데 있어 표준화가 필요하다고 말할 수 있을까? 선택 항목을 가리키는 것에 대한 다른 대안이 이를 해결해 줄 수 있다. 다음 프로그램은 좀 더 자유로운 접근 방식을 보여준다. 선택 항목을 두드러지게 보이기 위해 뭔가 더 필요하다고 보고 ListBoxItem 객체를 이용해보자. 
