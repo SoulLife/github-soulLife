@@ -1,0 +1,565 @@
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+class ListWithListBoxItems : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Applicaton();
+		app.Run(new ListWithListBoxItems());
+	}
+	public ListWithListBoxItems()
+	{
+		Title = "List with ListBoxItem";
+	
+		//윈도우 Content 를 위한 리스트 박스 생성
+		ListBox lstbox = new ListBox();
+		lstbox.Height = 150;
+		lstbox.Width = 150;
+		lstbox.SelectionChanged += ListBoxOnSelectionChanged;
+		Content = lstbox;
+
+		//리스트 박스를 ListBoxItem 객체로 채움
+		PropertyInfo[] props = typeof(Colors).GetProperties();
+
+		foreach(PropertyInfo prop in props)
+		{
+			Color clr = (Color)prop.GetValue(null, null);
+			bool isBlack = .222 * clr.R + .707 * clr.G + .071 * clr.B > 128;
+
+			ListBoxItem item = new ListBoxItem();
+			item.Content = prop.Name;
+			item.Background = new SolidColorBrush(clr);
+			item.Foreground = isBlack ? Brushes.Black : Brushes.White;
+			item.HorizontalContentAlignement = HorizontalAlignment.Center;
+			item.Padding = new Thickness(2);
+			lstbox.Items.Add(item);
+		}
+	}
+	void ListBoxOnSelectionChanged(object sender, SelectionChangedEventArgs args)
+	{
+		ListBox lstbox = sender as ListBox;
+		ListBoxItem item;
+
+		if(args.RemovedItems.Count > 0)
+		{
+			item = args.RemovedItems[0] as ListBoxItem;
+			String str = item.Content as String;
+			item.Content = str.Substring(2, str.Length - 4);
+			item.FontWeight = FontWeights.Regualar;
+		}
+		if(args.AddedItems.Count > 0)
+		{
+			item = args.AddItems[0] as ListBoxItem;
+			String str = item.Content as String;
+			item.Content = "[ " + str + " ]";
+			item.FontWeight = FontWeights.Bold;
+		}
+		item = lstbox.SelectedItem as ListBoxItem;
+		if(item != null)
+			Background = item.Background;
+	}
+}
+
+
+SelectionChanged 이벤트 핸들러는 선택한 ListBoxItem의 배경색으로 윈도우 배경색을 설정하고 항목의 텍스트를 바꿔준다. 텍스트를 대괄호로 감싸고 글씨가 굵게 보이게 한다. 물론 선택 해제된 항목은 다시 복원된다. 방금 선택한 항목과 선택 해제된 항목은 SelectionChangedEventArgs의 AddItems와 RemovedItems 프로퍼티로 알 수 있다(이 두 가지 속성은 다중 선택 리스트 박스에서만 사용 가능한 속성이다)
+
+선택한 항목에 대괄호와 글씨를 굵게 하는 것으로는 눈에 띄게 만드는 데 충분하지 않으니 글꼴 크기를 이용해보자. 다음 구문을 AddItem 부분에 추가한다. 
+
+item.FontSize *= 2;
+
+RemovedItems 부분에 아래 구문을 추가해서 상태를 되돌려야 한다. 
+
+item.FontSize = lstbox.FontSize;
+
+항목의 글씨 크기가 증가하려면 ListBox 자체도 더 크게 만들어 줘야 한다. 
+
+ListBoxItem은 Selected와 Unselected 라는 두 개의 이벤트 핸들러와 OnSelected와 OnUnSelected라는 두 개의 메소드를 가진다. ListBoxItem을 상속한 클래스는 텍스트 변경과 글꼴 변경에 대한 로직을 더 자연스럽게 구현하기 위해서 이 두 메소드를 오버라이딩해야 한다. 
+
+다음 클래스는 ListBoxItem 을 상속받았고 OnSelected와 OnUnSelected를 오버라이딩 했다. 그러나 여기서 정말로 보여주고 싶은 것은 색상명을 위한 TextBlock과 색상을 위한 Rectangle을 사용하기 위해 StackPanel을 이용하는 부분이다. 
+
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+class ColorListBoxItem : ListBoxItem
+{
+	string str;
+	Rectangle rect;
+	TextBlock text;
+
+	public ColorListBoxItem()
+	{
+		//Rectangle과 TextBlock을 위한 스택패널을 생성한다. 
+		StackPanel stack = new StackPanel();
+		stack.Orientation = Orientation.Horizontal;
+		Content = stack;
+
+		//색상을 보여줄 Rectangle 생성
+		rect = new Rectangle();
+		rect.Width = 16;
+		rect.Height = 16;
+		rect.Margin = new Thickness(2);
+		rect.Stroke = SystemColors.WindowTextBrush;
+		stack.Children.Add(rect);
+
+		//색상 명을 보여줄 TextBlock 생성
+		text = new TextBlock();
+		text.VerticalAlignment = VerticalAlignment.Center;
+		stack.Children.Add(text);
+	}
+	//Text 프로퍼티는 TextBlock의 Text 프로퍼티가 됨
+	public string Text
+	{
+		set
+		{
+			str = value;
+			string strSpaced = str[0].ToString();
+			for(int i=1; i<str.Length; i++)
+				strSpaced += (char.IsUpper(str[i]) ? " " + "") + str[i].ToString();
+			text.Text = strSpaced;	
+		}
+		get { return str;	}
+	}
+	//Color 프로퍼티가 Rectangle의 Brush 프로퍼티가 됨
+	public Color Color
+	{
+		set { rect.Fill = new SolidColorBrush(value);	}
+		get
+		{
+			SolidColorBrush brush = rect.Fill as SolidColorBrush;
+			return brush == null ? Colors.Transparent : brush.Color;
+		}
+	}
+	//선택한 항목의 폰트를 굵게 함
+	protected override void OnSelected(RoutedEventArgs args)
+	{
+		base.OnSelected(args);
+		text.FontWeight = FontWeights.Bold;
+	}
+	protected override void OnUnSelected(RoutedEventArgs args)
+	{
+		base.OnUnSelected(args);
+		text.FontWeight = FontWeights.Regular;
+	}
+	//키보드 인터페이스를 위한 ToString 구현
+	public override string ToString()
+	{
+		return str;
+	}
+}
+
+
+ColorListBoxItem 클래스는 생성자에서 수평 정렬의 StackPanel, Rectangle, TextBlock을 생성한다. 이 클래스는 TextBlock의 Text 프로퍼티를 정의하고 Rectangle에 사용되는 Brush의 Color 프로퍼티를 정의한다. 이 클래스는 선택 항목의 텍스트를 굵게 보이기 위해 OnSelected와 OnUnSelected 메소드를 오버라이딩 한다. 
+
+ColorListBox 클래스는 ListBox를 상속받고 ColorListBoxItem 타입 객체를 채우기 위해 리플렉션을 이용한다. 또한 SelectedValue를 참조하는 SelectedColor 라는 새로운 프로퍼티를 정의한다. 
+
+
+
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+class ColorListBox : ListBox
+{
+	public ColorListBox()
+	{
+		PropertyInfo[] props = typeof(Colors).GetProperties();
+
+		foreach(PropertyInfo prop in props)
+		{
+			ColorListBoxItem item = new ColorListBoxItem();
+			item.Text = prop.Name;
+			item.Color = (Color)prop.GetValue(null, null);
+			Items.Add(item);
+		}
+		SelectedValuePath = "Color";
+	}
+	public Color SelectedColor
+	{
+		set { SelectedValue = value; }
+		get { return (Color)SelectedValue;	}
+	}
+}
+
+
+ColorListBoxItem과 ColorListBox 클래스를 정의하면서 ListBox의 코드는 더 수월해지고 명확해졌다. 확실히 세련되게 변한 부분은 ListBox의 색상명과 색상을 보여주는 부분이다. 
+
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class ListColorsElegantly : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListColorsElegantly());
+	}
+	public ListColorElegantly()
+	{
+		Title = "List Colors Elegantly";
+
+		ColorListBox lstbox = new ColorListBox();
+		lstbox.Height = 150;
+		lstbox.Width = 150;
+		lstbox.SelectionChanged += listBoxOnSelectionChanged;
+		Content = lstbox;
+
+		//SelectedColor 초기화
+		lstbox.SelectedColor = SystemColors.WindowColor;
+	}
+	void ListBoxOnSelectionChanged(object sender, SelectionChangedEventArgs args)
+	{
+		ColorListBox lstbox = sender as ColorListBox;
+		Background = new SolidColorBrush(lstbox.SelectedColor);
+	}
+}
+
+
+그러나 여전히 드는 의문이 있다. WPF를 이용하면 무언가 더 개선할 수 있지 않을까?
+
+그렇다 Control로 정의된 Template 프로퍼티로 버튼 모양을 재정의하기 위해 11장에서 만들었던 BuildButtonFactory 프로그램을 떠올려 보자. ListBox는 프로퍼티를 상속받았지만 ItemsControl은 두 개의 템플릿 관련 프로퍼티를 정의한다. DataTemplate 타입의 ItemTemplate 프로퍼티는 항목의 외양을 정의하고 항목의 프로퍼티와 데이터 소스를 바인딩한다. ItemsPanelTemplate 타입의 ItemsPanel 프로퍼티는 항목을 나타내는 다른 패널을 사용할 수 있게 해준다. 
+
+ListColorsEventElegantlier 프로그램은 ItemTemplate 프로퍼티와 13장 초반에 나왔던 NamedBrush 클래스를 이용한다. 
+
+
+
+
+
+
+using sky4868.ListNamedBrushes;
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+
+public class ListColorsEvenElegantlier : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListColorsEvenElegantlier());
+	}
+	public ListColorsEvenElegantlier()
+	{
+		Title = "List Colors Even Elegantlier";
+
+		//항목의 DataTemplate 생성
+		DataTemplate template = new DataTemplate(typeof(NamedBrush));
+
+		//스택 패널 기반의 FrameworkElementFactory 생성
+		FrameworkElementFactory factoryStack = new FrameworkElementFactory(typeof(StackPanel));
+		factoryStack.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
+
+		//DataTemplate 비주얼 트리의 루트 생성
+		template.VisualTree = factoryStack;
+
+		//Rectangle 기반의 FrameworkElementFactory 생성
+		FrameworkElementFactory factoryRectangle = new FrameworkElementFactory(typeof(Rectangle));
+		factoryRectangle.SetValue(Rectangle.WidthProperty, 16.0);
+		factoryRectangle.SetValue(Rectangle.HeightProperty, 16.0);
+		factoryRectangle.SetValue(Rectangle.MarginProperty, new Thickness(2));
+		factoryRectangle.SetValue(Rectangle.StrokeProperty, SystemColors.WindowTextBrush);
+		factoryRectangle.SetBinding(Rectangle.FillProperty, new Binding("Brush"));
+
+		//StackPanel에 factoryRectangle 객체 추가
+		factoryStack.AppendChild(factoryRectangle);
+
+		//TextBlock 기반의 FrameworkElementFactory 생성
+		FrameworkElementFactory factoryTextBlock = new FrameworkElementFactory(typeof(TextBlock));
+		factoryTextBlock.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
+		factoryTextBlock.SetValue(TextBlock.TextProperty, new Binding("Name"));
+
+		//StackPanel에 factoryTextBlock 객체 추가
+		factoryStack.AppendChild(factoryTextBlock);
+
+		//윈도우 Content 를 위한 리스트 박스 생성
+		ListBox lstbox = new ListBox();
+		lstbox.Width = 150;
+		lstbox.Height = 150;
+  		Content = lstbox;
+
+		//ItemTemplate 프로퍼티를 위해 생성한 template 으로 설정
+		lstbox.ItemTemplate = template;
+
+		//ItemsSource를 NamedBrush 객체 배열로 설정
+		lstbox.ItemsSource = NamedBrush.All;
+
+		//SelectedValue와 윈도우 배경색을 바인딩
+		lstbox.SelectedValuePath = "Brush";
+		lstbox.SetBinding(ListBox.SelectedValueProperty, "Background");
+		lstbox.DataContext = this;
+	}
+}
+
+
+윈도우 생성자는 DataTemplate 타입의 객체를 만드는 것으로부터 시작된다(생성자 뒤로 가면이 객체를 ListBox의 ItemTemplate 프로퍼티에 할당한다) DataTemplate 생성자는 NamedBrush 클래스 타입을 넘겨받으며, ListBox는 NamedBrush 타입의 항목으로 채워지게 된다. 
+
+프로그램은 이 항목을 보여주기 위해 비주얼 트리를 생성하는 부분으로 넘어간다. 비주얼 트리의 루트는 StackPanel이다. StackPanel을 위한 FrameworkElementFactory 객체는 DataTemplate의 VisualTree 프로퍼티에 할당된다. 다음은 Rectangle과 TextBlock을 위해 FrameworkElementFactory 객체를 두 개 더 생성하고, 이를 StackPanel에 대한 FrameworkElementFactory 객체의 자식 컬렉션에 추가한다. Rectangle 엘리먼트의 Fill 프로퍼티가 NamedBrush의 Brush 프로퍼티와 연결되고, TextBlock의 Text 프로퍼티가 NamedBrush의 Name 프로퍼티와 연결된다는 데 주의하자. 
+
+이제는 ListBox를 만들 차례다. ListBox의 ItemTemplate 프로퍼티에 방금 생성한 DataTemplate을 할당하는 것만 제외한다면 이전에 만든 코드와 아주 유사하다. 이제 ListBox는 템플릿의 비주얼 트리로 NamedBrush 항목들을 보여주게 된다. 
+
+리스트 박스를 채우는 데 NamedBrush의 정적 프로퍼티 All과 ItemSource를 이용하는 것으로 생성자는 끝이 난다. SelectedValuePath는 NamedBrush 항목의 Brush 프로퍼티이며, 이 프로퍼티는 윈도우의 Background 프로퍼티와 바인딩 된다. 
+
+이장의 처음에서 ListBox는 많은 것 중에 하나를 선택하게 해주는 컨트롤이라고 했다. 11장에서 다룬 ColorGrid 컨트롤은 40개의 ColorCell 엘리먼트를 UniformGrid 상에 보여주고 이 그리드에서 색상을 선택할 수 있게 확장된 키보드와 마우스 인터페이스를 제공했었다. 
+
+이 컨트롤에 ListBox를 사용하는 것이 가능하며, ListBox에 이미 작성된 키보드와 마우스 코드를 중복으로 작성하지 않아도 된다. ListBox를 활용하는 데 정말로 필요한 부분은 StackPanel 보다는 UniformGrid를 이용해 항목을 보여주는 것이며, 다음에 나오는 클래스의 3개 구문에서 이를 구현하고 있다. ColorGridBox 클래스는 ListBox를 상속받았고, 11장에서 다룬 ColorGrid 컨트롤의 거의 모든 기능을 구현하고 있다(그럼에도 중복되는 부분은 거의 없다.).
+
+
+
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+
+class ColorGridBox : ListBox
+{
+	//보여줄 색상
+	string[] strColors = 
+	{
+		 "Black", "Brown", "DarkGreen", "MidnightBlue", "Navy", "DarkBlue", "Indigo", "DimGray",
+		"DarkRed", "OrangeRed", "Olive", "Green", "Teal", "Blue", "SlateGray", "Gray",
+		"Red", "Orange", "YellowGreen", "SeaGreen", "Aqua", "LightBlue", "Violet", "DarkGray",
+		"Pink", "Gold", "Yellow", "Lime", "Turquoise", "SkyBlue", "Plum", "LightGray",
+		"LightPink", "Tan", "LightYellow", "LightGreen", "LightCyan", "LightSkyBlue", "Lavender", "White"};
+
+	public ColorGridBox()
+	{
+		//ItemsPanel 템플릿 정의'
+		FrameworkElementFactory factoryUnigrid = new FrameworkElementFactory(typeof(UniformGrid));
+		factoryUnigrid.SetValue(UniformGrid.ColumnsProperty, 8);
+		ItemsPanel = new ItemsPanelTemplate(factoryUnigrid);
+
+		//ListBox에 항목 추가
+		foreach(string strColor in strColors)
+		{
+			//Rectangle을 생성해 리스트 박스에 추가
+			Rectangle rect = new Rectangle();
+			rect.Width = 12;
+			rect.Height = 12;
+			rect.Margin = new Thickness(4);
+			rect.Fill = (Brush)typeof(Brushes).GetProperty(strColor).GetValue(null, null);
+			Items.Add(rect);
+
+			//Rectangle을 위한 ToolTip 생성
+			ToolTip tip = new ToolTip();
+			tip.Content = strColor;
+			rect.ToolTip = tip;
+		}
+		//SelectedValue를 Rectangle 항목의 Fill 프로퍼티로 설정
+		SelectedValuePath = "Fill";
+	}
+}
+
+
+생성자는 UniformGrid 패널을 위해 FrameworkElementFactory 객체를 생성하는 것으로 시작한다. 그리고 Column 프로퍼티의 값을 8로 설정한다. ItemsPanelTemplate 생성자는 이 팩토리를 가지고 ItemsPanelTemplate 객체를 생성해 ListBox의 ItemsPanel 프로퍼티에 할당한다. ListBox를 위해 필요한 모든 것은 StackPanel을 대신 이용한다. 
+
+생성자의 나머지 부분은 대부분 ListBox를 Rectangle 객체로 채우는 부분이며, 각 ToolTip 은 색상명을 가리킨다. 생성자는 ListBox의 SelectedValue 프로퍼티를 ListBox 항목의 Fill 프로퍼티로 설정하면서 끝이 난다. 이는 Rectangle의 Fill 프로퍼티를 가리키게 된다. 
+
+SelecteColorFromGrid 프로그램은 새로운 컨트롤을 테스트 하기 위해 11장에서 사용한 SelectColor 프로그램과 유사하다. 한 가지 다른 부분은 윈도우 배경색 프로퍼티를 ColorGridBox 컨트롤의 SelectedValue 프로퍼티로 연결한 부분이다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+
+public class SelectColorFromGrid : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new SelectColorFromGrid());
+	}
+	public SelectColorFromGrid()
+	{
+		Title = "Select Color from Grid";
+		SizeToContent = SizeToContent.WidthAndHeight;
+
+		//윈도우 Content를 위한 StackPanel 생성
+		StackPanel stack = new StackPanel();
+		stack.Orientation = Orientation.Horizontal;
+		Content = stack;
+
+		//탭 키를 검사하기 위한 do-nothing 버튼 생성
+		Button btn = new Button();
+		btn.Content = "Do-nothing button\nto test tabbing";
+		btn.Margin = new Thickness(24);
+		btn.HorizontalAlignement = HorizontalAlignment.Center;
+		btn.VerticalAlignment = VerticalAlignement.Center;
+		stack.Children.Add(btn);
+
+		//ColorGridBox 컨트롤 생성
+		ColorGridBox clrgrid = new ColorGridBox();
+		clrgrid.Margin = new Thickness(24);
+		clrgrid.HorizontalAlignment = HorizontalAlignment.Center;
+		clrgrid.VerticalAlignment = VerticalAlignment.Center;
+		stack.Children.Add(clrgrid);
+
+		//윈도우 배경색과 ColorGridBox에서 선택된 값을 바인딩
+		clrgrid.SetBiding(ColorGridBox.SelectedValueProperty, "Background");
+		clrgrid.DataContext = this;
+
+		//또 다른 do-nothing 버튼을 생성
+		btn = new Button();
+		btn.Content = "Do-nothing button\nto test tabbing";
+		btn.Margin = new Thickness(24);
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.VerticalAlignment = VerticalAlignmenet.Center;
+		stack.Children.Add(btn);
+	}
+}
+
+특히 ColorGridBox를 키보드로 테스트해보기 바란다. 왼쪽/오른쪽 화살표 키를 이용해 수평으로 이동할 수가 있으며 위/아래 화살표 키를 이용하여 수직으로 이동이 가능하다(커스텀 ColorGrid 컨트롤과 달리 ColorGridBox는 하나의 열이나 행에서 다른 행이나 열로 넘어가는 것이 불가능하다. 시작이나 끝에서도 다음 컨트롤로 넘어가지 않는다)Page Up, Page Down 키는 칼럼의 맨 앞과 맨 뒤로 이동시켜준다. Home 키는 첫 번째 항목으로 , End 키는 마지막 항목으로 이동시킨다. 
+
+ListBox가 화면에 보이는 항목의 상대 좌표를 기반으로 한 일반적인 키보드 이동 로직을 구현함을 확실히 이해했을 것이다. 다음 프로그램을 통해 더 확실하게 알 수 있다. ListBox를 12장에서의 RadialPanel로 바꾸고, Brushes 클래스에 있는 141가지의 모든 색상을 Rectangle 엘리먼트로 보여주기 위해 RedialPanel을 이용해보자. 
+
+이 클래스는 ListBox를 상속했다는 점은 ColorGridBox와 유사하며 생성자는 ListBox의 ItemsPanel 프로퍼티를 또는 패널인 FrameworkElementFactory를 기반으로 하는 ItemsPanelTemplate으로 설정한다. 
+
+
+
+
+using sky4868.CircleTheButtons;
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Media;			
+using System.Windows.Shapes;
+
+class ColorWheel : ListBox
+{
+	public ColorWheel()
+	{
+		//ItemPanel 템플릿 정의
+		FrameworkElementFactory factoryRadialPanel = new FrameworkElementFactory(typeof(RadialPanel));
+		ItemsPanel = new ItemsPanelTemplate(factoryRadialPanel);
+
+		//항목에 대한 DataTemplate 생성
+		DataTempldate template = new DataTempldate(typeof(Brush));
+		ItemTemplate = template;
+
+		//Rectangle 기반의 FrameworkElementFactory 생성
+		FrameworkElementFactory elRectangle = new FrameworkElementFactory(typeof(Rectangle));
+		elRectangle.SetValue(Rectangle.WidthProperty, 4.0);
+		elRectangle.SetValue(Rectangle.HeightProperty, 12.0);
+		elRectangle.SetValue(Rectangle.MarginProperty, new Thickness(1, 8, 1, 8));
+		elRectangle.SetBinding(Rectangle.FillProperty, new Binding(""));
+
+		//비주얼 트리를 위해 factory를 사용
+		template.VisualTree = elRectangle;
+
+		//리스트 박스에 항목 설정
+		PropertyInfo[] props = typeof(Brushes).GetProperties();
+
+		foreach(PropertyInfo prop in props)
+			Items.Add((Brush)prop.GetValue(null, null));
+	}
+}
+
+
+ItemsPanel 프로퍼티를 설정한 후 생성자는 ListBox의 ItemTemplate 프로퍼티에 할당할 DataTemplate 객체를 정의한다. DataTemplate은 Brush 타입의 ListBox 항목을 가리킨다. 비주얼 트리는 Rectangle 타입의 엘리먼트 한 개로 이루어지며 Fill 프로퍼티는 항목 자체와 연결된다(Binding 생성자는 빈 문자열을 파라미터로 갖는다)
+
+생성자는 ListBox를 Brushes 클래스의 정적 프로퍼티로 채우는 것으로 끝나는데, ListBox의 항목이 실제 Brush 항목이기 때문에 ListBox의 SelectedValuePath를 설정할 필요가 있다. 커스텀 ItemTemplate이 없다면 16진수 RGB 값이 보였을 것이다. 
+
+SelectColorFrom Wheel 프로그램은 ColorWheel 컨트롤을 쓰는 부분 외에는 SelectColorFromGrid와 거의 똑같다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class SelectColorFromWheel : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new SelectColorFromWheel());
+	}
+	public SelectColorFromWheel()
+	{
+		Title = "Select Color from Wheel";
+		SizeToContent = SizeToContent.WidthAndHeight;
+
+		//윈도우 Content를 위한 StackPanel을 생성
+		StackPanel stack = new StackPanel();
+		stack.Orientation = Orientation.Horizontal;
+		Content = stack;
+
+		//탭 키를 검사하기 위한 do-nothing 버튼 생성
+		Button btn = new Button();
+		btn.Content = "Do-nothing button\nto test tabbing";
+		btn.Margin = new Thickness(24);
+		btn.HorizontalAlignment = HorizontalAlignement.Center;
+		btn.VerticalAlignment = VerticalAlignment.Center;
+		stack.Children.Add(btn);
+
+		//ColorWheel 컨트롤 생성
+		ColorWheel clrwheel = new ColorWheel();
+		clrwheel.Margin = new Thickness(24);
+		clrwheel.HorizontalAlignment = HorizontalAlignment.Center;
+		clrwheel.VerticalAlignment = VerticalAlignment.Center;
+		stack.Children.Add(clrwheel);
+
+		//윈도우 배경색과 ColorWheel 의 선택 값을 바인딩
+		clrwheel.SetBinding(ColorWheel.SelectedValueProperty, "Background");
+		clrwheel.DataContext = this;
+
+		//또 다른 do-nothing 버튼 생성
+		btn = new Button();
+		btn.Content = "Do-nothing button\nto test tabbing";
+		btn.Margin = new Thickness(24);
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.VerticalAlignment = VerticalAlignment.Center;
+		stack.Children.Add(btn);
+	}
+}
+
+
+키보드 인터페이스가 아주 재미있다. 위/아래 화살표 키는 원 안에서 왼쪽 반이나 오른쪽 반으로만 선택된 색상을 움직일 수 있다. 선택된 색상을 한쪽 면에서 다른쪽 면으로 움직일 수 없다. 유사하게 왼쪽/ 오른쪽 화살표 키는 단지 위쪽 반이나 아래쪽 반만 움직일 수 있다. 선택된 색상을 모든 방향으로 이동하고 싶을 때는 (예를 들어 시계 방향), 2사분면에서 오른쪽 화살표 키와 아래 화살표 키를 번갈아 눌러야 한다. 그리고 3사분면에서는 아래 화살표 키와 왼쪽 화살표 키를 눌러야 하는 식이다
+
+전체적으로 새롭게 보이게 ListBox 를 바꿔보는 것은 아주 강력한 기법이다. ListBox는 많은 항목 중에 한 가지 항목을 사용자가 선택하게 할 때는 언제든 사용되기 때문에 중요하다. 먼저 ListBox의 개념적인 본질에 대해 생각해보고 그런 후 원하는 방식으로 보이고 동작하게 컨트롤을 어떻게 변경할지를 생각해보자. 
