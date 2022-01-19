@@ -1,0 +1,519 @@
+CHAPTER 14장 : 메뉴 계층 구조
+
+예전부터 윈도우 애플리케이션의 대표적인 유저 인터페이스는 메뉴였다. 메뉴는 애플리케이션 창의 제목 바로 아래에 주요 부분을 차지하며, 보통 창과 같은 폭을 가진다. 메뉴는 주로 텍스트로 구성된 가로 방향으로 리스트다. 탑 레벨 메뉴 항목을 클릭하면 드롭다운 메뉴나 하위 메뉴라고 부르는 다른 항목들의 리스트가 나타난다. 각 하위 메뉴는 다른 명령어를 실행하거나 다른 하위 메뉴를 활성화시키는 또 다른 메뉴를 갖는다. 
+
+요약해보면 메뉴는 계층 구조다. 메뉴의 각 항목들은 MenuItem 타입의 객체이며, 메뉴 자체는 Menu 타입의 객체다. 이 두 개의 컨트롤이 다른WPF 컨트롤과 일치하는지 알아보기 위해 다음 클래스 계층 구조를 살펴보자. 
+
+Control
+	ContentControl
+		HeaderedContentControl
+	ItemsControl
+		HeaderedItemsControl
+
+Control에서 파생된 이 4개의 클래스 중에는 친숙한 컨트롤이 많이 들어있다. 
+
+* ContentControl에서 파생된 컨트롤은 Content 프로퍼티를 갖는다. 이런 컨트롤에는 버튼, 레이블, 툴 팁, 스크롤 뷰어, 리스트 박스 항목, 윈도우 등이 있다. 
+
+* ContentControl에서 파생된 HeaderedContentControl은 Header 프로퍼티를 갖는다. 그룹 박스가 이에 해당한다. 
+
+* ItemsControl은 다른 객체의 컬렉션인 Items 프로퍼티를 정의한다. 이런 컨트롤에는 리스트박스와 콤보 박스가 해당한다. 
+
+* HeaderedItemsControls은 ItemsControl로부터 상속받은 프로퍼티 외에 추가로 Header 프로퍼티를 갖고 있다. 메뉴 항목이 여기에 속한다. 
+
+
+MenuItem 객체의 Header 프로퍼티는 짧은 텍스트 문자열이며 작은 비트맵과 함께 나타낼수도 있다. 각 메뉴 항목은 하위 메뉴에 나타날 항목의 컬렉션이 포함될 수도 있다. 항목은 Items 프로퍼티에 저장된다. 직접 명령을 실행하는 메뉴 항목은 Items 컬렉션이 비어있다. 
+
+탑 레벨의 메뉴에서 첫 번째는 주로 File 메뉴이며, MenuItem 객체다. 이때 Header 프로퍼티는 File이며 Items 컬렉션에는 New, Open, Save 등의 메뉴를 나타내는 MenuItem 객체가 들어 있다. 
+
+이런 패턴을 따르지 않는 메뉴가 탑 레벨 메뉴이다. 탑 레벨 메뉴가 항목들(예를 들어 File, Edit, View, Help등)의 컬렉션이라는 것은 확실하다. 하지만 이 컬렉션과연결되는 헤더가 없다. 그래서 탑 레벨 메뉴는 ItemsControl로부터 파생된 Menu 타입의 객체가 된다. 아래 보이는 클래스 계층 구조는 메뉴와 관련 있는 클래스를 보여준다. 
+
+Control
+	ItemsControl
+		HeaderItemsControl
+		MenuItem
+	MenuBase(abstract)
+		ContextMenu
+		Menu
+	Separator
+
+Separator 컨트롤은 수평, 수직 라인으로 보이며, 주변 상황에 따라 메뉴 항목들을 기능별로 구분하는 하위 항목에서 자주 사용된다. 
+
+사실 어떤 타입의 객체도 메뉴 항목이 될 수 있다. 하지만 MenuItem은 메뉴와 관련 있는 여러 가지 프로퍼티와 이벤트를 정의하기 때문에 메뉴 항목으로 MenuItem을 사용할 것이다. ButtonBase처럼 MenuItem도 Click 이벤트와 Command 프로퍼티를 가지고 있어서 마치 버튼 처럼 메뉴 항목들을 다룰 수가 있다. 
+
+또한 MenuItem은 표준 위치 메뉴 항목에 작은 그림을 놓을 수 있는 Icon 프로퍼티를 갖고 있다. 재미있는 사실은 이 Icon 프로퍼티가 Object 타입이기 때문에 Shapes 라이브러리의 엘리먼트를 쉽게 사용할 수 있다는 사실이다.(14장에서 살펴볼 것이다)
+
+메뉴 항목을 체크할 수도 있다. 즉 온/오프 옵션을 나타낸다거나 상호 배타적인 항목의 그룹에서 항목 하나를 선택하는 것을 말한다. MenuItem은 체크 부호를 켜고, 끌 수 있는 불리언 타입의 IsChecked 프로퍼티를 갖는다. 그리고 체크 부호의 토글링을 자동화하는 IsCheckable프로퍼티도 갖고 있다. Checked 이벤트는 IsChecked 프로퍼티가 false에서 true로 변경될때 발생하며, UnChecked 이벤트는 IsChecked 프로퍼티가 true에서 false로 변경될 때 발생한다. 
+
+때때로 프로그램에서 하위 메뉴의 특정 항목을 비활성화 시켜야 할 때가 있다. 예를 들어 File 메뉴의 Save 옵션은 프로그램이 현재 저장할 문서를 가지고 있지 않다면 비활성화 되어야 한다. 이를 처리하기 위해서는 하위 메뉴가 나타날 때 메뉴 항목들을 비활성화 시키는 것이 편리하다. MenuItem은 이를 위해 SubmenuOpened 이벤트를 정의한다. 
+
+메뉴를 만드는 것은 대개 위에서 아래로 진행한다. 처음에는 Menu 타입의 객체를 생성한다. 
+
+Menu menu = new Menu();
+
+보통 첫 번째 항목은 File 메뉴이다. 
+
+MenuItem itemFile = new MenuItem();
+itemFile.Header = "_File";
+
+다른 컨트롤처럼 밑줄 문자는 키보드를 통한 네비게이션을 나타낸다. 사용자가 Alt 키를 누르고 File의 F키를 누르면 File의 하위 메뉴가 열린다. 탑 레벨 메뉴와 각 하위 메뉴에서 밑줄이 쳐진 문자는 반드시 유일해야 한다. 
+
+Menu 객체의 Items 컬렉션에 MenuItem을 추가해 탑 레벨 메뉴에 File 항목을 만들 수 있다. 
+
+menu.Items.Add(itemFile);
+
+File 메뉴의 첫 번째 항목은 보통 New 메뉴이다. 
+
+MenuItem itemNew = new MenuItem();
+itemNew.Header = "_New";
+itemNew.Click += NewOnClick;
+itemFile.Items.Add(itemNew);
+
+New 항목은 명령어(command)이기 때문에 이를 수행하는 핸들러를 Click 이벤트에 할당한다. File 컬렉션에 New 항목을 추가한다. 
+
+itemFile.Items.Add(itemNew);
+
+다음의 PeruseTheMenu 프로그램은 클라이언트 영역에 작은 텍스트를 보여주고 메뉴를 만든다. File 항목중에 오직 하나만 구현이 되어 있다. 하지만 그 메뉴는 Window의 프로퍼티들을 변경할 수 있게 하는 체크 가능한 4개의 항목이 있는 탑 레벨 Window 항목을 가지고 있다. 
+
+
+
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+public class PeruseTheMenu : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new PeruseTheMenu());
+	}
+	public PeruseTheMenu()
+	{
+		Title = "Peruse the Menu";
+
+		//DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//탑 메뉴가 될 Menu 생성
+		Menu menu = new Menu();
+		dock.Children.Add(menu);
+		DockPanel.SetDock(menu, Dock.Top);
+
+		//나머지 영역을 채울 TextBlock을 생성
+		TextBlock text = new TextBlock();
+		text.Text = Title;
+		text.FontSize = 32; //즉 24 포인트
+		text.TextAlignment = TextAlignment.Center;
+		dock.Children.Add(text);
+
+		//File 메뉴 생성
+		MenuItem itemFile = new MenuItem();
+		itemFile.Header = "_File";
+		menu.Items.Add(itemFile);
+
+		MenuItem itemNew = new MenuItem();
+		itemNew.Header = "_New";
+		itemNew.Click += UnimplementedOnClick;
+		itemFile.Items.Add(itemNew);
+
+		MenuItem itemOpen = new MenuItem();
+		itemOpen.Header = "_Open";
+		itemOpen.Click += UnimplementedOnClick;
+		itemFile.Items.Add(itemOpen);
+
+		MenuItem itemSave = new MenuItem();
+		itemSave.Header = "_Save";
+		itemSave.Click += UnimplementedOnClick;
+		itemFile.Items.Add(itemSave);
+
+		itemFile.Items.Add(new Separator());
+
+		MenuItem itemExit = new MenuItem();
+		itemExit.Header = "E_xit";
+		itemExit.Click += ExitOnClick;
+		itemFile.Items.Add(itemExit);
+
+		//Window 메뉴 생성
+		MenuItem itemWindow = new MenuItem();
+		itemWindow.Header = "_Window";
+		menu.Items.Add(itemWindow);
+
+		MenuItem itemTaskbar = new MenuItem();
+		itemTaskbar.Header = "_Show in Taskbar";
+		itemTaskbar.IsCheckable = true;
+		itemTaskbar.IsChecked = ShowInTaskbar;
+		itemTaskbar.Click += TaskbarOnClick;
+		itemWindow.Items.Add(itemTaskbar);
+
+		MenuItem itemSize = new MenuItem();
+		itemSize.Header = "Size to _Content";
+		itemSize.IsCheckable = true;
+		itemSize.IsChecked = SizeToContent == SizeToContent.WidthAndHeight;
+		itemSize.Checked += SizeOnCheck;
+		itemSize.UnChecked += SizeOnCheck;
+		itemWindow.Items.Add(itemSize);
+
+		MenuItem itemResize = new MenuItem();
+		itemResize.Header = "_Resizeable";
+		itemResize.IsCheckable = true;
+		itemResize.IsChecked = ResizeMode == ResizeMode.CanResize;
+		itemResize.Click += ResizeOnClick;
+		itemWindow.Items.Add(itemResize);
+
+		MenuItem itemTopmost = new MenuItem();
+		itemTopmost.Header = "_Topmost";
+		itemTopmost.IsCheckable = true;
+		itemTopmost.IsChecked = Topmost;
+		itemTopmost.Checked += TopmostOnCheck;
+		itemTopmost.UnChecked += TopmostOnCheck;
+		itemWindow.Items.Add(itemTopmost);
+	}
+	void UnimplementedOnClick(object sender, RoutedEventArgs args)
+	{
+		MenuItem item = sender as MenuItem;
+		string strItem = item.Header.ToString().Replace("_", "");
+		MessageBox.Show("The " + strItem + " option has not yet been implemented", Title);
+	}
+	void ExitOnClick(object sender, RoutedEventArgs args)
+	{
+		Close();
+	}
+	void TaskbarOnClick(object sender, RoutedEventArgs args)
+	{
+		MenuItem item = sender as MenuItem;
+		ShowInTaskbar = item.IsChecked;
+	}
+	void SizeOnCheck(object sender, RoutedEventArgs args)
+	{
+		MenuItem item = sender as MenuItem;
+		SizeToContent = item.IsChecked ? SizeToContent.WidthAndHeight : SizeToContent.Manual;
+	}
+	void ResizeOnClick(object sender, RoutedEventArgs args)
+	{
+		MenuItem item = sender as MenuItem;
+		ResizeMode = item.IsChecked ? ResizeMode.CanResize : ResizeMode.NoResize;
+	}
+	void TopmostOnCheck(object sender, RoutedEventArgs args)
+	{
+		MenuItem item = sender as MenuItem;
+		Topmost = item.IsChecked;
+	}
+}
+
+생성자에서 DockPanel을 생성하는 것에 주목하자. 보통 메뉴는 클라이언트 영역의 맨 위에 위치한다. 사용자를 혼란스럽게 하고싶지 않다면 메뉴가 패널에 잘 보여야만 한다. DockPanel은 메뉴, 툴바, 상태바를 갖는 윈도우의 표준 기본 패널이다. StackPanel이나 Grid를 갖고도 똑같은 효과를 줄 수 있지만 DockPanel이 표준이다. 
+
+UnimplementedOnClick 메소드는 New, Open, Save 항목들의 Click 이벤트를 처리한다. Exit 항목을 위한 Click 핸들러는 프로그램을 종료하기 위해 Window 객체에 정의된 Close 메소드를 호출한다. 보통 Separator로 다른 항목과 Exit 항목을 분리시켜준다. 
+
+Window 메뉴상의 4개 항목 모두의 체크 표시를 자동으로 토글할 수 있는 IsCheckable 프로퍼티를 true로 설정하고 있다. IsChecked 프로퍼티는 체크 표시가 현재 보이는지 보이지 않는지를 의미한다. 첫 번째와 세 번째 항목을 위해서 Click 이벤트 핸들러를 정의한다. 두번째와 네 번째 항목을 위해서 Checked, UnChecked 이벤트 핸들러를 정의한다. 어떤 접근 방식을 사용하더라도 상관없다. 잠재적으로 Checked, UnChecked 핸들러들을 별도로 두게 되면 IsChecked 프로퍼티를 명시적으로 검사하지 않고도 처리할 수 있다. 이 프로그램에서 Click, Checked, UnChecked 이벤트 핸들러 모두 Window의 특정프로퍼티를 설정하기 위해서만 IsChecked 프로퍼티를 사용한다. 
+
+아래의 두 구문을 주석으로 처리해보자. 
+
+itemTaskbar.IsChecked = ShowInTaskbar;
+itemTaskbar.Click += TaskbarOnClick;
+
+그리고 위 구문을 아래와 같이 변경하자
+
+itemTaskbar.SetBinding(MenuItem.IsCheckedProperty, "ShowInTaskbar");
+itemTaskbar.DataContext = this;
+
+또한 TaskbarOnClick 메소드 전체를 삭제하더라도 프로그램은 똑같이 작동할 것이다. 이것이 데이터 바인딩의 작은 묘미다. 보통 MenuItem의 IsChecked 프로퍼티는 항상 Window 객체의 ShowInTaskBar 프로퍼티와 같은 값을 갖는다. 더욱이 Topmost 메뉴 항목에 이러한 데이터 바인딩을 설정할 수 있다. 하지만 나머지 두 개의 MenuItem은 프로퍼티들이 불리언 타입이 아니기 때문에 바인딩을 설정할 수 없다. 
+
+체크 표시를 갖는 메뉴 항목을 사용하면서 IsCheckable 프로퍼티를 true로 설정하지 않으면 Click 이벤트와 IsChecked 프로퍼티를 이용해서 수작업으로 체크, 언체크 항목을 처리해줘야 한다. 이 방식은 라디오 버튼처럼 어떤 항목을 체크하기 위해서 체크된 다른 항목을 체크 해제해야 하는 상호 베타적인 항목들의 그룹을 나타내는 메뉴에서 필요하다. 상호 베타적 체크 항목 그룹에서 IsCheckable 프로퍼티를 기본값인 false로 두게 되면 자동 토글을 없앨 수 있다. 그리고 초기에 항목들을 생성할 때 항목 중 하나의 IsChecked 프로퍼티를 설정할 수 있다. Click 이벤트 핸들러에서 체크, 체크 해제 로직을 다룰 수도 있는데 상호 배타적 그룹에서는 모든 항목을 하나의 Click 이벤트 핸들러로 처리하는 것이 가장 쉬운 방법이다. 
+
+어떤 상호 배타적인 그룹에서 현재 체크된 항목을 유지하려면 (예를 들어)MenuItem 타입의 itemChecked와 같은 멤버 변수를 가져야 한다. 
+
+MenuItem itemChecked;
+
+Window 생성자에서 이 멤버 변수를 초기화한다. 상호 배타적인 항목에 대해 Click 이벤트 핸들러를 하나만 사용한다면 Click 이벤트 핸들러는 현재 체크된 항목을 체크 해제하는 것에서 부터 시작한다. 
+
+itemChecked.IsChecked = false;
+
+핸들러는 itemChecked 의 새로운 값으로 클릭된 항목을 저장하고 그 항목을 체크한다. 
+
+itemChecked = args.Source as MenuItem;
+itemCheck.IsChecked = true;
+
+항목들에 대한 처리를 완료하기 위해 필요한 작업은 무엇이든지 이벤트 핸들러에서 가능하다. 아래 프로그램은 5장에서 살펴봤던 Window의 WindowStyle 프로퍼티를 변경하는 TuneTheRadio와 비슷하다. 
+
+
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class CheckTheWindowStyle : Window
+{
+	MenuItem itemChecked;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new CheckTheWindowStyle());
+	}
+	public CheckTheWindowStyle()
+	{
+		Title = "Check the Window Style";
+
+		//DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//탑 메뉴가 될 Menu 생성
+		Menu menu = new Menu();
+		dock.Children.Add(menu);
+		DockPanel.SetDock(menu, Dock.Top);
+
+		//나머지 영역을 채울 TextBlock생성
+		TextBlock text = new TextBlock();
+		text.Text = Title;
+		text.FontSize = 32;
+		text.TextAlignment = TextAlignment.Center;
+		dock.Children.Add(text);
+
+		//WindowStyle을 변경할 MenuItem 객체를 생성
+		MenuItem itemStyle = new MenuItem();
+		itemStyle.Header = "_Style";
+		menu.Items.Add(itemStyle);
+
+		itemStyle.Items.Add(CreateMenuItem("_No border or caption", WindowStyle.None));
+		itemStyle.Items.Add(CreateMenuItem("_Single-border Window", WindowStyle.SingleBorderWindow));
+		itemStyle.Items.Add(CreateMenuItem("3_D-border Window", WindowStyle.ThreeDBorderWindow));
+		itemStyle.Items.Add(CreateMenuItem("_Tool Window", WindowStyle.ToolWindow));
+	}
+	MenuItem CreateMenuItem(string str, WindowStyle style)
+	{
+		MenuItem item = new MenuItem();
+		item.Header =str;
+		item.Tag = style;
+		item.IsChecked = (style == WindowStyle);
+		item.Click += StyleOnClick;
+
+		if(item.IsChecked)
+			itemChecked = item;
+		return item;
+	}
+	void StyleOnClick(object sender, RoutedEventArgs args)
+	{
+		itemChecked.IsChecked = false;
+		itemChecked = args.Source as MenuItem;
+		itemChecked.IsChecked = true;
+
+		WindowStyle = (WindowStyle)itemCheck.Tag;
+	}
+}
+
+
+Style 메뉴상에 보이는 네 개의 항목도 아주 유사하고 동일한 Click 이벤트 핸들러를 공유하는 점도 같다. 항목을 생성하는 CreateMenuItem 메소드를 정의하는 데 각 항목은 열거형인 WindowStyle의 특정 멤버 값을 갖는다. MenuItem 객체의 Tag 프로퍼티는 열거형 멤버 자체를 저장하기에 편리하다. 특정 WindowStyle 열거형 멤버와 윈도우의 WindowStyle 프로퍼티가 같으면 IsChecked 프로퍼티를 true로 설정하는 itemChecked 필드를 그 항목으로 설정한다. 
+
+Click 이벤트 핸들러는 itemChecked 항목을 언 체크하고, itemChecked 를 클릭한 항목으로 설정하고 클릭한 항목의 Tag 프로퍼티를 윈도우의 WindowStyle 프로퍼티로 설정하는 것으로 끝난다. 
+
+CheckTheWindowStyle 프로그램에서 itemChecked 필드를 유지하는 것이 필요한지 다시 생각해보자. 이 필드를 유지하는 것은 단지 프로그램의 편의성을 위해서이다. 프로그램은 항상 Style 항목의 Items 컬렉션을 검색하거나 윈도우의 WindowStyle 프로퍼티를 검사하는 것으로 현재 체크된 항목을 알 수 있다. 
+
+Click 이벤트 핸들러에서 항목을 체크하거나 체크를 해제하는 것은 불필요하다. 대신 SubmenuOpenned 이벤트에서 하위 메뉴를 보여주기 위한 준비를 할 때 항목을 체크할 수 있다. CheckeTheColor 프로그램은 메뉴 항목들을 체크하고, 체크를 해제하는 다른 방법을 보여준다. 메뉴 항목 두 개는 TextBlock 엘리먼트의 전경색과 배경색 브러시를 변경한다. 
+
+
+
+
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Window.Shapes;
+
+
+public class CheckTheColor : Window
+{
+	TextBlock text;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new CheckTheColor());
+	}
+	public CheckTheColor()
+	{
+		Title = "Checkthe Color";
+
+		//DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//탑 메뉴가 될 Menu 생성
+		Menu menu = new Menu();
+		dock.Children.Add(menu);
+		DockPanel.SetDock(menu, Dock.Top);
+
+		//나머지를 채울 TextBlock 생성
+		text = new TextBlock();
+		text.Text = Title;
+		text.TextAlignment = TextAlignment.Center;
+		text.FontSize = 32;
+		text.Background = SystemColors.WindowBrush;
+		text.Foreground = SystemColors.WindowTextBrush;
+		dock.Children.Add(text);
+
+		//메뉴 항목 생성
+		MenuItem itemColor = new MenuItem();
+		itemColor.Header = "_Color";
+		menu.Items.Add(itemColor);
+
+		MenuItem itemForeground = new MenuItem();
+		itemForeground.Header = "_Foreground";
+		itemForeground.SubmenuOpened += ForegroundOnOpened;
+		itemColor.Items.Add(itemForeground);
+		FillWithColors(itemForeground, ForegroundOnClick);
+
+		MenuItem itemBackground = new MenuItem();
+		itemBackground.Header = "_Background";
+		itemBackground.SubmenuOpened += BackgroundOnOpened;
+		itemColor.Items.Add(itemBackground);
+
+		FillWithColors(itemBackground, BackgroundOnClick);
+	}
+	void FillWithColors(MenuItem itemParent, RoutedEventHandler handler)
+	{
+		foreach(PropertyInfo prop in typeof(Colors).GetProperties())
+		{
+			Color clr = (Color)prop.GetValue(null, null);
+			int iCount = 0;
+
+			iCount += clr.R == 0 || clr.R == 255 ? 1 : 0;
+			iCount += clr.G == 0 || clr.G == 255 ? 1 : 0;
+			iCount += clr.B == 0 || clr.B == 255 ? 1 : 0;
+
+			if(clr.A == 255 && iCount > 1)
+			{
+				MenuItem item = new MenuItem();
+				item.Header = "_" + prop.Name;
+				item.Tag = clr;
+				item.Click += handler;
+				itemParent.Items.Add(item);
+			}
+		}
+	}
+	void ForegroundOnOpened(object sender, RoutedEventArgs args)
+	{
+		MenuItem itemParent = sender as MenuItem;
+		
+		foreach(MenuItem item in itemParent.Items)
+			item.IsChecked = ((text.Foreground as SolidColorBrush).Color == (Color)item.Tag);
+	}
+	void BackgroundOnOpened(object sender, RoutedEventArgs args)
+	{
+		MenuItem itemParent = sender as MenuItem;
+
+		foreach(MenuItem item in itemParent.Items)
+			item.IsChecked = ((text.Background as SolidColorBrush).Color == (Color)item.Tag);
+	}
+	void ForegroundOnClick(object sender, RoutedEventArgs args)
+	{
+		MenuItem item = sender as MenuItem;
+		Color clr = (Color)item.Tag;
+		text.Foreground = new SolidColorBrush(clr);
+	}
+	void BackgroundOnClick(object sender, RoutedEventArgs args)
+	{
+		MenuItem item = sender as MenuItem;
+		Color clr = (Color)item.Tag;
+		text.Background = new SolidColorBrush(clr);
+	}
+}
+
+탑 레벨 메뉴와 전경색, 배경색의 두 개 항목을 갖는 하위 메뉴를 생성한다. 각 항목에 대해 FillWithColors 메소드는 하위 항목에 색상 항목을 추가한다. Red, Green, Blue 중 적어도 2개는 0에서 255 사이의 주요한 값을 갖게 메뉴가 제한하고 있기 때문에 로직은 약간 복잡하다(WPF가 메뉴가 많을 때 어떻게 처리하는 지만 보고 싶으면 로직을 삭제해도 된다.)
+
+전경색 메뉴 항목에서 ForegroundOnOpened 메소드는 SubmenuOpened 이벤트를 처리하지만 ForegroundOnClick 메소드는 전경색 하위 메뉴상의 각 색상에 대한 Click 이벤트를 처리한다(배경색 메뉴도 유사하게 동작한다) ForegroundOnOpened 핸들러는 Items 프로퍼티의 항목에 대해 루프를 도는데, 메뉴 항목과 TextBlock의 현재 전경색과 색상이 일치하면 IsChecked 프로퍼티값을 true로 설정하고 아니면 false로 설정한다. ForegroundOnClick 메소드는 오직 TextBlock 을 위한 새로운 브러쉬를 생성할 뿐 체크/해제 해제하는 부분과는 관련이 없다. 
+
+메뉴를 통해서 실제 색상을 얻을 수 있을까? 물론 가능하다. 그리고 MenuItem 클래스는 항목 왼쪽에 작은 그림을 보여줄 수 있는 Icon 프로퍼티를 갖고 있다. FillWithColors 메소드안의 if 블럭에서 MenuItem 이 생성된 후 아래의 구문을 추가하자. System.Windows.Shapes는 이미 using문에 추가해 놓았다. 
+
+Rectangle rect = new Rectangle();
+rect.Fill = new SolidColorBrush(clr);
+rect.Width = 2 * (rect.Height = 12);
+item.Icon = rect;
+
+체크 표시가 나타나게 설정하면 Icon 프로퍼티와 공간을 공유한다. 
+
+11장의 ColorGrid 컨트롤 예제와 유사하지만 좀 더 간단한 13장의 ColorGridBox 컨트롤 예제를 다시 살펴보라. 메뉴 항목으로 이 컨트롤들을 사용할 수 있는데 다음 프로그램을 통해 이를 살펴보자. 이 프로젝트에서는 ColorGrid Box.cs 파일을 추가해야 한다. 그리고 Petzole.SelectColorFromGrid에 대한 using문을 쓰고 있음을 확인하자. 
+
+
+using sky4868.SelectColorFromGrid;
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class SelectColorFromMenuGrid : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new SelectColorFromMenuGrid());
+	}
+	public SelectColorFromMenuGrid()
+	{
+		Title = "Select Color from Menu Grid";
+
+		//DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//탑 메뉴가 될 Menu 생성
+		Menu menu = new Menu();
+		dock.Children.Add(menu);
+		DockPanel.SetDock(menu, Dock.Top);
+
+		//나머지를 채울 TextBlock 생성
+		TextBlock text = new TextBlock();
+		text.Text = Title;
+		text.FontSize = 32;
+  		text.TextAlignment = TextAlignment.Center;
+		dock.Children.Add(text);
+
+		//메뉴에 항목을 추가
+		MenuItem itemColor = new MenuItem();
+		itemColor.Header = "_Color";
+		menu.Items.Add(itemColor);
+
+		MenuItem itemForeground = new MenuItem();
+		itemForeground.Header = "_Foreground";
+		itemColor.Items.Add(itemForeground);
+
+		//윈도우 전경색과 바인딩되는 ColorGridBox를 생성
+		ColorGridBox clrbox = new ColorGridBox();
+		clrbox.SetBinding(ColorGridBox.SelectedValueProperty, "Foreground");
+		clrbox.DataContext = this;
+		itemForeground.Items.Add(clrbox);
+
+		MenuItem itemBackground = new MenuItem();
+		itemBackground.Header = "_Background";
+		itemColor.Items.Add(itemBackground);
+
+		//윈도우 배경색과 바인딩되는 ColorGridBox를 생성
+		clrbox = new ColorGridBox();
+		clrbox.SetBinding(ColorGridBox.SelectedValueProperty, "Background");
+		clrbox.DataContext = this;
+		itemBackground.Items.Add(clrbox);
+	}
+}
+
+
+이전의 프로그램처럼 이 프로그램은 하위 메뉴로 Foreground와 Background라는 항목을 가진 Color라는 탑 레벨 항목을 만든다. 프로그램은 Foreground와 Background 하위 메뉴에 여러 개의 항목을 추가하는 대신에 ColorGridBox 타입의 각 객체에 하나의 항목만을 추가한다. ColorGridBox의 SelectedValue 프로퍼티는 Brush타입의 객체이므로, Foreground와 Background 하위 메뉴에 ColorGridBox 타입의 객체를 항목당 하나씩 추가한다. 이렇게 하면 이벤트 핸들러를 사용하지 않아도 되며, ColorGridBox의 의존 프로퍼티인 SelectedValueProperty와 Window의 Foreground 프로퍼티와 Background 프로퍼티 사이에 바인딩을 제공할 수 있다. 
+
+SubmenuOpen 이벤트가 메뉴 항목을 검사하는 데 얼마나 유용한지 살펴보았다. 특정 메뉴 항목을 비활성화 시키기 위해 이 이벤트를 사용하는 것은 프로그램에서 흔히 볼 수 있다. 
+하나의 예가 바로 Edit 메뉴다. 클립보드에 텍스트가 없다면 클립보드를 이용해 텍스트를 전송하는 붙여넣기 메뉴는 비활성화 된다. 프로그램이 무언가를 클립보드로 복사할 수 있을 때만 잘라내기, 복사, 삭제 옵션들이 활성화된다. 
+
+다음 프로그램은 TextBlock 엘리먼트에서 텍스트를 잘라내기, 복사, 붙여넣기, 삭제할수 있는 Edit 메뉴만이 구현되어 있다. 프로젝트의 애플리케이션 리소스에는 4개의 비트맵이 들어있는데 이 비트맵을 각 메뉴 항목의 Icon프로퍼티에 설정하기 위해 Image 엘리먼트를 생성한다(마이크로소프트 비주얼 스튜디오에 들어있던 것이며, 원래 해상도가 72DPI였던 것을 96DPI로 변경했다)
