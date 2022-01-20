@@ -1,0 +1,515 @@
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+public class CutCopyAndPaste : Window
+{
+	TextBlock text;
+	protected MenuItem itemCut, itemCopy, itemPaste, itemDelect;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new CutCopyAndPaste());
+	}
+	public CutCopyAndPaste()
+	{
+		Title = "Cut, Copy, and Paste";
+
+		//DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//탑 메뉴가 될 Menu 생성
+		Menu menu = new Menu();
+		dock.Children.Add(menu);
+		DockPanel.SetDock)menu, Dock.Top);
+
+		//나머지를 채울 TextBlock 을 생성
+		text = new TextBlock();
+		text.Text = "Sample clipboard text";
+		text.HorizontalAlignment = HorizontalAlignment.Center;
+		text.VerticalAlignment = VerticalAlignment.Center;
+		text.FontSize = 32;
+		text.TextWrapping = TextWrapping.Wrap;
+		dock.Children.Add(text);
+
+		//Edit 메뉴 생성
+		MenuItem itemEdit = new MenuItem();
+		itemEdit.Header = "_Edit";
+		itemEdit.SubmenuOpened += EditOnOpened;
+		menu.Items.Add(itemEdit);
+
+		//Edit 메뉴 항목 생성
+		itemCut = new MenuItem();
+		itemCut.Header = "Cu_t";
+		itemCut.Click += CutOnClick;
+		Image img = new Image();
+		img.Source = new BitmapImage(new Uri("pack://application:,,/Images/CusHS.png"));
+		itemCut.Icon = img;
+		itemEdit.Items.Add(itemCut);
+
+		itemCopy = new MenuItem();
+		itemCopy.Header = "_Copy";
+		itemCopy.Click += CopyOnClick;
+		img = new Image();
+		img.Source = new BitmapImage(new Uri("pack://application:,,/Images/CopyHS.png"));
+		itemCopy.Icon = img;
+		itemEdit.Items.Add(itemCopy);
+
+		itemPaste = new MenuItem();
+		itemPaste.Header = "_Paste";
+		itemPaste.Click += PasteOnClick;
+		img = new Image();
+		img.Source = new BitmapImage(new Uri("pack://application:,,/Images/PasteHS.png"));
+		itemPaste.Icon = img;
+		itemEdit.Items.Add(itemPaste);
+
+		itemDelete = new MenuItem();
+		itemDelete.Header = "_Delete";
+		itemDelete.Click += DeleteOnClick;
+		img = new Image();
+		img.Source = new BitmapImage(new Uri("pack://application:,,/Images/DeleteHS.png"));
+		itemDelete.Icon = img;
+		itemEdit.Items.Add(itemDelete);
+	}
+	void EditOnOpened(object sender, RoutedEventArgs args)
+	{
+		itemCut.IsEnabled = itemCopy.IsEnabled = itemDelete.IsEnabled = text.Text != null && text.Text.Length > 0;
+		itemPaste.IsEnabled = Clipboard.ContainsText();
+	}
+	protected void CutOnClick(object sender, RoutedEventArgs args)
+	{
+		CopyOnClick(sender, args);
+		DeleteOnClick(sender, args);
+	}
+	protected void CopyOnClick(object sender, RoutedEventArgs args)
+	{
+		if(text.Text != null && text.Text.Length > 0)
+			Clipboard.SetText(text.Text);
+	}
+	protected void PasteOnClick(object sender, RoutedEventArgs args)
+	{
+		if(Clipboard.ContainsText())
+			text.Text = Clipboard.GetText();
+	}
+	protected void DeleteOnClick(object sender, RoutedEventArgs args)
+	{
+		text.Text = null;
+	}
+}
+
+
+잘라내기, 복사, 붙여넣기, 삭제에 대한 MenuItem 객체를 필드로 정의하고, EditOnOpened 이벤트 핸들러를 통해 액세스한다. 이 핸들러의 TextBlock에 텍스트가 들어있으면 잘라내기, 복사, 삭제를 할 수 있다. 붙여넣기 항목의 활성화를 위해 핸들러에서 board.ContainsText정적 메소드의 결과 값을 이용한다. 
+
+PasteOnClick 메소드는 클립보드에서 텍스트를 복사하기 위해 Clipboard.GetText 메소드를 사용한다. 유사하게 CopyOnClick 은 Clipboard.SetText를 사용한다. 삭제 명령어는 클립보드에 접근할 필요 없이 TextBlock 엘리먼트의 Text 프로퍼티를 null로 설정하면 된다. CutOnClick 이벤트 핸들러는 잘라내기 기능을, CopyOnClick은 복사 기능을, DeleteOnClick은 삭제 기능을 구현한다. 
+
+CutCopyAndPaste 프로그램은 Edit 메뉴에 대한 표준 밑줄 문서를 갖는다. 예를 들어 Alt, E, P를 누르면 붙여넣기 명령을 실행할 수 있다. 하지만 이 편집 명령어들은 일명 가속기(acclcrators)라고 부르는 표준 키보드 바로 가기 키를 갖는다. 잘라내기를 위한 Ctrl+X, 복사를 위한 Ctrl+C, 붙여넣기를 위한 Ctrl+V, 삭제를 위한 Delete 키가 있다. CutCopyAndPaste 프로그램에서 이런 기능을 구현하지 않는다는 사실에 유의하자. 
+
+잘라내기 항목과 Ctrl+X를 함께 보여주는 쉬운 방법은 메뉴 항목의 InputGetstureText 프로퍼티에 Ctrl+X를 지정하는 것이다. 
+
+itemCut.InputGestureText = "Ctrl+X";
+
+하지만 실제로 사용자가 Ctrl+X를 눌렀을 때 잘라내기 명령어가 실행되는 것은 완전히 다른 작업이다. 보통 자동으로 이루어지지 않으며, 이를 처리하기 위해서는 두 가지 방법이 있다. 하나는 지금 설명할 키보드 입력을 직접 처리하는 방법이고, 또 하나는 그 다음에 보여줄 커맨드 바인딩이다. 
+
+키보드 입력을 처리하기로 결정했다면 그 입력은 우선순위를 높여서 처리해야 한다. 즉, 다른 것이 입력을 가로채기 전에 메뉴 가속기에 대한 키보드 입력을 검사해야 한다. 그러기 위해서는 윈도우의 OnPreviewKeyDown 메소드를 오버라이딩해야 한다. 키 입력과 메뉴 항목이 일치 하면 명령어가 실행되고 이벤트 인자의 Handled 프로퍼티를 true로 설정한다. 
+
+메뉴 항목을 실행하는 키보드 입력은 KeyGesture 클래스를 통해 쉽게 처리할 수 있다. Ctrl+X를 위한 KeyGesture 타입의 객체를 아래와 같이 정의할수 있다. 
+
+KeyGesture gestCut = new KeyGesture(Key.X, ModifierKeys.Control);
+
+이 클래스를 사용하는 이유는 InputEventArgs 인자를 받아들이는 Matches 메소드를 사용하기 위해서다. OnPreviewKeyDown 이벤트 핸들러가 이벤트를 전달하는 KeyEventArgs를 인자로 받게 오버라이딩해서 Match 메소드를 호출할 수 있다.(KeyEventArgs는 InputEventArgs에서 파생되었다) Matches 메소드는 실제로 KeyEventArgs를 인자로 사용하며, 사용자가 누른 키와 Key Gesture 객체에 정의된 키가 같으면 true를 리턴한다. 오버라이딩한 OnPreviewKeyDown 메소드는 다음과 같다. 
+
+if(gestCut.Matches(null, args))
+{
+	CutOnClick(this, args);
+	args.Handled = true;
+}
+
+KeyEventArgs 객체가 RoutedEventArgs 에서 파생되었기 때문에 직접 CutOnClick에 넘겨줄수 있다. 그러나 Click 핸들러를 호출하기 전까지 잘라내기 항목이 실제로 유효한지 아닌지 체크하지 않는다. itemCut 메뉴 항목이 활성화되었는지 체크하는 것이 쉬운 방법일 것이다. 
+
+하지만 itemCut은 드롭다운 메뉴가 나타날 때만 활성화되기 때문에 제대로 작동하지 않을 것이다. 
+
+다행히 CutCopyAndPaste 프로그램의 CopyOnClick과 PasteOnClick 메소드는 명령어가 유효하지 않으면 실제 복사와 붙여넣기를 수행하지 않는다. 이 체크 로직을 Edit 메뉴의표준 키보드 가속기를 처리하는 데 재활용하기 위해 CutCopyAndPaste 를 상속받는다. 이 프로젝트는 CutCopyAndPaste.cs 소스 코드 파일이 필요하지만 소스 코드의 using 문에는 이 파일이 없다. 대신 클래스를 정의할 때 CutCopyAndPaste 클래스의 전체 이름을 사용했다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class ControlXCV : Petzold.CutCopyAndPaste.CutCopyAndPaste
+{
+	KeyGesture gestCut = new KeyGesture(Key.X, ModifierKeys.Control);
+	KeyGesture gestCopy = new KeyGesture(Key.C, ModifierKeys.Control);
+	KeyGesture gestPaste = new KeyGesture(Key.V, ModifierKeys.Control);
+	KeyGesture gestDelete = new KeyGesture(Key.Delete);
+
+	[STAThread]
+	public new static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ControlXCV());
+	}
+	public ControlXCV()
+	{
+		Title = "Control X, C, and V";
+
+		itemCut.InputGestureText = "Ctrl+x";
+		itemCopy.InputGestureText = "Ctrl+c";
+		itemPaste.InputGestureText = "Ctrl+v";
+		itemDelete.InputGestureText = "Delete";
+	}
+	protected override void OnPreviewKeyDown(KeyEventArgs args)
+	{
+		base.OnkeyDown(args);
+		args.Handled = true;
+
+		if(gestCut.Matches(null, args)
+			CutOnClick(this, args);
+		else if(gestCopy.Matches(null, args)
+			CopyOnClick(this, args):
+		else if(gestPaste.Matches(null, args)
+			PasteOnClick(this, args);
+		else if(gestDelete.Matches(null, args)
+			DeleteOnClick(this, args);
+		else
+			args.Handled = false;
+	}
+}
+
+
+CutCopyAndPaste 클래스처럼 Main 메소드를 정의한 클래스를 상속받거나 새로운 Main 메소드(ControlXCV 클래스에서 하는 것처럼)를 정의하게되면 어떤 Main 메소드가 프로그램의 시작점인지를 비주얼 스튜디오에 지정해야 한다. 솔루션 탐색기에서 프로젝트의 속성을 선택하고 시작 개체 항목에 원하는 Main 메소드가 들어있는 클래스를 지정한다. 
+
+프로그램은 KeyGesture 객체 4개를 멤버 변수로 정의하고 각 MenuItem의 InputGesture Text 프로퍼티를 그에 맞는 문자열로 설정한다 (아쉽게도 KeyGesture는 ToString 메소드와 같은 정보를 제공하지 않는다). OnPreviewKeyDown 메소드는 이벤트 인수의 Handled 프로퍼티를 true로 지정하는 것에서 시작한다. 그리고 키가 정의한 KeyGesture 개체와 맞지 않으면 프로퍼티를 false로 재지정한다. 
+
+
+KeyGesture 객체가 많은 경우 그 객체들을 컬렉션에 저장하고 싶을 것이다. 아래처럼 제너릭 Dictionary를 생성하는 필드를 정의할 수 있다. 
+
+Dictionary<KeyGesture, RoutedEventHandler> gests = new Dictionary<KeyGesture, RoutedEventHandler>();
+
+윈도우의 생성자는 컬렉션을 KeyGesture 객체와 객체의 이벤트 핸들러로 채운다. 
+
+gests.Add(new KeyGesture(Key.X, ModifierKeys.Control), CutOnClick);
+gests.Add(new KeyGesture(Key.C, ModifierKeys.Control), CopyOnClick);
+gests.Add(new KeyGesture(Key.V, ModifierKeys.Control), PasteOnClick;
+gests.Add(new KeyGesture(Key.Delete), DeleteOnClick);
+
+OnPreviewKeyDown 메소드는 gests에 대해 루프를 돌면서 일치하는 이벤트 핸들러를 찾아서 호출한다. 
+foreach(KeyGesture gest in gests.Keys)
+{
+	if(gest.Matches(null, args)
+	{
+		gests[gest](this, args);
+		args.Handled = true;
+	}
+}
+
+if 블록의 첫 번째 구문은 gets라는 이름의 Dictionary 객체 중에서 gest라는 이름의 KeyGesture 객체와 일치하는 것을 가리킨다. 검색 결과는 RoutedEventHandler 객체로 핸들러를 this와 KeyEventArgs 객체를 인자로 호출한다. 
+
+직접 Click 이벤트 핸들러를 호출하고 싶지 않으면 Value가 MenuItem인 Dictionary를 정의한다. 
+
+Dictionary<KeyGesture, MenuItem) gests = new Dicitionary<KeyGesture, MenuItem>();
+
+이 gests에 엔트리를 추가한다. 
+
+gests.Add(new KeyGestrue(Key.X, ModifierKeys.Control), itemCut);
+
+그러면 OnKeyDown은 아래와 같이 된다. 
+
+foreach(KeyGesture gest in gests.Keys)
+	if(gest.Matchs(null, args))
+		gests[gest].RaiseEvent( new RoutedEventArgs(MenuItem.ClickEvent, gests[gest]));
+
+이것만 본다면 커맨드 바인딩이 더 간단한 방법이라고 생각할 수도 있다. 4장의 CommandTheButton 프로그램에서 버튼과 커맨드 바인딩을 어떻게 사용하는지를 살펴보았다. 메뉴 항목에 커맨드 바인딩을 사용하는 것도 유사하다. 보통은 ApplicationCommands지만 더 복잡한 경우에는 ComponentCommands, EditingCommands, MediaCommands, NavigationCommands 클래스의 RoutedUICommand 타입의 정적 프로퍼티를 사용한다. 하지만 직접 만들 수도 있다. 
+
+미리 정의되어 있는 정적 프로퍼티를 이용하려면 아래와 같이 MenuItem의 Command 프로퍼티를 설정한다. 
+
+itemCut.Command = ApplicationCommands.Cut;
+
+MenuItem의 Header 프로퍼티를 설정하지 않으면 RoutededUICommand의 Text 프로퍼티를 사용할수 있는데, 밑줄에 대한 정의만 없다면 문제없다. MenuItem은 자동으로 메뉴 항목에 Ctrl+X 텍스트를 추가한다. 
+
+또 다른 중요한 단계는 RoutedUICommand 객체를 기반으로 커맨드 바인딩을 만들어서 윈도우의 CommandBindings 컬렉션에 추가하는 것이다. 
+
+CommandBindings.Add(new CommandBinding(ApplicationCommands.Cut, CutOnExecute, CutCanExecute));
+
+이 커맨드 바인딩은 자동으로 커맨드와 연결되는 표준 가속기에 대한 키보드 처리를 제공한다. 보이는 것처럼 이 가속기는 RoutedUICommand 객체 안에서 정의된다. 커맨드와 CommandBinding을 연결시켜주는 커맨드 바인딩은 CanExecute와 Executed 이벤트를 발생시킨다. RoutedUICommand 객체를 사용할 때 Edit 메뉴에서 항목을 활성화시키거나 비활성화시키기 위해 이벤트 핸들러를 제공할 필요는 없다. CanExecute 핸들러에서 CanExecuteRoutedEventArgs 의 CanExecute 프로퍼티를 true나 false로 설정함으로써 메뉴 항목을 활성화시키거나 비활성화시킬 수 있다. 필요하다면 여러 메뉴 항목간에 CanExecute 핸들러를 공유할수 있다. 
+
+프로그램은 Edit 메뉴의 네 개 표준 항목에 대한 커맨드 바인딩을 구현한다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class CommandTheMenu : Window
+{
+	TextBlock text;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new CommandTheMenu());
+	}
+	public CommandTheMenu()
+	{
+		Title = "Command the Menu";
+
+		//DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//탑 메뉴용 Menu 생성
+		Menu menu = new Menu();
+		dock.Children.Add(menu);
+		DockPanel.SetDock(menu, Dock.Top);
+
+		//나머지를 채울 TextBlock 생성
+		text = new TextBlock();
+		text.Text = "Sample clipboard text";
+		text.HorizontalAlignment = HorizontalAlignment.Center;
+		text.VerticalAlignment = VerticalAlignment.Center;
+		text.FontSize = 32; // 즉 24point
+		text.TextWrapping = TextWrapping.Wrap;
+		dock.Children.Add(text);
+
+		//Edit 메뉴 생성
+		MenuItem itemEdit = new MenuItem();
+		itemEdit.Header = "_Edit";
+		menu.Items.Add(itemEdit);
+
+		//Cut 메뉴 항목을 생성
+		MenuItem itemCut = new MenuItem();
+		itemCut.Header = "Cu_t";
+		itemCut.Command = ApplicationCommands.Cut;
+		itemEdit.Items.Add(itemCut);
+
+		MenuItem itemCopy = new MenuItem();
+		itemCopy.Header = "_Copy";
+		itemCopy.Command = ApplicationCommands.Copy;
+		itemEdit.Items.Add(itemCopy);
+
+		MenuItem itemPaste = new MenuItem();
+		itemPaste.Header = "_Paste";
+		itemPaste.Command = ApplicationCommands.Paste;
+		itemEdit.Items.Add(itemPaste);
+
+		MenuItem itemDelete = new MenuItem();
+		itemDelete.Header = "_Delete";
+		itemDelete.Command = ApplicationCommands.Delete;
+		itemEdit.Items.Add(itemDelete);
+
+		//Window 컬렉션에 바인딩될 커맨드를 추가
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Cut, CutOnExecute, CutCanExecute));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy, CopyOnExecute, CutCanExecute));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Paste, PasteOnExecute, PasteCanExecute));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Delete, DeleteOnExecute, CutCanExecute));
+	}
+	void CutCanExecute(object sender, CanExecuteRoutedEventArgs args)
+	{
+		args.CanExecute = text.Text != null && text.Text.Length > 0;
+	}
+	void PasteCanExecute(object sender, CanExecuteRoutedEventArgs args)
+	{
+		args.CanExecute = Clipboard.ContainsText();
+	}
+	void CutOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		ApplicationCommands.Copy.Execute(null, this);
+		ApplicationCommands.Delete.Execute(null, this);
+	}
+	void CopyOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		Clipboard.SetText(text.Text);
+	}
+	void PasteOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		text.Text = Clipboard.GetText();
+	}
+	void DeleteOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		text.Text = null;
+	}
+}
+
+잘라내기, 복사, 삭제, 모두 CanExecute 핸들러를 똑같이 공유한다는 사실을 주목하자.
+
+커맨드 바인딩으로 표준 Edit 항목을 구현하는 것이 좋다해도 더 재미있는 것은 새로운 것을 만들어 보는 것이다. CommandTheMenu 프로그램의 생성자 끝에 다음 코드를 추가하자. 이 객체는 TextBlock 에 원래 있던 텍스트로 복구시키는 Restore라는 새로운 커맨드를 생성한다. Restore 커맨드의 바로 가기 키는 Ctrl+R이다. 
+
+RoutedUICommand는 여러 키 조합과 연관이 있기 때문에 컬렉션에는 반드시 하나의 조합만 정의돼야 한다. 
+
+InputGestrueCollection collGestures = new InputGestureCollection();
+
+컬렉션에 적절한 keyGesture를 추가한다. 
+
+collGestures.Add(new KeyGesture(Key.R, ModifierKeys.Control));
+
+그런후 RoutedUICommand를 생성한다. 
+
+RoutedUICommand commRestore = new RoutedUICommand("_Restore", "Restore", GetType(), collGestures);
+
+생성자의 첫 번째 인수는 Text 프로퍼티고, 두 번째는 Name 프로퍼티다(Text 프로퍼티에 밑줄이 있는 것에 주목하자) 세 번째 인수는 소유자로 단순하게 Window 객체가 될 수 있다. 그리고 네 번째 인수는 키보드 조합에 대한 컬렉션이다. 이제 MenuItem 을 정의해서 메뉴에 추가한다. 
+
+MenuItem itemRestore = new MenuItem();
+itemRestore.Header = "_Restore";
+itemRestore.Command = commRestore;
+itemEdit.Items.Add(itemRestore);
+
+RoutedUICommand에서 Text 프로퍼티를 사용할수 있기 때문에 Header 프로퍼티를 반드시 설정할 필요는 없다. 하지만 커맨드는 윈도우의 커맨드 컬렉션에 반드시 추가되어야 한다. 아래에 이벤트 핸들러를 지정했다. 
+
+CommandBindings.Add(new CommandBinding(commRestore, RestoreOnExecute));
+
+RestoreOnExecute 핸들러는 TextBlock 의 텍스트를 원래 값으로 되돌린다. 
+
+void RestoreOnExecute(object sender, ExecutedRoutedEventArgs args)
+{
+	text.Text = "Sample clipboard text";
+}
+
+지금까지 이 장에서 살펴본 프로그램은 윈도우 상단에 위치하는 Menu 컨트롤에 대해서만 이야기했다. WPF는 오른쪽 마우스 버튼을 클릭했을 때 나타나는 ContextMenu 컨트롤도 지원한다. 
+
+툴 팁처럼 ContextMenu는 클래스이면서 프로퍼티이다. ContextMenu 프로퍼티는 FrameworkElement와 FrameworkContentElement에 의해 구분한다. 원한다면 다른 특정 엘리먼트와 연관된 ContextMenu 객체를 정의하고, ContextMenu 객체를 그 엘리먼트의 ContextMenu 프로퍼티에 할당할 수 있다. 그러면 엘리먼트에서 마우스 오른쪽 버튼을 클릭할 때마다 컨텍스트 메뉴가 나타난다. 메뉴가 열릴 때 이를 초기화하기 위한 이벤트 핸들러를 추가하면 클릭 여부를 검사해 이벤트가 실행된다. 
+
+엘리먼트의 ContextMenu 프로퍼티에 ContextMenu 객체를 설정하지 않으면 MouseRightButtonUp 이벤트에 대해 컨텍스트 메뉴를 직접 보여줘야 한다. 다행스럽게도 컨텍스트 메뉴를 보여주는 것은 IsOpen 프로퍼티를 true로 설정하는 것만큼이나 쉽다. 컨텍스트 메뉴는 기본 설정에 따라 마우스 포인터 위치에 나타난다. 
+
+다음 프로그램은 3장의 ToggleBoldAndItalic 프로그램과 유사하다. 프로그램은 유명한 인용문을 보여주는데, 각 단어에서 마우스 오른쪽 버튼을 클릭하면 컨텍스트 메뉴가 나타난다. 컨텍스트 메뉴는 굵게(Bold), 이탤릭(Italic), 밑줄(Underline), 아래 첨자(baseline), 위 첨자(Overline), 취소선(Strikethrough)과 같은 포맷팅 옵션 목록을 보여준다. 프로그램은 텍스트의 모든 단어에 대해 ContextMenu 객체는 하나만 생성한다. 그리고 각 단어의 포맷팅 이력를 유지 하지 않는다. 대신 컨텍스트 메뉴가 나타날 때마다 클릭된 단어의 포맷팅 정보로 메뉴를 초기화 한다. 
+
+
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class PopupContextMenu : Window
+{
+	ContextMenu menu;
+	MenuItem itemBold, itemItalic;
+	MenuItem[] itemDecor;
+	Inline inClicked;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new PopupContextMenu();
+	}
+	public PopupContextMenu()
+	{
+		Title = "Popup Context Menu";
+
+		//ContextMenu 생성
+		menu = new ContextMenu();
+
+		//Bold 항목 추가
+		itemBold = new MenuItem();
+		itemBold.Header = "Bold";
+		menu.Items.Add(itemBold);
+
+		//Italic 항목 추가
+		itemItalic = new MenuItem();
+		itemitalic.Header = "Italic";
+		menu.Items.Add(itemItalic);
+
+		//모든 TextDecorationLocation 멤버를 구함
+		TextDecorationLocation[] locs = (TextDocorationLocation[])Enum.GetValues(typeof(TextDecorationLocation));
+
+		//MenuItem 객체 배열을 생성해 채움
+		itemDecor = new MenuItem[locs.Length];
+
+		for(int i=0; i<locs.Length; i++)
+		{
+			TextDecoration decor = new TextDecoration();
+			decor.Location = locs[i];
+
+			itemDecor[i] = new MenuItem();
+			itemDecor[i].Header = locs[i].ToString();
+			itemDecor[i].Tag = decor;
+			menu.Items.Add(itemDecor[i]);
+		}
+		//전체 컨텍스트 메뉴를 핸들러 한 개로 처리
+		menu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(MenuOnClick));
+		//윈도우 Content를 위한 TextBlock을 생성
+		TextBlock text = new TextBlock();
+		text.FontSize = 32;
+		text.HorizontalAlignment = HorizontalAlignment.Center;
+		text.VerticalAlignment = VerticalAlignment.Center;
+		Content = text;
+
+		//문장을 단어로 분리
+		string strQuote = "To be, or not to be, that is the question";
+		string[] strWords = strQuote.Split();
+
+		//각 단어로 Run 객체를 만들어서 TextBlock에 추가
+		foreach(string str in strWords)
+		{
+			Run run = new Run(str);
+
+			//TextDecorations이 실제로 컬렉션인지를 확인
+			run.TextDecorations = new TextDecorationCollection();
+			text.Inlines.Add(run);
+			text.Inlines.Add(" ");
+		}
+	}
+	protected override void OnMouseRightButtonUp(MouseButtonEventArgs args)
+	{
+		base.OnMouseRightButtonUp(args);
+	
+		if((inlClicked = args.Source as Inline) != null)
+		{
+			//inLine 프로퍼티에 맞는 메뉴 항목인지 검사
+			itemBold.IsChecked = (inlClicked.FontWeight == FontWeights.Bold);
+			itemItalic.IsCheck = (inlClicked.FontStyle == FontStyles.Italic);
+
+			foreach(MenuItem item in itemDecor)
+			item.IsChecked = (inlClicked.TextDecorations.Contains(item.Tag as TextDecoration));
+
+			//컨텍스트 메뉴를 보여줌
+			menu.IsOpen = true;
+			args.Handled = true;
+		}
+	}
+	void MenuOnClick(object sender, RoutedEventArgs args)
+	{
+		MenuItem item = args.Source as MenuItem;
+	
+		item.IsChecked ^= true;
+
+		//체크 항목이나 체크해제 항목을 기반으로 Inline을 변경
+		if(item == itemBold)		
+			inlClicked.FontWeight = (item.IsChecked? FontWeights.Bold : FontWeights.Normal);
+		else if(item == itemItalic)
+			inlClicked.FontStyle = (item.IsChecked ? FontStyles.Italic : FontStyles.Normal);
+		else
+		{
+			if(item.IsChecked)
+				inlClicked.TextDecorations.Add(item.Tag as TextDecoration);
+			else
+				inlClicked.TextDecorations.Remove(item.Tag as TextDecoration);
+		}
+	}
+}
+
+윈도우 생성자는 ContextMenu 객체를 생성하는 것으로 시작한다. 메뉴에 굵게(Bold)와 이탤릭(Italic)항목을 추가한 후에 TextDecorationLocation 열거형 멤버를 구한다. 이 멤버들은 밑줄(Underline), 위첨자(Overline), 취소선(Strikethrough), 아래 첨자(Baseline)를 나타낸다. 생성자는 메뉴 항목을 위한 click 핸들러를 할당하기 위해 ContentMenu의 AddHandler 메소드를 사용한다. 
+
+String 클래스의 Split 메소드는 인용문을 단어로 분리한다. 이 단어들을 Run 타입의 객체를 만들고 한데 모아서 하나의 TextBlock 객체로 합친다. TextDecoration 컬렉션이 각 Run 객체별로 생성된다는 사실에 주의하자. 기본 설정은 이 컬렉션을 만들지 않는 것이어서 보통 TextDecorations 프로퍼티는 null이다. 
+
+OnMouseRightButtonUp 메소드가 윈도우의 마우스 이벤트를 얻는 것처럼 보이지만 이벤트 라우팅은 Inline 객체가 클릭되면 이벤트 인자의 Source 프로퍼티가 객체를 가리키게 한다(Inline에서 Run이 파생되었다는 것을 기억하자) 그런 후 이벤트 핸들러는 클릭된 단어의 프로퍼티를 가지고 메뉴를 초기화 한다. 
+
+MenuOnClick은 수동으로 클릭된 항목의 IsChecked 프로퍼티를 토글한다. 메뉴를 클릭하면 사라지기 때문에 꼭 필요한 작업은 아니다. 이벤트 핸들러는 클릭한 Inline 객체의 포맷팅을 어떻게 변경할지를 결정하기 위해 이 IsChecked 프로퍼티의 새로운 값을 이용한다. 
+
+이번 장은 윈도우의 상단을 차지하는 메뉴로 시작했다 이미 알고 있듯이 보통 메뉴 아래에는 툴바가 있고(때로는 중요하게 여길 수 있는) 상태바는 윈도우 하단에 위치한다. 이런 내용이 15장의 주제이다. 
