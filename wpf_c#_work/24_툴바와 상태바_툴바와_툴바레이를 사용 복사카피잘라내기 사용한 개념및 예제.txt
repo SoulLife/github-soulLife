@@ -1,0 +1,506 @@
+CHAPTER 15장 : 툴바와 상태바
+
+메뉴와 툴바를 쉽게 구분하게 된 지는 그리 오래되지 않았다. 텍스트를 계층적으로 구성해 만드는 게 메뉴라면 툴바는 비트맵 버튼을 한 줄로 배치해서 만든다. 그러나 아이콘과 컨트롤을 메뉴에서도 사용할 수 있게 되고, 툴바에서도 드롭다운 메뉴가 사용 가능해지면서 그 차이는 더 모호해졌다. 보통 툴바는 윈도우 상단의 메뉴 아래에 위치하며, 상태바와 같이 사용하는 것이 일반적이지만 둘 중 하나만 사용할 수도 있다. 
+
+ToolBar는 MenuItem이나 16장에서 살펴보게 될 TreeViewItem처럼 HeaderedItemsControl을 상속받으므로 Items 컬렉션이 있어서 툴바 위에 버튼과 같은 항목을 출력할 수 있다. ToolBar의 Header프로퍼티는 수평 툴바에서는 사용되지 않고 수직 툴바에서 타이틀로만 사용된다. 
+
+ToolBarItem 클래스라는 것은 없다. 윈도우나 패널에서 사용할 수 있는 엘리먼트와 컨트롤은 툴바에서도 역시 사용할수 있다. 물론 버튼이 가장 즐겨 사용되며, 보통 작은 비트맵으로 나타낸다. ToggleButton은 온/오프를 선택하는 데 사용된다. ComboBox는 툴바에서 아주 유용하며 단일 라인 TextBox 역시 사용할 수 있다. 심지어 툴바에 드롭다운이 가능한 MenuItem도 가능하며, 다른 컨트롤들도 가능할 것이다. Separator는 기능적으로 그룹핑을 위해 사용한다. 툴바는 윈도우나 대화상자보다 텍스트가 적고 그림 형태이기 때문에 툴바 항목에 툴팁을 사용해야 한다. 툴바 항목은 메뉴 항목과 중복되는 경우가 많으므로 커맨드 바인딩으로 공유해야 한다. 
+
+8개의 버튼을 가진 ToolBar를 만드는 프로그램으로 시작해보자. 이 ToolBar 버튼은 아무런 기능도 하지 않는다. 프로그램은 RoutedUICommand 타입의 ApplicationCommands 클래스에서 8개의 정적 프로퍼티 배열을 정의한다. 그리고 프로젝트의 Images 폴더에 있는 비트맵 파일 이름8개를 이 배열에 저장한다. 각 버튼의 Command 프로퍼티는 RoutedUICommand 객체중 하나로 할당되며 비트맵 이미지를 갖는다. 
+401장 시작 419페이지까지 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+
+public class CraftTheToolbar : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new CraftTheToolbar());
+	}
+	public CraftTheToolbar()
+	{
+		Title = "Craft the Toolbar";
+	
+		RoutedUICommand[] comm = 
+		{
+			ApplicationCommands.New, ApplicationCommands.Open,ApplicationCommands.Save, ApplicationCommands.Print,
+			ApplicationCommands.Cut, ApplicationCommands.Copy, ApplicationCommands.Paste, ApplicationCommands.Delete
+		};
+		string[] strImages = 
+		{
+			"NewDocumentHS.png", "openHS.png", "saveHS.png", "PrintHS.png", "CutHS.png", "CopyHS.png", "PasteHS.png",
+			"DeleteHS.png"
+		};
+		//윈도우 Content를 위한 DockPanel 생성
+		DockPanel dock =  new DockPanel();
+		dock.LastChildFill = false;
+		Content = dock;
+
+		//윈도우 상단에 위치할 툴바 생성
+		ToolBar toolbar = new ToolBar();
+		dock.Children.Add(toolbar);
+		DockPanel.SetDock(toolbar, Dock.Top);
+
+		//툴바 버튼 생성
+		for(int i=0; i< 8; i++)
+		{
+			if(i == 4)
+				toolbar.Items.Add(new Separator());
+			//버튼 생성
+			Button btn = new Button();
+			btn.Command = comm[i];
+			boolbar.Items.Add(btn);
+
+			//버튼의 내용에 해당하는 이미지 생성
+			Image img = new Image();
+			img.Source = new BitmapImage(new Uri("pack://application:,,/Images/' + strImages[i]));
+			img.Stretch = Stretch.None;
+			btn.Content = img;
+
+			//UICommand 텍스트 기반의 툴팁 생성
+			ToolTip tip = new ToolTip();
+			tip.Content = comm[i].Text;
+			btn.ToolTip = tip;
+
+			//윈도우 커맨드 바인딩에 UICommand 추가
+			CommandBindings.Add(new CommandBinding(comm[i], ToolBarButtonOnClick));
+		}
+	}
+	//아무 작업도 하지 않는 버튼에 대한 커맨드 핸들러
+	void ToolBarButtonOnClick(object sender, ExecutedRoutedEventArgs args)
+	{
+		RoutedUICommand comm = args.Command as RoutedUICommand;
+		MessageBox.Show(comm.Name + " command not yet implemented", Title);
+	}
+}
+
+
+버튼을 클릭하면 ToolBarButtonOnClick 이벤트 핸들러가 메시지 박스를 보여준다. 이벤트 핸들러를 RoutedUICommand 객체와 연결하기 위해서 for 루프의 끝 부분에 있는 윈도우의 커맨드 바인딩 컬렉션에 이 커맨드 객체(RoutedUICommand)를 추가해준다. RoutedUICommand 객체의 Text 프로퍼티가 각 버튼과 ToolTip 컨트롤을 연결해준다는 사실에 주목하자. 
+
+이 커맨드 바인딩의 좋은 점은 키보드 인터페이스에 있는데 Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+P, Ctrl+X, Ctrl+C, Ctrl+V, Delete 키로도 메시지 박스를 출력할 수 있다. 
+
+16픽셀의 사각형 이미지 파일들은 마이크로소프트 비주얼 스튜디오 2005에 들어있는 것들이다. 이미지의 해상도를 96dpi로 바꾸고 싶다면 이미지 편집 프로그램을 사용해야 한다. 이미지의 실제 크기가 1/6인치이면 윈도우 프레젠테이션 매니저 환경에서는 12포인트의 높이로 보인다. 더 높은 해상도라면 이미지가 선명하지는 않아도 실제 물리적 크기와 동일하게 이미지를 보여줄 수 있다. 
+
+여기 재밌는 사실이 하나 더 있다. 툴바가 클라이언트 영역을 꽉 채우는 걸 막기 위해 아래 구문을 제거한다. 
+
+dock.LastChildFill = false;
+
+이제 RichTextBox 컨트롤을 DockPanel에 추가하자. 이 구문은 for 루프 이전에 와야 한다. 
+
+RichTextBox txtbox = new RichTextBox();
+dock.Children.Add(txtbox);
+
+여기서 또 중요한 것은 키보드 입력 포커스를 RichTextBox에 놓기 위해 윈도우 생성자에 다음 구문을 추가하는 것이다. 
+
+txtbox.Focus();
+
+이미 알고 있겠지만 RichTextBox는 잘라내기, 복사, 붙여넣기에 대한 바로 가기 키(Ctrl+X, Ctrl+C, Ctrl+V)를 지원한다(RichTextBox에서 오른쪽 마우스 버튼을 클릭하면 작은 컨텍스트 메뉴에서 이 커맨드들을 볼 수 있다)RichTextBox의 커맨드 바인딩이 윈도우 커맨드 바인딩과 상호작용하게 구현된 것은 아주 바람직해 보인다. RichTextBox에 선택된 텍스트가 없으면 잘라내기가 복사 버튼은 사용 불능이 된다. 텍스트를 선택하고 버튼 중 하나를 클릭하면 메시지박스를 보여주는 것이 아니라 동작을 수행해야 한다(그러나 위 프로그램에서 버튼은 사용 불능이 되고 RichTextBox가 Ctrl+X나 Ctrl+C를 무시해도 메시지 박스는 나타난다)
+
+RichTextBox의 이러한 도움이 없다 하더라도 프로그램은 클립보드의 내용을 바탕으로 해 붙여넣기 버튼을 활성화 또는 비활성화가 되게 구현해야 한다. 프로그램이 표준 RoutedUICommand 객체를 사용하지 않는다면 클립보드의 내용을 확인하기 위해 타이머를 설정하고 그 결과를 가지고 버튼을 활성화해야한다. 표준 RoutedUICommand 객체를 사용하면 클립보드의 내용이 변경될 때마다 커맨드 바인딩과 연결된 CanExecute 핸들러가 호출되기 때문에 보통 더 쉽게 이를 구현할 수 있다. 
+
+마이크로소프트 인터넷 익스플로러와 같은 프로그램들은 의미가 명확하지가 않으면 툴바 버튼의 옆에 텍스트를 보여준다. WPF 툴바에서는 버튼을 StackPanel에 놓음으로서 이를 쉽게 구현할 수 있다. 먼저 if 루프 안에 있는 다음 구문을 주석으로 처리하자. 
+
+btn.Content = img;
+
+그 구문 밑에 다음 구문을 추가하자. 
+
+StackPanel stack = new StackPanel();
+stack.Orientation = Orientation.Horizontal;
+btn.Content = stack;
+
+TextBlock txtblk = new TextBlock();
+txtblk.Text = comm[i].Text;
+
+stack.Children.Add(img);
+stack.Children.Add(txtblk);
+
+이제 각 버튼의 이미지 오른쪽에 텍스트가 보일 것이다. StackPanel의 Orientation을 Vertical로 바꾸면 텍스트를 이미지의 밑으로 오게 바꿀수 있다. Image와 TextBlock의 순서는 StackPanel 자식 컬렉션에 추가하는 순서를 바꿈으로서 간단하게 변경할 수 있다. 
+
+툴바의 왼쪽 끝에 작은 그림 이미지가 있는 것을 볼 수 있다. 마우스를 그림의 위로 가져가면 마우스 커서는 Cursors.SizeAll(네 방향으로 화살표가 있는 커서)로 변한다. 그러나 커서가 바뀌 더라도 툴바를 이동시킬 수는 없다(이동시키는 방법은 나중에 다룰 것이다) ToolBar 객체의 Header 프로퍼티를 설정하면 텍스트는 툴바의 첫 번째 항목과 그립 사이에 나타난다. 
+
+윈도우의 폭이 툴바에 비해 너무 좁으면 오른쪽 끝에 작은 버튼이 나타나고, 이 버튼을 클릭하면 툴바의 다른 버튼들이 작은 팝업으로 보인다. 여기서 볼 수 있는 것은 ToolBarOverflowPanel 타입의 객체다. ToolBar는 항목들을 배열하기 위해 ToolBarPanel이라는 이름의 클래스를 사용한다. ToolBarPanel과 ToolBarOverflowPanel은 사용하는 경우가 다르다. 다음의 클래스 구조는 ToolBar 관련 클래스들을 모두 보여주고 있다. 
+
+FrameworkElement
+	Control
+		ItemsControl
+			HeaderedItemsControl
+				ToolBar
+	Panel (abstract)
+		StackPanel
+			ToolBarPanel
+		ToolBarOverflowPanel
+	ToolBarTray
+
+ToolBarPanel과 ToolBarOverflowPanel이 보통 툴바를 보여주는 부분을 담당하지만 수직 툴바나 다중 툴바 같은 것을 구현할 때는 ToolBarTray 클래스가 중요하다. 
+
+MoveTheToolbar 프로그램은 ToolBarTray를 어떻게 사용하는지를 보여준다. 두 개의 툴바를 생성하는데, 하나는 클라이언트 영역의 상단에 도킹되고, 다른 하나는 왼쪽에 도킹된다. 각 ToolBarTray는 3개의 ToolBar 컨트롤을 생성하며 각 ToolBar 컨트롤은 헤더와 영문자로 된 6개의 버튼을 갖는다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class MoveTheToolbar : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new MoveTheToolbar());
+	}
+	public MoveTheToolbar()
+	{
+		Title = "Move the Toolbar";
+
+		//Window Content를 위한 DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//윈도우 왼쪽과 상단에 위치할 ToolBarTray 생성
+		ToolBarTray trayTop = new ToolBarTray();
+		dock.Children.Add(trayTop);
+		DockPanel.SetDock(trayTop, Dock.Top);
+
+		ToolBarTray trayLeft = new ToolBarTray();
+		trayLeft.Orientation = Orientation.Vertical;
+		dock.Children.Add(trayLeft);
+		DockPanel.SetDock(trayLeft, Dock.Left);
+
+		//나머지 클라이언트 영역을 채울 텍스트 박스 생성
+		TextBox txtbox = new TextBox();
+		dock.Children.Add(txtbox);
+
+		//6개의 툴바 생성...
+		for(int i=0; i< 6; i++)
+		{
+			ToolBar toolbar = new ToolBar();
+			toolbar.Header = "Toolbar " + (i + 1);
+
+			if(i < 3)
+				trayTop.ToolBars.Add(toolbar);
+			else
+				trayLeft.ToolBars.Add(toolbar);
+			//각 6개의 버튼을 갖는데... 
+			for(int j=0; j< 6; j++)
+			{
+				Button btn = new Button();
+				btn.FontSize = 16;
+				btn.Content = (char)('A' + j);
+				toolbar.Items.Add(btn);
+			}
+		}
+	}
+}
+
+
+클라이언트 영역의 왼쪽에 도킹된 ToolbarTray가 수직 방향으로 나타난 것에 주목하자. ToolBar의 Header 프로퍼티를 숫자로 설정하면 상단의 ToolBarTray에 있는 툴바 번호는 1, 2, 3이 되고 왼쪽의 ToolBarTray에 있는 것들은 4, 5, 6이 된다. 각 트레이 내에서 툴바를 움직일 수 있다. 상단에 있는 것들은 수평으로, 왼쪽에 있는 것은 수직으로만 움직이며, 왼쪽에 있는 것은 여러 칼럼, 상단에 있는 것은 여러 행으로도 배치가 가능하다. 그러나 ToolBarTray의 ToolBar를 다른 트레이로 옮길 수는 없다. 
+
+트레이 내에서 툴바의 위치를 초기화하거나 사용자가 원하는 위치를 저장할 때는 ToolBar 프로퍼티 중에서 Band와 BandIndex라는 정수형 프로퍼티를 사용해야 한다. 수평 ToolBar에서 Band는 ToolBar가 차지하는 행을 가리킨다. BandIndex는 그 행의 위치를 의미하며 왼쪽에서부터 시작한다. 수직 ToolBar에서 Band는 ToolBar가 차지하는 열을 가리킨다. BandIndex는 열의 위치를 의미하며, 상단부터 시작한다. 모든 툴바의 기본값으로 Band는 0, BandIndex는 0부터 시작하는 일련번호가 되고 , ToolBarTray에 추가된 순서대로 증가한다. 
+
+이장의 나머지 부분에서는 실제 애플리케이션에서 사용하는 형태의 툴바를 보여줄 것이다. FormatRichText 프로그램에서는 메뉴는 없지만 4개의 툴바와 하나의 상태바가 있다. 4개의 툴바는 파일 I/O, 클립보드, 문자 포맷팅, 단락 포맷팅을 처리한다. 
+
+프로그램의 대부분을 담당하는 FormatRichText 클래스는 보통 Window를 상속받는다. 그러나 소스 코드 파일을 작게 나눠서 관련 코드의 그룹으로 만들고 싶다. 그래서 FormatRichText 클래스는 partial 키워드를 사용하는 6개의 부분으로 나눈다. 이 클래스의 각 부분은 서로 다른 파일에 저장된다. 첫 번째 파일은 FormatRichText.cs이다. 이 파일은 FormatRichText.File.cs에 있는 파일을 열고 저장하는 코드를 갖는다. 이 프로젝트는 13장에서 다룬 ColorGridBox.cs 파일을 링크해야 한다. 
+
+이제 첫번째 파일을 살펴보자. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public partial class FormatRichText : Window
+{
+	RichTextBox txtbox;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new FormatRichText());
+	}
+	public FormatRichText()
+	{
+		Title = "Format Rich Text";
+	
+		//윈도우 Content를 위한 DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//클라이언트 영역의 상단에 위치할 ToolBarTray 생성
+		ToolBarTray tray = new ToolBarTray();
+		dock.Children.Add(tray);
+		DockPanel.SetDock(tray, Dock.Top);
+
+		//RichTextBox 생성
+		txtbox = new RichTextBox();
+		txtbox.VerticalScrollBarVisibility = ScrollBarVisibillty.Auto;
+
+		//다른 파일의 메소드 호출
+		AddFileToolBar(tray, 0, 0);
+		AddFileToolBar(tray, 1, 0);
+		AddFileToolBar(tray, 2, 0);
+		AddFileToolBar(tray, 2, 1);
+		AddStatusBar(dock);
+
+		//RichTextBox로 나머지 클라이언트 영역을 채우고 포커스를 위치시킨다. 
+		dock.Children.Add(txtbox);
+		txtbox.Focus();
+	}
+}
+
+생성자는 DockPanel, ToolBarTray, RichTextBox를 생성한다. RichTextBox는 FormatRichText같은 다른 클래스가 사용하는 필드를 저장한다는 사실을 기억하자. 그리고 AddFileToolBar등의 5개 메소드를 호출하는데, 각 메소드는 각기 다른 파일에 존재한다. 이 메소드들의 두번째 세 번째 인자는 ToolBar의 Band와 BandIndex 프로퍼티다. 
+
+FormatRichText 프로젝트의 두 번째 파일은 파일을 읽어 들이고 저장하는 FormatRichTextFile.cs이다. RichTextBox 컨트롤은 4가지 포맷의 파일을 읽어 들이고 저장할 수 있다. 이 4가지 포맷은 DataFormats 클래스에 정적 읽기 전용 필드로 정의되어 있는 DataFormats.Text, DataFormats.Rtf(Rich Text 포맷), DataFormats.Xaml, DataFormats.XamlPackage(문서 파일 자체가 들어있는 ZIP 파일)이다. 이 포맷들은 파일의 맨 위에 있는 배열에 정의되어 있다. DataFormats.Text는 총합을 5개로 만들기 위해 추가되었다는 사실에 주목하자. penFileDialog와 SaveFileDialog 클래스는 대화상자에서 다 섯 가지 파일 형식과 확장자를 보여주기 위해 strFilter를 사용한다. 
+
+
+
+
+
+
+using Microsoft.Win32;
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documnets;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+
+public partial class FormatRichText : Window
+{
+	string[] formats = 
+	{
+		DataFormats.Xaml, DataFormats.XamlPackage, DataFormats.Rtf, DataFormats.Text, DataFormats.Text
+	};
+	
+	string strFilter = 
+		"XAML Document Files (*.xaml) | *.xaml |" +
+		"XAML Package Files (*.zip)|*.zip|" +
+		"Rich Text Format Files (*.rtf)|*.rtf|" +
+		"Text Files (*.txt)|*.txt|" +
+		"All files (*.*)|*.*";
+	void AddFileToolBar(ToolBarTray tray, int band, int index)
+	{
+		//툴바 생성
+		ToolBar toolbar = new ToolBar();
+		toolbar.Band = band;
+		toolbar.BandIndex = index;
+		tray.ToolBars.Add(toolbar);
+
+		RoutedUICommand[] comm = 
+		{
+			ApplicationCommands.New, ApplicationCommands.Open,ApplicationCommands.Save
+		};
+
+		string[] strImages = 
+		{
+			"NewDocumentHS.png", "openHS.png", "saveHS.png"
+		};
+
+		//툴바 버튼 생성
+		for(int i=0; i<3; i++)
+		{
+			Button btn = new Button();
+			btn.Command = comm[i];
+			toolbar.Items.Add(btn);
+
+			Image img = new Image();
+			img.Source = new BitmapImage( new Uri("pack://application:,,/Images/" + strImages[i]));
+			img.Stretch = Stretch.None;
+			btn.Content = img;
+
+			ToolTip tip = new ToolTip();
+			tip.Content = comm[i].Text;
+			btn.ToolTip = tip;
+		}
+		//커맨드 바인딩 추가
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.New, OnNew));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Open, OnOpen));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Save, OnSave));
+	}
+	
+	//New: 빈 문자열을 설정
+	void OnNew(object sender, ExecutedRoutedEventArgs args)
+	{
+		FlowDocument flow = txtbox.Document;
+		TextRange range = new TextRange(flow.ContentStart, flow.ContentEnd);
+		range.Text = "";
+	}
+	//Open : 대화상자를 출력하고 파일을 로딩
+	void OnOpen(object sender, ExecutedRoutedEventArgs args)
+	{
+		OpenFileDialog dlg = new OpenFileDialog();
+		dlg.CheckFileExists = true;
+		dlg.Filter = strFilter;
+
+		if((bool)dlg.ShowDialog(this))
+		{
+			FlowDocument flow = txtbox.Document;
+			TextRange range = new TextRange(flow.ContentStart, flow.ContentEnd);
+			FileStream strm = null;
+			try
+			{
+				strm = new FileStream(dlg.FileName, FileMode.Open);
+				range.Load(strm, formats[dlg.FilterIndex - 1]);
+			}catch(Exception exc)
+			{
+				MessageBox.Show(exc.Message, Title);
+			}
+			finally
+			{
+				if(strm != null)
+					strm.Close();
+			}
+		}
+	}
+	//Save : 대화상자를 출력하고 파일을 저장
+	void OnSave(object sender, ExecutedRoutedEventArgs args)
+	{
+		SaveFileDialog dlg = new SaveFileDialog();
+		dlg.Filter = strFilter;
+
+		if((bool)dlg.ShowDialog(this))
+		{
+			FlowDocument flow = txtbox.Document;
+			TextRange range = new TextRange(flow.ContentStart, flow.ContentEnd);
+			FileStream strm = null;
+			try
+			{
+				strm = new FileStream(dlg.FileName, FileMode.Create);
+				range.Save(strm, formats[dlg.FilterIndex - 1]);
+			}
+			catch (Exception exc)
+			{
+				MessageBox.Show(exc.Message, Title);
+			}
+			finally
+			{
+				if(strm != null)
+					strm.Close();
+			}
+		}
+	}
+}
+
+
+AddFileToolBar 메소드는 ToolBar 객체를 생성하고 표준 커맨드인 ApplicationCommands.New, ApplicationCommands.Open, ApplicationCommands.Save에 부합하는 3개의 Button 객체를 생성한다.(FormatRichText 프로그램은 이 커맨드에 대한 표준 키보드 바로 가기 키 Ctrl+N, Ctrl+O, Ctrl+S를 지원한다)
+
+프로그램을 단순하게 만들기 위해 몇  가지 기능은 생략했다. 이 프로그램에서는 파일명을 보존하지 않기 때문에 같은 이름으로 파일을 저장하는 Save 기능은 빠져있다. 또한 파일을 수정한 후 저장하지 않는 경우에 경고 메시지를 보여주는 기능도 없다. 여기서 빠져 있는 이 기능들은 18장에 나오는 NotepadClone 프로그램에서 구현할 예정이다. 
+
+OnOpen과 OnSave 메소드는 서로 유사하다. 둘 다 대화상자를 보여주며, 사용자가 Open이나  Save 버튼을 누르면 메소드는 RichTextBox로부터 FlowDocument 객체를 받아와서 문서 내용 전체가 들어갈 TextRange 객체를 생성한다. TextRange 클래스에는 Load와 Save 메소드가 있다. 첫 번째 인자는 Stream이고 두 번째는 DataFormats의 필드가 된다. 대화상자의 FilterIndex 프로퍼티를 이용해 formats 배열을 가리킨다. 이 프로퍼티는 사용자가 Open이나 Save 버튼을 누르기 전에 선택한 strFilter를 가리킨다(프로퍼티가 1이 아니라 0을 기준으로 하기 때문에 FilterIndex에서 1을 빼야 한다는 데 유의하자)
+
+다음 파일은 보통 Edit 메뉴에서 볼 수 있는 커맨드를 처리한다. 이번 장의 처음에 나왔던 CraftTheToolbar 프로그램에서 경험한 것처럼 윈도우에 추가된 커맨드 바인딩은 입력 포커스가 있는 자식 즉, RichTextBox에 대한 커맨드 바인딩과 연결된다. 다음 코드는 버튼과 커맨드 바인딩을 생성하고, 윈도우 컬렉션에 커맨드 바인딩을 추가한다.  그러나 클립보드 로직의 대부분을 RichTextBox 자체가 처리해주기 때문에 바인딩의 대부분은 구현할 필요가 없다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+public partial class FormatRichText  : Window
+{
+	void AddEditToolBar(ToolBarTray tray, int band, int index)
+	{
+		//툴바 생성
+		ToolBar toolbar = new ToolBar();
+		toolbar.Band = band;
+		toolbar.BandIndex = index;
+		tray.ToolBars.Add(toolbar);
+		RoutedUICommand[] comm = 
+		{
+			ApplicationCommands.Cut, ApplicationCommands.Copy, ApplicationCommands.Paste, ApplicationCommands.Delete,
+			ApplicationCommands.Undo, ApplicationCommands.Redo
+		};
+		string[] strImages = 
+		{
+			"CutHS.png", "CopyHS.png", PasteHS.png", "DeleteHS.png", "Edit_UndoHS.png", "Edit_RedoHS.png"
+		};
+
+		for(int i=0; i< 6; i++)
+		{
+			if (i == 4)
+				toolbar.Items.Add(new Separator());
+	
+			Button btn = new Button();
+			btn.Command = comm[i];
+			toolbar.Items.Add(btn);
+
+			Image img = new Image();
+			img.Source = new BitmapImage(new Uri("pack://application:,,/Images/" + strImages[i]));
+			img.Stretch = Stretch.None;
+			btn.Content = img;
+
+			ToolTip tip = new ToolTip();
+			tip.Content = comm[i].Text;
+			btn.ToolTip = tip;
+		}
+		CommandBingings.Add(new CommandBinding(ApplicationCommands.Cut));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Paste));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.CanDelete));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Undo));
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Redo));
+	}
+	void CanDelete(object sender, CanExecuteRoutedEventArgs args)
+	{
+		args.CanExecute = !txtbox.Selection.IsEmpty;
+	}
+	void OnDelete(object sender, ExecutedRoutedEventArgs args)
+	{
+		txtbox.Selection.Text = "";
+	}
+}
+
+제대로 동작하지 않는 버튼은 삭제뿐이다. 그래서 이 커맨드를 위해 CanExecute와 Executed 핸들러를 추가했다. RichTextBox에서 입력 취소(Undo)와 다시 실행(Redo)버튼이 항상 활성화 되어 있는데, 이는 옳지 않아 보인다. 그러나 이 명령에 대한 CanExecute 핸들러를 구현할때 RichTextBox의 CanUndo와 CanRedo 메소드를 호출했는데, 항상 true가 반환됨을 알 수 있다. 
+
+이제 FormatRichText.Char.cs 파일을 살펴보자. 이 파일은 문자 포맷팅 폰트 패밀리, 폰트 크기, 굵게, 이탤릭, 전경색, 배경색을 다루는 Toolbar다. 
+
+이 툴바의 컨트롤은 현재 선택된 텍스트의 폰트 패밀리나 문자 포맷팅을 보여준다(선택 영역이 없으면 입력 지점의 폰트 패밀리나 문자 포맷을 보여준다). RichTextBox의 Selection 프로퍼티로 현재 선택된 텍스트를 구한다. 이 프로퍼티는 TextSelection 타입이지만 원래는 TextRange 객체이다. Text Range에는 GetPropertyValue와 ApplyPropertyValue라는 이름의 메소드가 2개 있다. 두  메소드의 첫 번째 인자는 포맷팅과 관련된 프로퍼티다. 
+
+예를 들어 txtbox라는 이름의 RichTextBox에서 현재 선택된 텍스트와 관련된 FontFamily 를 어떻게 구하는 지에 대한 구문은 다음과 같다. 
+
+txtbox.Selection.GetPropertyValue(FlowDocument.FontFamilyProperty);
+
+RichTextBox에 저장된 FlowDocument의 프로퍼티를 얻는 것에 주목하자. 여러 폰트가 섞여 있을 때 어떤 결과가 나오는지는 문서화가 잘 되어 있지 않다. 그래서 결과 값이 null인지, 원하는 결과 값의 타입이 맞는지를 확인해야 한다. 현재 선택된 부분(이나 입력 지점)에 fontfam이라는 이름의 새로운 FontFamily를 설정하려면 다음 구문을 호출한다. 
+
+txtbox.Selection.ApplyPropertyValue(FlowDocument.FontFamilyProperty, fontfam);
+
+툴바의 컨트롤을 업데이트시키려면 RichTextBox의 SelectionChanged 이벤트에 대한 핸들러를 추가해야 한다. 
+
+문자 포맷팅 ToolBar는 폰트 패밀리와 폰트 크기를 설정하기 위해 COmboBox 컨트롤을 이용한다. ComboBox는 TextBox와 ListBox의 조합이다. 
+
+ListBox처럼 ComboBox도 Selector로부터 파생됐다. Items 컬렉션이나 ItemSource 프로퍼티를 이용해 ComboBox의 항목을 채울 수 있다. ComboBox는 Selector로부터 SelectedIndex, SelectedItem, SelectedValue 프로퍼티를 상속받았다. 그러나 ListBox와 달리 ComboBox는 다중 선택은 불가능 하다. 
+
+정상 상태의 ComboBox는 텍스트로 한 줄만 보이며, Text 프로퍼티로 설정하고 읽어올수 있다. ComboBox의 오른쪽 버튼은 항목의 실제 목록을 보여준다. ComboBox가 보여주는 항목의 리스트를 드롭다운 이라고 부른다. ComboBox에는 읽기 쓰기가 가능한 MaxDropDownHeight, IsDropDownOpen이라는 2개의 프로퍼티와 DropDownOpen, DropDownClosed 이벤트가 정의되어 있다. 
+
+ComboBox에는 IsEditable이라는 이름의 중요한 프로퍼티가 정의돼 있다. 이 프로퍼티의 기본값은 false이며 목록의 값을 수정할 수 없을을 의미하는데, ComboBox는 목록의 가장 위에 있는 항목이 선택된 항목으로 나타난다. 사용자가 이를 클릭하면 드롭다운은 펼쳐지거나 사라지게 된다. 사용자는 필드에 어떤 것도 입력할 수 없지만 특정 문자를 입력해서 그 문자로 시작되는 항목을 선택하는 것은 가능하다. 프로그램은 Text 프로퍼티를 통해 선택된 항목의 텍스트를 얻는다거나 선택된 항목을 설정할 수 있지만 SelectedItem을 이용하는 것이 더 안전하다. 프로그램이 ComboBox에 없는 항목으로 Text 프로퍼티를 설졍하려 하면 아무것도 선택되지 않는다. 
+
+IsEditable을 true로 설정하면 ComboBox 목록의 가장 위에 있는 항목이 Text Box로 변경되면서 사용자는 필드에 다른 것을 입력할 수 있다. 하지만 이 텍스트 변경을 처리할 이벤트가 없다. 
+
+ComboBox에는 제한적으로 사용하는 세 번째 모드가 있다. 프로그램이 IsEditable을 true로 설정하면 IsReadOnly도 true로 설정 가능하다. 이 경우에는 사용자가 EditBox에 있는 항목을 변경할 수는 없지만 클립보드에 선택된 항목을 복사할 수는 있다. IsEditable이 false가 되면 IsReadOnly는 의미가 없다. 
+
+폰트 ComboBox와 같이 IsEditable 프로퍼티의 기본값 false를 그대로 사용할 때 약간의 기교를 부려볼 수 있다(사용자가 폰트 패밀리 목록에 없는 것을 입력하지는 않을 것이다)ComboBox의 SelectionChanged 이벤트에 대한 핸들러를 추가하고, 이 핸들러에서 RichTextBox에 입력 포커스를 되돌려주는 호출을 포함시켜 처리할 수도 있을 것이다. 이렇게 FontFamily에 대한 ComboBox를 구현했다. 사용자가 ComboBox의 화살표를 클릭하고 난 후 폰트 패밀리를 클릭한다면 제대로 작동 할 것이다. 사용자가 ComboBox의 화살표를 클릭한 후 키보드로 목록을 스크롤해서 항목을 Enter 키로 선택하거나 Esc 키로 취소하는 경우에도 제대로 동작한다. 
+
+그러나 이 단순한 방식에는 약간의 결함이 있다. 사용자가 ComboBox의 텍스트 부분을 클릭하고 난 후 다시 한번 클릭하면 리스트는 사라진다. 하지만 ComboBox는 여전히 입력 포커스를 가지고 있으므로, 사용자는 위 방향키와 아래 방향키를 이용해 리스트를 스크롤 할 수 있다. 
+RichTextBox에서 선택한 텍스트에 현재 선택된 폰트 패밀리를 반영하기 위해 어떻게 해야할까? 이 과정 동안에는 입력 포커스를 ComboBox가 유지해야 할 것이다. 그러나 사용자가 Esc 키를 누른다고 가정해보자. RichTextBox에 선택된 텍스트는 ComboBox가 동작하기 전의 폰트패밀리로 돌아가야 하고, 입력 포커스는 ComboBox에서 RichTextBox로 이동해야 한다. 사용자가 Enter키를 누르면 입력 포커스는 RichTextBox로 돌아가야 하지만 ComboBox에서 항목을 선택한 경우에는 RichTextBox에 선택된 텍스트에 현재 선택된 폰트 패밀리를 적용해야 한다. 이런 로직을 구현하는 것은 독자에게 맡기겠다. 
+
+폰트 크기를 선택하는 ComboBox에 대한 처리는 더 어렵다. 보통 그런 ComboBox는 공통된 폰트 크기를 하나의 리스트로 제공해야 하지만 사용자가 특정 값을 입력할 수도 있다. 그래서 ComboBox는 IsEditable 프로퍼티를 true로 설정해야 한다. 그러나 사용자가 언제 입력을 끝마쳤는지 어떻게 알 수 있을까? 사용자는 TAB키, Enter 키, Esc 키로 ComboBox를 떠날 수 있다. TAB키는 ToolBar에서 다음 컨트롤로 키보드 포커스가 넘어가게 되고, Enter 키는 RichTextBox로 포커스가 가게 되고, Esc 키는 ComboBox 값을 수정하기 전으로 복구하고 입력 포커스를 RichTextBox로 이동시킨다. 또한 사용자가 ComboBox외의 다른 곳을 마우스로 클릭해서 빠져나갈수도 있다. 이런 모든 동작들이 입력 포커스를 잃어버리게 만들기 때문에 아래와 같이 ComboBox의 LostKeyboardFocut 이벤트에 대한 핸들러에 추가해야 한다. 이 이벤트 핸들러에는 사용자가 숫자로 입력한 텍스트를 Double.Tryparse 코드로 변환해주는 부분이 들어있다. 실패하면 텍스트는 원래의 값으로 복원된다. 이 원래 값을 저장하는 부분은 GotKeyboardFocus 이벤트 핸들러에 들어가야 한다. Enter 키와 Esc 키를 처리하기 위해서 PreviewKeyDown 이벤트에 대한 핸들러도 필요하다. 
