@@ -1,0 +1,416 @@
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+
+public partial class FormatRichText : Window
+{
+	ComboBox comboFamily, comboSize;
+	ToggleButton btnBold, btnItalic;
+	ColorGridBox clrboxBackground, clrboxForeground;
+
+	void AddCharToolBar(ToolBarTray tray, int band, int index)
+	{
+		//툴바를 생성해서 ToolBarTray에 넣음
+		ToolBar toolbar = new ToolBar();
+		toolbar.Band = band;
+		toolbar.BandIndex = index;
+		tray.ToolBars.Add(toolbar);
+
+		//폰트 패밀리를 위한 콤보 박스 생성
+		comboFamily = new ComBoBox();
+		comboFamily.Width = 144;
+		comboFamily.ItemsSource = Fonts.SystemFontFamilies;
+		comboFamily.SelectedItem = txtbox.FontFamily;
+		comboFamily.SelectionChanged += FamilyComboOnSelection;
+		toolbar.Items.Add(comboFamily);
+
+		ToolTip tip = new ToolTip();
+		tip.Content = "Font Family";
+		comboFamily.ToolTip = tip;
+
+		//폰트 크기를 위한 콤보박스 생성
+		comboSize = new ComboBox();
+		comboSize.Width = 48;
+		comboSize.IsEditable = true;
+		comboSize.Text = (0.75 * txtbox.FontSize).ToString();
+		comboSize.ItemSource = new double[]
+		{
+			8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72
+		};
+		comboSize.SelectionChanged += SizeComboOnSelection;
+		comboSize.GotKeyboardFocus += SizeComboOnGotFocus;
+		comboSize.LostKeyboardFocus += SizeComboOnLostFocus;
+		comboSize.PreviewKeyDown += SizeComboOnKeyDown;
+		toolbar.Items.Add(comboSize);
+	
+		tip = new ToolTip();
+		tip.Content = "Font Size";
+		comboSize.ToolTip = tip;
+
+		//굵게 버튼 생성
+		btnBold = new ToggleButton();
+		btnBold.Checked += BoldButtonOnChecked;
+		btnBold.UnChecked += BoldButtonOnChecked;
+		toolbar.Items.Add(btnBold);
+
+		Image img = new Image();
+		img.Source = new BitmapImage(new Uri("pack://application:,,/Images/boldhs.png"));
+		img.Stretch = Stretch.None;
+		btnBold.Content = img;
+
+		tip = new ToolTip();
+		tip.Content = "Bold";
+		btnBold.ToolTip = tip;
+
+		//이탤릭 버튼 생성
+		btnItalic = new ToggleButton();
+		btnItalic.Checked += ItalicButtonOnChecked;
+		btnItalic.UnChecked += ItalicButtonOnChecked;
+		toolbar.Items.Add(btnItalic);
+	
+		img = new Image();
+		img.Source = new BitmapImage(new Uri("pack://application:,,/Images/ItalicHS.png"));
+		img.Stretch = Stretch.None;
+		btnItalic.Content = img;
+
+		tip = new ToolTip();
+		tip.Content = "Italic";
+		btnItalic.ToolTip = tip;
+
+		toolbar.Items.Add(new Separator());
+
+		//배경색과 전경색 메뉴 생성
+		Menu menu = new Menu();
+		toolbar.Items.Add(menu);
+
+		//배경색 메뉴 항목 생성
+		MenuItem item = new MenuItem();
+		menu.Items.Add(item);
+
+		img = new Image();
+		img.Source = new BitmapImage(new Uri("pack://application:,,/Images/ColorHS.png"));
+		img.Stretch = Stretch.None;
+		item.Header = img;
+
+		clrboxBackground = new ColorGridBox();
+		clrboxBackground.SelectionChanged += BackgroundOnSelectionChanged;
+		item.Items.Add(clrboxBackground);
+
+		tip = new ToolTip();
+		tip.Content = "Background Color";
+		item.ToolTIp = tip;
+
+		//전경색 메뉴 항목 생성
+		item = new MenuItem();
+		menu.Items.Add(item);
+
+		img = new Image();
+		img.Source = new BitmapImage(new Uri("pack://application:,,/Images/Color_fontHS.png"));
+		img.Stretch = Stretch.None;
+		item.Header = img;
+
+		clrboxForeground = new ColorGridBox();
+		clrboxForeground.SelectionChanged += ForegroundOnSelectionChanged;
+		item.Items.Add(clrboxForeground);
+
+		tip = new ToolTip();
+		tip.Content = "Foreground Color";
+		item.ToolTip = tip;
+
+		//RichTextBox의 SelectionChanged 이벤트에 대한 핸들러 연결
+		txtbox.SelectionChanged += TextBoxOnSelectionChanged;
+	}
+	//RichTextBox의 SelectionChanged 이벤트 핸들러
+	void TextBoxOnSelectionChanged(object sender, RoutedEventArgs args)
+	{
+		//현재 선택된 텍스트의 폰트 패밀리를 구하고.. 
+		object obj = txtbox.Selection.GetPropertyValue(FlowDocument.FontFamilyProperty);
+		//... 콤보 박스에 구한 것을 설정하고
+		if (obj is FontFamily)
+			comboFamily.SelectedItem = (FontFamily)obj;
+		else
+			comboFamily.SelectedIndex = -1;
+		//현재 선택된 텍스트의 폰트 크기를 구하고...
+		obj = txtbox.Selection.GetPropertyValue(FlowDocument.FontSizeProperty);
+		
+		//... 콤보 박스에 구한 것을 설정하고
+		if(obj is double)
+			comboSize.Text = (0.75 * (double)obj).ToString();
+		else
+			comboSize.SelectedIndex = -1;
+		
+		//현재 선택된 텍스트의 폰트웨이트를 구하고
+		obj = txtbox.Selection.GetPropertyValue(FlowDocument.FontWeightProperty);
+
+		//.. 토글 버튼을 설정하고
+		if( obj is FontWeight)
+			btnBold.IsChecked = (FontWeight)obj == FontWeights.Bold;
+		
+		//현재 선택된 텍스트의 폰트 스타일을 구하고..
+		obj = txtbox.Selection.GetPropertyValue(FlowDocument.FontStyleProperty);
+
+		//토글 버튼을 설정하고
+		if(obj is FontStyle)
+			btnItalic.IsChecked = (FontStyle)obj == FontStyles.Italic;
+
+		//배경색과 전경색을 구해서 ColorGridBox 컨트롤에 설정
+		obj = txtbox.Selection.GetPropertyValue(FlowDocument.BackgroundProperty);
+		if(obj != null && obj is Brush)
+			clrboxBackground.SelectedValue = (Brush)obj;
+
+		obj = txtbox.Selection.GetPropertyValue(FlowDocument.ForegroundProperty);
+
+		if(obj != null && obj is Brush)
+			clrboxForeground.SelectedValue = (Brush)obj;
+	}
+	//폰트 패밀리 콤보 박스의 SelectionChanged 이벤트에 대한 핸들러
+	void FamilyComboOnSelection(object sender, SelectionChangedEventArgs args)
+	{
+		//선택된 폰트 패밀리를 구함
+		ComboBox combo = args.Source as ComboBox;
+		FontFamily family = combo.SelectedItem as FontFamily;
+
+		//선택된 텍스트를 설정
+		if(family != null)
+			txtbox.Selection.ApplyPropertyValue(FlowDocument.FontFamilyProperty, family);
+
+		//텍스트 박스에 포커스를 줌
+		txtbox.Focus();
+	}
+	//폰트 크기 콤보 박스에 대한 핸들러
+	string strOriginal;
+
+	void SizeComboOnGotFocus(object sender, KeyboardFocusChangedEventArgs args)
+	{
+		strOriginal = (sender as ComboBox).Text;
+	}
+	void SizeComboOnLostFocus(object sender, KeyboardFocusChangedEventArgs args)
+	{
+		double size;
+
+		if(Double.TryParse((sender as ComboBox).Text, out size))
+			txtbox.Selection.ApplyPropertyValue(FlowDocument.FontSizeProperty, size / 0.75);
+		else
+			(sender as ComboBox).Text = strOriginal;
+	}
+	void SizeComboOnKeyDown(object sender, KeyEventArgs args)
+	{
+		if(args.Key == Key.Escape)
+		{
+			(sender as ComboBox).Text = strOriginal;
+			args.Handled = true;
+			txtbox.Focus();
+		}
+		else if(args.Key == Key.Enter)
+		{
+			args.Handled = true;
+			txtbox.Focus();
+		}
+	}
+	void SizeComboOnSelection(object sender, SelectionChangedEventArgs args)
+	{
+		ComboBox combo = args.Source as ComboBox;
+	
+		if(combo.SelectedIndex != -1)
+		{
+			double size = (double) combo.SelectedValue;
+			txtbox.Selection.ApplyPropertyValue(FlowDocument.FontSizeProperty, size / 0.75);
+			txtbox.Focus();
+		}
+	}
+	//굵게 버튼에 대한 핸들러
+	void BoldButtonOnChecked(object sender, RoutedEventArgs args)
+	{
+		ToggleButton btn = args.Source as ToggleButton;
+
+		txtbox.Selection.ApplyPropertyValue(FlowDocument.FontWeightProperty, (bool)btn.IsChecked ? FontWeights.Bold : FontWeights.Normal);
+	}
+	//이탤릭 버튼에 대한 핸들러
+	void ItalicButtonOnChecked(object sender, RoutedEventArgs args)
+	{
+		ToggleButton btn = args.Source as ToggleButton;
+
+		txtbox.Selection.ApplyPropertyValue(FlowDocument.FontStyleProperty, (bool)btn.IsChecked ? FontStyles.Italic : FontStyles.Normal);
+	}
+	//배경색 변경에 대한 핸들러
+	void BackgroundOnSelectionChanged(object sender, SelectionChangedEventArgs args)
+	{
+		ColorGridBox clrbox = args.Source as ColorGridBox;
+		txtbox.Selection.ApplyPropertyValue(FlowDocument.BackgroundProperty, clrbox.SelectedValue);
+	}
+	//전경색 변경에 대한 핸들러
+	void ForegroundOnSelectionChanged(object sender, SelectionChangedEventArgs args)
+	{
+		ColorGridBox clrbox = args.Source as ColorGridBox;
+
+		txtbox.selection.ApplyPropertyValue(FlowDocument.ForegroundProperty, clrbox.SelectedValue);
+	}
+}
+
+이 파일의 나머지 부분은 비교적 간단하다 AddCharToolBar 메소드는 굵게와 이탤릭을 위한 ToggleButton 객체를 두 개 생성하고 배경색과 전경색을 설정하기 위한 메뉴를 생성한다. 툴바가 전체 메뉴를 지원하지만 항목은 두 개로 구성되어 있다. 이 두 개의 MenuItem 객체는 각기 배경색이나 전경색을 나타내는 비트맵에 설정할 Header를 갖고 있으며, ColorGridBox컨트롤에 포함되어야 하는 Items 컬렉션을 갖는다. 
+
+이번에 살펴볼 문자 포맷 툴바와 문단 포맷 툴바는 급히 만든 것이다. 왼쪽, 오른쪽, 중앙, 양쪽 맞춤의 정렬 방식을 나타내기 위해 단지 4개의 이미지만 갖는데,적당한 이미지를 찾지 못해 코드에서 이를 구현했다. CreateButton 메소드는 ToggleButton을 위해 16단위 크기의 정사각형 Canvas를 놓고 다양한 정렬 방식을 줄5개로 그려서 표현했다. 
+
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+public partial class FormatRichText : Window
+{
+	ToggleButton[] btnAlignment = new ToggleButton[4];
+
+	void AddParaToolBar(ToolBarTray tray, int band, int index)
+	{
+		//트레이에 추가할 툴바 생성
+		ToolBar toolbar = new ToolBar();
+		toolbar.Band = band;
+		toolbar.BandIndex = index;
+		tray.ToolBars.Add(toolbar);
+
+		//툴바 항목 생성
+		toolbar.Items.Add(btnAlignment[0] = CreateButton(TextAlignment.Left, "Align Left", 0, 4));
+		toolbar.Items.Add(btnAlignment[1] = CreateButton(TextAlignment.Center, "Center", 2, 2));
+		toolbar.Items.Add(btnAlignment[2] = CreateButton(TextAlignment.Right, "Align Right", 4, 0));
+		toolbar.Items.Add(btnAlignment[3] = CreateButton(TextAlignment.Justify, "Justify", 0, 0));
+
+		//SelectionChanged 이벤트에 대한 또다른 이벤트 핸들러를 연결
+		txtbox.SelectionChanged += TextBoxOnSelectionChanged2;
+	}
+	ToggleButton CreateButton(TextAlignment align, string strToolTip, int offsetLeft, int offsetRight)
+	{
+		//토글 버튼 생성
+		ToggleButton btn = new ToggleButton();
+		btn.Tag = align;
+		btn.Click += ButtonOnClick;
+		
+		//Canvas를 Content로 설정
+		Canvas canv = new Canvas();
+		canv.Width = 16;
+		canv.Height = 16;
+		btn.Content = canv;
+
+		//Canvas에 선을 그림
+		for(int i=0; i< 5; i++)
+		{
+			polyline poly = new Polyline();
+			poly.Stroke = SystemColors.WindowTextBrush;
+			poly.StrokeThickness = 1;
+
+			if(( i & 1) == 0)
+				poly.Points = new PointCollection(new Point[]
+					{
+						new Point(2, 2 + 3 * i), new Point(14, 2 + 3 * i)
+					});
+			else
+				poly.Points = new PointCollection(new Point[]
+					{
+						new Point(2 + offsetLeft, 2 + 3 * i),
+						new Point(14 - offsetRight, 2 + 3 * i)
+					});
+			canv.Children.Add(poly);
+		}
+		//툴팁 생성
+		ToolTip tip = new ToolTip();
+		tip.Content = strToolTip;
+		btn.ToolTip = tip;
+		return btn;
+	}
+	//텍스트 박스 SelectionChanged 이벤트 핸들러
+	void TextBoxOnSelectionChanged2(object sender, RoutedEventArgs args)
+	{
+		//현재 텍스트 정렬 상태를 구함
+		object obj = txtbox.Selection.GetPropertyValue(Paragraph.TextAlignmentProperty);
+
+		//버튼 설정
+		if(obj != null && obj is TextAlignment)
+		{
+			TextAlignment align = (TextAlignment)obj;
+
+			foreach(ToggleButton btn in btnAlignmment)btn.Tag);
+		}
+		else
+		{
+			foreach(ToggleButton btn in btnAlignment)
+				btn.IsChecked = false;
+		}
+	}
+	//버튼 클릭 이벤트 핸들러
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		ToggleButton btn = args.Source as ToggleButton;
+
+		foreach(ToggleButton btnAlign in btnAlignment)
+			btnAlign.IsChecked = (btn == btnAlign);
+
+		//새로운 텍스트 정렬 설정
+		TextAlignment align = (TextAlignment) btn.Tag;
+		txtbox.Selection.ApplyPropertyValue(Paragraph.TextAlignmentProperty, align);
+	}
+}
+
+툴바 로직을 마무리할 때가 왔다. FormatRichText 프로그램은 상태바도 갖고 있다. 이 프로그램에서 StatusBar는 Menu처럼 ItemControl이며, StatusBarItem은 MenuItem처럼 ContentControl이다. 다음은 클래스 계층도의 일부이다 
+
+Control
+	ContentControl
+		StatusBarItem
+	ItemsControl
+		StatusBar
+
+상태바는 클라이언트 영역의 아래쪽에 원하는 대로 붙일 수 있다. 실제로 상태바에는 보통 텍스트를 표시하고, 간흑 큰 파일을 불러온다거나 저장할 때 아니면 긴 시간이 필요한 작업을 처리할 때 ProgressBar가 보이기도 한다. 내부적으로 StatusBar는 레이아웃을 설정하기 위해 DockPanel을 이용한다. 그래서 상태바가 여러 가지 항목을 포함한다면 항목들의 위치를 결정하기 위해 DockPanel.SetDock 메소드를 호출해야 한다. 
+
+마지막 항목은 상태바의 남은 부분을 채워야 하기 때문에 HorizontalAlignment를 사용한다. 상태바의 항목이 하나라면 HorizontalAlignment를 항목의 위치를 정하는 데 사용한다. 이 프로그램의 상태바는 단순히 현재 날짜와 시간만을 보여준다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
+
+public partial class FormatRichText : Window
+{
+	StatusBarItem itemDateTime;
+
+	void AddStatusBar(DockPanel dock)
+	{
+		//클라이언트 영역의 아래쪽에 도킹된 상태바를 만든다. 
+		StatusBar status = new StatusBar();
+		dock.Children.Add(status);
+		DockPanel.SetDock(status, Dock.Bottom);
+
+		//StatusBarItem을 만든다
+		itemDateTime = new StatusBarItem();
+		itemDateTime.HorizontalAlignment = HorizontalAlignment.Right;
+		status.Items.Add(itemDateTime);
+
+		//StatusBarItem을 갱신하기 위한 타이머를 만든다. 
+		DispatcherTimer tmr = new DispatcherTimer();
+		tmr.Interval = TimeSpan.FromSeconds(1);
+		tmr.Tick += TimerOnTick;
+		tmr.Start();
+	}
+	void TimerOnTick(object sender, EventArgs args)
+	{
+		DateTime dt = DateTime.Now;
+		itemDateTime.Content = dt.ToLongDateString() + " " + dt.ToLongTimeString();
+	}
+}
+
+FormatRichText는 윈도우 워드패드 프로그램의 기능을 잘 흉내 내고 있지만 계속 이 프로그램을 사용하지는 않을 것이다. 그 대신 18장에서 윈도우 노트패드의 기능을 흉내 내어 더 쉽게 이런 기능을 지원할 것이다. 20장에서는 XamlCruncher라는 프로그래밍 도구를 만들고 이를 수정할 것이다. 
