@@ -1,0 +1,669 @@
+CHAPTER 16장 : 트리 뷰와 리스트 뷰
+
+TreeView 컨트롤은 계층적 데이터를 보여준다. 아마도 가장 유명한 트리 뷰는 윈도우 탐색기의 왼쪽 창에서 디스크와 디렉토리를 보여주는 트리일 것이다. 트리 뷰는 마이크로소프트 비주얼 스튜디오와 .NET 문서를 보여주는 마이크로소프트 문서 뷰어의 왼쪽 면에서도 볼 수 있다. 문서 뷰어의 트리 뷰는 .NET 네임스페이스를 모두 보여주며 내부 클래스 구조, 메소드, 프로퍼티 등의 정보를 보여준다. 
+
+WPF TreeView 컨트롤의 각 항목은 TreeViewItem 타입의 객체이다. 컬렉션에 포함된 TreeViewItem 객체는 보통 짧은 텍스트 문자열로 구분한다. 이 방식은 TreeView가 Menu와 유사하다는 것을 나타내는데 TreeViewItem 역시 MenuItem과 아주 유사하다. 다음 클래스 계층도를 보면 이미 14, 15장을 통해서 중요한 컨트롤은 모두 살펴봤다는 것을 알 수 있다. 
+
+Control
+	ItemsControl
+		HeaderedItemsControl
+			MenuItem
+			ToolBar
+			TreeViewItem
+		MenuBase (abstract)
+			ContextMenu
+			Menu
+		StatusBar
+		TreeView
+
+이미 살펴본 적이 있지만 ItemsControl은 Selector 클래스의 부모 클래스이며, Selector 클래스는 ListBox와 ComboBox의 부모 클래스이다. ItemsControl은 Items라는 중요한 프로퍼티를 갖는다. 이 프로퍼티는 컨트롤에 목록으로 보이는 항목들의 컬렉션이다. HeaderedItemsControl은 ItemsControl에 Header라는 이름의 프로퍼티를 추가한 것으로 Header 프로퍼티는 object 타입이지만 주로 텍스트가 사용된다. 
+
+Menu는 탑 레벨 MenuItem 객체 컬렉션이기 때문에 Header 프로퍼티가 없다. 이와 유사하게 TreeView도 탑 레벨 TreeViewItem 객체 컬렉션이기 때문에 Header 프로퍼티가 없다. 
+
+다음 프로그램은 수동으로 TreeView 컨트롤을 구성한다. 즉 항목들을 하드 코딩하고 있다. 
+
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+
+public class ManuallyPopulateTreeView : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ManuallyPopulateTreeView();
+	}
+
+	public ManuallyPopulateTreeView()
+	{
+		Title = "Manually Populate TreeView";
+
+		TreeView tree = new TreeView();
+		Content = tree;
+
+		TreeViewItem itemAnimal = new TreeViewItem();
+		itemAnimal.Header = "Animal";
+		tree.Items.Add(itemAnimal);
+
+		TreeViewItem itemDog = new TreeViewItem();
+		itemDog.Header = "Dog";
+		itemDog.Items.Add("Poodle");
+		itemDog.Items.Add("irish Setter");
+		itemDog.Items.Add("German Shepherd");
+		itemAnimal.Items.Add(itemDog);
+
+		TreeViewItem itemCat = new TreeViewItem();
+		itemCat.Header = "Cat";
+		itemCat.Items.Add("Calico");
+
+		TreeViewItem item = new TreeViewItem();
+		item.Header = "Alley Cat";
+		itemCat.Items.Add(item);
+
+		Button btn = new Button();
+		btn.Content = "Noodles";
+		itemCat.Items.Add(btn);
+
+		itemCat.Items.Add("Siamese");
+		itemAnimal.Items.Add(itemCat);
+
+		TreeViewItem itemPrimate = new TreeViewItem();
+		itemPrimate.Header = "Primate";
+		itemprimate.Items.Add("Chimpanzee");
+		itemPrimate.Items.Add("Bonobo");
+		itemPrimate.Items.Add("Human");
+		itemAnimal.Items.Add(itemPrimate);
+
+		TreeViewItem itemMineral = new TreeViewItem();
+		itemMineral.Header = "Mineral";
+		itemMineral.Items.Add("Calcium");
+		itemMineral.Items.Add("Zinc");
+		itemMineral.Items.Add("Iron");
+		tree.Items.Add(itemMineral);
+
+		TreeViewItem itemVegetable = new TreeViewItem();
+		itemVegetable.Header = "Vegetable";
+		itemVegetable.Items.Add("Carrot");
+		itemVegetable.Items.Add("Asparagus");
+		itemVegetable.Items.Add("Broccoli");
+		tree.Items.Add(itemVegetable);
+	}
+}
+
+
+위 프로그램은 두 가지 방법으로 부모 항목에 TreeViewItem 객체를 추가하고 있다. TreeViewItem 타입의 객체를 만들어서 Items 프로퍼티를 통해 ItemCollection 객체에 추가할 수 있다. 자식 항목을 갖는 항목을 추가할 때만 이 방법이 필요하다. 자식 항목이 없으면 Items 컬렉션의 Add 메소드에 텍스트 문자열을 넘기는 것만으로 간단하게 처리할 수 있다. 항목들 중 하나(Nodles)는 실제로 Button 컨트롤임을 알아차렸을 것이다. 
+
+이 프로그램을 통해 TreeView 사용자 인터페이스를 사용해봤다. + 표시를 클릭하면 항목은 펼쳐지고, -표시를 클릭하면 닫힌다. TreeView 는 화살표 키로도 모든 항목을 이동할수 있게 완벽한 키보드 인터페이스도 지원한다. 
+
+이를 제외하면 ManuallyPopulateTreeView 프로그램은 TreeView 를 프로그래밍하는 유용한 기법을 보여주는 게 별로 없다. 항목과 하위 항목을 직접 추가해 Menu  컨트롤에 연결하는 것이 일반적이지만 TreeView 컨트롤에 이 방법을 사용하는 것은 실제 프로그램에서는 보기 어렵다. 보통은 데이터베이스나 다른 외부 프로그램을 기반으로 한 TreeView 컨트롤을 구성한다. 
+
+예를 들어 TreeView 컨트롤은 디스크 드라이브와 디렉토리를 보여주기 위해 System.IO 네임스페이스와 TreeView 컨트롤을 연결하는 클래스를 이용한다. 이 프로그램은 현재 시스템 드라이브의 모든 디렉토리를 보여주는 TreeView 컨트롤을 제공한다(시스템 드라이브는 보통 C 드라이브지만 다중 부팅 파티션을 가진 경우에는 시스템 드라이브가 다른 드라이브가 될 수도 있다. )
+
+이 프로그램 이름은 경고의 의미를 가진다. 이 프로그램은 TreeView 에 디렉토리 트리를 연결하는 잘못된 방법을 보여주고 있다. 
+
+
+
+
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+
+public class RecurseDirectoriesInefficiently : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new RecurseDirectoriesInefficiently());
+	}
+	public RecurseDirectoriesInefficiently()
+	{
+		Title = "Recurse Directories Inefficiently";
+
+		TreeView tree = new TreeView();
+		Content = tree;
+
+		//시스템 드라이브를 기반으로 TreeViewItem 생성
+		TreeViewItem item = new TreeViewItem();
+		item.Header = Path.GetPathRoot(Environment.SystemDirectory);
+		item.Tag = new DirectoryInfo(item.Header as string);
+		tree.Items.Add(item);
+
+		//재귀호출로 내용을 채움
+		GetSubdirectories(item);
+	}
+	void GetSubdirectories(TreeViewItem item)
+	{
+		DirectoryInfo dir = item.Tag as DirectoryInfo;
+		DirectoryInfo[] subdirs;
+
+		try
+		{
+			//하위 디렉토리를 구함
+			subdirs = dir.GetDirectories();
+		}
+		catch
+		{
+			return;
+		}
+
+		//각 하위 디렉토리에 대해 루프를 수행
+		foreach(DirectoryInfo subdir in subdirs)
+		{
+			//각 디렉토리에 대해 새로운 TreeViewItem 생성
+			TreeViewItem subitem = new TreeViewItem();
+			subitem.Header = subdir.Name;
+			subitem.Tag = subdir;
+			item.Items.Add(subitem);
+
+			//재귀적으로 하위 디렉토리를 구함
+			GetSubdirectories(subitem);
+		}
+	}
+}
+
+
+이론적으로는 이 프로그램도 괜찮아 보인다. 윈도우 생성자는 TreeView 컨트롤을 생성하고 첫 번째 TreeViewItem을 생성한다. 이 항목의 Header 프로퍼티는 현재 시스템 드라이브의 루트 패스이며(예를 들어 "C:\"), Tag 프로퍼티는 루트 패스를 기반으로 한 디렉토리 정보가 된다. 생성자는 TreeViewItem 객체를 GetSubdirectories에게 넘겨준다. 
+
+GetSubdirectories는 재귀 메소드로서 DirectoryInfo의 모든 자식 하위 디렉토리를 구해준다(try-catch 블록은 디렉토리에 대한 접근이 불가능한 경우를 위해 필요하다) 각 하위 디렉토리에 대해서 새로운 TreeViewItem 객체를 생성하고, 이를 파라미터로 GetSubdirectories를 호출한다. 구조적으로 보면 이 코드는 디렉토리 트리를 보여주기 위해 한 번만 실행하면 된다. 
+
+이 프로그램을 실행해 보면 윈도우를 보여주기 전에 디스크 탐색 시간이 오래 걸리는 것을 알 수 있다. 시간이 오래 걸릴뿐만 아니라 필요 이상으로 많은 것을 만들어낸다. 사용자가 볼 필요가 없는 디렉토리는 TreeView에 추가할 필요가 없는데도 이 프로그램은 심지어 디스크가 공장에서 출시된 후 한 번도 접근하지 않았을 부분까지도 읽어 들인다. 
+
+디렉토리 트리를 보여주는 더 나은 방식은 TreeView 에서 필요한 하위 디렉토리만을 트리에 추가하는 것이다. 예를 들어 사용자가 + 표시를 클릭했을 때 다음에 나올 디렉토리가 이에 해당한다. 사실 이 방식이 약간 느릴 수는 있다. + 표시는 단지 자식 항목이 있을 때만 나타난다. 그래서 프로그램은 사용자보다 한 발자국 더 나가서 각 항목을 보여줄 때 하위 항목도 가져와야 한다. 하지만 하위 항목을 즉시 추가할 필요는 없다. 
+
+데이터를 읽어 들이는 것이 느리면, "lazy loading" 기법(역자주: lazy loading이나 lazy binding으로 흔히 사용된다. 성능을 위해 객체를 선언만 하고 실제로 객체를 생성하거나 로딩하는 것은 필요한 시점으로 미루는 것을 의미한다) 을 사용할 수 있다. TreeView에서 이를 구현하려면 TreeViewItem 이벤트를 잘 알아야 한다. 4개의 이벤트가 있는데, Expanded 이벤트는 사용자가 자식 항목을 보려고 + 기호를 클릭했을 때도 발생하지만 프로그램에서 임의로 IsExpanded 프로퍼티를 true로 설정했을 때도 발생한다. Collapse 이벤트는 반대로 자식 항목이 안보이게 될 때 발생한다. Selected와 UnSelected 이벤트는 사용자가 항목을 선택했을 때나 IsSelected 프로퍼티가 변경됐을 때 발생한다. 이 4개의 이벤트는 On으로 시작하는 메소드를 동반한다. 
+
+TreeView도 SelectedItemChanged 이벤트를 갖고 있다. 그러나 TreeView의 SelectedItem 프로퍼티는 읽기 전용이기 때문에 TreeView가 보여질 때 처음 선택되는 항목을 프로그래밍 하려면 TreeViewItem의 IsSelected 프로퍼티를 설정해야 한다. 
+
+디렉토리 TreeView가 제대로 동작하게 이런 이벤트들을 어떻게 이용하는지 알아보자. 이런 실습을 재밌게 하기 위해 디렉토리를 선택했을 때 파일 목록을 보여주게 해보자. 더 재밌게 하려면 TreeView에 작은 비트맵을 사용할 수도 있다. 흰 배경색을 갖는 이 비트맵들은 비주얼 스튜디오 이미지 라이브러리 outline\16color_nomask 디렉토리에서 찾을 수 있다. 96DPI 해상도에서 더 잘 보이게 이 파일들을 약간 수정했다. 여기서 사용하는 파일은 35Floppy.bmp, Cddrive.bmp, Clsdfold.bmp, Drive.bmp, Openfold.bmp이다. 윈도우 탐색기 같이 폴더 이미지는 선택한 디렉토리가 열고 닫힘에 따라 변한다. 
+
+이 프로젝트는 재사용을 위해서 TreeViewItem을 상속받은 ImagedTreeViewItem 클래스로 시작한다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+
+public class ImagedTreeViewItem : TreeViewItem
+{
+	TextBlock text
+	Image img;
+	ImageSource srcSelected, srcUnselected;
+
+	//생성자는 이미지와 텍스트를 스택패널에 추가
+	public ImagedTreeViewItem()
+	{
+		StackPanel stack = new StackPanel();
+		stack.Orientation = Orientation.Horizontal;
+		Header = stack;
+
+		img = new Image();
+		img.VerticalAlignment = VerticalAlignment.Center;
+		img.Margin = new Thickness(0, 0, 2, 0);
+		stack.Children.Add(img);
+
+		text = new TextBlock();
+		text.VerticalAlignment = VerticalAlignment.Center;
+		stack.Children.Add(text);
+	}
+	//텍스트와 이미지에 대한 public vmfhvjxl
+	public string Text
+	{
+		set { text.Text = value;	}
+		get { return text.Text;	}
+	}
+	public ImageSource SelectedImage
+	{
+		set
+		{
+			srcSelected = value;
+		
+			if(IsSelected)
+				img.Source = srcSelected;
+		}
+		get { return srcSelected;	}
+	}
+	public ImageSource UnselectedImage
+	{
+		set
+		{
+			srcUnselected = value;
+
+			if(!IsSelected)
+				img.Source = srcUnselected;
+		}
+		get { return srcUnselected; }
+	}
+	//이미지를 설정하는 이벤트 오버라이딩
+	protected override void OnSelected(RoutedEventArgs args)
+	{
+		base.OnSelected(args);
+		img.Source = srcSelected;
+	}
+	protected override void OnUnselected(RoutedEventArgs args)
+	{
+		base.OnUnselected(args);
+		img.Source = srcUnselected;
+	}
+}
+
+
+ImagedTreeViewItem 클래스는 TreeViewItem에서 상속받은 Header 프로퍼티를 StackPanel로 설정한다. StackPanel은 Image 객체와 TextBlock을 자식으로 갖는다. Text라는 이름의 프로퍼티는 TextBlock의 Text 프로퍼티에 접근할 수 있게 해준다. 또 다른 프로퍼티는 ImageSource 타입인 SelectedImage와 UnSelectedImage이다. SelectedImage는 선택된 항목을 위한 것이고, UnSelectedImage는 반대의 경우를 위한 것이다. OnSelected와 OnUnSelected 메소드를 오버라이딩하려면 Image 객체의 Source 프로퍼티에 적절한 ImageSource를 설정해야 한다. 
+
+DirectoryTreeViewItem 클래스는 ImagedTreeViewItem을 상속받으며, 상위 클래스에서 요구하는 이미지를 2개 제공한다. 이 클래스의 생성자는 DirectoryInfo 를 파라미터로 받아서 이 값을 멤버 변수 dir에 저장하고 DirectoryInfo 프로퍼티로 제공한다. (DirectoryTreeViewItem이 DirectoryInfo 객체의 비주얼 래퍼(visual wrapper)가 되는 방법도 생각해 볼 수 있다) 생성자에서 ImagedTreeViewItem에 정의된 Text 프로퍼티도 설정하고 있음을 유의하자
+
+
+
+
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+
+public class DirectoryTreeViewItem : ImagedTreeViewItem
+{
+	DirectoryInfo dir;
+
+	//DirectoryInfo 객체를 받는 생성자
+	public DirectoryTreeViewItem(DirectoryInfo dir)
+	{
+		this.dir = dir;
+		Text = dir.Name;
+
+		SelectedImage = new BitmapImage(new Uri("pack://application:,,/Images/OPENFOLD.BMP"));
+
+		UnselectedImage = new BitmapImage(new Uri("pack://application:,,/Images/CLSDFOLD.BMP"));
+	}
+
+	//DirectoryInfo 객체에 대한 Public 프로퍼티
+	public DirectoryInfo DirectoryInfo
+	{
+		get { return dir;
+	}
+	//항목들을 값과 연동시켜주는 Public 메소드
+	public void Populate()
+	{
+		Items.Clear();
+		DirectoryInfo[] dirs;
+
+		try
+		{
+			dirs = dir.GetDirectories();
+		}catch
+		{
+			return;
+		}
+		foreach(DirectoryInfo dirChild in dirs)
+			Items.Add(new DirectoryTreeViewItem(dirChild);
+	}
+	//populate 하위 항목에 대한 이벤트 오버라이딩
+	protected override void OnExpanded(RoutedEventArgs args)
+	{
+		base.OnExpanded(args);
+		
+		foreach(object obj in Items)
+		{
+			DirectoryTreeViewItem item = obj as DirectoryTreeViewItem;
+			item.Populate();
+		}	
+	}
+}
+
+Populate 메소드는 항목과 연결된 DirectoryInfo 객체의 모든 하위 디렉토리를 구해 이 항목의 자식들을 위한 새로운 DirectoryTreeViewItem 객체를 생성한다. 원래 정의했던 Populate 메소드는 생성자에서 호출하는 private 메소드 였다. 왜 이 메소드를 public 으로 변경했는지 잠시 생각해 보라. 
+
+클래스는 OnExpanded 메소드를 오버라이딩하고 있다. OnExpanded 메소드는 모든 자식 하위 디렉토리를 보여주기 위해서 중요하다. 이 시점에서 + 표시를 적절하게 보여주기 위해서는 모든 자식 하위 디렉토리와 자신의 하위 디렉토리가 연결되어야 하는데, OnExpanded 메소드가 이를 처리한다. 
+
+TreeView로부터 파생된 DirectoryTreeView 클래스에서 모든 디스크 드라이브를 얻으며 이 클래스에서부터 DirectoryTreeViewItem 객체를 생성하는 과정이 시작된다
+
+
+
+
+
+
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+
+
+public class DirectoryTreeView : TreeView
+{
+	//생성자는 디렉토리 트리 일부를 생성
+	public DirectoryTreeView()
+	{
+		RefreshTree();
+	}
+	public void RefreshTree()
+	{
+		BeginInit();
+		Items.Clear();
+
+		//디스크 드라이브를 구함
+		DriveInfo[] drives = DriveInfo.GetDrives();
+
+		foreach(DriveInfo drive in drives)
+		{
+			char chDrive = drive.name.ToUpper()[0];
+			DirectoryTreeViewItem item = new DirectoryTreeViewItem(drive.RootDirectory);
+		
+			//드라이브가 준비되면 볼륨 레이블을 보여주고
+			//준비가 안되면 DriveType을 보여줌
+			if(chDrive != 'A' && chDrive != 'B' && drive.IsReady && drive.VolumeLabel.Length > 0)
+				item.Text = String.Format("{0} ({1})", drive.VolumeLabel, drive.Name);
+			else
+				item.Text = String.Format("{0} ({1})", drive.DriveType, drive.Name);
+
+			//드라이브에 맞는 비트맵을 결정
+			if(chDrive == 'A' || chDrive == 'B')
+				item.SelectedImage = item.UnselectedImage = new BitmapImage(new Uri("pack://application:,,/Images/CDDRIVE.BMP"));
+			else
+				item.SelectedImage = item.UnselectedImage = new BitmapImage(new Uri("pack://application:,,/Images/DRIVE.BMP"));
+			Items.Add(item);
+		
+			//드라이브에 맞는 디렉토리를 맵핑
+			if(chDrive != 'A' && chDrive != 'B' && drive.IsReady)
+				item.Populate();
+		}
+		EndInit();
+	}
+}
+
+이 프로젝트 에서는 사용하지 않더라도 DirectoryTreeView에 RefreshTree 메소드를 정의하고 있다. 이 메소드는 Refresh 메뉴 항목에서 호출되지만 여기서는 생성자만 이 메소드를 호출한다. RefreshTree 메소드는 BeginInit가 호출된 후에는 TreeView는 트리를 생성하는 작업이 느리기 때문에 현재 보이는 항목을 업데이트하지는 않는다. 
+
+RefreshTree 메소드는 현재 시스템의 모든 드라이브를 나타내는 DriveInfo 객체 배열을 구한다. DriveInfo의 RootDirectory 프로퍼티는 DirectoryInfo 타입의 객체이기 때문에 이 프로퍼티로부터 DirectoryTreeViewItem을 생성하는 것도 쉽다. 그러나 A와 B 드라이브는 신중히 처리해야 한다. 플로피디스크 드라이브에 대한 TreeView 컨트롤을 초기화할 때 드라이브가 구동된다. 디스크가 드라이브에 없을 때 메시지 박스를 띄우는 것은 가장 나중에 해야 하므로, 플로피디스크 드라이브에 대한 DriveInfo 의 IsReady 프로퍼티는 건드리지 않는 것이다. 또한 이 메소드에서 IsReady  프로퍼티의 값이 true이고 드라이브가 플로피디스크 드라이브가 아닌 경우에만 Populate 메소드를 호출하는 것에 주목하자. 
+
+RecurseDirectoriesIncrementally 프로젝트의 마지막 클래스는 Window를 상속받은 같은 이름의 클래스이다. 
+
+
+
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+class RecurseDirectoriesIncrementally : Window
+{
+	StackPanel stack;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new RecurseDirectoriesIncrementally());
+	}
+
+	public RecurseDirectoriesIncrementally()
+	{
+		Title = "Recurse Directories Incrementally";
+
+		//윈도우 Content를 위한 Grid 생성
+		Grid grid = new Grid();
+		Content = grid;
+
+		//ColumnDefinition 객체 정의
+		ColumnDefinition coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(50, GridUnitType.Star);
+		grid.ColumnDefinitions.Add(coldef);
+
+		coldef = new ColumnDefinition();
+		coldef.Width = GridLength.Auto;
+		grid.ColumnDefinitions.Add(coldef);
+
+		coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(50, GridUnitType.Star);
+		grid.ColumnDefinitions.Add(coldef);
+
+		//왼쪽 면의 DirectoryTreeView를 추가
+		DirectoryTreeView tree = new DirectoryTreeView();
+		tree.SelectedItemChanged += TreeViewOnSelectedItemChanged;
+		grid.Children.Add(tree);
+		Grid.SetColumn(tree, 0);
+
+		//가운데 GridSplitter를 추가
+		GridSplitter split = new GridSplitter();
+		split.Width = 6;
+		split.ResizeBehavior = GridResizeBehavior.PreviousAndNext;
+		grid.Children.Add(split);
+		Grid.SetColumn(split, 1);
+
+		//오른쪽에 스크롤 되는 스택 패널을 추가
+		ScrollViewer scroll = new ScrollViewer();
+		grid.Children.Add(scroll);
+		Grid.SetColumn(scroll, 2);
+
+		stack = new StackPanel();
+		scroll.Content = stack;
+	}
+	
+	void TreeViewOnSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> args)
+	{
+		//선택된 항목을 구함
+		DirectoryTreeViewItem item = args.NewValue as DirectoryTreeViewItem;
+
+		//DockPanel을 지움
+		stack.Children.Clear();
+
+		//다시 채움
+		FileInfo[] infos;
+		
+		try
+		{
+			infos = item.DirectoryInfo.GetFiles();
+		}catch
+		{
+			return;
+		}
+	
+		foreach(FileInfo info in infos)
+		{
+			TextBlock text = new TextBlock();
+			text.Text = info.Name;
+			stack.Children.Add(text);
+		}
+	}
+}
+
+생성자에서 열이 3개인 Grid를 생성한다. 첫 번째 열은 DirectoryTreeView를 위한 것이고, 두 번째 열은 GridSplitter를 위한 것이고, 세 번째 열은 StackPanel을 갖는 ScrollView이다. 여기에 파일이 나타난다. 
+
+생성자는 SelectedItemChanged 이벤트에 대한 이벤트 핸들러를 설정한다. 이 이벤트 핸들러는 StackPanel에 있는 모든 자식 엘리먼트를 제거하고 선택한 디렉토리에 들어 있는 모든 파일로 다시 채운다. 물론 이 파일을 갖고 다른 작업을 할 수는 없지만 윈도우 탐색기처럼 보이게 하는 것으로 충분하다. 
+
+13장 리스트 박스에서 ListBox의 ItemTemplate 프로퍼티에 대해 살펴보면서 ItemTemplate 프로퍼티를 DataTemplate 객체로 어떻게 정의하는지를 보여주었다. 이 DataTemplate 에는 ListBox에 있는 항목들을 어떻게 보여줄 것인지를 결정하는 VisualTree가 들어 있다. 
+
+ItemsControl에 의해 정의된 ItemTemplate 프로퍼티는 TreeView를 상속받는다. 더욱이 HierarchicalDataTemplate 클래스는 DataTemplate을 상속받았기 때문에 TreeView가 만들어야 하는 계층적 데이터를 표현하는 가장 이상적인 클래스이다. 이 클래스를 이용하려면 TreeView에 보여줄 데이터 구조를 정의하는 것부터 시작해야 한다. 
+
+DiskDirectory 클래스는 DirectoryInfo 객체에 대한 래퍼이다. 사실 DirectoryInfo가 Sealed되지 않았다면 DiskDirectoryInfo는 DirectoryInfo를 상속받아 만들었을 것이다. 그러면 이 클래스가 더 간단해 졌을 것이다. 예를 들어 생성자나 Name 프로퍼티가 필요 없어진다. 
+
+
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+public class DiskDirectory
+{
+	DirectoryInfo dirinfo;
+
+	//DirectoryInfo 객체를 받는 생성자
+	public DiskDirectory(DirectoryInfo dirinfo)
+	{
+		this.dirinfo = dirinfo;
+	}
+
+	//디렉토리명을 구해주는 Name 프로퍼티
+	public string Name
+	{
+		get { return dirinfo.Name; }
+	}
+
+	//DiskDirectory 객체에 대한 컬렉션을 구해주는 Subdirectories 프로퍼티
+	public List<DiskDirectory> Subdirectories
+	{
+		get
+		{
+			List<DiskDirectory> dirs = new List<DiskDirectory>();
+			DirectoryInfo[] subdirs;
+
+			try
+			{
+				subdirs = dirinfo.GetDirectories();
+			}catch
+			{
+				return dirs;
+			}
+
+			foreach(DirectoryInfo subdir in subdirs)
+				dirs.Add(new DiskDirectory(subdir));
+			return dirs;
+		}
+	}
+}
+
+여기서 중요한 프로퍼티는 Subdirectories이다. 이 프로퍼티는 GetDirectories 메소드를 호출해 각 하위 디렉토리에 대한 DiskDirectory 객체를 생성하고 이 객체를 List 컬렉션에 추가해준다. List 객체는 프로퍼티에 의해 사용할 수 있다. 
+
+TemplateTheTree 프로그램은 TreeView의 데이터 템플릿을 정의하기 위해 DiskDirectory 클래스를 사용한다. 
+
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+
+public class TemplateTheTree : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new TemplateTheTree());
+	}
+	public TemplateTheTree()
+	{
+		Title = "Template the Tree";
+
+		//윈도우 Content를 위한 TreeView 생성
+		TreeView treevue = new TreeView();
+		Content = treevue;
+
+		//DiskDirectory를 기반으로 HierarchicalDataTemplate 생성
+		HierarchicalDataTemplate template = new HierarchicalDataTemplate(typeof(DiskDirectory));
+
+		//ItemSource로 Subdirectories 프로퍼티를 설정
+		template.ItemsSource = new Binding("Subdirectories");
+
+		//TextBlock에 대한 FrameworkElementFactory 생성
+		FrameworkElementFactory factoryTextBlock = new FrameworkElementFactory(typeof(TextBlock));
+
+		//DiskDirectory의 Name 프로퍼티와 Text 프로퍼티를 바인딩
+		factoryTextBlock.SetBinding(TextBlock.Textproperty, new Binding("Name"));
+
+		//템플릿의 VisualTree로 이 Textblock 를 설정
+		template.VisualTree = factoryTextBlock;
+
+		//시스템 드라이브에 대한 DiskDirectory 객체 생성
+		DiskDirectory dir = new DiskDirectory(new DirectoryInfo(Path.GetPathRoot(Environment.SystemDirectory)));
+
+		//루트 TreeViewItem을 생성하고 프로퍼티를 설정
+		TreeViewItem item = new TreeViewItem();
+		item.Header = dir.Name;
+		item.ItemsSource = dir.Subdirectories;
+		item.ItemTemplate = template;
+
+		//TreeView에 TreeViewItem을 추가
+		treevue.Items.Add(item);
+		item.IsExpanded = true;
+	}
+}
+
+
+HierarchicalDataTemplate 객체는 DiskDirectory 클래스를 바탕으로 생성된다. 이 템플릿은 TreeViewItem 객체와 관련된 DiskDirectory 객체를 나타내는 데 중요하다. HierarchicalDataTemplate에는 Items 컬렉션의 소스에 해당하는 ItemSources 프로퍼티가 있다. 이 프로퍼티를 DiskDirectory의 Subdirectories 프로퍼티로 설정한다. 
+
+다음 단계는 FrameworkElementFactory 객체를 바탕으로 비주얼 트리를 만드는 것이다. 예제를 단순하게 하기 위해 TreeViewItem의 비주얼 트리를 TextBlock으로 구성했다. TextBlock의 Text 프로퍼티는 DiskDirectory의 Name 프로퍼티와 바인딩된다. 
+
+계속 해서 생성자는 시스템 드라이브를 나타내는 DiskDirectory 타입 객체를 생성한다(예제를 단순화 하기 위해 모든 드라이브를 읽어오게 구현하지 않았다) TreeViewItem을 생성해 Header 프로퍼티를 DiskDirectory 객체의 Name 프로퍼티로 설정하고 ItemsSource 프로퍼티를 DiskDirectory 객체의 Subdirectories 프로퍼티로 설정한다. 그리고 ItemTemplate 프로퍼티는 조금 전에 만들었던 HierarchicalDataTemplate 으로 설정한다. 이제 TreeViewItem루트의 자식은 DiskDirectory 객체의 Subdirectories 프로퍼티가 되었다. 이 자식들을 나타낼 때는 HierarchicalDataTemplate를 이용해야 한다. 이 템플릿이 앞으로 보여줄 모든 항목이 어떻게 보여질지를 정의한다. TreeView는 이벤트 핸들러 없이도 디렉토리 트리를 효율적으로 나타내고 있다. 
+
+TemplateTheTree 프로그램은 TreeViewItem이 같은 종류의 객체일 때 어떻게 이들을 나타내는지를 보여주고 있는데, 부모와 자식 항목이 다른 종류일 경우에도 트리 뷰를 이용할 수 있다. 25장에서 템플릿 예제를 통해 이를 보여줄 것이다. 
+
+이번 장의 마지막 예제인 TreeView는 DispatcherObject를 상속받은 WPF의 모든 public 클래스를 트리로 보여주는 예제이다. TreeView는 서로 유사한 계층 구조를 갖는 각 항목들을 비주얼한 계층 구조로 보여줄 수 있어 이런 작업에 이상적이다. 현재 프로그램이 클래스의 이름만을 보여주지만 이름과 연관된 Type 객체를 보여주게 코드를 수정할 수 있다. TypeTreeViewItem 클래스는 TreeViewItem을 상속받았으며, Type 프로퍼티를 갖는다. 물론 Type 프로퍼티의 타입은 Type이다. 
+
+
+using Syste;
+using System.Windows;
+using System.Windows.Controls;
+
+class TypeTreeViewItem : TreeViewItem;
+{
+	Type typ;
+
+	//두가지 생성자
+	public TypeTreeViewItem()
+	{
+	}
+	public TypeTreeViewItem(Type typ)
+	{
+		this.typ = typ;
+	}
+
+	//Type 타입의 Public Type 프로퍼티
+	public Type Type
+	{
+		set
+		{
+			typ = value;
+		
+			if(typ.IsAbstract)
+				Header = typ.Name + " (abstract)";
+			else
+				Header = typ.Name;
+		}
+		get
+		{
+			return typ;
+		}
+	}
+}
+
+TypeTreeViewItem 프로그램은 객체를 생성하는 시점에 Type 프로퍼티를 설정할 수도 있고 나중에도 설정할 수도 있게 두 개의 생성자를 갖는다. Type 프로퍼티의 set 접근자에서 TreeViewItem의 Header 프로퍼티에 Type 객체의 Name 프로퍼티를 대입하고 있음을 주목하자. 예를 들어 TypeTreeViewItem 객체를 생성하고 아래처럼 Type 프로퍼티를 설정할 수 있다. 
+
+TypeTreeViewItem item = new TypeTreeViewItem();
+item.Type = typeof(Button);
+
+Button은 단순한 텍스트로 보이지만 Type 프로퍼티를 통해 이 항목에 연결된 Type 객체를 사용할 수 있다(Type 프로퍼티의 set 접근자는 Header를 Type 객체로 설정할 수 있지만 그러한 경우에 Type 객체는 Type 클래스의 ToString 메소드를 이용해서 보여주게 된다. ToString은 클래스의 전체 이름을 구해준다. 예를 들어 System.Windows.Controls.Button)
+
+다음 단계는 TreeView를 상속받는 ClassHierarchyTreeView 클래스를 정의하는 것이다. 
+
+
+
+
