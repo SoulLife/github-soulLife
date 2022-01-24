@@ -1,0 +1,625 @@
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Collections.Generic;
+using System.Reflection;
+
+
+public class ClassHierarchyTreeView : TreeView
+{
+	public ClassHierarchyTreeView(Type typeRoot)
+	{
+		//PresentationCore가 로딩되었는지 확인
+		UIElement dummy = new UIElement();
+
+		//리스트에 참조하는 모든 어셈블리를 추가
+		List<Assembly> assemblies = new List<Assembly>();
+
+		//참조하는 어셈블리를 모두 구함
+		AssemblyName[] anames = Assembly.GetExecuteingAssembly().GetReferenceAssemblies();
+
+		//어셈 블리 목록에 추가
+		foreach(AssemblyName aname in anames)
+			assemblies.Add(Assembly.Load(aname));
+
+		//sorted 리스트에 typeRoot의 하위 요소를 저장
+		SortedList<string, Type> classes = new SortedList<string, Type>();
+		classes.Add(typeRoot.Name, typeRoot);
+
+		//어셈블리의 모든 타입을 구함
+		foreach(Assembly assembly in assemblies)
+			foreach(Type typ in assembly.GetTypes())
+				if(typ.IsPublic && typ.IsSubclassOf(typeRott))
+					classes.Add(typ.Name, typ);
+
+		//루트 항목 생성
+		TypeTreeViewItem item = new TypeViewItem(typeRoot);
+		Items.Add(item);
+
+		//재귀적 메소드 호출
+		CreateLinkedItems(item, classes);
+	}
+	void CreateLinkedItems(TypeTreeViewItem itemBase, SortedList<string, Type> list)
+	{
+		foreach(KeyValuePair<string, Type> kvp in list)
+			if(kvp.Value.BaseType == itemBase.Type)
+			{
+				TypeTreeViewItem item = new TypeTreeViewItem(kvp.Value);
+				itemBase.Items.Add(item);
+				CreateLinkedItems(item, list);
+			}
+	}
+}
+
+ClassHierarchyTreeView 클래스의 모든 작업은 생성자에서 이루어진다. 생성자는 계층 구조가 시작되는 루트 Type을 파라미터로 받는다. 먼저 프로그램이 참조하는 모든 AssemblyName 객체를 저장하기 위한 List 객체를 생성하고 Assembly 객체를 만들기 위해 이 어셈블리들을 읽어 들인다. 
+
+그리고 SortedList 객체를 생성해 TypeRect에서 파생된 Type 객체를 저장한다. 이 Type 객체는 그 타입의 Name 프로퍼티를 키로 사용해 리스트에 저장된다. 생성자는 모든 Assembly 객체에 대해 루프를 돌면서 각 어셈블리에 대해 Type 객체를 검색한다. 
+
+일단모든 클래스가 SortedList에 저장되고 나면 각 클래스에 대해 TypeTreeViewItem 클래스를 생성한다. 이 작업은 CreateLinkedItems 메소드에 의해 재귀적으로 이루어진다. 첫 번째 인자는 특정 클래스와 연결되는 TypeTreeViewItem이다. 이 메소드는 SortedList에 있는 모든 클래스에 대해 루프를 돌면서 클래스의 베이스 타입을 찾는다. 그런 후 각 항목에 대해 새로운 TypeTreeViewItem을 생성하고 베이스 클래스의 컬렉션에 이 객체를 추가한다. 
+
+이전의 두 소스 코드 파일과 다음에 살펴볼 파일 하나가 ShowClassHierarchy 프로젝트의 모든 부분이다. 생성자에서 DisptacherObject의 루트 클래스를 이용해 ClassHierarchyTreeView 타입의 객체로 Window의 Content를 설정한다. 
+
+
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+
+class ShowClassHierarchy : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ShowClassHierarchy());
+	}
+	public ShowClassHierarchy()
+	{
+		Title = "Show Class Hierarchy";
+
+		//ClassHierarchyTreeView 생성
+		ClassHierarchyTreeView treevue = new ClassHierarchyTreeView(typeof(System.Windows.Threading.DisptacherObject));
+		Content = treevue;
+	}
+}
+
+더큰 클래스 구조를 얻기 위해서 DisptacherObject를 참조하는 부분을 typeof(Object)로 바꾸고 싶을 지도 모른다. 하지만 ClassHierarchyTreeView의 로직은 Object로 시작하는 경우 다른 네임스페이스에 있는 두 클래스가 같은 이름이면 에러를 발생시킨다. 
+
+TreeView 컨트롤이 윈도우 탐색기의 왼쪽 부분과 유사하다면 ListView 컨트롤은 오른쪽 분과 유사하다. 윈도우 탐색기에서는 다른 뷰(미리보기, 큰아이콘, 아이콘, 간단히, 자세히 등)를 선택할 수 있다. 13장에서 어떻게 ListBox에 템플릿을 정의해 다른 포맷으로 객체를 나타내는지는 이미 살펴봤기 때문에 객체를 다양하게 보여주기 위해 커스텀 템플릿으로 ListBox를 이용할수 있다. 그러나 어려운 부분은 자세히 이다. 자세히 보기는 여러 열과 열 헤더가 필요하기 때문이다. 이에 대한 해결책은 ListView를 이용하는 것이다. 
+
+ListView 컨트롤은 ListBox에서 직접 파생되었다(ListViewItem도 ListBoxItem에서 직접 파생되었다)ListBox처럼 ListView도 컨트롤이 보여줄 객체를 저장하는 Items 프로퍼티를 갖고 있다. ListView 역시 배열이나 객체 다른 컬렉션으로 설정할 수 있는 ItemSource 프로퍼티를 갖고 있다. ListView는 ListBox에 비해 View라는 이름의 프로퍼티를 추가로 갖고 있으며, 이 프로퍼티의 타입은 ViewBase이다. View가 null이면 ListView는 ListBox와 동일하다. 
+
+일단 ViewBase를 상속받는 GridView라는 클래스를 만든다. 이 GridView는 여러 열과 열 헤더를 보여준다. GridView의 중요한 프로퍼티는 Columns이며, Column 객체 타입은 GridViewColumnCollection이다. 각 열을 보여주기 위해 GridViewColumn 타입의 객체를 생성해 Columns 컬렉션에 추가한다. GridViewColumn 객체는 열에서 보여줄 항목에 대해 열의 헤더, 열의 폭과 같은 프로퍼티를 정의한다. 
+
+예를 들어 ListView 컨트롤의 Items 컬렉션을 Personel 타입의 객체로 설정한다고 가정해보자. Personnel 클래스가 FirstName, LastName, EmailAddreess와 같은 프로퍼티를 갖는 다면 ListView의 각 열은 열에 나타날 Personnel 클래스의 특정 프로퍼티(FirstName, LastName 같은)를 나타내게 정의해야 한다. 즉 프로퍼티를 바인딩을 위해 구분해야 하는 것이다. 
+
+첫 번째 프로그램은 SystemParameters 클래스의 모든 프로퍼티와 값을 보여주는 SystemParam이다. SystemParameters 클래스는 MenuBarHeight나 IsMouseWheelPresent와 같은 많은 정적 프로퍼티를 갖고 있다. 이 프로퍼티는 애플리케이션 메뉴의 기본 높이나 컴퓨터에 연결되어 있는 마우스의 휠 여부를 나타낸다. 
+
+GridView에 정보를 보여주기 위한 첫 번째 단계는 보여줄 항목을 나타내는 클래스를 정의하는 것이다. 먼저 2개의 열을 가진 GridView가 필요하다. 첫 번째 열은 프로퍼티 이름, 두 번째 열은 프로퍼티 값을 보여준다. 각 항목을 저장할 클래스 이름은 SystemParam이다. 
+
+
+
+public class SystemParam
+{
+	string strName;
+	object objValue;
+
+	public string Name
+	{
+		set { strName = value;	}
+		get { return strName;	}
+	}
+
+	public object Value
+	{
+		set { objValue = value;	}
+		get { return objValue;	}
+	}
+
+	public override string ToString()
+	{
+		return Name + " = " + Value;
+	}
+}
+
+ListSystemParameters 클래스는 Window를 상속받았고, 클라이언트 영역을 채우기 위해 ListView 컨트롤을 생성한다. 그런 후 GridView 객체를 생성해 ListView의 View 프로퍼티에 설정한다. 
+
+
+
+using System;
+using System.Collections.Generic; //실험을 위해 미리 선언
+using System.ComponentModel;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Data;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+class ListSystemParameters : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListSystemParameters());
+	}
+	
+	public ListSystemParameters()
+	{
+		Title = "List System Parameters";
+
+		//윈도우 Content 를 위한 ListView 생성
+		ListView lstvue = new ListView();
+		Content = lstvue;
+
+		//ListView의 View로 사용하기 위해 GridView 생성
+		GridView grdvue = new GridView();
+		lstvue.View = grdvue;
+
+		//GridView 열 2개 생성
+		GridViewColumn col = new GridViewColumn();
+		col.Header = "Property Name";
+		col.Width = 200;
+		col.DisplayMemberBinding = new Binding("Name");
+		grdvue.Columns.Add(col);
+
+		col = new GridViewColumn();
+		col.Header = "Value";
+		col.Width = 200;
+		col.DisplayMemberBinding = new Binding("Value");
+		grdvue.Columns.Add(col);
+
+		//배열에서 모든 시스템 파라미터를 구함
+		PropertyInfo[] props = typeof(SystemParameters).GetProperties();
+
+		//ListView에 항목추가
+		foreach(PropertyInfo prop in props)
+			if(prop.PropertyType != typeof(ResourceKey))
+			{
+				SystemParam sysparam = new Systemparam();
+				sysparam.Name = prop.Name;
+				sysparam.Value = prop.GetValue(null, null);
+				lstvue.Items.Add(sysparam);
+			}
+	}
+}
+
+
+첫 번째 GridViewColumn은 SystemParameters 클래스의 프로퍼티 이름을 보여준다. Header 프로퍼티는 "Property Name"이고 Width 프로퍼티는 장치 독립적인 단위로 200이다. GridViewColumn의 DisplayMemberBinding 프로퍼티는 보여줄 데이터의 프로퍼티를 가리키는 바인딩으로 설정해야 하며, 여기서는 SystemParam의 프로퍼티이다. 이 열은 SystemParam의 Name 프로퍼티가 나타나야 한다. 그래서 다음과 같은 구문을 사용한다. 
+
+col.DisplayMemberBinding = new Binding("Name");
+
+
+두번째 열에서 Header 프로퍼티는 "Value"이고 SystemParams의 Value 프로퍼티와 연결된다. 
+
+지금까지 ListView는 항목이 없었다. 생성자는 SystemParammeters의 PropertyInfo 객체 배열을 리플렉션으로 구한다. 각 프로퍼티에 대해서 프로그램은 SystemParam 타입의 객체를 생성하고, PropertyInfo의 Name 프로퍼티로 Name 프로퍼티를 할당하고, PropertyInfo의 GetValue 메소드로부터 Value 프로퍼티를 할당한다. 각 항목은 Items 컬렉션에 추가된다. 
+
+SystemParamter에서 ResourceKey 타입의 모든 프로퍼티는 처리하지 않고 넘어간다는 데 유의하자. 클래스의 각 프로퍼티는 두 가지 형태가 있다.  예를 들어 MenuBarHeight는 double 타입이고, MenuBarHeightKey는 ResourceKey 타입이다. ResourceKey 타입의 프로퍼티는 XAML에서 사용하는 것으로 21장에서 다룰 것이다. 
+
+프로그램에서 다음 구문을 삭제하게 되면 View 프로퍼티의 값은 기본값 null이 되기 때문에 ListView는 ListBox와 동일하게 동작한다. 
+
+lstvue.View = grdvue;
+
+항목들은 SystemParam의 ToString 메소드로부터 문자열을 받아서 보여주는데, 그리 좋지는 않지만 확실하게 모든 정보를 보여줄 수가 있다. 
+
+ListSystemParameters 프로그램의 문제점은 정렬이 되지 않는다는 것이다. 이 문제를 해결하는 데는 몇 가지 방법이 있다. 한 가지 방법은 foreach 루프의 전에 PropertyInfo 배열을 정렬하는 것이다. 이렇게 하기 위해서는 IComparer 인터페이스를 구현하는 클래스를 정의하고 두 PropertyInfo 항목을 비교하기 위한 Compare 메소드를 구현해야 한다.  그런 클래스를 간단하게 구현한 예가 있다. 
+
+class PropertyInfoCompare : IComparer<PropertyInfo>
+{
+	public int Compare(PropertyInfo prop1, PropertyInfo prop2)
+	{
+		return string.Compare(prop1.Name, prop2.Name);
+	}
+}
+
+ListSystemParameters.cs 파일은 이미 System.Collection.Generic 네임스페이스를 using문으로 포함하고 있다. PropertyInfoCompare 클래스로 PropertyInfo 배열을 정렬하기 위해서는 아래와 같이 간단히 호출하면 된다. 
+
+Array.Sort(props, new PropertyInfoCompare());
+
+두번째 방법은 System.ComponentModel 네임스페이스를 using 문으로 포함해야 한다(ListSystemParameters.cs는 이미 가지고 있다)정렬하고자 하는 항목의 프로퍼티를 참조하는 SortDescription 객체를 생성해 이를 ItemCollections로 정의된 SortDescriptions 컬렉션에 추가한다. 
+
+lstvue.Items.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
+
+세번째 방법은 SortedList 컬렉션과 관련이 있다. 이 방법은 프로그램의 다음 버전에서 소개할 것이다. String 객체를 키로해 SystemParam의 값으로 SortedList를 정의한다. 
+
+SortedList<string, SystemParam> sortlist = new SortedList<string, SystemParam>();
+
+그런후 프로그램은 이 SortedList를 PropertyInfo 배열로 채운다. 
+
+foreach(PropertyInfo prop in props)
+	if(prop.PropertyType != typeof(ResourceKey))
+	{
+		SystemParam sysparam = new SystemParam();
+		sysparam.Name = prop.Name;
+		sysparam.Value = prop.GetValue(null, null);
+		sortlist.Add(prop.Name, sysparam);
+	}
+
+프로퍼티 이름이 SortedList의 키 이름도 되지만 항목의 정렬에도 사용된다는 사실에 유념하자. 
+
+마지막 단계는 SortedList의 Values 컬렉션을 ListView의 ItemSource 프로퍼티에 설정하는 것이다. 
+
+lstvue.ItemsSource = sortlist.Values;
+
+SortedList의 Value 프로퍼티는 정렬된 SystemParam 객체를 위한 컬렉션이다. 
+
+프로그램의 두 번째 버전은 열에 있었던 작은 문제를 수정한 버전이다. 다양한 값을 보여줘야 하기 때문에 내용을 오른쪽 정렬하는 것이 더 좋다. 열의 내용을 정렬하는 설정이 없기 때문에 템플릿을 이용해 설정해야 하는데 이 방법이 더 일반적이다. 
+
+이 버전의 프로그램은 DataTemplate을 생성하고 오른쪽 정렬의 TextBlock으로 구성된 비주얼 트리로 이 템플릿을 초기화한다. 그리고 두 번째 GridViewColumn의 CellTemplate 프로퍼티를 생성한 템플릿으로 설정한다. 
+
+
+using sky4868.ListSystemParameters; //SystemParam을 쓰기 위함
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+public class ListSortedSystemParameters : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ListSortedSystemParameters());
+	}
+	public ListSortedSystemParameters()
+	{
+		Title = "List Sorted System Parameters";
+
+		//윈도우 Content를 위한 ListView 생성
+		ListView lstvue = new ListView();
+		Content = lstvue;
+
+		//ListView의 View로 사용하기 위한 GridView 생성
+		GridView grdvue = new GridView();
+		lstvue.View = grdvue;
+
+		//GridView 열2개 생성
+		GridViewColumn col = new GridViewColumn();
+		col.Header = "Property Name";
+		col.Width = 200;
+		col.DisplayMemberBinding = new Binding("Name");
+		grdvue.Columns.Add(col);
+
+		col = new GridViewColumn();
+		col.Header = "Value";
+		col.Width = 200;
+		grdvue.Columns.Add(col);
+
+		//두번째 열을 위한 데이터 템플릿 생성
+		DataTemplate template = new DataTemplate(typeof(string));
+		FrameworkElementFactory factoryTextBlock = new FrameworkElementFactory(typeof(TextBlock));
+		factoryTextBlock.SetValue(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Right);
+		factoryTextBlock.SetBinding(TextBlock.TextProperty, new Binding("Value"));
+		template.VisualTree = factoryTextBlock;
+		col.CellTemplate = template;
+
+		//배열의 모든 시스템 파라미터를 구함
+		PropertyInfo[] props = typeof(SystemParameters).GetProperties();
+
+		//SystemParam 객체가 들어갈 SortedList 생성
+		SortedList<String, SystemParam> sortlist = new SortedList<string, SystemParam>();
+
+		//PropertyInfo 배열로 SortedList를 채움
+		foreach(PropertyInfo prop in props)
+			if(prop.PropertyType != typeof(ResourceKey))
+			{
+				SystemParam sysparam = new SystemParam();
+				sysparam.Name = prop.Name;
+				sysparam.Value = prop.GetValue(null, null);
+				sortlist.Add(prop.Name, sysparam);
+			}
+		//ListView의 ItemsSource 프로퍼티를 설정
+		lstvue.ItemsSource = sortlist.Values;
+	}
+}
+
+TextBlock의 Text 프로퍼티가 SystemParam의 Value 프로퍼티와 바인딩된다는 사실에 주목하자. 그래서 DisplayMemberBinding은 더 이상 사용하지 않는다. 
+
+8장에서 의존 프로퍼티에 대해 살펴보면서 WPF 클래스에 정의된 의존 프로퍼티에 대한 정보를 직접 얻기 위해 리플렉션을 이용하는 콘솔 프로그램을 작성했다. 그러나 더 일반적인 방법에 대해 알아보기 위해서 ClassHierarchyTreeView(16장에서 이미 살펴봤다)와 DependencyPropertyListView(앞으로 살펴볼 것이다)를 만들게 되었다. 17장의 마지막 프로그램인 ExploreDependencyProperties는 하나의 윈도우를 스플리터로 양분해 두 개의 컨트롤(트리뷰와 리스트 뷰)을 통합한다. ClassHirearchyTreeView에서 클래스를 선택하면 DependencyPropertyListView는 클래스에 정의된 FrameworkMetadata 플래그 같은 의존 프로퍼티를 보여준다. 
+
+DependencyPropertyListView는 ListView를 상속받고 DependencyProperty 타입 객체의 컬렉션을 보여준다. 각 열은 DependencyProperty의 특정 프로퍼티와 연결된다. 즉, 첫 번째 열은 Name 프로퍼티와 연결되고, 두 번째는 OwnerType 프로퍼티와 연결된다. 
+
+그러나 여기서 문제가 시작된다. ListView에 있는 열을 DependencyProperty의 OwnerType프로퍼티로 바인딩하면 System.Windows.Controls.Button과 같은 문자열을 보게 된다. 이러면 읽기가 어렵다. 그 대신 Button 만 열에 보이게 하고 싶다. 다행히 이렇게 바꾸는 몇 가지 방법이 있다. GridViewColumn 객체의 CellTemplate 프로퍼티를 위해 DataTemplate 객체를 정의하면 보여줄 프로퍼티와 보여지는 엘리먼트를 연결하는 Binding도 정의할 수 있다. 
+
+Binding 클래스에는 Converter라는 프로퍼티가 정의되어 있는데, 이 프로퍼티는 바인딩 데이터를 원하는 형태로 변환한다. 이 Converter 프로퍼티는 IValueConverter 타입이며, Convert와 ConvertBack 두 개의 메소드만을 갖는 인터페이스이다. 
+
+그래서 System.Windows.Controls.Button과 같은 Type 객체를 Button과 같은 string으로 변환해주는 IValueConverter 인터페이스를 구현한 클래스가 필요하다. TypeToString 클래스를 살펴보자. 
+
+
+
+
+using System;
+using System.Globalization;
+using System.Windows.Data;
+
+class TypeToString : IValutConverter
+{
+	public object Convert(object obj, Type type, object param, CultureInfo culture)
+	{
+		return (obj as Type).Name;
+	}
+	public object ConvertBack(object obj, Type type, object param, CultureInfo culture)
+	{
+		return null;
+	}
+}
+
+변환되어야 하는 객체는 Convert 메소드의 첫 번째 파라미터로 들어간다. 이 클래스를 이용하는 데 있어 이 객체는 Type 타입이어야 한다. Type 객체로 형 변환하고 난 후 Name 프로퍼티는 네임스페이스 없이 이름을 제공한다. 이 애플리케이션에서 ConvertBack 메소드는 단순히 null 값을 반환하기 때문에 사용된 적이 없다. 이 변환 역시 DependencyProperty의 PropertyType 프로퍼티를 보여주기에 좋다
+
+DependencyProperty가 PropertyMetadata 타입의 DefaultMetadata라는 이름의 프로퍼티를 정의한다는 사실을 기억할 것이다. 이 PropertyMetadata 객체는 내부에 DefaultValue 프로퍼티와 같은 몇 가지 유용한 정보를 갖고 있다. 그러나 많은 엘리먼트가 FrameworkPropertyMetadata 타입의 객체를 이용해 메타 데이터를 정의하는데, 이중 중요한 프로퍼티는 AffectMeasure, AffectArrange, AffectsRender 등이다. 이 메타 데이터 프로퍼티들은 FrameworkPropertyMetadataOptions 열거형을 이용하는 생성자에 의해 설정되는데, 이 부분에 중점을 두자. AffectMeasure와 AffectArrange 프로퍼티 등의 불리언 값보다는 앞에서 메타 데이터를 생성하는 데 사용했던 FrameworkPropertyMetadataOptions 멤버들로 보여주는 것이 더 좋겠다. 
+
+이를 위해서 클래스 변환이 필요하다. Convert 메소드는 FrameworkPropertyMetadata 타입의 열거형 객체를 FrameworkPropertyMetadataOptions 타입의 객체로 변환한다. 
+
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+
+
+class MetadataToFlags : IValueConverter
+{
+	public object Convert(object obj, Type type, object param, CultureInfo culture)
+	{
+		FrameworkPropertyMetadataOptions flags = 0;
+		FrameworkPropertyMetadata metadata = obj as FrameworkPropertyMetadata;
+
+		if(metadata == null)
+			return null;
+	
+		if(metadata.AffectsMeasure)
+			flags |= FrameworkPropertyMetadataOptions.AffectsMeasure;
+
+		if(metadata.AffectsArrange)
+			flags |= FrameworkPropertyMetadataOptions.AffectsAffectsArrage;
+
+		if(metadata.AffectsParentMeasure)
+			flags |= FrameworkPropertyMetadataOptions.AffectsParentMeasure;
+
+		if(metadata.AffectsParentArrange)
+			flags |= FrameworkPropertyMetadataOptions.AffectsParentArrange;
+
+		if(metadata.AffectsRender)
+			flags |= FrameworkPropertyMetadataOptions.AffectsRender;
+
+		if(metadata.Inherits)
+			flags |= FrameworkPropertyMetadataOptions.Inherits;
+	
+		if(metadata.OverridesInheritanceBehavior)
+			flags |= FrameworkPropertyMetadataOptions.OverridesInheritanceBehavior;
+
+		if(metadata.IsNotDataBindable)
+			flags |= FrameworkPropertyMetadataOptions.NotDataBindable;
+		
+		if(metadata.BindsTwoWayByDefault)
+			flags |= FrameworkPropertyMetadataOptions.BindsTwoWayByDefault;
+
+		if(metadata.Journal)
+			flags |= FrameworkPropertyMetadataOptions.Journal;
+
+		return flags;
+	}
+	public object ConvertBack(object obj, Type type, object param, CulureInfo culture)
+	{
+		return new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions)obj);
+	}
+}
+
+변환된 항목이 실제로 보이며 Enum 구조체에 정의된 ToString 메소드는 멤버를 콤마로 구분하여 읽을 수 있게 만든다. 
+
+DependencyPropertyListView를 살펴볼 때가 되었다. 이 클래스는 ListView로부터 파생되었으며 Type이라는 프로퍼티가 정의되어 있고, TypeProperty라는 의존 프로퍼티로 지원된다. ListView의 Type 프로퍼티를 설정하면 컨트롤은 Type에 의해정의된 모든 DependencyProperty 객체를 보여준다. OnTypePropertyChanged 메소드는 리플렉션을 이용하여 모든 DependencyProperty 객체를 구해주며, ListView의 ItemSource 프로퍼티를 설정하기 위해 이 객체를 SortedList 컬렉션에 집어넣는다. 
+
+
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+
+
+public class DependencyPropertyListView : ListView
+{
+	//Type에 대한 의존 프로퍼티 정의
+	public static DependencyProperty TypeProperty;
+
+	//정적 생성자에 의존 프로퍼티 등록
+	static DependencyPropertyListView()
+	{
+		TypeProperty = DependencyProperty.Register("Type", typeof(Type), typeof(DependencyPropertyListView),
+				new PropertyMetadata(null, new PropertyChangedCallback(OnTypePropertyChanged)));
+	}
+	//TypeProperty가 변경될 때 호출되는 정적 메소드
+	static void OnTypePropertyChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
+	{
+		//관련된 ListView 객체를 구함
+		DependencyPropertyListView lstvue = obj as DependencyPropertyListView;
+
+		//Type 프로퍼티의 새로운 값을 구함
+		Type type = args.NewValue as Type;
+
+		//ListView에 현재 저장되어 있는 모든 항목을 지움
+		lstvue.ItemsSource = null;
+
+		//Type 객체의 모든 의존 프로퍼티를 구함
+		if(type != null)
+		{
+			SortedList<string, DependencyProperty> list = new SortedList<string, DependencyProperty>();
+			FieldInfo[] infos = type.GetFileds();
+
+			foreach(FieldInfo info in infos)
+				if(info.FieldType == typeof(DependencyProperty))
+					list.Add(info.Name, (DependencyProperty)info.GetValue(null));
+			//리스트의 ItemSource를 설정
+			lstvue.ItemsSource = list.Values;
+		}
+	}
+	//Public Type 프로퍼티
+	public Type Type
+	{
+		set { setValue(TypeProperty, value);	}
+		get { return (Type)GetValue(TypeProperty); }
+	}
+	// 생성자
+	public DependencyPropertyListView()
+	{
+		//GridView를 생성해서 View 프로퍼티에 설정
+		GridView grdvue = new GridView();
+		this.View = grdvue;
+
+		//첫번째 얼에 의존 프로퍼티의 Name 프로퍼티를 보여줌
+		GridViewColumn col = new GridViewColumn();
+		col.Header = "Name";
+		col.Width = 150;
+		col.DisplayMemberBinding = new Binding("Name");
+		grdvue.Columns.Add(col);
+
+		//두번째 열의 레이블은 Owner
+		col = new GridViewColumn();
+		col.Header = "Owner";
+		col.Width = 100;
+		grdvue.Columns.Add(col);
+
+		//두번째 열에 의존 프로퍼티의 OwnerType 출력
+		//이 열은 데이터 템플릿이 필요함
+		DataTemplate template = new DataTemplate();
+		col.CellTemplate = template;
+
+		//텍스트 블록에 데이터를 출력
+		FrameworkElementFactory elTextBlock = new FrameworkElementFactory(typeof(TextBlock));
+		template.VisualTree = elTextBlock;
+
+		//TypeToString 컨버터를 이용해서 
+		//의존 프로퍼티의 'OwnerType' 프로퍼티를 텍스트 블록의 Text 프로퍼티와 바인딩
+		Binding bind = new Binding("OwnerType");
+		bind.Converter = new TypeToString();
+		elTextBlock.SetBinding(TextBlock.Textproperty, bind);
+
+		//세번째 열의 레이블은 Type
+		col = new GridViewColumn();
+		col.Header = "Type";
+		col.Width = 100;
+		grdvue.Columns.Add(col);
+
+		//PropertyType과 바인딩하기 위해 유사한 템플릿이 필요함
+		template = new DataTemplate();
+		col.CellTemplate = template;
+		elTextBlock = new FrameworkElementFactory(typeof(TextBlock));
+		template.VisualTree  = elTextBlock;
+		bind = new Binding("PropertyType");
+		bind.Converter = new TypeToString();
+		elTextBlock.SetBinding(TextBlock.TextProperty, bind);
+
+		//네번째 열의 레이블은 Default이고
+		//DefaultMetadata.DefaultValue를 출력
+		col = new GridViewColumn();
+		col.Header = "Default";
+		col.Width = 75;
+		col.DisplayMemberBinding = new Binding("DefaultMetadata.DefaultValue");
+		grdvue.Columns.Add(col);
+
+		//다섯 번째 열도 유사함
+		col = new GridViewColumn();
+		col.Header = "Read-Only";
+		col.Width = 75;
+		col.DisplayMemberBinding = new Binding("DefaultMetadata.ReadOnly");
+		grdvue.Columns.Add(col);
+
+		//여섯 번째 열도 유사함
+		col = new GridViewColumn();
+		col.Header = "Usage";
+		col.Width = 75;
+		col.DisplayMemberBinding = new Binding("DefaultMetadata.AttachedPropertyUsage");
+		grdvue.Columns.Add(col);
+
+		//일곱 번째 열은 메타 데이터 플래그를 출력
+		col = new GridViewColumn();
+		col.Header = "Flags";
+		col.Width = 250;
+		grdvue.Columns.Add(col);
+
+		//MetadataToFlags를 이용해 변환하기 위해서 템플릿이 필요함
+		template = new DataTemplate();
+		col.CellTemplate = template;
+		elTextBlock = new FrameworkElementFactory(typeof(TextBlock));
+		template.VisualTree = elTextBlock;
+		bind = new Binding("DefaultMetadata");
+		bind.Converter = new MetadataToFlags();
+		elTextBlock.SetBinding(TextBlock.TextProperty, bind);
+	}
+}
+
+이 클래스에서는 생성자에서 모든 열을 정의하고 있다. 어떤 열은 간단하지만, 어떤 열은 앞서 논의한 변환을 처리한다. 
+
+마지막으로 ExploreDependencyProperties 클래스는 이 모든 것을 하나로 합칠 것이다. ClassHierarchyTreeView와 DependencyPropertyListView를 생성하고 그 사이에 Grid Splitter를 넣는다. 
+
+
+using Petzold.ShowClassHierarchy; //ClassHierarchtTreeView를 쓰기 위함
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class ExploreDependencyProperties : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ExploreDependencyProperties());
+	}
+	public ExploreDependencyProperties()
+	{
+		Title = "Explore Dependency Properties";
+
+		//윈도우 Content 를 위한 Grid 생성
+		Grid grid = new Grid();
+		Content = grid;
+
+		//Grid에 열을 3개 정의
+		ColumnDefinition col = new ColumnDefinition();
+		col.Width = new GridLength(1, GridUnitType.Start);
+		grid.ColumnDefinitions.Add(col);
+
+		col = new ColumnDefinition();
+		col.Width = GridLength.Auto;
+		grid.ColumnDefinitions.Add(col);
+		
+		col = new ColumnDefinition();
+		col.Width = new GridLength(3, GridUnitType.Star);
+		gird.ColumnDefinitions.Add(col);
+
+		//ClassHierarchyTreeView를 왼쪽에 배치
+		ClassHierarchyTreeView treevue = new ClassHierarchyTreeView(typeof(DependencyObject));
+		grid.Children.Add(treevue);
+		Grid.SetColumn(treevue, 0);
+
+		//GridSplitter를 가운데에 배치
+		GridSplitter split = new GridSplitter();
+		split.HorizontalAlignment = HorizontalAlignment.Center;
+		split.VerticalAlignment = VerticalAlignment.Stretch;
+		split.Width = 6;
+		grid.Children.Add(split);
+		Grid.SetColumn(split, 1);
+
+		//DependencyPropertyListView를 오른쪽에 배치
+		DependencyPropertyListView lstvue = new DependencyPropertyListView();
+		gird.Children.Add(lstvue);
+		Grid.SetColumn(lstvue, 2);
+
+		//TreeView와 ListView를 바인딩
+		lstvue.SetBinding(DependencyPropertyListView.TypeProperty, "SelectedItem.Type");
+		lstvue.Context = treevue;
+	}
+}
+
+생성자의 마지막 두 구문은 DependencyProperyListView 컨트롤의 Type 프로퍼티와 ClassHierarchyTreeView의 SelectedItem 프로퍼티간에 바인딩을 설정한다. SelectedItem 프로퍼티는 사실 TypeTreeViewItem 타입 객체인데 편의를 위해 프로퍼티를 Type 이름 으로 정의한 것이다. 이전의 거의 모든 작업들은 이 바인딩을 단순하게 하기 위해서였다. 
