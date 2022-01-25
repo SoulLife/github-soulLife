@@ -1,0 +1,868 @@
+CHAPTER 17장 : 인쇄와 대화상자
+
+System.Printing 네임스페이스를 살펴보면 프린터 드라이버, 프린터 뷰, 프린터 서버, 프린터 작업에 대한 클래스들이 모두 있는 것에 놀라게 된다. 인쇄에 관련해 대부분의 프로그램들에서 System.Printing에 관련된 대부분의 작업을 무시해도 된다는 것은 반가운 사실이다. 대부분의 인쇄 로직은 System.Windows.Controls 네임스페이스에 정의된 PrintDialog에 모여 있다 
+
+System.Printing 네임스페이스에서 필요한 주요 클래스는 PrintTicket 이다. 프로젝트에서 이 클래스를 사용하려면 ReachFramework.dll 어셈블리를 참조에 추가해야 한다. 이 클래스는 PrintQueue 타입 필드를 관리하면서 인쇄하는 프로그램에서도 유용하게 사용한다.  PrintQueue 클래스는 System.Printing 네임스페이스에서도 볼 수 있는데, System.Printing.dll에서 나온 것이다. 다른 인쇄 관련 클래스는 System.Windows.Documents에 정의되어 있다. 
+
+PrintDialog 클래스는 문서를 한 페이지 인쇄할지, 여러 페이지 인쇄할지 대화상자로도 보여주지만 메소드도 갖고 있다. 두 경우 모두 페이지에 인쇄하는 것은 Visual 타입의 객체다. 지금까지 Visual 을 상속받은 중요한 클래스는 UIElement였다. 이 사실은 패널 컨트롤 같이 FrameworkElement에서 파생된 클래스의 인스턴스는 어떤 것이든 인쇄가 가능하다는 것을 의미한다. 예를 들어 Canvas나 다른 패널을 생성해 그 위에 여러 개의 자식 컨트롤이나 엘리먼트를 올려놓고 이것들을 인쇄할 수 있다. 
+
+패널을 인쇄하는 것이 많은 유연성을 제공하는 것처럼 보이지만 DrawingVisual 클래스의 장점을 이용해 인쇄 작업을 구현하는 더 직접적인 방법은 Visual 클래스를 상속받는 것이다. 11장의 SelectColor 프로젝트의 ColorCell 클래스에서는 DrawingVisual을 이용했었다. DrawingVisual 클래스에는 RenderOpen이라는 이름의 메소드가 있으며, 이 메소드는 DrawingContext 타입의 객체를 구해준다. DrawingVisual 객체에 그래픽을 저장하기 위해서 DrawingContext에 있는 메소드를 호출해야 한다(Close를 호출하면 끝난다)
+
+이번에 살펴볼 PrintEllipse 프로그램은 아주 간단한 인쇄 프로그램이다. 인쇄 프로그램은 인쇄를 위한 초기화 작업이 필요하다. 버튼을 클릭하면 프로그램은 PrintDialog 타입 객체를 생성해서 보여준다. 이 대화상자에서 프린터가 여러 개 있는 경우에 프린터를 선택하고, 인쇄설정을 변경할 수 있다. 그런 후 인쇄 버튼을 누르면 PrintDialog는 사라지고 프로그램은 인쇄 준비를 시작한다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+public class PrintEllipse : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new PrintEllipse());
+	}
+	public PrintEllipse()
+	{
+		Title = "Print Ellipse";
+		FontSize = 24;
+
+		//윈도우 Content 를 위한 스택 패널 생성
+		StackPanel stack = new StackPanel();
+		Content = stack;
+
+		//인쇄를 위한 버튼 생성
+		Button btn = new Button();
+		btn.Content = "_Print...";
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.Margin = new Thickness(24);
+		btn.Click += PrintOnClick;
+		stack.Children.Add(btn);
+	}
+	void PrintOnClick(object sender, RoutedEventArgs args)
+	{
+		PrintDialog dlg = new PrintDialog();
+	
+		if((bool)dlg.ShowDialog().GetValueOrDefault())
+		{
+			//DrawingVisual을 생성하고 DrawingContext를 준비
+			DrawingVisual vis = new DrawingVisual();
+			DrawingContext dc = vis.RenderOpen();
+
+			//타원을 출력
+			dc.DrawEllipse(Brushes.LightGray,new Pen(Brushes.Black, 3), new Point(dlg.PrintableAreaWidth /2,
+					dlg.PrintableAreaHeight /2), 
+					dlg.PrintableAreaWidth /2,
+					dlg.PrintableAreaHeight /2 );
+
+			//DrawingContext를 닫음
+			dc.Close();
+
+			//끝으로 페이지를 인쇄
+			dlg.PrintVisual(vis, "My first print job");
+		}
+	}
+}
+
+ShowDialog는 널 값이 가능한 bool을 반환하게 정의되어 있다. 대화상자 클래스의 ShowDialog 메소드는 true, false, null을 반환한다. 사용자가 인쇄 버튼을 클릭하면 true를, 취소 버튼을 클릭하면 false를 , 제목 옆의 닫기 버튼을 클릭하면 null을 반환한다. GetValueOrDefault메소드는 if문을 위해 결과가 항상 bool 형태가 되게 null값을 false로 바꾸어 준다. 
+
+ShowDialog 메소드가 true를 반환하면 프로그램은 DrawingVisual 타입의 객체를 생성하고, DrawingContent 객체를 반환하는 RenderOpen 메소드를 호출한다. 그런 후 DrawingContext에서 DrawEllipse와 Close 메소드를 모두 호출한다. 마지막으로 DrawingVisual 객체를 프린터 큐에 프린트 작업을 구분할 수 있는 텍스트와 함께 PrintDialog의 PrintVisual 메소드에 넘겨주게 된다. 
+
+DrawEllipse 인자가 PrintDialog에 정의된 프로퍼티 PrintableAreaWidth와 PrintableAreaHeight를 참조한다는 사실을 기억하자. PrintEllipse 프로그램이 인쇄한 페이지가 프린터로 나올 때 타원의 일부가 페이지상에 인쇄가 안되는 영역에 있어서 잘린 것을 볼 수 있다. PrintableAreaWidth와 PrintableAreaHeight는 페이지의 인쇄 기능 영역을 참조하는 것이 아니라 장치 독립적딘 단위(1/96 인치)로 페이지의 전체 물리적인 크기를 가리킨다. 
+
+인쇄 대화상자 하단을 보면 사용자가 인쇄하고자 하는 문서 부분을 선택할 수 있게 네 개의 라디오 버튼이 모두, 선택 영역, 현재 페이지, 인쇄할 페이지 라는 텍스트와 같이 있는 것을 볼 수 있다. 네 개의 라디오 버튼은 문서 전체, 현재 선택한 영역, 현재 페이지, 사용자가 선택한 특정 페이지 영역을 나타낸다. 모두 라디오 버튼 외에는 전부 비활성화 되어 있다. WPF에서는 초기화를 하지 않으면 선택한 영역과 현재 페이지를 사용할 수가 없다 
+UserPageRangeEnabled 프로퍼티를 true로 해야만 인쇄 버튼을 사용할 수 있다. 
+
+PageRangeSelection 프로퍼티를 통해 라디오 버튼의 체크 상태를 초기화하거나 사용자가 선택한 버튼을 구할 수 있는데, 이 프로퍼티는 PageRangeSelection 열거형의 멤버가 된다. AllPages, UserPages, PageRangeSelection 프로퍼티가 Pages 라는 레이블을 가진 라디오 버튼에 해당하는 PageRangeSelection.UserPages와 같다면 PrintDialog의 PageRanges프로퍼티는 PageFrom과 PageTo 프로퍼티를 갖는 PageRange 타입의 객체 컬렉션이 된다. 
+
+인쇄 대화상자도 매수를 넣는 항목이 있어서 여기에다가 1 이상의 숫자를 넣으면 PrintVisual메소드가 그 숫자만큼 인쇄 한다. 
+
+인쇄 대화상자는 속성 이라는 버튼을 눌러서 세부적인 페이지 속성을 볼 수 있다. 다른 크기의 페이지를 선택하면 프로그램이 페이지 크기를 PrintableAreaWidth와 PrintableAreaHeight로 설정한다는 것을 알게 될 것이다. 용지 방향을 가로와 세로로 바꿀 수도 있는데, 여기서는 자세히 다루지 않을 것이다. 
+
+사용자가 요청한 페이지 방향, 매수와 같은 많은 정보는 PrintDialog의 프로퍼티 중에 PrintTicket 타입인 PrintTicket에 저장되는데, PrintTicket 클래스는 System.Printing 네임스페이스에 정의되어 있고, 어셈블리는 ReachFramework 이다. PrintTicket을 사용하려면 ReachFramework.dll을 참조에 추가해야 한다. 
+
+PrintEllipse 프로그램에서 PrintDialog를 실행해서 용지 방향과 같은 속성을 변경하고 인쇄한 다음 다시 PrintDialog를 실행하면 설정이 원래 상태로 돌아와 있음을 알 수 있다. 친절한 프로그램은 인쇄 작업을 위해 설정한 페이지 방향과 같은 설정을 저장하고 있는다. 이렇게 하려면 PrintTicket 타입의 멤버 변수를 정의해야 한다. 
+
+PrintTicket prntkt;
+
+물론 prntkt의 초기값은 null이다. 대화상자를 보여주기 전에 PrintDialog 객체를 생성하고 prntkt 값이 null이 아니면 대화상자의 PrintTicket 필드를 prntkt로 설정해야 한다. 
+
+PrintDialog dlg = new PrintDialog();
+if(prntkt != null)
+	dlg.PrintTicket = prntkt;
+
+대화상자에서 인쇄 버튼을 누르면 대화상자 클래스의 PrintTicket 프로퍼티를 필드에 저장한다. 
+
+if(dlg.ShowDialog().GetValueOrDefault())
+{
+	printkt = dlg.PrintTicket;
+	...
+}
+
+PrintTicket 프로퍼티를 설정하고 읽어오는 것은 사용자가 선택한 값을 유지할 수 있게 한다. 인쇄 대화상자를 열어서 인쇄 방향을 가로로 바꾼 다음 확인을 누르고 다시 인쇄 대화상자를 열면 가로로 설정한 것이 남아있게 된다. 
+
+프린터가 여러 개면 인쇄 대화상자의 콤보 박스에서 선택할 수 있다. 기본 프린터가 아닌 프린터를 인쇄 대화상자에서 선택했다면 다음 번에도 같은 프린터를 인쇄 대화상자에서 보고 싶어 할 것이다. 이를 구현하려면 PrintQueue 타입 필드를 대화상자의 PrintQueue 프로퍼티에 저장한다. 그러면 대화상자가 보여질 때 그 필드에 프로퍼티가 설정된다. PrintQueue 클래스를 이용하려면 System.printing 어셈블리를 참조해야 한다 
+
+인쇄 관련해서 PrintDialog에서 빠진 부분은 페이지 여백을 설정하는 부분이다. 이를 지원하려면 여백 설정만을 위한 대화상자를 생성해야 한다. Windows에서 파생된 대화상자 클래스는 Window 기반의 클래스와 유사하지만 몇 가지 차이점이 있다. 
+
+대화상자 클래스의 생성자에서 ShowInTaskbar 프로퍼티를 false로 설정해야 한다. 대화상자의 크기가 내용에 따라 자주 바뀌게 되면 ResizeMode를 NoResize로 설정한다. 원한다면 WindowStyle을 SingleBorderWindow나 ToolWindow로 설정할 수 있다. 타이틀바가 없는 대화상자를 보여주는 것은 여기서 고려하지 않는다. 
+
+대화상자를 부모 창의 어디에 나타낼 것인가를 결정하는 가장 쉬운 방법은 WindowStartupLocation을 CenterOwner로 설정하는 것이다. 윈도우가 알아서 대화상자의 위치를 결정하게 WindowStartupLocation 프로퍼티를 기본값으로 설정하더라도 대화상자의 Owner 프로퍼티는 대화상자를 실행한 Window 객체로 설정해야 한다. 보통 코드는 이렇게 작성한다. 
+
+MyDialog dlg = new MyDialog();
+dlg.Owner = this;
+
+
+대화상자의 Owner 프로퍼티가 null이면 대화상자가 떠있는 채로 애플리케이션을 선택한 경우에 대화상자는 윈도우 뒤로 숨게 되고 애플리케이션은 입력을 받지 못하는 상황이 발생할 수 있다. 
+
+Microsoft.Win32 네임스페이스에 정의되어 있는 CommonDialog 클래스는 OpenFileDialog와 SaveFileDialog를 상속받으며 Owner를 인자로 하는 ShowDialog 메소드를 정의하는데, 이 메소드를 이용하는 것도 한 가지 해결책이 된다. 그렇지 않으면 대화상자의 생성자가 Owner를 인자로 가져야 한다. 그러면 대화상자의 위치를 결정하는게 더 용이해진다. 예를 들어 대화상자의 위치를 애플리케이션 윈도우의 왼쪽 상단으로 하고 싶다면 생성자에 다음과 같이 추가한다. 
+
+public MyDialog(Window owner)
+{
+	Left = 96 + owner.Left;
+	Top = 96 + owner.Top;
+	...
+}
+
+거의 모든 대화상자는 사용자로부터 입력받은 정보를 애플리케이션에 제공하기 위해 보통 프로퍼티를 정의해서 사용한다. 이를 쉽게 하기 위해 대화상자가 제공하는 모든 정보를 담는 구조체나 클래스를 정의하고 싶을 것이다. 이 프로퍼티를 정의할 때 set 접근자에서 대화상자 컨트롤의 프로퍼티 값을 초기화 하고, get 접근자에서 컨트롤의 프로퍼티를 얻는다. 
+
+대화상자는 확인과 취소 버튼이 있다. 확인 버튼 이외에 열기, 저장, 인쇄 버튼이 있을 수 있다. 확인 버튼은 IsDefault 프로퍼티가 true로 설정돼 있어 사용자가 대화상자 내에서 Enter키를 누르게 되면 이 버튼을 클릭한 것으로 인식한다. 취소 버튼은 IsCancel 프로퍼티가 true이며 사용자가 Esc 키를 누르면 클릭한 것으로 인식한다. 
+
+취소 버튼에 대해 Click 핸들러를 작성할 필요는 없다. 대화상자는 IsCancel 프로퍼티가 true로 설정되면 자동으로 종료된다. 확인 버튼에 대한 Click 핸들러는 DialogResult 프로퍼티를 true로 설정하기만 하면 된다. 대화상자를 종료하면 ShowDialog는 true를 반환한다. 
+
+PageMarginDialog 클래스는 인치 단위로 페이지의 왼쪽, 오른쪽, 상단, 하단 여백을 입력할수 있게 4개의 TextBox 컨트롤을 갖는다. 클래스는 Thickness 타입의 PageMargines 프로퍼티를 정의하며, 이 프로퍼티는 인치를 장치 독립적 단위로 변환한다. PageMargins 프로퍼티의 get 메소드는 4개의 TextBox 컨트롤 값을 숫자로 변환하기 위해 Double.Parse를 호출하고 모든 필드의 값이 적합해 질 때까지 확인 버튼은 비활성화된다. 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+
+
+class PageMarginDialog : Window
+{
+	//종이 테두리를 참조하는 내부 열거형
+	enum Side
+	{
+		Left, Right, Top, Bottom
+	}
+	//숫자 입력을 위한 텍스트 박스 네 개
+	TextBox[] txtbox = new TextBox[4];
+	Button btnOk;
+
+	//페이지 여백을 위한 타입 Thickness의 Public 프로퍼티
+	public Thickness PageMargins
+	{
+		set
+		{
+			txtbox[(int)Side.Left].Text = (value.Left / 96).ToString("F3");
+			txtbox[(int)Side.Right].Text = (value.Right / 96).ToString("F3");
+			txtbox[(int)Side.Top].Text = (value.Top / 96).ToString("F3");
+			txtbox[(int)Side.Bottom].Text = (value.Bottom / 96).ToString("F3");
+		}
+		get
+		{
+			return new Thickness(Double.Parse(txtbox[(int)Side.Left].Text) * 96, Double.Parse(txtbox[(int)Side.Top].Text) * 96,
+						Double.Parse(txtbox[(int)Side.Right].Text) * 96, Double.Parse(txtbox[(int)Side.Bottom].Text) * 96);
+		}
+	}
+	//생성자
+	public PageMarginsDialog()
+	{
+		//대화상자를 위한 표준 설정
+		Title = "Page Setup";
+		ShowInTaskbar = false;
+		WindowStyle = WindowStyle.ToolWindow;
+		WindowStartupLocation = WindowStartupLocation.CenterOwner;
+		SizeToContent = SizeToContent.WidthAndHeight;
+		ResizeMode = ResizeMode.NoResize;
+
+		//윈도우 Content를 위한 스택 패널을 만든다
+		StackPanel stack = new StackPanel();
+		Content = stack;
+
+		//스택 패널의 자식으로 그룹 박스를 생성
+		GroupBox grpbox = new GroupBox();
+		grpbox.Header = "Margins (inches)";
+		grpbox.Margin = new Thickness(12);
+		stack.Children.Add(grpbox);
+
+		//그룹 박스의 내용으로 그리드를 생성
+		Grid grid = new Grid();
+		grid.Margin = new Thickness(6);
+		grpbox.Content = grid;
+
+		//2개의 행과 4개의 열
+		for(int i=0; i<2; i++)
+		{
+			RowDefinition rowdef = new RowDefinition();
+			rowdef.Height = GridLength.Auto;
+			grid.RowDefinitions.Add(rowdef);
+		}
+		for(int i=0; i< 4; i++)
+		{
+			ColumnDefinition coldef = new ColumnDefinition();
+			coldef.Width = GridLength.Auto;
+			grid.ColumnDefinitions.Add(coldef);
+		}
+		//그리드에 레이블과 텍스트 박스 컨트롤을 추가
+		for(int i=0; i<4; i++)
+		{
+			Label lbl = new Label();
+			lbl.Content = "_" + Enum.GetName(typeof(Side), i) + ":";
+			lbl.Margin = new Thickness(6);
+			lbl.VerticalAlignment = VerticalAlignment.Center;
+			grid.Children.Add(lbl);
+			Grid.SetRow(lbl, i / 2);
+			Grid.SetColumn(lbl, 2 * (i % 2));
+			
+			txtbox[i] = new TextBox();
+			txtbox[i].TextChanged += TextBoxOnTextChanged;
+			txtbox[i].MinWidth = 48;
+			txtbox[i].Margin = new Thickness(6);
+			grid.Children.Add(txtbox[i]);
+			Grid.SetRow(txtbox[i], i/2);
+			Grid.SetColumn(txtbox[i], 2 * ( i % 2) + 1);
+		}
+		//OK와 Cancel 버튼을 위해 UniformGrid 를 이용
+		UniformGrid unigrid = new UniformGrid();
+		unigrid.Rows = 1;
+		unigrid.Columns = 2;
+		stack.Children.Add(unigrid);
+
+		btnOk = new Button();
+		btnOk.Content = "OK";
+		btnOK.IsDefault = true;
+		btnOk.IsEnabled = false;
+		btnOk.MinWidth = 60;
+		btnOk.Margin = new Thickness(12);
+		btnOk.HorizontalAlignment = HorizontalAlignment.Center;
+		btnOk.Click += OkButtonOnClick;
+		unigrid.Children.Add(btnOk);
+
+		Button btnCancel = new Button();
+		btnCancel.Content = "Cancel";
+		btnCancel.IsCancel = true;
+		btnCancel.MinWidth = 60;
+		btnCancel.Margin = new Thickness(12);
+		btnCancel.HorizontalAlignment = HorizontalAlignment.Center;
+		unigrid.Children.Add(btnCancel);
+	}
+	//텍스트 박스의 값이 숫자이면 Ok 버튼을 활성화
+	void TextBoxOnTextChanged(object sender, TextChangedEventArgs args)
+	{
+		double result;
+
+		btnOk.IsEnabled = Double.TryParse(txtbox[(int)Side.Left].Text, out result) && Double.TryParse(txtbox[(int)Side.Right].Text, out result) && 
+				Double.TryParse(txtbox[(int)Side.Top].Text, out result) && Double.TryParse(txtbox[(int)Side.Bottom].Text, out result);
+	}
+	//OK 를 클릭하면 대화상자를 종료함
+	void OkButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		DialogResult = true;
+	}
+}
+
+PageMarginDialog 클래스는 PrintWithMargins 프로젝트를 구성하는 파일이며, 다음 파일도 포함된다. 이 프로그램은 PrintQueue와 PrintTicket 객체를 이용해서 대화상자의 여러 인쇄 작업간에 설정을 저장하고 전송하는 것을 보여준다. PageMarginDialog는 페이지 설정 버튼을 클릭했을 때 나타난다. 
+
+
+
+
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Printing;
+
+
+public class PrintWithMargins : Window
+{
+	//PrintDialog 의 정보를 저장하기 위한 Private 필드
+	PrintQueue prnqueue;
+	PrintTicket prntkt;
+	Tickness marginpage = new Thickness(96);
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new PrintWithMargins());
+	}
+	public PrintWithMargins()
+	{
+		Title = "Print with Margins";
+		FontSize = 24;
+
+		//윈도우 Content를 위한 스택 패널 생성
+		StackPanel stack = new StackPanel();
+		Content = stack;
+
+		//페이지 설정 버튼 생성
+		Button btn = new Button();
+		btn.Content = "Page Set_up...";
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.Margin = new Thickness(24);
+		btn.Click += SetupOnClick;
+		stack.Children.Add(btn);
+
+		//인쇄 버튼 생성
+		btn = new Button();
+		btn.Content = "_Print...";
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.Margin = new Thickness(24);
+		btn.Click += PrintOnClick;
+		stack.Children.Add(btn);
+	}
+	//페이지 설정 버튼 : PageMarginsDialog 실행
+	void SetupOnClick(object sender, RoutedEventArgs args)
+	{
+		//대화상자를 생성하고 PageMargins 프로퍼티를 초기화
+		PageMarginsDialog dlg = new PageMarginsDialog();
+		dlg.Owner = this;
+		dlg.PageMargins = marginPage;
+
+		if(dlg.ShowDialog().GetValueOrDefault())
+		{
+			//대화상자의 페이지 여백을 저장
+			marginPage = dlg.PageMargins;
+		}
+	}
+	//인쇄 버튼 : PrintDialog 실행
+	void PrintOnClick(object sender, RoutedEventArgs args)
+	{
+		printDialog dlg = new PrintDialog();
+
+		//PrintQueue와 PrintTicket 설정
+		if(prnqueue != null)
+			dlg.PrintQueue = prnqueue;
+		if(prntkt != null)
+			dlg.PrintTicket = prntkt;
+
+		if(dlg.ShowDialog().GetValueOrDefault())
+		{
+			//PrintQueue와 PrintTicket을 대화상자의 값으로 설정
+			prnqueue = dlg.printQueue;
+			prntkt = dlg.printTicket;
+
+			//DrawingVisual을 생성하고 DrawingContext를 염
+			DrawingVisual vis = new DrawingVisual();
+			DrawingContext dc = vls.RenderOpen();
+			Pen pn = new Pen(Brushes.Black, 1);
+
+			//Rectangle은 여백을 뺀 페이지를 나타냄
+			Rect rectPage = new Rect(marginPage.Left, marginPage.Top, dlg.PrintableAreaWidth - 
+						(marginPage.Left + marginPage.Right), dlg.PrintableAreaHeight - 
+						(marginPage.Top + marginPage.Bottom));
+
+			//사용자 여백을 반영한 사각형 출력
+			dc.DrawRectangle(null, pn, rectPage);
+
+			//PrintableArea 프로퍼티를 보여주는 포맷팅된 텍스트 객체를 생성
+			FormattedText formtxt = new FormattedText(String.Format("Hello, Printer! {0} x {1} ",dlg.PrintableAreaWidth / 96,
+								dlg.PrintableAreaHeight / 96),CultureInfo.CurrentCluture,
+								FlowDirection.LeftToRight,new Typeface(new FontFamily("Times New Roman"),
+								FontStyles.Italic, FontWeights.Normal, FontStretches.Normal),48, Brushes.Black);
+
+			//포맷된 텍스트 스트링의 물리적 크기를 계산
+			Size sizeText = new Size(formtxt.Width, formtxt.Height);
+
+			//여백 내의 텍스트의 중앙점을계산
+			Point ptText = new Point(rectPage.Left + (rectPage.Width - formtxt.Width) / 2,
+					rectPage.Top + (rectPage.Height - formtxt.Height) / 2);
+		
+			//텍스트와 이를 둘러싸는 사각형 출력
+			dc.DrawText(formtxt, ptText);
+			dc.DrawRectangle(null, pn, new Rect(ptText, sizeText);
+
+			//DrawingContext를 종료
+			dc.Close();
+	
+			//끝으로 페이지를 인쇄
+			dlg.PrintVisual(vis, Title);
+		}
+	}
+}
+
+PrintWithMargin 프로그램은 사용자가 선택한 페이지 여백을 기반으로 여백 중앙에 텍스트를 보여주고, 그 주위를 사각형으로 감싸고 나서 이를 인쇄 한다. 텍스트는 Hello, Printer!이고 페이지 단위는 인치이다. 
+
+PrintVisual은 Visual 타입 객체를 인쇄하기 때문에 Canvas 같은 패널 위에 엘리먼트와 컨트롤을 조합해서 페이지를 구성한다. 이 방법은 Shapes 라이브러리로 그래픽을 구성하기 위해 확장할 수 있고 TextBlock에 텍스트를 보여주는 데 이용할수 있다. 
+
+이번 프로그램은 그라디언트 브러시로 배경을 채운 Grid 패널에 25개의 다양한 크기의 버튼을 배치하고 이를 인쇄하는 PrintaBunchaButtons이다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+public class PrintaBunchaButtons : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new PrintaBunchaButtons());
+	}
+	public PrintaBunchaButtons()
+	{
+		Title = "Print a Bunch of Buttons";
+		SizeToContent = SizeToContent.WidthAndHeight;
+		ResizeMode = ResizeMode.CanMinimize;
+
+		//Print 버튼 생성
+		Button btn = new Button();
+		btn.FontSize = 24;
+		btn.Content = "Print ...";
+		btn.Padding = new Thickness(12);
+		btn.Margin = new Thickness(96);
+		btn.Click += PrintOnClick;
+		Content = btn;
+	}
+	void PrintOnClick(object sender, RoutedEventArgs args)
+	{
+		PrintDialog dlg = new PrintDialog();
+
+		if((bool)dlg.ShowDialog().GetValueOrDefault())
+		{
+			//그리드 패널 생성
+			Grid grid = new Grid();
+			
+			//자동으로 크기가 변하는 열과 행을 5개 정의
+			for(int i=0; i<5; i++)
+			{
+				ColumnDefinition coldef = new ColumnDefinition();
+				coldef.Width = GridLegth.Auto;
+				grid.ColumnDefinitions.Add(coldef);
+
+				RowDefinition rowdef = new RowDefinition();
+				rowdef.Height = GridLength.Auto;
+				grid.RowDefinitions.Add(rowdef);
+			}
+			//그라디언트 브러시로 그리드의 배경색을 지정
+			grid.Background = new LinearGradientBrush(Colors.Gray, Colors.White, new Point(0, 0), new Point(1, 1));
+			
+			//난수 생성
+			Random rand =new Random();
+
+			//25개 버튼으로 Grid를 채움
+			for(int i=0; i< 25; i++)
+			{
+				Button btn = new Button();
+				btn.FontSize = 12 + rand.Next(8);
+				btn.Content = "Button No. " + (i + 1);
+				btn.HorizontalAlignment = HorizontalAlignment.Center;
+				btn.VerticalAlignment = VerticalAlignment.Center;
+				btn.Margin = new Thickness(6);
+				grid.Children.Add(btn);
+				Grid.SetRow(btn, i % 5);
+				Grid.SetColumn(btn, i / 5);
+				//그리드 크기 결정
+				grid.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+
+				Size sizeGrid = grid.DesiredSize;
+
+				//페이지상의 그리드의 중앙점을 결정
+				Point ptGrid = new Point((dlg.PrintableAreaWidth - sizeGrid.Width) / 2, (dlg.PrintableAreaHeight - sizeGrid.Height) / 2 );
+
+				//레이아웃은 설정하지 않고 통과
+				grid.Arrange(new Rect(ptGrid, sizeGrid));
+	
+				//인쇄
+				dlg.PrintVisual(grid, Title);
+			}
+		}
+	}
+}
+
+PrintaBunchaButtons 프로그램은 PrintTicket과 PrintQueue로 여백을 설정한다거나 설정을 저장하는 등의 이전 프로그램이 가졌던 기능을 지원하지 않는다. 
+
+UIElement에서 파생된 클래스 인스턴스를인쇄할 때 중요한 단계가 필요하다. 엘리먼트를 배치하기 위해 객체의 Measure와 Arrange 메소드를 호출해야 한다. 그렇지 않으면 객체의 크기는 0이 되고 페이지상에 나타나지 않는다. PrintaBunchaButtons 프로그램은 Grid 객체의 Measure 메소드를 호출할 때 유한한 범위가 필요하다. 대안은 페이지 크기를 기준으로 하는 것이다. Arrange를 호출할 때, 프로그램은 DesiredSize 프로퍼티에서 Grid 의 크기를 구하고, Grid가 페이지 중앙에 위치하게 점을 계산한 다음 이 점과 크기를 가지고 Arrange를 호출한다. 이제 PrintVisual에 Grid를 넘겨줄 준비가 끝났다. 
+
+PrintVisual을 호출해서 여러 페이지의 문서를 인쇄할 수 있지만 각 페이지는 다른 인쇄 작업으로 간주된다. 여러 페이지를 인쇄하는 더 나은 방법은 PrintDialog에 정의된 PrintDocument 메소드를 호출하는 것이다. PrintDocument의 인자는 DocumentPaginator에서 파생된 인스턴스와 프린트 큐에서는 문서를 나타낼 텍스트 문자열이다. 
+
+DocumentPaginator는 System.Windows.Documents에서 정의된 추상 클래스다. DocumentPaginator를 상속받는 클래스를 정의하고 DocumentPaginator가 추상으로 정의한 메소드와 프로퍼티를 오버라이딩해야 한다. 이 메소드 중 GetPage는 DocumentPage 타입 객체를 반환 한다. Visual에서 DocumentPage 객체를 쉽게 생성할 수 있다는 것은 한 페이지를 인쇄하는 것과 여러 페이지를 인쇄하는 것이 완전히 다른 건 아니라는 것을 의미한다. 문서의 각 페이지는 Visual 객체이다. 
+
+DocumentPaginator는 불리언 타입의 읽기 전용 IsPageCountValid, 읽기 전용 PageCount, 읽기 쓰기 PageSize 프로퍼티와 GetPage 메소드, Source 프로퍼티를 오버라이딩해야 한다. GetPage 메소드는 0부터 시작하는 페이지 번호를 인자로 받으며, DocumentPage 타입의 객체를 반환한다. 
+
+DocumentPaginator의 파생 클래스는 자신만의 프로퍼티를 정의해야 한다. 예를 들어 배너를 인쇄하는 프로그램을 작성한다고 해보자. 배너 프로그램은 연속 용지에 연속해서 한번에 인쇄해 야 하지만 요즘의 배너 프로그램은 한 페이지에 한 글자를 인쇄한다. DocumentPaginator에서 파생된 클래스는 Text 타입 프로퍼티가 필요하며, 이 텍스트에는 Happy Birthday to the Greatest Mom in All the World, and Probably Other Planets as Well 과 같이 설정할 수 있다. 
+DocumentPaginator의 파생 클래스에는 폰트를 설정하는 프로퍼티가 있다. 많은 프로퍼티를 정의하지 않으려고 Typeface 타입의 객체에 대부분의 폰트 정보를 통합하는 것이다. 
+
+그러나 DocumentPaginator의 파생 클래스를 더 단순하게 하기 위해서 커스텀 프로퍼티를 더 줄이고 생성자가 정보를 받게 정의한다. DocumentPaginator 객체는 보통 여기서 사용한 방법과 같이 사용한다. PrintDialog의 인쇄 버튼을 클릭하면 객체를 생성하고, PrintDocument를 호출한 다음 객체를 없앤다. 
+
+다음은 Text와 Typeface라는 이름의 두 프로퍼티가 정의된 BannerDocumentPaginator클래스이다. 
+
+
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+
+
+public class BannerDocumentPaginator : DocumentPaginator
+{
+	string txt = "";
+	Typeface face = new Typeface("");
+	Size sizePage;
+	Size sizeMax = new Size(0, 0);
+
+	//이 DocumentPaginator에 특화된 Public 프로퍼티
+	public string Text
+	{
+		set { txt = value; }
+		get { return txt;	}
+	}
+	public Typeface Typeface
+	{
+		set { face = value;	}
+		get { return face; 	}
+	}
+	//FormattedText 객체를 생성하는 Private 함수
+	FormattedText GetFormattedText(char ch, Typeface face, double em)
+	{
+		return new FormattedText(ch.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, face, em, Brushes.Black);
+	}
+	//오버라이딩이 필요
+	public override bool IsPageCountValid
+	{
+		get
+		{
+			//100em 사이즈를 기반으로 문자의 최대 크기를 결정
+			foreach(char ch in txt)
+			{
+				FormattedText formtxt = GetFormattedText(ch, face, 100);
+				sizeMax.Width = Math.Max(sizeMax.Width, formtxt.Width);
+				sizeMax.Height = Math.Max(sizeMax.Height, formtxt.Height);
+			}
+			return true;
+		}
+	}
+	public override int PageCount
+	{
+		get { return txt == null ? 0 : txt.Length;	}
+	}
+	public override Size PageSize
+	{
+		set { sizePage = value;	}
+		get { return sizePage;	}
+	}
+	public override DocumentPage GetPage(int numPage)
+	{
+		DrawingVisual vis = new DrawingVisual();
+		DrawingContext dc = vis.RenderOpen();
+
+		//em 사이즈의 factor를 계산할때 1/2인치 여백을 가정
+		double factor = Math.Min((PageSize.Width - 96) / sizeMax.Width,(PageSize.Height - 96) / sizeMax.Height);
+	
+		FormattedText formtxt = GetFormattedText(txt[numPage], face, factor * 100);
+
+		//페이지 중앙에 위치할 수 있게 좌표 계산
+		Point ptText = new Point((PageSize.Width - formtxt.Width) / 2, (PageSize.Height - formtxt.Height ) /2 );
+	
+		dc.DrawText(formtxt, ptText);
+		dc.Close();
+
+		return new DocumentPage(vis);
+	}
+	public override IDocumentPaginatorSource Source
+	{
+		get { return null; }	
+	}
+}
+
+DocumentPaginator라는 이름이 나타내는 것처럼 클래스는 문서를 페이지로 만든다. 그렇게 하려면 문서에 얼마나 많은 페이지가 있는지 각 페이지가 얼마나 되는지 알아야 한다. 페이지 수를 세는 것은 간단하다. 텍스트 문자열에 있는 문자의 개수에서 구할수 있다. 그러나 먼저 문자의 너비를 얼마로 해야할지 결정해야 한다. 각 문자의 높이가 얼마인지 문자의 최대 폭이 얼마인지 결정하기 위해 FormattedText 타입 객체를 생성해야 한다. 
+
+페이지 처리를 하는 데 필요한 모든 정보가 들어있는 클래스를 인자로 받는 생성자를 정의하면 생성자가 페이지 처리 로직을 갖는다. 그렇지 않으면 프로퍼티 정의와 페이지 처리 로직이 들어갈 다른 곳을 찾아야 한다. 다른 작업 이전에 호출되기 때문에 IsPageCountValid 프로퍼티가 적당하다. 그러므로 BannerDocumentPaginator는 IsPageCountValid 프로퍼티에서 Typeface 프로퍼티와 100em 사이즈를 기반으로 모든 텍스트 스트링 문자에 대한 FormattedText 객체를 생성하고 가장 큰 크기를 저장한다. 
+
+GetPage 메소드는 DocumentPage 타입 객체를 반환하는데, 이 객체는 Visual 타입 객체에서 생성된다. 메소드는 DrawingVisual을 생성하고 DrawingContext를 열고, 가장 넓은 문자 크기와 페이지에서 1/2인치 여백을 뺀 크기를 기반으로 배수를 계산하고 FormattedText 객체를 생성해 DrawText 메소드로 페이지 중앙에 놓는다. 이 DrawingVisual은 DocumentPage 생성자로 넘겨지고 GetPage는 결과 객체를 반환한다. 
+
+배너 프로그램의 사용자 인터페이스는 다음과 같이 아주 간단하다. 
+
+
+
+using System;
+using System.Printing;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+
+
+
+public class PrintBanner : Window
+{
+	TextBox txtbox;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new PrintBanner());
+	}
+	public PrintBanner()
+	{
+		Title = "Print Banner";
+		SizeToContent = SizeToContent.WidthAndHeight;
+
+		//윈도우 Content를 위한 스택 패널 생성
+		StackPanel stack = new StackPanel();
+		Content = stack;
+
+		//텍스트 박스 생성
+		txtbox = new TextBox();
+		txtbox.Width = 250;
+		txtbox.Margin = new Thickness(12);
+		stack.Children.Add(txtbox);
+
+		//버튼 생성
+		Button btn = new Button();
+		btn.Content = "_Print...";
+		btn.Margin = new Thickness(12);
+		btn.Click += PrintOnClick;
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		stack.Children.Add(btn);
+
+		txtbox.Focus();
+	}
+	void PrintOnClick(object sender, RoutedEventArgs args)
+	{
+		PrintDialog dlg = new PrintDialog();
+		if(dlg.ShowDialog().GetValueOrDefault())
+		{
+			//인쇄 방향이 수직인지 확인
+			PrintTicket prntkt = dlg.PrintTicket;
+			prntkt.PageOrientation = PageOrientation.Portrait;
+			dlg.PrintTicket = prntkt;
+
+			//BannerDocumentPaginaotr 객체 생성
+			BannerDocumentPaginator paginator = new BannerDocumentPaginator();
+
+			//텍스트 박스로 Text 프로퍼티를 설정
+			paginator.Text = txtbox.Text;
+	
+			//종이의 크기를 기반으로 PageSize 프로퍼티를 설정
+			paginator.PageSize = new Size(dlg.PrintableAreaWidth, dlg.PrintableAreaHeight);
+
+			//Call PrintDocument to print the document.
+			dlg.PrintDocument(paginator, "Banner: " + txtbox.Text);
+		}
+	}
+}
+
+배너 프로그램은 인쇄 방향이 세로일 때만 제대로 작동하기 때문에 인쇄 방향을 가로로 변경해도 PrintOnClick 메소드가 세로로 돌려 놓는다. 그런 후 메소드는 BannerDocumentPaginator 타입 객체를 생성하고, Text와 PageSize 프로퍼티를 설정한다. 메소드는 초기화된 BannerDocumentPaginator 객체를 PrintDocument에 넘기는 것으로 끝이 나며, 나머지는 PrintDocument가 처리한다. 
+
+PrintBanner 프로그램은 BannerDocumentPaginator를 위해 커스텀 Typeface 객체를 정의하지 않았다는 것에 주목하자. 이 프로그램에 정말 필요한 것은 폰트 대화상자지만 아쉽게도 WPF의 첫 번째 버전에서는 지원하지 않는다. 그래서 폰트 대화상자를 만들어야만 한다. 
+
+폰트 대화상자를 만드는 것은 목록을 보여줄 때 항상 등장 하는 콤보 박스에서 시작된다. 하지만 WPF의 첫 번째 버전은 ComboBox 클래스를 지원하지 않으며, TextBox와 ListBox를 가지고 콤보 박스를 만들려고 했던 첫 번째 시도는 제대로 되지 않았다. 입력 포커스가 항상 TextBox에 있기를 원했지만 ListBox가 입력 포커스를 갖는 것을 막는 게 어렵다는 것을 알게 되었다. 그래서 이 작업은 ListBox와 같이 동작하면서 포커스를 갖지 않는 컨트롤에서 시작해야 한다는 것을 알게 되었고 이를 Lister라 부르겠다. 이 파일이 ChooseFont 프로젝트의 첫 번째 파일이다. 
+
+
+
+using System;
+using System.Collections;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+
+
+
+class Lister : ContentControl
+{
+	ScrollViewer scroll;
+	StackPanel stack;
+	ArrayList list = new ArrayList();
+	int indexSelected = -1;
+
+	//public 이벤트
+	public event EventHandler SelectionChanged;
+
+	//생성자
+	public Lister()
+	{
+		Focusable = false;
+
+		//윈도우와 Content를 ContentControl의 Border로 설정
+		Border bord = new Border();
+		bord.BorderThickness = new Thickness(1);
+		bord.BorderBrush = SystemColors.ActiveBorderBrush;
+		bord.Background = SystemColors.WindowBrush;
+		Content = bord;
+
+		//border의 자식으로 ScrollViewer 생성
+		scroll = new ScrollViewer();
+		scroll.Focusable = false;
+		scroll.Padding = new Thickness(2, 0, 0, 0);
+		bord.Child = scroll;
+
+		//ScrollViewer의 Content로 스택 패널을 생성
+		stack = new StackPanel();
+		scroll.Content = stack;
+
+		//마우스 왼쪽 버튼에 대한 핸들러를 연결
+		AddHandler(TextBlock.MouseLeftButtonDownEvent, new MouseButtonEventHandler(TextBlockOnMouseLeftButtonDown));
+
+		Loaded += OnLoaded;
+	}
+	void OnLoaded(object sender, RoutedEventArgs args)
+	{
+		//Lister가 처음 보여질 때 뷰에 선택된 항목을 스크롤
+		ScrollIntoView();
+	}
+	
+	//Lister에 항목을 추가하고, 삽입하는 Public 메소드
+	public void Add(object obj)
+	{
+		list.Add(obj);
+		TextBlock txtblk = new TextBlock();
+		txtblk.Text = obj.ToString();
+		stack.Children.Add(txtblk);
+	}
+	public void Insert(int index, object obj)
+	{
+		list.Insert(index, obj);
+		TextBlock txtblk = new TextBlock();
+		txtblk.Text = obj.ToString();
+		stack.Children.Insert(index, txtblk);
+	}
+	public void Clear()
+	{
+		SelectedIndex = -1;
+		stack.Children.Clear();
+		list.Clear();
+	}
+	public bool Contains(object obj)
+	{
+		return list.Contatins(obj);
+	}
+	public int Count
+	{
+		get { return list.Count; }
+	}
+	//입력한 문자에 따라 항목이 선택되게 하기 위해 호출되는 메소드
+	public void GoToLetter(char ch)
+	{
+		int offset = SelectedIndex + 1;
+
+		for(int i=0; i<Count; i++)
+		{
+			int index = (i + offset) % Count;
+
+			if(Char.ToUpper(ch) == Char.ToUpper(list[index].ToString()[0]))
+			{
+				SelectedIndex = index;
+				break;
+			}
+		}
+	}
+	//선택바를 출력하기 위한 SelectedIndex 프로퍼티
+	public int SelectedIndex
+	{
+		set
+		{
+			if(value <1 || value >= Count)
+				throw new ArgumentOutOfRangeException("SelectedIndex");
+
+			if(value == indexSelected)
+				return;
+
+			if(indexSelected != -1)
+			{
+				TextBlock txtblk = stack.Children[indexSelected] as TextBlock;
+				txtblk.Background = SystemColors.WindowBrush;
+				txtblk.Foreground = SystemColors.WindowTextBrush;
+			}
+			indexSelected = value;
+		
+			if(indexSelected > -1)
+			{
+				TextBlock txtblk = stack.Children[indexSelected] as TextBlock;
+				txtblk.Background = SystemColors.HighlightBrush;
+				txtblk.Foreground = SystemColors.HighlightTextBrush;
+			}
+			ScrollIntoView();
+		
+			//SelectionChanged 이벤트 트리거
+			OnSelectionChanged(EventArgs.Empty);
+		}
+		get
+		{
+			return indexSelected;
+		}
+	}
+	//SelectedItem 프로퍼티는 SelectedIndex를 이용
+	public object SelectedItem
+	{
+		set
+		{
+			SelectedIndex = list.IndexOf(value);
+		}
+		get
+		{
+			if(SelectedIndex > -1)
+				return list[SelectedIndex];
+			return null;
+		}
+	}
+	
+	//리스트에서 페이지 업,페이지 다운하는 public 메소드
+	public void PageUp()
+	{
+		if(SelectedIndex == -1 || Count == 0)
+			return;
+		int index = SelectedIndex - (int)(Count * scroll.ViewportHeight / scroll.ExtenHeight);
+		if(index < 0)
+			index = 0;
+		SelectedIndex = index;
+	}
+	public void PageDown()
+	{
+		if(SelectedIndex == -1 || Count == 0)
+			return;
+
+		int index = SelectedIndex + (int)(Count * scroll.ViewportHeight / scroll.ExtenHeight);
+		if(index > Count -1)
+			index = Count - 1;
+
+		SelectedIndex = index;
+	}
+
+	//뷰에서 선택 항목을 스크롤하는 Private 메소드
+	void ScrollIntoView()
+	{
+		if(Count == 0 || SelectedIndex == -1 || scroll.ViewportHeight > scroll.ExtenHeight)
+			return;
+		double heightPerItem = scroll.ExtenHeight /  Count;
+		double offsetItemTop = SelectedIndex * heightPerItem;
+		double offsetItemBot = (SelectedIndex + 1) * heightPerItem;
+
+		if(offsetItemTop < scroll.VerticalOffset)
+			scroll.ScrollToVerticaloffset(offsetItemTop);
+		else if(offsetItemBot > scroll.VerticalOffset + scroll.ViewportHeight)
+			scroll.ScrollToVerticalOffset(scroll.VerticalOffset + offsetItemBot - scroll.VerticalOffset - scroll.ViewpoertHeight);
+	}
+	//이벤트 핸들러와 트리거
+	void TextBlockOnMouseLeftButtonDown(object sender, MouseButtonEventArgs args)
+	{
+		if(args.Source is TextBlock)
+			SelectedIndex = stack.Children.IndexOf(args.Source as TextBlock);
+	}
+
+	protected virtual void OnSelectionChanged(EventArgs args)
+	{
+		if(SelectionChanged != null)
+			SelectionChanged(this, args);
+	}
+}
+
+Lister는 여러 TextBlock 항목을 갖는 StackPanel 이 패널을 갖는 ScrollViewer 이 뷰어를 갖는 Border가 있는 ContentControl이다. 파일의 마지막 부분은 클릭한 TextBlock의 인덱스를 SelectedIndex 프로퍼티를 설정하는 TextBlockOnMouseLeftButtonDown 메소드이다. SelectedIndex 프로퍼티는 현재 선택된 항목을 표시하기 위해 TextBlock 항목의 전경색과 배경색을 관리하고, SelectionChanged 이벤트에 의해 OnSelectionChanged가 호출되게 한다. 
+
+선택한 항목을 변경하기 위한 키보드 인터페이스는 List 컨트롤 외부에서 다음에 살펴볼 클래스가 담당하게 된다. TextBoxWithLister 클래스는 ContentControl 에서 파생되었고, DockPanel이 있어서 TextBox 컨트롤과 Lister 엘리먼트를 추가할 수 있다. 커서를 움직이는 키를 이용해 선택 항목을 변경시킬 수 있게 OnPreviewKeyDown 메소드를 오버라이딩한다.
