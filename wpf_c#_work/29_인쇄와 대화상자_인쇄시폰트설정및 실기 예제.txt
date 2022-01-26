@@ -1,0 +1,732 @@
+using System;
+using System.Collections;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+class TextBoxWithLister : ContentColtrol
+{
+	TextBox txtbox;
+	Lister lister;
+	bool isReadOnly;
+
+	//public 이벤트
+	public event EventHandler SelectionChanged;
+	public event TextChangedEventHandler TextChanged;
+
+	//생성자
+	public TextBoxWithLister()
+	{
+		//윈도우 Content를 위해 DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//상단에 위치할텍스트 박스
+		txtbox = new TextBox();
+		txtbox.TextChanged += TextBoxOnTextChanged;
+		dock.Children.Add(txtbox);
+		DockPanel.SetDock(txtbox, Dock.Top);
+
+		//DockPanel의 나머지에 Lister 를 추가
+		lister = new Lister();
+		lister.SelectionChanged += ListerOnSelectionChanged;
+		dock.Children.Add(lister);
+	}
+	// 텍스트 박스 항목과 관련된 Public 프로퍼티
+	public string Text
+	{
+		get { return txtbox.Text; 	}
+		set { txtbox.Text = value; 	}
+	}
+	public bool IsReadOnly
+	{
+		set { isReadOnly = value;	}
+		get { return isReadOnly;	}
+	}
+
+	//Lister 요소의 다른 public 프로퍼티 인터페이스
+	public object SelectedItem
+	{
+		set
+		{
+			lister.SelectedItem = value;
+
+			if(lister.SelectedItem != null)
+				txtbox.Text = lister.SelectedItem.ToString();
+			else
+				txtbox.Text = "";
+		}
+		get
+		{
+			return lister.SelectedItem;
+		}
+	}
+	public int SelectedIndex
+	{
+		set
+		{
+			lister.SelectedIndex = value;
+
+			if(lister.SelectedIndex == -1)
+				txtbox.Text = "";
+			else
+				txtbox.Text = lister.SelectedItem.ToString();
+		}
+		get
+		{
+			return lister.SelectedIndex;
+		}
+	}
+	public void Add(object obj)
+	{
+		lister.Add(obj);
+	}
+	public void Insert(int index, object obj)
+	{
+		lister.Insert(index, obj);
+	}
+	public void Clear();
+	{
+		lister.Clear();
+	}
+	public bool Contains(object obj)
+	{
+		return lister.Contains(obj);
+	}
+
+	//마우스를 클릭하면 키보드 포커스를 설정
+	protected override void OnMouseDown(MouseButtonEventArgs args)
+	{
+		base.OnMouseDown(args);
+		Focus();
+	}
+	//키보드가 포커스를 갖게 되면 텍스트 박스에 포커스를 설정
+	protected override void OnGotKeyboardFocus(keyboardFocusChangedEventArgs args)
+	{
+		base.OnGotKeyboardFocus(args);
+
+		if(args.NewFocus == this)
+		{
+			txtbox.Focus();
+			if(SelectedIndex == -1 && lister.Count > 0)
+				SelectedIndex = 0;
+		}
+	}
+	//첫 문자를 입력하면 이 값을 GoToLetter 메소드로 넘김
+	protected override void OnPreviewTextInput(TextCompositionEventArgs args)
+	{
+		base.OnPreviewTextInput(args);
+
+		if(IsReadOnly)
+		{
+			lister.GoToLetter(args.Text[0]);
+			args.Handled = true;
+		}
+	}
+	//선택 항목을 변경하기 위해 커서 이동키를 처리
+	protected override void OnPreviewKeyDown(KeyEventArgs args)
+	{
+		base.OnKeyDown(args);
+
+		if(SelectedIndex == -1)
+			return;
+		switch(args.Key)
+		{
+			case Key.Home:
+				if(lister.Count > 0)
+					SelectedIndex = 0;
+				break;
+			case Key.End:
+				if(lister.Count > 0)
+					SelectedIndex = lister.Count - 1;
+				break;
+			case Key.Up:
+				if(SelectedIndex > 0)
+					SelectedIndex--;
+				break;
+			case Key.Down:
+				if(SelectedIndex < lister.Count - 1)
+					SelectedIndex++;
+				break;
+			case Key.PageUp:
+				lister.PageUp();
+				break;
+			case Key.PageDown:
+				lister.PageDown();
+				break;	
+			default:
+				return;
+		}
+		args.Handled = true;
+	}
+	//이벤트 핸들러와 트리거
+	void ListerOnSelectionChanged(object sender, EventArgs args)
+	{
+		if(SelectedIndex == -1)
+			txtbox.Text = "";
+		else
+			txtbox.Text = lister.SelectedItem.ToString();
+		OnSelectionChanged(args);
+	}
+	void TextBoxOnTextChanged(object sender, TextChangedEventArgs args)
+	{
+		if(TextChanged != null)
+			TextChanged(this, args);
+	}
+	protected virtual void OnSelectionChanged(EventArgs args)
+	{
+		if(SelectionChanged != null)
+			SelectionChanged(this, args);
+	}
+}
+
+이 클래스는 IsReadOnly 프로퍼티로 두 가지 모드를 지원한다. false이면 TextBox에 자유롭게 입력할 수 있고, 프로그램에서는 TextBox에서 사용자가 선택한 것을 입력받는 용도로 이 컨트롤을 사용한다. 이 모드는 FontDialog에서 폰트 크기에 사용하는 모드이다. 컨트롤의 목록에는 일련의 폰트 크기가 들어 있으며, 사용자가 원하는 크기를 입력할 수도 있다. 
+
+IsReadOnly가 true이면 TextBox는 선택한 항목을 보여주기만 할뿐 직접 입력할 수는 없게 된다. 키보드로 입력한 문자는 어떤 것이든 Lister의 GoToLetter 메소드로 넘겨지고, 이 문자로 시작하는 항목을 선택 항목으로 변경한다. 이 모드는 FontDialog가 보여주는 항목중에 폰트 패밀리, 폰트 스타일, 폰트 굵기, 폰트 확대 등에 적당하다. 대화상자를 가능한 한 단순하게 하기 위해서는 실제 사용할 수 없는 것은 선택하지 못하게 했다. 
+
+IsReadOnly 프로퍼티를 설정했다 하더라도 TextBox는 키보드 입력 포커스를 항상 유지해야 한다. 컨트롤은 이벤트 핸들러를 통해 사용자가 목록에 있는 항목을 클릭했는지 알 수 있지만 목록은 입력 포커스를 갖지 않아야 한다. OnPreviewKeyDown은 커서 이동 키와 같은 컨트롤의 키보드 인터페이스 중 많은 부분을 오버라이딩 한다. 
+
+FontDialog 클래스 자체에는 폰트 패밀리, 폰트 스타일, 폰트 굵기, 폰트 확대, 폰트 크기를 위해 5개의 TextBoxWithLister 컨트롤이 있으며 5개의 레이블이 각 컨트롤을 구분해 준다. 또 다른 레이블은 샘플 텍스트를 나타내며, 확인과 취소 버튼이 있는데, 정말 복잡한 부분은 컨트롤의 내용이 동적으로 바뀌는 부분이다. 
+
+첫 번째 TextBoxWithLister 컨트롤은 모든 가능한 폰트 패밀리를 보여주는데, 이 목록은 Fonts.SystemFontFamilies 메소드에서 얻을 수 있고, 생성자 끝부분에서 이 컨트롤을 폰트 패밀리로 채운다. 
+
+그러나 모든 폰트 패밀리는 가능한 폰트 스타일, 폰트 굵기, 폰트 확대가 다르다. 다른 폰트 패밀리를 선택할 때마다 FontDialog 클래스의 FamilyOnSelectionChanged 핸들러는 3개의 TextBoxWithLister 컨트롤의 내용을 지우고 선택한 FontFamily 객체의 FamilyTypeface 프로퍼티에서 FamilyTypeface 객체를 구해 다시 내용을 채워야 한다. 
+
+FontDialog는 2개의 프로퍼티를 정의한다. Typeface 프로퍼티는 FontFamily, FontStyle, FontWeight, FontStretch 프로퍼티를 캡슐화하고, double 타입의 FaceSize 프로퍼티는 폰트 크기를 캡슐화한다(FontDialog가 FontSize라는 이름의 프로퍼티를 상속받기 때문에 후자를 FontSize라고 이름짓지 못하고 FaceSize라 했다. 상속받은 FontSize는 대화상자 내에서 사용되는 폰트 크기를 나타낸다)
+
+
+using System;
+using System.Collections.Generic;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+public class FontDialog : Window
+{
+	TextBoxWithLister boxFamily, boxStyle, boxWeight, boxStretch, boxSize;
+	Label lblDisplay;
+	bool isUpdateSuppressed = true;
+
+	//public 프로퍼티
+	public Typeface Typeface
+	{
+		set
+		{
+			if(boxFamily.Contains(value.FontFamily))
+				boxFamily.SelectedItem = value.FontFamily;
+			else
+				boxFamily.SelectedIndex = 0;
+
+			if(boxStyle.Contains(value.Style))
+				boxStyle.SelectedItem = value.Style;
+			else
+				boxStyle.SelectedIndex = 0;
+			
+			if(boxWeight.Contains(value.Weight))
+				boxWeight.SelectedItem = value.Weight;
+			else
+				boxWeight.SelectedIndex = 0;
+
+			if(boxStretch.Contains(value.Stretch))
+				boxStretch.SelectedItem = value.Stretch;
+			else
+				boxStretch.SelectedIndex = 0;
+		}
+		get
+		{
+			return new Typeface((FontFamily)boxFamily.SelectedItem, (FontStyle)boxStyle.SelectedItem, (FontWeight)boxWeight.SelectedItem,
+					(FontStretch)boxStretch.SelectedItem);
+		}
+	}
+	public double FaceSize
+	{
+		set
+		{
+			double size = 0.75 * value;
+			boxSize.Text = size.ToString();
+
+			if(!boxSize.Contains(size))
+				boxSize.Insert(0, size);
+			boxSize.SelectedItem = size;
+		}
+		get
+		{
+			double size;
+			
+			if(!Double.TryParse(boxSize.Text, out size))
+				size = 8.25;
+			return size / 0.75;
+		}
+	}
+	//생성자
+	public FontDialog()
+	{
+		Title = "Font";
+		ShowInTaskbar = false;
+		WindowStyle = WindowStyle.ToolWindow;
+		WindowStartupLocation = WindowsStartupLocation.CenterOwner;
+		SizeToContent = SizeToContent.WidthAndHeight;
+		ResizeMode = ResizeMode.NoResize;
+
+		//윈도우 Content를 위해 3개 행을 가진 Grid 생성
+		Grid gridMain = new Grid();
+		Content = gridMain;
+
+		//TextBoxWithLister 컨트롤을 위한 행
+		RowDefinition rowdef = new RowDefinition();
+		rowdef.Height = new GridLength(200, GridUnitType.Pixel);
+		gridMain.RowDefinitions.Add(rowdef);
+
+		//샘플 텍스트를 위한 행
+		rowdef = new RowDefinition();
+		rowdef.Height = new GridLength(150, GridUnitType.Pixel);
+		gridMain.RowDefinitions.Add(rowdef);
+
+		//버튼을 위한 행
+		rowdef = new RowDefinition();
+		rowdef.Height = GridLength.Auto;
+		girdMain.RowDefinitions.Add(rowdef);
+
+		//메인 Grid를 위한 열
+		ColumnDefinition coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(650, GridUnitType.Pixel);
+		gridMain.ColumnDefinitions.Add(coldef);
+
+		//TextBoxWithLister 컨트롤을 위해 2개 행과 5개 열을 가진Grid를 생성
+		Grid gridBoxes = new Grid();
+		gridMain.Children.Add(gridBoxes);
+
+		//라벨을 위한 행
+		rowdef = new RowDefinition();
+		rowdef.Height = GridLength.Auto;
+		gridBoxes.RowDefinitions.Add(rowdef);
+
+		//EditBoxWithLister 컨트롤을 위한 행
+		rowdef = new RowDefinition();
+		rowdef.Height = new GridLength(100, GridUnitType.Star);
+		gridBoxes.RowDefinitions.Add(rowdef);
+
+		//폰트 패밀리를 위한 첫 번째 열
+		coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(175, GridUnitType.Star);
+		girdBoxes.ColumnDefinitions.Add(coldef);
+
+		//폰트 스타일을 위한 두번째 열
+		coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(100, GrudUnitType.Star);
+		gridBoxes.ColumnDefinitions.Add(coldef);
+
+		//폰트 웨이트를 위한 세 번째 열
+		coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(100, GridUnitType.Star);
+		gridBoxes.ColumnDefinitions.Add(coldef);
+
+		//폰트 스트레치를 위한 네번 째 열
+		coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(100, GridUnitType.Star);
+		gridBoxes.ColumnDefinitions.Add(coldef);
+
+		//크기를 위한 다섯 번째 열
+		coldef = new ColumnDefinition();
+		coldef.Width = new GridLength(75, GridUnitType.Star);
+		gridBoxes.ColumnDefinitions.Add(coldef);
+
+		//TextBoxWithLister 컨트롤과 폰트 패밀리 레이블 생성
+		Label lbl = new Label();
+		lbl.Content = "Font Family";
+		lbl.Margin = new Thickness(12, 12, 12, 0);
+		gridBoxes.Children.Add(lbl);
+		Grid.SetRow(lbl, 0);
+		Grid.SetColumn(lbl, 0);
+
+		boxFamily = new TextBoxWithLister();
+		boxFamily.IsReadOnly = true;
+		boxFamily.Margin = new Thickness(12, 0, 12, 12);
+		gridBoxes.Children.Add(boxFamily);
+		Grid.SetRow(boxFamily, 1);
+		Grid.SetColumn(boxFamily, 0);
+
+		//TextBoxWithLister 컨트롤과 폰트 스타일 레이블 생성
+		lbl = new Label();
+		lbl.Content = "Style";
+		lbl.Margin = new Thickness(12, 12, 12, 0);
+		gridBoxes.Children.Add(lbl);
+		Grid.SetRow(lbl, 0);
+		Grid.SetColumn(lbl, 1);
+
+		boxStyle = new TextBoxWithLister();
+		boxStyle.IsReadOnly = true;
+		boxStyle.Margin = new Thickness(12, 0, 12, 12);
+		gridBoxes.Children.Add(boxStyle);
+		Grid.SetRow(boxStyle, 1);
+		Grid.SetColumn(boxStyle, 1);
+
+		//TextBoxWithLister 컨트롤과 폰트 웨이트 레이블 생성
+		lbl = new Label();
+		lbl.Content = "Weight";
+		lbl.Margin = new Thickness(12, 12, 12, 0);
+		gridBoxes.Children.Add(lbl);
+		Grid.SetRow(lbl, 0);
+		Grid.SetColumn(lbl, 2);
+
+		boxWeight = new TextBoxWithLister();
+		boxWeight.IsReadOnly = true;
+		boxWeight.Margin = new Thickness(12, 0, 12, 12);
+		gridBoxes.Children.Add(boxWeight);
+		Grid.SetRow(boxWeight, 1);
+		Grid.SetColumn(boxWeight, 2);
+
+		//TextBoxWithLister 컨트롤과 폰트 스트레치 레이블 생성
+		lbl = new Label();
+		lbl.Content = "Stretch";
+		lbl.Margin = new Thickness(12, 12, 12, 0);
+		gridBoxes.Children.Add(lbl);
+		Grid.SetRow(lbl , 0);
+		Grid.SetColumn(lbl, 3);
+		
+		boxStretch = new TextBoxWithLister();
+		boxStretch.IsReadOnly = true;
+		boxStretch.Margin = new Thickness(12, 0, 12, 12);
+		gridBoxes.Children.Add(boxStretch);
+		Grid.SetRow(boxStretch, 1);
+		Grid.SetColumn(boxStretch, 3);
+
+		//TextBoxWithLister 컨트롤과 크기 레이블 생성
+		lbl = new Label();
+		lbl.Content = "Size";
+		lbl.Margin = new Thickness(12, 12, 12, 0);
+		gridBoxes.Children.Add(lbl);
+		Grid.SetRow(lbl, 0);
+		Grid.SetColumn(lbl, 4);
+
+		boxSize = new TextBoxWithLister();
+		boxSize.Margin = new Thickness(12, 0, 12, 12);
+		gridBoxes.Children.Add(boxSize);
+		Grid.SetRow(boxSize, 1);
+		Grid.SetColumn(boxSize, 4);
+
+		//샘플 텍스트를 보여주기 위한 레이블 생성
+		lblDisplay = new Label();
+		lblDisplay.Content = "AaBbCc XxYyZz 012345";
+		lblDisplay.HorizontalContentAlignment = HorizontalAlignment.Center;
+		lblDisplay.VerticalContentAlignment = VerticalAlignment.Center;
+		gridMain.Children.Add(lblDisplay);
+		Grid.SetRow(lblDisplay, 1);
+
+		//버튼을 위해 5개의 열을 가진 Grid를 생성
+		Grid gridButtons = new Grid();
+		gridMain.Children.Add(gridButtons();
+		Grid.SetRow(gridButtons, 2);
+
+		for(int i=0; i< 5; i++)
+			gridButtons.ColumnDefinitions.Add(new ColumnDefinition());
+
+		//Ok 버튼
+		Button btn = new Button();
+		btn.Content = "OK";
+		btn.IsDefault = true;
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.MinWidth = 60;
+		btn.Margin = new Thickness(12);
+		btn.Click += OkOnClick;
+		gridButtons.Children.Add(btn);
+		Grid.SetColumn(btn, 1);
+
+		//Cancel 버튼
+		btn = new Button();
+		btn.Content = "Cancel";
+		btn.IsCancel = true;
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.MinWidth = 60;
+		btn.Margin = new Thickness(12);
+		gridButtons.Children.Add(btn);
+		Grid.SetColumn(btn, 3);
+
+		//시스템 폰트 패밀리로 폰트 패밀리 박스를 초기화
+		foreach(FontFamily fam in Fonts.SystemFontFamilies)
+			boxFamily.Add(fam);
+
+		//폰트 크기 박스를 초기화
+		double[] ptsizes = new double[] {8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72};
+		
+		foreach(double ptsize in ptsizes)
+			boxSize.Add(ptsize);
+
+		//이벤트 핸들러를 설정
+		boxFamily.SelectionChanged += FamilyOnSelectionChanged;
+		boxStyle.SelectionChanged += StyleOnSelectionChanged;
+		boxWeight.SelectionChanged += StyleOnSelectionChanged;
+		boxStretch.SelectionChanged += StyleOnSelectionChanged;
+		boxSize.TextChanged += SizeOnTextChanged;
+
+		//윈도우 프로퍼티를 기반으로 선택 값을 설정 (이 부분은 프로퍼티가 설정되면오버라이딩됨)
+		Typeface = new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
+		FaceSize = FontSize;
+
+		//키보드 포커스를 설정
+		boxFamily.Focus();
+
+		//샘플 텍스트를 수정할 수 있게 함
+		isUpdateSuppressed = false;
+		UpdateSample();
+	}
+	//폰트 패밀리 박스에 대한 SelectionChanged 이벤트 핸들러
+	void FamilyOnSelectionChanged(object sender, EventArgs args)
+	{
+		//선택한 폰트 패밀리를 구함
+		FontFamily fntfam = (FontFamily)boxFamily.SelectedItem;
+
+		//이전 스타일, 웨이트, 스트레치를 저장
+		//이 값은 이 메소드가 처음 불릴 때는 null
+		FontStyle? fntstyPrevious = (FontStyle?)boxStyle.SelectedItem;
+		FontWeight? fntwtPrevious = (FontWeight?)boxWeight.SelectedItem;
+		FontStretch? fntstrPrevious = (FontStretch?)boxStretch.SelectedItem;
+
+		//샘플이 보이지 않게 함
+		isUpdateSuppressed = true;
+
+		//스타일, 웨이트, 스트레치 박스를 지움
+		boxStyle.Clear();
+		boxWeight.Clear();
+		boxStretch.Clear();
+
+		//선택된 폰트 패밀리의 typefaces 에 대해서 루프를 수행
+		foreach(FamilyTypeface ftf in fntfam.FamilyTypefaces)
+		{
+			//boxStyle에 스타일을 추가(Normal이 가장 상위에 위치)
+			if(!boxStyle.Contains(ftf.Style))
+			{
+				if(ftf.Style == FontStyles.Normal)
+					boxStyle.Insert(0, ftf.Style);
+				else
+					boxStyle.Add(ftf.Style);
+			}
+			//boxWeight에 웨이트를 추가(Normal이 가장 상위에 위치)
+			if(!boxWeight.Contains(ftf.Weight))
+			{
+				if(ftf.Weight == FontWeights.Normal)
+					boxWeight.Insert(0, ftf.Weight);
+				else
+					boxWeight.Add(ftf.Weight);
+			}
+			//boxStretch에 스트레치를 추가(Normal이 가장 상위에 위치)
+			if(!boxStretch.Contains(ftf.Stretch))
+			{
+				if(ftf.Stretch == FontStretchs.Normal)
+					boxStretch.Insert(0, ftf.Stretch);
+				else
+					boxStretch.Add(ftf.Stretch);
+			}
+		}
+		//boxStyle에 선택 항목을 설정
+		if(boxStyle.Contains(fntstyPrevious))
+			boxStyle.SelectedItem = fntstyPrevious;
+		else
+			boxStyle.SelectedIndex = 0;
+
+		//boxWeight에 선택 항목을 설정
+		if(boxWeight.Contains(fntwtPrevious))
+			boxWeight.SelectedItem = fntwtPrevious;
+		else
+			boxWeight.SelectedIndex = 0;
+
+		//boxStretch에 선택 항목을 설정
+		if(boxStretch.Contains(fntstrPrevious))
+			boxStretch.SelectedItem = fntstrPrevious;
+		else
+			boxStretch.SelectedIndex = 0;
+
+		//샘플 수정이 가능하게 하고 샘플을 갱신
+		isUpdateSuppressed = false;
+		UpdateSample();
+	}
+	//스타일, 웨이트, 스트레치 박스에 대한 SelectionChanged 이벤트 핸들러
+	void StyleOnSelectionChanged(object sender, EventArgs args)
+	{
+		UpdateSample();
+	}
+	//크기 박스에 대한 TextChanged 이벤트 핸들러
+	void SizeOnTextChanged(object sender, TextChangedEventArgs args)
+	{
+		UpdateSample();
+	}
+	//샘플 텍스트를 갱신
+	void UpdateSample()
+	{
+		if(isUpdateSuppressed)
+			return;
+		
+		lblDisplay.FontFamily = (FontFamily)boxFamily.SelectedItem;
+		lblDisplay.FontStyle = (FontStyle)boxStyle.SelectedItem;
+		lblDisplay.FontWeight = (FontWeight)boxWeight.SelectedItem;
+		lblDisplay.FontStretch = (FontStretch)boxStretch.SelectedItem;
+
+		double size;
+
+		if(!Double.TryParse(boxSize.Text, out size))
+			size = 8.25;
+		lblDisplay.FontSize = size / 0.75;
+	}
+	//OK 버튼을 누르면 대화상자를 종료
+	void OKOnClick(object sender, RoutedEventArgs args)
+	{
+		DialogResult = true;
+	}
+}
+
+FontDialog를 테스트하기 위한 ChooseFont 프로그램은 클라이언트 영역 중간에 버튼을 하나 추가해 버튼을 클릭할 때마다 대화상자가 나타나게 했다. 사용자가 확인 버튼을 누르면 프로그램은 윈도우의 폰트 관련 프로퍼티들을 대화상자의 프로퍼티들로 설정한다. 버튼도 대화상자의 프로퍼티들을 상속받는다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class ChooseFont : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ChooseFont());
+	}
+	public ChooseFont()
+	{
+		Title = "Choose Font";
+
+		Button btn = new Button();
+		btn.Content = Title;
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.VerticalAlignment = VerticalAlignment.Center;
+		btn.Click += ButtonOnClick;
+		Content = btn;
+	}
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		FontDialog dlg = new FontDialog();
+		dlg.Owner = this;
+
+		//윈도우의 폰트 대화상자 프로퍼티를 설정
+		dlg.Typeface = new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
+		dlg.FaceSize = FontSize;
+
+		if(dlg.ShowDialog().GetValueOrDefault())
+		{
+			//폰트 대화상자에서 윈도우 프로퍼티를 설정
+			FontFamily = dlg.Typeface.FontFamily;
+			FontStyle = dlg.Typeface.Style;
+			FontWeight = dlg.Typeface.Weight;
+			FontStretch = dlg.Typeface.Stretch;
+			FontSize = dlg.FaceSize;
+		}
+	}
+}
+
+다음은 더 개선된 배너 프린터 프로그램이다. 이 프로젝트는 BannerDocumentPaginator.cs 파일을 참조하고 FontDialog 클래스에 사용된 파일 3개(Lister.cs, TextBoxWithLister.cs FontDialog.cs)를 이용한다. 이 새로운 버전의 프로그램은 FontDialog를 보여주는 버튼을 갖고 있다. 여기서 명시한 폰트는 BannerDocumentPaginator로 보내진다. 물론 여기서 설정한 크기는 무시되고 BannerDocumentPaginator가 페이지 크기를 기반으로 폰트 크기를 다시 계산한다. 
+
+
+using Petzold.ChooseFont;
+using Petzold.PrintBanner;
+using System;
+using System.Printing;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class PrintBetterBanner : Window
+{
+	TextBox txtbox;
+	Typeface face;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new PrintBetterBanner());
+	}
+	public PrintBetterBanner()
+	{
+		Title = "Print Better Banner";
+		SizeToContent = SizeToContent.WidthAndHeight;
+
+		//윈도우 Content를 위한 스택 패널을 생성
+		StackPanel stack = new StackPanel();
+		Content = stack;
+
+		//텍스트 박스 생성
+		txtbox = new TextBox();
+		txtbox.Width = 250;
+		txtbox.Margin = new Thickness(12);
+		stack.Children.Add(txtbox);
+
+		//폰트 버튼 생성
+		Button btn = new Button();
+		btn.Content = "_Font...";
+		btn.Margin = new Thickness(12);
+		btn.Click += FontOnClick;
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		stack.Children.Add(btn);
+
+		//인쇄 버튼 생성
+		btn = new Button();
+		btn.Content = "_Print...";
+		btn.Margin = new Thickness(12);
+		btn.Click += PrintOnClick;
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		stack.Children.Add(btn);
+
+		//Facename 필드 초기화
+		face = new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
+
+		txtbox.Focus();
+	}
+	void FontOnClick(object sender, RoutedEventArgs args)
+	{
+		FontDialog dlg = new FontDialog();
+		dlg.Owner = this;
+		dlg.Typeface = face;
+
+		if(dlg.ShowDialog().GetValueOrDefault())
+		{
+			face = dlg.Typeface;
+		}
+	}
+	void PrintOnClick(object sender, RoutedEventArgs args)
+	{
+		PrintDialog dlg = new PrintDialog();
+
+		if(dlg.ShowDialog().GetValueOrDefault())
+		{
+			//인쇄 방향이 수직인지 확인
+			PrintTicket prntkt = dlg.PrintTicket;
+			prntkt.PageOrientation = PageOrientation.Portrait;
+			dlg.PrintTicket = prntkt;
+
+			//DocumentPaginator 객체 생성
+			BannerDocumentPaginator paginator = new BannerDocumentPaginator();
+
+			//텍스트 박스 프로퍼티 설정
+			paginator.Text = txtbox.Text;
+
+			//Typeface 프로퍼티 설정
+			paginator.Typeface = face;
+
+			//용지 크기를 기반으로 PageSize 프로퍼티 설정
+			paginator.PageSize = new Size(dlg.PrintableAreaWidth, dlg.PrintableAreaHeight);
+			
+			//문서를 인쇄하기 위해 PrintDocument 호출
+			dlg.PrintDocument(paginator, "Banner: " + txtbox.Text);
+		}
+	}
+}
+
+예제 프로그램은 여러 페이지를 인쇄하는 기본적인 방법을 설명하는 것이 목적이다. 텍스트를 여러 페이지로 나누는 것은 그리 유용하지 않다. 여러 폰트가 포함된 텍스트를 처리하는 프로그램은 아주 복잡하지만 그렇다고 해서 하나의 폰트로 되어있는 텍스트를 처리하는 프로그램이 단순한 것은 아니다. 
+
+어려울지도 모르지만 18장에서 살펴볼 노트패드 클론에서도 간단한 텍스트와 자동 줄바꿈(word wrap)을 지원하는 프로그램이 필요할 것이며, 그 프로젝트에서도 PlainTextDocumentPaginator 클래스는 중요한 역할을 할 것이다. 
