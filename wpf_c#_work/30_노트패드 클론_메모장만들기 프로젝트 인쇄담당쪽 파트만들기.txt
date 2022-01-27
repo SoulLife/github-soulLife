@@ -1,0 +1,886 @@
+CHAPTER 18장 : 노트패드 클론
+새로운 운영체제나 프로그래밍 인터페이스를 배우다보면 흔히 볼 수 있는 애플리케이션을 살펴보고서 나도 이정도 프로그램을 만들 수 있어 라고 이야기하는 때가 온다. 이를 증명하기 위해 그 애플리케이션의 클론을 만들려고 애쓰기도 한다. 물론 새로운 프로그램이 유전학적으로 가까운건 아니기 때문에 클론 이라는 용어가 적절하지 않을 수도 있다. 여기서 목적은 저작권이 있는 코드를 복사하지 않고 가능한 유사하게 사용자 인터페이스와 기능을 모방하는 것이다. 
+
+이번 장의 노트패드 클론은 마이크로소프트 윈도우의 메모장 프로그램과 모양과 기능이 매우 유사하다. 다른 부분은 도움말 창뿐이다(도움말 정보를 구현하는 방법은 25장에서 보여줄 것이다) 노트패드 클론은 파일 I/O, 인쇄, 검색과 치환, 폰트 대화상자, 세션간의 사용자 설정 저장등의 기능을 갖고 있다. 
+
+노트패드 클론 프로젝트는 17장에서 작성했던 PrintMarginDialog.cs 파일과 FontDialog를 위한 파일 3개(FontDialog.cs Lister.cs TextBoxWithLister.cs)를 링크해야 한다. 노트패드 클론을 구성하는 다른 파일들은 이번 장에서 설명할 것이다. 
+
+물론 간단한 텍스트 편집기가 더 이상 필요하지 않겠지만 노트패드 클론으로 우리가 배울수 있는 것은 학술적인 것 이상이다. 20장에서는 XAML Cruncher라는 다른 프로그램을 만들기 위해 여기에다 몇 개 파일을 더 추가할 것이다. XAML Cruncher가 이 책의 2부에서 확장애플리케이션 마크업 언어인 XAML을 배우고 사용하는 데 있어 강력한 도구라는 것을 알게될 것이다. XAML Cruncher 프로그램의 클래스 2개가 노트패드 클론 프로그램에서 파생되기 때문에 노트패드 클론 자체로서 뿐만 아니라 상속에서도 의미가 있다. 그 경우에 다시 이야기 할 것이다. 
+
+노트패드 클론 프로젝트의 첫 번째 파일은 NotepadClone.exe에서 메타 데이터를 생성한 결과가 들어갈 C# 속성을 여러 개 정의해놓은 파일이다. 이 메타 데이터는 저작권에 대한 공지와 버전 정보 같이 프로그램을 구분할 수 있는 데이터이다. 실제 애플리케이션에서는 이런 파일을 꼭 포함시켜야 한다. 
+
+
+using System.Reflection;
+
+[assembly: AssemblyTitle("Notepad Clone")]
+[assembly: AssemblyProduct("NotepadClone")]
+[assembly: AssemblyDescription("Functionally Similar to Windows Notepad")]
+[assembly: AssemblyCompany("www.charlespetzold.com")]
+[assembly: AssemblyCopyright("\x00A9 2006 by Charles Petzold")]
+[assembly: AssemblyVersion("1.0.*")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
+
+이파일을 프로젝트에 있는 다른 C# 파일과 다르게 취급할 필요는 없다. 이 파일도 다른 파일과 똑같이 컴파일 된다. 이 파일은 노트패드 클론 프로그램에서만 사용되고, XAML Cruncher 프로젝트에서는 사용하지 않는다. XAML Cruncher는 자체 어셈블리 정보 파일을 갖고 있다. 
+
+노트패드 클론이 세션간에 사용자 정보를 저장한다고 말했었다. 요즘에는 XML이 설정을 저장하는 표준 포맷이다. 보통 애플리케이션은 사용자별로 사용자 애플리케이션 데이터 라고 부르는 독립된 장소에 프로그램 설정을 저장한다. 예를 들어 노트패드 클론 프로그램을 Petzold라는 회사의 Deirder라는 사람이 설치한다면 프로그램 설정은 아래 위치에 저장될 것이다. 
+
+\Documents and Settings\Deirdre\Application Data\Petzold\NotepadClone
+
+그러나 XAML Cruncher 프로그램은 ClickOnce 애플리케이션 형태로 웹사이트에서 다운이 가능하며, 설치될 때 프로그램 설정이 로컬 사용자 애플리케이션 데이터라고 부르는 곳에 저장되게 권고할 것이다. 
+
+\Documents and Settings\Deirdre\Local Settings\Application Data\Petzold\NotepadClone
+
+이 두 영역이 각 사용자에 맞게 특화된 영역이지만 보통의 사용자 애플리케이션 데이터는 여러 장소에 걸쳐 저장된다. 즉 사용자가 다른 컴퓨터에 로그온하면 로컬 사용자 애플리케이션 데이터는 그 컴퓨터의 사용자 영역에 저장된다. 
+
+사용자 설정은 public 필드나 같은 목적으로 클래스에 정의된 프로퍼티에 정의하는 것이 쉽다. XML 포맷으로 이런 정보를 자동으로 저장하고 불러들이는 클래스가 XMLSerializer클래스이다. 파일을 저장하고 불러들이는 첫 번째 단계는 시리얼라이즈하려는 클래스를 기반으로 XmlSerializer 객체를 생성하는 것이다. 
+
+XmlSerializer xml = new XmlSerializer(typeof(MyClass));
+
+그런 후 Serialize 메소드를 호출해서 XML로 MyClass 객체를 저장한다. 파일을 지정하기 위해서는 Stream, XmlWriter, (StreamWriter를 상속받은)TextWriter와 같은 타입의 객체가 필요하다. XmlSerializer의 Deserialize 메소드는 XML을 XmlSerializer 생성자에서 지정한 타입으로 변환해 준다. Deserialize 메소드에서 반환된 객체를 정확한 타입으로 형변환 할 수 있다. 
+
+생각해보면 XmlSerializer 클래스는 XmlSerializer 생성자에서 지정한 클래스의 내부를 알기 위해서 리플렉션을 사용해 멤버를 확인한다. 문서에 따르면 XmlSerializer는 프로그램의 밖에서도 실행할 수 있는 코드를 실제로 만든다. 그런 이유 때문에 시리얼라이즈하려는 클래스는 public으로 정의해야 한다. XmlSerializer는 public으로 정의된 필드와 프로퍼티만을 시리얼라이즈하고 디시리얼라이즈한다. 읽기 전용이나 쓰기 전용인 멤버는 무시된다. XmlSerializer는 디시리얼라이즈할 때 인자가 없는 생성자를 이용해서 적당한 타입의 객체를 생성하고, 객체의 프로퍼티를 XML 엘리먼트로 설정한다. XmlSerializer는 인자가 없는 생성자가 없으면 동작하지 않는다.
+
+시리얼라이즈할 수 있는 클래스의 멤버가 복잡한 데이터 타입이면 그 클래스와 구조체 역시 public이어야 하고, 인자가 없는생성자를 가져야 한다. XmlSerializer는 중첩된 엘리먼트로 서의 다른 클래스나 구조체에 public 프로퍼티와 필드도 처리할 것이다. XmlSerializer는 배열과 List 객체인 프로퍼티도 처리할 수 있다. 
+
+다음은 NotepadCloneSettings 클래스이다. 사용 편이성과 공간을 절약하기 위해 프로퍼티가 아닌 필드로 public 멤버를 정의했다. 
+
+
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Media;
+using System.Xml.Serialization;
+
+public class NotepadCloneSettings
+{
+	//기본 설정
+	public WindowState WindowState = WindowState.Normal;
+	public Rect RestoreBounds = Rect.Empty;
+	public TextWrapping TextWrapping = TextWrapping.NoWrap;
+	public string FontFamily = "";
+	public string FontStyle = new FontStyleConverter().ConvertToString(FontStyles.Normal);
+	public string FontWeight = new FontWeightConverter().ConvertToString(FontWeights.Normal);
+	public string FontStretch = new FontStretchConverter().ConvertToString(FontStretchs.Normal);
+	public double FOntSize = 11;
+
+	//설정을 파일에 저장
+	public virtual bool Save(string strAppData)
+	{
+		try
+		{
+			Directory.CreateDirectory(Path.GetDirectoryName(strAppData));
+			StreamWriter write = new StreamWriter(strAppData);
+			XmlSerializer xml = new XmlSerializer(GetType());
+			xml.Serialize(write, this);
+			write.Close();
+		}catch
+		{
+			return false;
+		}
+			return true;
+	}
+	//설정을 파일에서 불러들임
+	public static object Load(Type type, string strAppData)
+	{
+		StreamReader reader;
+		object settings;
+		XmlSerializer xml = new XmlSerializer(type);
+
+		try
+		{
+			reader = new StreamReader(strAppData);
+			settings = xml.Deserialize(reader);
+			reader.Close();
+		}catch
+		{
+			settings = type.GetConstructor(System.Type.EmptyTypes).Invoke(null);
+		}
+		return settings;
+	}
+}
+
+클래스는 2 개의 메소드를 갖고 있다. Save 메소드는 전체 파일명이 필요하며 필드를 쓰기 위해 StreamWriter와 XmlSerializer 객체를 생성한다. Load 메소드는 Deserialize를 호출하거나 (설정 파일이 존재하지 않는 경우)클래스의 생성자를 이용해서 NotepadCloneSetting타입 객체를 생성하기 위해 static으로 정의한다. 
+
+Load 메소드는 XAML Cruncher 프로젝트에서 이 파일을 상속받아서 재사용하기 때문에 필요이상으로 복잡한 부분이 있다. 재사용할 필요가 없다면 Load 메소드의 Type 인자는 필요 없으며, XmlSerializer 생성자의 인자는 typeof(NotepadCloneSettings)로 대신할 수 있다. catch 블록에서는 리플렉션을 이용하는 것보다 클래스의 생성자를 실행하는 것이 낫다. 즉 new NotepadCloneSettings()으로 충분하다. 
+
+보이는 것처럼 첫 번째 3개 필드는 열거형 2개와 구조체 하나이다. 이 필드들은 시리얼라이즈와 디시리얼라이즈가 가능하다. 그러나 대부분의 폰트 관련 프로퍼티는 시리얼라이즈와 맞지 않는다. 예를 들어 FontStyle은 public 필드나 프로퍼티가 없는 구조체이다. NotepadCloneSettings에 string 객체로 폰트에 관련된 필드를 정의하고, 그 필드를 XAML을 파싱할 때 흔히 사용하는 FontStyleConvertor와 같은 여러 클래스로 초기화했다. 
+
+다음은 NotepadClone.cs 파일인데 이 파일이 프로젝트의 메인 파일이라고 하기에는 너무 작다고 생각할 수도 있다. 사실 그렇게 생각하는 것도 맞다. 보통 NotepadClone 클래스는 Window로부터 파생되었지만 이 클래스의 소스 코드를 partial 키워드를 이용해서 7개의 파일로 나누었다. 이 다른 파일들은 탑 레벨 메뉴 항목과 유사하다. 예를 들어 NotepadClone.Edit.cs 파일의 코드는 NotepadClone 클래스의 일부이지만 Edit 메뉴를 생성하고 이벤트 처리를 담당한다. 
+
+이 7개 파일이 같은 클래스이므로 다른 파일에 정의된 메소드와 필드를 바로 사용할 수가 있다는 사실을 기억하는 것이 도움이 될 것이다. 특히 프로그램의 클라이언트 영역을 담당할 TextBox 컨트롤은 txtbox라는 이름의 필드에 저장된다. 많은 다른 메소드들이 이 객체를 사용해야 한다. 
+
+NotepadClone.cs 파일에는 NotepadCLone 생성자가 있는데, 이 생성자는 Notepad Clone 이 라는 프로그램의 제목을 구하고 설정을 저장할 파일 패스를 생성하기 위해 NotepadCloneAssemblyinfo.cs 파일에 정의되어 있는 어셈블리 메타 데이터에 접근하는 것으로 시작한다. 상속의 활용도를 높이기 위해 이 방법을 사용한다. 생성자는 DockPanel, Menu, StatusBar, TextBox를 윈도우에 배치시킨다. 메뉴 생성의 모든 부분은 다른 파일에 위치한다고 가정하자. 
+
+
+using System;
+using System.CompontModel;
+using System.IO;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+public partial class NotepadCLone : Window
+{
+	protected string strAppTitle; //프로그램의 타이틀바 이름
+	protected string strAppData; //설정 파일의 전체 파일 이름
+	protected NotepadCloneSettings settings; //설정
+	protected bool isFileDirty = false; //파일 저장 확인을 위한 플래그
+
+	//메인 윈도우에서 사용되는 컨트롤
+	protected Menu menu;
+	protected TextBox txtbox;
+	protected StatusBar status;
+
+	string strLoadedFile; //불러올 파일의 전체 이름
+	StatusBarItem statLineCol; //줄과 열 상태
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.ShutdownMode = ShutdownMode.OnMainWindowClose;
+		app.Run(new NotepadClone());
+	}
+	public NotepadClone()
+	{
+		//속성에 접근하기 위해 executing assembly를 구함
+		Assembly asmbly = Assembly.GetExecutingAssembly();
+
+		//strAppTitle 필드를 설정하기 위해 AssemblyTitle 속성을 구함
+		AssemblyTitleAttribute title = (AssemblyTitleAttribute)asmbly.GetCustomAttributes(typeof(AssemblyTitleAttribute), false)[0];
+		strAppTitle = title.Title;
+
+		//strAppData 파일 이름을 설정하기 위해 AssemblyProduct 속성을 구함
+		AssemblyProductAttribute product = (AssemblyProductAttribute)asmbly.GetCustomAttributes(typeof(AssemblyProductAttribute), false)[0];
+		strAppData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
+			"Petzold\\" + product.Product + "\\ " product.Product + ".Settings.xml");
+
+		//윈도우 Content를 위해 DockPanel 생성
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//상단에 위치할 메뉴 생성
+		menu = new Menu();
+		dock.Children.Add(menu);
+		DockPanel.SetDock(menu, Dock.Top);
+
+		//하단에 위치할 상태바 생성
+		status = new StatusBar();
+		dock.Children.Add(status);
+		DockPanel.SetDock(status, Dock.Bottom);
+
+		//선과 열을 보여주기 위해 StatusBarItem 생성
+		statLineCol = new StatusBarItem();
+		statLineCol.HorizontalAlignment = HorizontalAlignment.Right;
+		status.Items.Add(statLineCol);
+		DockPanel.SetDock(statLineCol, Dock.Right);
+
+		//클라이언트 영역의 남은 부분은 채울 텍스트 박스 생성
+		txtbox = new TextBox();
+		txtbox.AcceptsReturn = true;
+		txtbox.AcceptsTab = true;
+		txtbox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+		txtbox.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
+		txtbox.TextChanged += TextBoxOnTextChanged;
+		txtbox.SelectionChanged += TextBoxOnSelectionChanged;
+		dock.Children.Add(txtbox);
+
+		//모든 탑 레벨 메뉴 항목 생성
+		AddFileMenu(menu); // in NotepadClone.File.cs
+		AddEditMenu(menu); // in NotepadClone.Edit.cs
+		AddFormatMenu(menu);// in NotepadClone.Format.cs
+		AddViewMenu(menu);//in NotepadClone.View.cs
+		AddHelpMenu(menu);//in NotepadClone.Help.cs
+
+		//이전에 실행되면서 저장해놓은 설정을 불러옴
+		settings = (NotepadCloneSettings)LoadSettings();
+
+		//저장된 설정을 적용
+		WindowState = settings.WindowState;
+
+		if(settings.RestoreBounds != Rect.Empty)
+		{
+			Left = settings.RestoreBounds.Left;
+			Top = settings.RestoreBounds.Top;
+			Width = settings.RestoreBounds.Width;
+			Height = settings.RestoreBounds.Height;
+		}
+	
+		txtbox.TextWrapping = settings.TextWrapping;
+		txtbox.FontFamily = new FontFamily(settings.FontFamily);
+		txtbox.FontStyle = (FontStyle) new FontStyleConverter().ConvertFromString(settings.FontStyle);
+		txtbox.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(settings.FontWeight);
+		txtbox.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(settings.FontStretch);
+		txtbox.FontSize = settings.FontSize;
+
+		//Loaded 이벤트 핸들러를 설정
+		Loaded += WindowOnLoaded;
+
+		//텍스트 박스에 포커스 설정
+		txtbox.Focus();
+	}
+	//생성자를 호출했을 때 설정을 불러들이는 메소드를 오버라이딩
+	protected virtual object LoadSettings()
+	{
+		return NotepadCloneSettings.Load(typeof(NotepadCloneSettings), strAppData);
+	}
+	//Loaded 이벤트에 대한 이벤트 핸들러: New 커맨드와 유사 명령 행에서 파일을읽어 들일 수 있음
+	void WindowOnLoaded(object sender, RoutedEventArgs args)
+	{
+		ApplicationCommands.New.Execute(null, this);
+
+		//명령 행 인자를 구함
+		string[] strArgs = Environment.GetCommandLineArgs();
+
+		if(strArgs.Length > 1) //첫 번째 인자는 프로그램 이름!
+		{
+			if(File.Exists(strArgs[1]))
+			{
+				LoadFile(strArgs[1]);
+			}else
+			{
+				MessageBoxResult result = MessageBox.Show("Cannot find the " + Path.GetFileName(strArgs[1]) + " file. \r\n\r\n" + 
+					"Do you want to create a new file?",strAppTitle, MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+				//사용자가 Cancel을 클릭하면 윈도우를 종료
+				if(result == MessageBoxResult.Cancel)
+					Close();
+			
+				//Yes이면 파일을 생성하고 종료
+				else if(result == MessageBoxResult.Yes)
+				{
+					try
+					{	
+						File.Create(strLoadedFile = strArgs[1]).Close();
+					}catch(Exception e)
+					{
+						MessageBox.Show("Error on File Creation: " + exc.Message, strAppTitle, MessageBoxButton.OK,
+							MessageBoxImage.Asterisk);
+						return;
+					}
+					UpdateTitle();
+				}
+				//No이면 아무 작업도 안함
+			}
+		}
+	}
+	//OnClosing 이벤트 : 파일을 지워도 되는지 확인
+	protected override void OnClosing(CancelEventArgs args)
+	{
+		base.OnClosing(args);
+		args.Cancel = !OkToTrash();
+		settings.RestoreBounds = RestoreBounds;
+	}
+	//OnClosed 이벤트: settings 필드를 설정하고 SaveSettings 을 호출
+	protected override void OnClosed(EventArgs args)
+	{
+		base.OnCLosed(args);
+		settings.WindowState = WindowState;
+		settings.TextWrapping = txtbox.TextWrapping;
+
+		settings.FontFamily = txtbox.FontFamily.ToString();
+		settings.FontStyle = new FontStyleConverter().ConvertToString(txtbox.FontStyle);
+		settings.FontWeight = new FontWeightConverter().ConvertToString(txtbox.FontWeight);
+		settings.FontStretch = new FOntStretchConverter().ConvertToString(txtbox.FontStretch);
+		settings.FontSize = txtbox.FontSize;
+
+		SaveSettings();
+	}
+	//settings 객체의 Save를 호출하기 위해 메소드를 오버라이딩
+	protected virtual void SaveSettings()
+	{
+		settings.Save(strAppData);
+	}
+	//파일명이나 Untitled를 출력
+	protected void UpdateTitle()
+	{
+		if(strLoadedFile == null)
+			Title = "Untitled - " + strAppTitle;
+		else
+			Title = Path.GetFileName(strLoadedFile) + "-" + strAppTitle;
+	}
+	//텍스트 박스의 text가 변경되면 isFileDirty를 설정
+	void TextBoxOnTextChanged(object sender, RoutedEventArgs args)
+	{
+		isFileDirty = true;
+	}
+	//선택이 변경되면 상태바를 갱신
+	void TextBoxOnSelectionChanged(object sender, RoutedEventArgs args)
+	{
+		int iChar = txtbox.SelectionStart;
+		int iLine = txtbox.GetLineIndexFromCharacterIndex(iChar);
+
+		//버그가 있는지 에러를 검사
+		if(iLine == -1)
+		{
+			statLineCol.Content = "";
+			return;
+		}
+	
+		int iCol = iChar - txtbox.GetCharacterIndexFromLineIndex(iLine);
+		string str = String.Format("Line {0} Col {1}", iLine + 1, iCol + 1);
+
+		if(txtbox.SelectionLength > 0 )
+		{
+			iChar += txtbox.SelectionLength;
+			iLine = txtbox.GetLineIndexFromCharacterIndex(iChar);
+			iCol = iChar - txtbox.GetCharacterIndexFromLineIndex(iLine);
+			str += String.Format(" - Line {0} Col {1}", iLine + 1, iCol + 1);
+		}
+		statLineCol.Content = str;
+	}
+}
+
+생성자의 끝부분에서 NotepadClone 클래스는 설정 파일을 불러오기 위해 LoadSettings라는 가상 메소드를 호출하고 Loaded 이벤트를 위한 핸들러를 설정한다. Loaded 이벤트 핸들러는 명령어 인자 값과 파일을 불러오는 것이 가능한지를 검사한다. 메소드와 관련 있는 모든 파일은 앞으로 살펴볼 NotepadClone.File.cs 파일에 있다. 
+
+NotepadClone.cs 파일은 TextBox의 TextChanged와 SelectionChanged 이벤트에 대한 이벤트 핸들러로 끝난다. TextChanged 핸들러는 변경된 파일을 저장하려 할 때 사용자에게 적절히 알려주기 위해 단순히 isFileDirty 플래그를 true로 설정할 뿐이다. SelectionChanged 핸들러는 상태바에 캐럿이나 선택 영역의 행과 열 번호를 보여준다. 
+
+NotepadClone.File.cs 파일의 AddFileMenu 메소드는 File 메뉴와 파일에 관련된 커맨드 처리를 묶어준다. File 메뉴의 많은 항목은 ApplicationCommands 클래스의 정적 프로퍼티와 일치한다. 이 항목들은 커맨드 바인딩으로 처리할 수 있다. 
+
+
+using Microsoft.Win32;
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Printing;
+
+public partial class NotepadClone : Window
+{
+	//대화상자에서 파일 열기와 저장을 위한 필터
+	protected string strFilter = "Text Documents(*.txt)|*.txt|All Files(*.*)|*.*";
+
+	void AddFileMenu(Menu menu)
+	{
+		//탑 레벨 파일 항목 생성
+		MenuItem itemFile = new MenuItem();
+		itemFile.Header = "_File";
+		menu.Items.Add(itemFile);
+		
+		//New 메뉴 항목
+		MenuItem itemNew = new MenuItem();
+		itemNew.Header = "_New";
+		itemNew.Command = ApplicationCommands.New;
+		itemFile.Items.Add(itemNew);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.New, NewOnExecute));
+
+		//Open 메뉴 항목
+		MenuItem itemOpen = new MenuItem();
+		itemOpen.Header = "_Open...";
+		itemOpen.Command = ApplicationCommands.Open;
+		itemFile.Items.Add(itemOpen);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Open, OpenOnExecute));
+
+		//Save 메뉴 항목
+		MenuItem itemSave = new MenuItem();
+		itemSave.Header = "_Save";
+		itemSave.Command = ApplicationCommands.Save;
+		itemFile.Items.Add(itemSave);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Save, SaveOnExecute));
+
+		//Save As 메뉴 항목
+		MenuItem itemSaveAs = new MenuItem();
+		itemSaveAs.Header = "Save _As...";
+		itemSaveAs.Command = ApplicationCommands.SaveAs;
+		itemFile.Items.Add(itemSaveAs);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.SaveAs, SaveAsOnExecute));
+
+		//구분자와 인쇄 항목
+		itemFIle.Items.Add(new Separator());
+		AddPrintMenuItems(itemFile);
+		itemFile.Items.Add(new Separator());
+
+		//Exit 메뉴 항목
+		MenuItem itemExit = new MenuItem();
+		itemExit.Header = "E_xit";
+		itemExit.Click += ExitOnClick;
+		itemFile.Items.Add(itemExit);
+	}
+	//File New 커맨드 : 빈 텍스트 박스로 시작
+	protected virtual void NewOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		if(!OkToTrash())
+			return;
+		
+		txtbox.Text = "";
+		strLoadedFile = null;
+		isFileDirty = false;
+		UpdateTitle();
+	}
+	//File Open 커맨드 : 대화상자를 출력하고 파일을 로딩
+	void OpenOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		if(!OkToTrash())
+			return;
+		
+		OpenFileDialog dlg = new OpenFileDialog();
+		dlg.Filter = strFilter;
+
+		if((bool)dlg.ShowDialog(this))
+		{
+			LoadFile(dlg.FileName);
+		}
+	}
+	//File Save 커맨드: SaveAsExecute 실행
+	void SaveOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		if(strLoadedFile == null || strLoadedFile.Length == 0)
+			DisplaySaveDialog("");
+		else
+			SaveFile(strLoadedFile);
+	}
+	//File Save As 커맨드 : 파일 저장 대화상자를 출력하고 파일을 저장
+	void SaveAsOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		DisplaySaveDialog(strLoadedFile);
+	}
+	//파일 저장 대화상자를 보여주고 파일이 저장되면 true를 반환
+	bool DisplaySaveDialog(string strFileName)
+	{
+		SaveFileDialog dlg = new SaveFileDialog();
+		dlg.Filter = strFilter;
+		dlg.FileName = strFileName;
+
+		if((bool)dlg.ShowDialog(this))
+		{
+			SaveFile(dlg.FileName);
+			return true;
+		}
+		return false; //OkToTrash에 대해
+	}
+	//File Exit 커맨드 : 윈도우를 종료
+	void ExitOnClick(object sender, RoutedEventArgs args)
+	{
+		Close();
+	}
+	//텍스트 박스 내용이 저장될 필요가 없으면 OkToTrash를 true를 반환
+	bool OkToTrash()
+	{
+		if(!isFileDirty)
+			return true;
+		MessageBoxResult result = MessageBox.Show("The text in the file " + strLoadedFile + " has changed\n\n" +
+						Do you want to save the changes?",strAppTitle, MessageBoxButton.YesNoCancel,
+						MessageBoxImage.Question,MessageBoxResult.Yes);
+		if(result == MessageBoxResult.Cancel)
+			return false;
+		else if(result == MessageBoxResult.No)
+			return true;
+		else //result == MessageBoxResult.Yes
+		{
+			if(strLoadedFile != null && strLoadedFile.Length > 0)
+				return SaveFile(strLoadedFile);
+			return DisplaySaveDialog("");
+
+		}
+	}
+	//에러가 발생하면 메시지 박스를 출력
+	void LoadFile(string strFileName)
+	{
+		try
+		{
+			txtbox.Text = File.ReadAllText(strFileName);
+		}catch(Exception exc)
+		{
+			MessageBox.Show("Error on File Open: " + exc.Message, strAppTitle, MessageBoxButton.OK, MessageBoxImage.Asterisk);
+			return;
+		}
+		strLoadedFile = strFileName;
+		UpdateTitle();
+		txtbox.SelectionStart = 0;
+		txtbox.SelectionLength = 0;
+		isFileDirty = false;
+	}
+	//에러가 발생하면 메시지 박스를 출력
+	bool SaveFile(string strFileName)
+	{
+		try
+		{
+			File.WriteAllText(strFileName, txtbox.Text);
+		}catch(Exception exc)
+		{
+			MessageBox.Show("Error on File Save" + exc.Message, strAppTitle, MessageBoxButton.OK, MessageBoxImage.Asterisk);
+			return false;
+		}
+		strLoadedFile = strFileName;
+		UpdateTitle();
+		isFileDirty = false;
+		return true;
+	}
+}
+
+이 파일 역시 아주 중요한 OkToTrash 메소드를 갖고 있는데, 이 메소드는 변경된 내용에 대해 저장할지 여부를 사용자에게 물어본다. 
+
+File 메뉴에서 인쇄 관련 항목 2개는 다음 소스 코드 파일인 NotepadClone.Print.cs에서 처리한다. 이 파일의 로직은 17장에서 살펴봤던 인쇄 코드와 아주 유사해 보인다. 여기서 가장 큰 차이는 이 파일은 Typeface와 FaceSize와 같은 프로퍼티를 갖는 PrintTextDocumentPaginator 클래스를 이용한다는 점인데, 이 점은 FontDialog와 유사하며 여기서 코드는 TextBox로부터 얻는다. PlainTextDocumentPaginator의 또 다른 프로퍼티는 TextWrapping이다. 이 프로퍼티는 텍스트가 컨트롤에서 줄바꿈 될지의 여부를 나타내는 TextBox 프로퍼티다. 
+
+
+using Petzold.PrintWithMargins; //PageMarginsDialog를 쓰기 위함
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Printing;
+
+
+public partial class NotepadClone : Window
+{
+	//인쇄를 위한 필드
+	PrintQueue prnqueue;
+	PrintTicket prntkt;
+	Thickness marginPage = new Thickness(96);
+
+	void AddPrintMenuItems(MenuItem itemFile)
+	{
+		//Page Setup 메뉴 항목
+		MenuItem itemSetup = new MenuItem();
+		itemSetup.Header = "Page Set_up...";
+		itemSetup.Click += pageSetupOnClick;
+		itemFile.Items.Add(itemSetup);
+
+		//Print 메뉴 항목
+		MenuItem itemPrint = new MenuItem();
+		itemPrint.Header = "_Print...";
+		itemPrint.Command = ApplicationCommands.Print;
+		itemFile.Items.Add(itemPrint);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Print, PrintOnExecuted));
+	}
+	void PageSetupOnClick(object sender, RoutedEventArgs args)
+	{
+		//대화상자를 만들고 PageMargins 프로퍼티를 초기화
+		PageMarginsDialog dlg = new PageMarginDialog();
+		dlg.Owner = this;
+		dlg.PageMargins = marginPage;
+
+		if(dlg.ShowDialog().GetValueOrDefault())
+		{
+			//대화상자로 페이지 여백을 저장
+			marginPage = dlg.PageMargins;
+		}
+	}
+	void PrintOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		PrintDialog dlg = new PrintDialog();
+
+		//이전 실행에서의 PrintQueue와 PrintTicket을 구함
+		if(prnqueue != null)
+			dlg.PrintTicket = prntkt;
+
+		if(dlg.ShowDialog().GetValueOrDefault())
+		{
+			//대화상자에서 PrintQueue와 PrintTicket을 저장
+			prnqueue = dlg.PrintQueue;
+			prntkt = dlg.PrintTicket;
+
+			//PlainTextDocumentPaginator 객체 생성
+			PlainTextDocumentPaginator paginator = new PlainTextDocumentPaginator();
+
+			//paginator 프로퍼티 설정
+			paginator.PrintTicket = prntkt;
+			paginator.Text = txtbox.Text;
+			paginator.Header = strLoadedFile;
+			paginator.Typeface = new Typeface(txtbox.FontFamily, txtbox.FontStyle, txtbox.FontWeight, txtbox.FontStretch);
+			paginator.FaceSize = txtbox.FontSize;
+			paginator.TextWrapping = txtbox.TextWrapping;
+			paginator.Margins = marginPage;
+			paginator.PageSize = new Size(dlg.PrintableAreaWidth, dlg.PrintableAreaHeight);
+			//문서를 인쇄
+			dlg.PrintDocument(paginator, Title);
+		}
+	}
+}
+
+PlainTextDocumentPaginator는 대부분의 귀찮은 작업을 처리한다. 클래스의 Header 텍스트 프로퍼티를 읽어 들인 파일명으로 설정한다. 또한 페이지 끝에 페이지 번호와 총 페이지 수 를 총 15페이지 중 5페이지로 출력하고 싶을 것이다. 
+
+기본적인 포맷팅은 PlainTextDocumentPaginator의 Format 메소드에서 이루어진다. 이 메소드는 파일 내 텍스트의 각 줄에 대해 루프를 돈다(자동 줄바꿈을 하게 되면 사실상 텍스트의 각 줄은 문단이 된다는 것을 기억하자)각 줄은 ProcessLine 메소드로 넘겨져서 텍스트의 각 줄을 인쇄할 수 있는 형태로 바꿔준다. 이렇게 바뀐 텍스트의 각 줄은 List 타입 컬렉션인 PrintLine 객체에 저장된다. PrintLine 객체가 준비되고 나면 페이지 크기, 여백, 총 줄수를 기준으로 페이지 번호를 결정하는 것은 쉽다. Format 메소드는 DrawText를 호출해 페이지에 텍스트를 출력하는 것으로 끝난다. 
+
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Printing;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+
+public class PlainTextDocumentPaginator : DocumentPaginator
+{
+	//public 프로퍼티와 연관된 Private 필드
+	char[] charsBreak = new char[]{ ' ', '-' };
+	string txt = "";
+	string txtHeader = null;
+	Typeface face = new Typeface("");
+	double em = 11;
+	Size sizePage = new Size(8.5 * 96, 11 * 96);
+	Size sizeMax = new Size(0, 0);
+	Thickness margins = new Thickness(96);
+	PrintTicket prntkt = new PrintTicket();
+	TextWrapping txtwrap = TextWrapping.Wrap;
+
+	//DocumentPage 객체로 각 페이지를 저장
+	List<DocumentPage> listPages;
+
+	//public 프로퍼티
+	public string Text
+	{
+		set { txt = value;	}
+		get { return txt; 	}
+	}
+	public TextWrapping TextWrapping
+	{
+		set { txtwrap = value; 	}
+		get { return txtwrap; 	}
+	}
+	public Thickness Margins
+	{
+		set { margins = value;	}
+		get { return margins;	}
+	}
+	public Typeface Typeface
+	{
+		set { face = value;	}
+		get { return face;	}
+	}
+	public double FaceSize
+	{
+		set { em = value;	}	
+		get { return em;	}
+	}
+	public PrintTicket PrintTicket
+	{
+		set { printkt = value;	}
+		get { return printkt;	}
+	}
+	public string Header
+	{
+		set { txtHeader = value;	}
+		get{ return txtHeader;	}
+	}
+	//오버라이딩
+	public override bool IsPageCountValid
+	{
+		get
+		{
+			if(listPages == null)
+			Format();
+			return true;
+		}
+	}
+	public override int PageCount
+	{
+		get
+		{
+			if(listPages == null)
+				return 0;
+			return listPages.Count;
+		}
+	}
+	public override Size PageSize
+	{
+		set { sizePage = value;	}
+		get { return sizePage; 	}
+	}
+	public override DocumentPage GetPage(int numPage)
+	{
+		return listPages[numPage];
+	}
+	public override IDocumentPaginatorSource Source
+	{
+		get { return null;	}
+	}
+	//인쇄할 때 텍스트 한 줄이 끝났음을 알려주는 화살표를 표시하는 내부 클래스
+	class PrintLine
+	{
+		public string String;
+		public bool Flag;
+
+		public PrintLine(string str, bool flag)
+		{
+			String = str;
+			Flag = flag;
+		}
+	}
+
+	//전체 문서를 페이지로 포맷팅
+	void Format()
+	{
+		//LineWithFlag 객체로 문서의 각 줄을 저장
+		List<PrintLine> listLines = new List<PrintLine>();
+
+		//몇 가지 기본적인 계산에 이를 이용
+		FormattedText formtxtSample = GetFormattedText("w");
+
+		//인쇄 되는 줄의 폭
+		double width = PageSize.Width - Margins.Left - Margins.Right;
+
+		//심각한 위험: 작업 중지
+		if(width < formtxtSample.Width)
+			return;
+
+		string strLine;
+		Pen pen = new Pen(Brushes.Black, 2);
+		StringReader reader = new StringReader(txt);
+
+		//listLines에 각 줄을 저장하기 위해 ProcessLine을 호출
+		while(null != (strLine = reader.ReadLine()))
+			ProcessLine(strLine, width, listLines);
+		reader.Close();
+
+		//페이지를 인쇄할 준비 시작
+		double heightLine = formtxtSample.LineHeight + formtxtSample.Height;
+		double height = PageSize.Height - Margins.Top - Margins.Bottom;
+		int linesPerPage = (int)(height / heightLine);
+
+		//심각한 문제: 작업 중지
+		if(linesPerPage < 1)
+			return;
+
+		int numPages = (listLines.Count + linesPerPage - 1) / linesPerPage;
+		double xStart = Margins.Left;
+		double yStart = Margins.Top;
+
+		//DocumentPage 객체를 각 리스트에 저장
+		listPages = new List<DocumentPage>();
+
+		for(int iPage = 0, iLine = 0, iPage < numPages; iPage++)
+		{
+			//DrawingVisual 객체를 생성해 DrawingContext를 오픈
+			DrawingVisual vis = new DrawingVisual();
+			DrawingContext dc = vis.RenderOpen();
+
+			//페이지 상단에 헤더를 출력
+			if(Header != null && Header.Length > 0)
+			{
+				FormattedText formtxt = GetFormattedText(Header);
+				formtxt.SetFontWeight(FontWeights.Bold);
+				Point ptText = new Point(xStart, yStart - 2 * formtxt.Height);
+				dc.DrawText(formtxt, ptText);
+			}
+			//페이지 하단에 꼬리말을 출력
+			if(numPages > 1)
+			{
+				FormattedText formtxt = GetFormattedText("Page " + (iPage+1) + " of " + numPages);
+				formtxt.SetFontWeight(FontWeights.Bold);
+				Point ptText = new Point((PageSize.Width + Margins.Left - Margins.Right - formtxt.Width ) / 2,
+				PageSize.Height - Margins.Bottom + formtxt.Height);
+				dc.DrawText(formtxt, ptText);
+			}
+			//페이지 상의 각 줄에 대해 처리
+			for(int i=0; i<linesPerPage; i++, iLine++)
+			{
+				if(iLine == listLines.Count)
+					break;
+				//줄의 텍스트를 보여주기 위해 정보를 설정
+				string str = listLines[iLine].String;
+				FormattedText formtxt = GetFormattedText(str);
+				Point ptText = new Point(xStart, yStart + i * heightLine);
+				dc.DrawText(formtxt, ptText);
+
+				//작은 화살표 플래그를 출력
+				if(listLines[iLine].Flag)
+				{
+					double x = xStart + width + 6;
+					double y = yStart + i * heightLine + formtxt.Baseline;
+					double len = face.CapsHeight * em;
+					dc.DrawLine(pn, new Point(x, y), new Point(x + len, y - len));
+					dc.DrawLine(pn, new Point(x, y), new Point(x, y-len / 2));
+					dc.DrawLine(pn, new Point(x, y), new Point(x + len /2, y));
+				}
+			}
+			dc.Close();
+
+			//visual 기반의 DocumentPage 객체를 생성
+			DocumentPage page = new DocumentPage(vis);
+			listPages.Add(page);
+		}
+		reader.Close();
+	}
+	//텍스트의 각 줄에 대해 여러 줄로 이루어진 텍스트를 처리	
+	void ProcessLine(string str, double width, List<PrintLine> list)
+	{
+		str = str.TrimEnd(' ');
+
+		//TextWrapping == TextWrapping.NoWrap
+		//============================
+		if(TextWrapping == TextWrapping.NoWrap)
+		{
+			do
+			{
+				int length = str.Length;
+				while(GetFormattedText
+				{
+					str.Substring(0, length)).Width > width)
+					length--;
+					list.Add(new PrintLine(str.Substring(0, length),length < str.Length));
+					str = str.Substring(length);
+				}
+				while(str.Length > 0);
+		}
+		//TextWrapping == TextWrapping.Wrap 또는
+		//TextWrapping == TextWrapping.WrapWithOverflow
+		//================================================
+		else
+		{
+			do
+			{
+				int length = str.Length;
+				bool flag = false;
+
+				while(GetFormattedText(str.Substring(0, length)).Width > width)
+				{
+					int index = str.LastIndexOfAny(charsBreak, length - 2);
+					if(index != -1)
+						length = index + 1; //공백이나 대시를 포함
+					else
+					{
+						//특정 영역 내에서 공백이나
+						//대시가 들어갈 수도 있다는 점을 기억할 것
+						//공백이나 대시가 있는지를 검사
+						index = str.IndexOfAny(charsBreak);
+
+						if(index != -1)
+							length = index + 1;
+
+						//TextWrapping.WrapWithOverflow이면 단순히 줄을 출력
+						TextWrapping.Wrap이면 플래그를 설정하고 루프 탈출
+						if(TextWrapping == TextWrapping.Wrap)
+						{
+							while(GetFormattedText(str.Substring(0, length)).Width > width)
+								length--;
+							flag = true;
+						}
+						break; //while 루프를 탈출
+					}
+				}
+				list.Add(new printLine(str.Substring(0, length), flag));
+				str = str.Substring(length);
+			}
+			while(str.Length > 0);
+		}
+	}
+	//FormattedText 객체를 생성하는 Private 메소드
+	FormattedText GetFormattedText(string str)
+	{
+		return new FormattedText(str, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, face, em,Brushes.Black);
+	}
+}
+
+이 클래스에서 재미있는 부분은 확실히 각 줄을 인쇄 가능하게 나눠주는 ProcessLine 메소드다. 이 메소드는 텍스트에 들어있는 여백이나 대시(-)와 자동 줄바꿈 설정을 기반으로 줄을 구분한다. 
+
+이전의 TextBox와 유사한 편집 가능한 컨트롤은 자동 줄바꿈 설정을 켜거나 끌 수 있었다. 컨트롤의 테두리 내로 긴 줄을 줄바꿈하게 편집하거나 오른쪽 여백을 기준으로 잘라낼 수 있다. 
+
+WPF 버전 TextBox의 자동 줄바꿈은 TextWrapping 프로퍼티로 설정하는데, 열거형 객체인 TextWrapping의 멤버로 설정한다. 멤버는 NoWrap, Wrap , WrapWithOverflow이다. 이 새로운 스킴은 작은 문제를 해결해준다. 사용자는 줄바꿈을 원하지만 특정 단어가 너무 길어서 TextBox의 폭에 맞지 않은 경우는 어떻게 될까? TextWrapping.Wrap 옵션은 가능한 단어의 많은 부분이 보이게 하고 나머지 부분은 다음 줄에 나타낸다. TextWrapping.WrapWithOverflow 옵션은 긴 단어를 나누지 않는다. 그러면 단어는 여백에 의해 가려져서 화면에서 볼 수 없게 된다. 마지막 옵션은 긴 단어가 페이지 여백에 의해 나눠지게 한다. 
+
+Wrap과 WrapWithOverflow간의 차이는 확실히 몇 가지 작은 코딩 이슈를 야기 시킨다. NoWrap옵션에도 몇 가지 민감한 부분에 더 관심을 가졌었다. 페이지 처리 로직이 XAML Cruncher에서도 사용되기 때문에 비주얼 스튜디오에서 보이는 것과 유사하게 소스 코드가 출력되기를 원한다. 즉 한 줄에 보여주기에 너무 길면 비주얼 스튜디오는 다음 줄에 나눠서 보여주고 줄이 계속된다는 것을 나타내기 위해 여백에 작은 화살표를 그려준다. 
+
+이런 이유 때문에 PlainTextDocumentPaginator가 PrintLine 타입 객체에 인쇄 가능한 형태로 각 줄을 저장하는 것이다. PrintLine 클래스는 작은 화살표를 줄 끝에 그려야 하는지의 여부를 나타내는 불리언 타입 Flag 필드를 갖고 있다. 이 화살표는 TextWrapping 옵션이 NoWrap이고 줄이 너무 길 때 나타나며, Wrap 옵션인 경우에는 긴 줄은 두 줄에 걸쳐 나눠진다. 
+
+재미있는 것은 윈도우 노트패드 프로그램은 현재의 자동 줄바꿈 설정과 상관없이 문서를 인쇄할 때 동일한 줄바꿈 로직을 이용한다. 세 가지 자동줄바꿈 설정에 대해 별도의 인쇄 로직을 구현한 다음에 노트패드에서 사용한 방법을 게으른 방법 이라 부르기로 했다. 
+
+이제 Edit 메뉴로 가보자. 이 부분은 쉬운 부분과 어려운 부분이 섞여있다. 쉬운 부분은 클립 보드와 관련된 커맨드로 구성되어 있는 부분으로 지금쯤이면 익숙해졌을 것이다. 
