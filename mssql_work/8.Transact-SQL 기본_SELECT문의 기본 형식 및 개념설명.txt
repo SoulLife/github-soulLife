@@ -1,0 +1,380 @@
+CHAPTER 06 : Transact-SQL 기본
+3장에서 간단히 사용해 보았던, 기본적인 SQL 문장인 SELECT/INSERT/UPDATE/DELETE에 대해서 알아보자. 이 4개만 알아도 SQL 구문을 기본적으로는 사용할 수가 있다. 특히 관리자보다는 응용프로그램 개발자에게 이 4개를 잘 사용하는 것이 중요하다. 
+
+
+※ 원하는 데이터를 가져와 주는 기본적인 <SELECT...FROM>
+SELECT 문은 가장 많이 사용하는 구문이다. 처음에는 쉬운 듯 별것 아닌 것처럼 보이지만 갈수록 어렵게 느껴지는 구문이기도 하다. SELECT는 한마디로 데이터베이스 내의 테이블에서 원하는 정보를 추출하는 명령이다. 
+
+(1) SELECT의 구문 형식
+다음은 도움말에 나오는 SELECT의 구문 형식이다. 
+[WITH <common_table_expression> [,..n]]
+	<query_expression>
+	[ORDER BY { order_by_expression | column_position [ ASC | DESC ] }
+		[,...n] ]
+	[ <FOR clause>]
+	[ OPTION ( <query_hint> [,..n] ) ]
+<query_expression> ::=
+	{ <query_specification> | ( <query_expression> ) }
+	{	{ UNION [ ALL] | EXCEPRT | INTERSECT }
+		<query_specification> | (<query_expression> ) [...n ] ]
+<query_specification> ::=
+SELECT [ ALL | DISTINCT ]
+	[TOP (expression ) [PERCENT] [ WITH TIES ] ]
+	<select_list >
+	[ INTO new_table ]
+	[ FROM { <table_source> } [ ,..n ] ]
+	[ WHERE <search_condition> ]
+	[ <GROUP BY> ]
+	[HAVING < search_condition > ]
+
+필자가 방금 처음에는 쉽다고 이야기했는데, 앞의 형식을 보면 처음에도 전혀 쉬워 보이지 않다고 생각하는 독자가 많을 것이다. 앞의 구문은 SQL Server 2005부터 추가된 WITH 절 때문에 더욱 복잡해졌다. 
+
+SELECT 문은 옵션이 다양해서 전체 구문 형식이 복잡해 보이지만, 실질적으로 요약한 구조는 다음과 같다. 여기서 대괄호([])의 내용은 생략할 수 있다. 
+
+[ WITH <common_table_expression>]
+SELECT select_list [ INTO new_table]
+[ FROM table_soruce ] [ WHERE search_condition ]
+[ GROUP BY group_by_expression ]
+[ HAVING search_condition ]
+[ ORDER BY order_expression [ ASC | DESC ] ]
+
+방금 전보다 훨씬 단순해졌다. 그래도 복잡해 보인다면 다음과 같이 가장 자주 쓰이는 형식으로 줄여보자. 
+
+SELECT 열이름
+FROM 테이블 이름
+WHERE 조건
+
+어떤가? 이 정도면 충분히 해볼 만하게 보일 것이다. 앞으로 쉬운 것부터 하나씩 해가면서 추가로 살을 붙여가는 형식으로 SELECT 문을 정복해보자. 
+
+
+※ 여기서 잠깐
+SQL Server 최신 버전에서는 내부적 입출력(I/O)을 줄이는 방식을 사용해서 쿼리 속도를 항상시키려 노력한다. 단 CPU의 비용(cost)이 많이 발생할 수 있는데, 이는 최근의 CPU는 성능이 우수하므로 그다지 큰 영향을 미치지 않는다. 즉 입출력 속도가 CPU 보다 훨씬 늦기 때문에 되도록 CPU에 부담을 넘기는 것이 더 유리하다. 
+
+
+
+(2) USE 구문
+SELECT 문을 학습하려면 먼저 사용할 데이터베이스를 지정해야 한다. 이번 장에서 주로 사용할 데이터베이스는 잠시 후에 만들게 될 sqlDB와 SQL Server의 샘플 DB인 AdventureWorks이다. 현재 사용하는 데이터베이스를 지정 또는 변경하는 구문 형식은 다음과 같다. 
+
+USE 데이터베이스_이름;
+
+만약 AdventureWorks를 사용하려면 쿼리 창에서 다음과 같이 입력하면 된다. 
+
+USE AdventureWorks;
+
+이렇게 지정해 놓은 후에는 특별히 다시 USE 문을 사용하거나 다른 DB를 사용하겠다고 명시하지 않는 이상, 모든 SQL 문은 AdventureWorks에서 수행된다. 한마디로 지금부터 AdventureWorks를 사용하겠으니, 모든 쿼리는 AdventureWorks에서 수행하라 라는 의미다. 
+
+
+※여기서 잠깐
+T-SQL은 일반적으로 대소문자를 구분하지 않는다. 즉 USE , use, uSE를 모두 같게 인식한다. 하지만 여러 가지 면에서 전체 대문자 또는 소문자 등으로 통일하는 것이 구문을 읽기 쉽게 하며, SQL Server의 성능에도 약간의 도움이 된다. 
+
+
+다음 그림과 같이 SSMS에서 직접 선택하여 지정할 수도 있다. 먼저 쿼리 창의 내부를 클릭한 후에 AdventureWorks 데이터베이스를 선택하고 쿼리창의 제목 틀에 마우스를 가져가면 인스턴스이름.데이터베이스이름 으로 풍선 도움말이 나오는 것을 확인할 수 있다. 
+
+만약 다른 데이터베이스가 지정된 상태에서 조회를 하면 주로 다음과 같은 메시지가 나온다. 
+
+USE tempdb;
+SELECT * FROM HumanResources.Employee;
+
+메시지 208, 수준 16, 상태 1, 줄 2
+개체 이름 HumanResources.Employee이(가) 잘못되었습니다.
+
+현재 tempdb 데이터베이스에는 HumanResources.Employee라는 테이블이 없으므로 나오는 메시지다. 이런 경우에는 먼저 데이터베이스 이름을 확인하고, 제대로 지정되었다면 열 이름이나 테이블 이름의 철자를 확인해 보자. 
+
+* SQL Server 초보자라면 가장 먼저 만나게 될 오류 메시지다. 그러므로 쿼리 창을 열면 가장 먼저 자신이 작업할 데이터베이스가 선택되어 있는지 확인하는 습관을 들여야 한다.
+
+
+(3) SELECT 와 FROM
+다시 AdventureWorks 데이터베이스를 선택하고 SSMS의 쿼리 창에서 간단한 SQL 문을 수행해 보자. 
+
+SELECT * FROM HumanResources.Employee;
+
+결과를 확인할 수 있다. 앞의 그림에 표시해 놓은 아래쪽 상태 바의 의미를 간단히 살펴보자. 
+
+* 쿼리가 실행되었습니다. : 정상적으로 쿼리가 실행된 상태를 표시하며, 초록색 아이콘으로 표시된다. 
+
+* HP-PC(11.0 RTM) : 현재 쿼리를 수행한 서버는 HP-PC이며 버전은 11.0(2012)이다. 
+
+* hp-PC\hp(52) : 쿼리를 수행한 사용자를 의미한다. (필자는 Windows 인증으로 접속했다. 괄호 안의 번호는 SPID 번호(프로그램 번호라고 생각하면 된다)를 표시하는데, 별 의미는 없다. 
+
+* AdventureWorks : 쿼리가 수행된 데이터베이스다. 
+
+* 290개의 행 : 쿼리의 결과 행의 개수를 나타낸다. 즉 조건에 맞는 데이터의 건수로 생각하면 된다.
+
+[메시지]탭을 클릭하면 (290개 행이 영향을 받음)이라는 정상적인 메시지가 보일 것이다. 만약 해당 쿼리에 오류가 있으면 메시지 행에서 어떤 오류가 발생했는지 확인할 수 있다. 
+
+이제 SELECT 문을 하나하나 뜯어보자. *은 모든 것을 의미한다. 그런데 *가 사용곳이 열 이름이므로, 이곳의 *은 모든 열을 의미한다. FROm 다음은 테이블/뷰 등의 항목이다. 결국 풀어서 쓰면, HumanResources.Employee 테이블에서 모든 열의 내용을 가져오라는 의미가 된다. 그런데, HumanResources.Employee에서 HumanResources는 스키마 이름이고, Employee는 테이블 이름이며, HumanResources.Employee는 전체 이름을 축소한 것이다. 원래 테이블의 전체 이름은 서버이름.데이터베이스이름.스카마이름.테이블이름 형식으로 표현된다. 필자가 든 예제를 보면, 이 테이블의 전체 이름은 [HP-PC].AdventrueWorks.HumanResources.Employee이므로 원칙적으로는 다음과 같이 사용하여야 한다 
+
+SELECT * FROM [HP-PC].AdventrueWorks.HumanResources.Employee;
+
+*필자의 서버이름에는 '-'가 들어가 있기에 [] 로 서버이름을 묶어줬다. 일반적인 서버이름(예:MYCOMPUTER)라면 []로 묶지 않아도 된다. 
+
+하지만 서버이름 및 데이터베이스 이름을 생략하더라도[그림6-1]에서 보이듯 현재 쿼리 창의 제목틀에 표시된 서버이름.데이터베이스이름(필자는 HP-PC.AdventureWorks)으로 간주하고 실행된다. 그런데 만약 스키마 이름까지 생략해서 실행하면 어떻게 될까?
+
+SELECT * FROM Employee;
+
+아마도 그런 개체가 없다는 오류를 만들게 될 것이다. SQL Server에서는 스키마 이름을 생략하면 다음과 같이 디폴트 스키마인 dbo를 자동으로 붙인다. 
+
+SELECT * FROM [HP-PC].AdventrueWorks.dbo.Employee
+
+그러나 현재의 데이터베이스인 AdventureWorks에는 HumanResources.Employee라는 테이블은 있어도 dbo.Employee라는 테이블이 없으므로 결국 개체 이름이 잘못되었다는 오류 메시지가 나오게 되는 것이다. 결론적으로 스키마 이름이 dbo가 아니라면, 스키마 이름은 꼭 붙여야 한다. 
+
+
+※ 여기서 잠깐
+SQL Server 2000까지는 스키마 이름과 사용자 이름을 같게 취급해서 사용되었지만, SQL Server 2005부터는 스키마 이름과 사용자 이름을 분리한다. 스키마(Schema)는 간단히 테이블의 묶음 정도로 생각하자. 즉 데이터베이스 안에서 여러 개의 테이블을관리할 때, 묶음으로 구분해서 좀 더 효율적으로 관리하기 위한 것이다. 스키마는 테이블과 관련이 깊으므로 8장에서 좀 더 살펴보겠다. 
+
+
+
+이제는 해당 테이블에서 전체 열이 아닌 필요로 하는 열만 가져오자. 다음과 같이 부서 테이블의 이름만 가져와 보자. 
+
+SELECT Name FROM HumanResources.Department;
+
+원하는 부서의 이름만 얻을수 있다. 
+
+
+여려 개의 열을 가져오고 싶으면 콤마(,)로 구분하면 된다. 또한 열 이름의 순서는 사용자의 마음대로 바꿔도 된다. 
+
+SELECT Name, GroupName FROM HumanResources.Department;
+
+
+
+※여기서 잠깐
+SQL Server에서 '--'이후부터는 주석으로 처리된다. 주로 코드에 설명을 달거나 해당 부분의 실행을 잠시 막고 싶을때 사용한다. 
+
+-- 한 줄 주석 연습
+SELECT Name, GroupName --이름과 그룹이름 열을 가져옴
+FROM HumanResources.Dapartment;
+
+여러줄 주석은 /* */로 묶는다
+/* 블록 주석 연습
+SELECT Name, GroupName
+FROM HumanResources.Department;
+*/
+주석으로 묶이면 해당 글자들은 모두 초록색으로 보이게 된다. 
+
+
+
+실습1 :데이터베이스 이름, 스키마 이름, 테이블 이름, 필드 이름이 정확히 기억나지 않거나 각 이름의 철자가 확실하지 않을 때 찾아서 조회하는 방법을 실습해 보자. 지금 조회하고자 하는 내용이 AdventureWorks.HumanResources.Department 테이블의 Name및 GroupName열이라고 가정한다. 
+
+
+0. 쿼리 창을 연다. 
+1. 현재 인스턴스에 어떤 데이터베이스가 있는지 조회한다. 
+EXECUTE sp_helpdb;
+
+* 저장 프로시저 중에서 접두어에 sp_가 붙은 것은 대부분 SQL Server에서 제공하는 시스템 저장 프로시저이다. 이를 실행하려면
+EXECUTE 저장프로시저이름 [옵션];
+형식으로 실행하면 된다. 저장 프로시저는 11장에서 다룬다. 
+
+2. 우리가 찾던 데이터베이스 이름이 AdventureWorks인 것 같다. AdventureWorks 데이터베이스를 지정한다.
+
+USE AdventureWorks;
+
+3. 현재 데이터베이스(AdventrueWorks)에 있는 테이블 정보를 조회한다. 
+EXECUTE sp_tables @table_type = "'TABLE'";
+
+그중 찾고자 하는 스키마 이름(TABLE_ONWER)과 테이블 이름(TABLE_NAME)인 HumanResources.Department의 정확한 이름을 찾았다. 
+
+4. HumanResources.Department 테이블의 열에 무엇이 있는지 확인해보자. 
+
+EXECUTE sp_columns @table_name = 'Department', @table_owner = 'HumanResources';
+
+Name과 GroupName 열 이름을 확인했다 
+
+5. 데이터를 조회한다
+SELECT Name, GroupName FROM HumanResources.Department;
+
+물론 지금 쓴 방법 외에 간단히 SSMS의 개체 탐색기로 확인하는 방법도 있다. 하지만 이 방법을 잘 알아두면 추후에 자주 유용하게 사용할 수 있을 것이다. 
+
+
+※ 여기서 잠깐
+열 이름을 별도의  별칭(Alias)으로 지정할 수도 있다. 열 이름 뒤에 AS 별칭의 형식으로 붙이면된다. 하지만 별칭의 중간에 공백이 있다면 꼭 [ ]로 별칭을 감싸줘야 한다. 또 AS는 붙여도 되고 생략해도 된다. 다른 방법으로는 별칭 = 열_이름으로 해도 된다. 별칭을 붙일 때는 되도록 [ ] 안에 사용하기를 권장한다 
+
+SELECT DepartmentID AS 부서번호, Name '부서이름', [그룹이름] = GroupName FROM HumanResources.Department
+
+별칭을 사용하면 결과를 보기가 한결 편해지므로 필드 제목을 알아보기 힘들거나 계산식에 의해서 복잡한 열 이름이 되는 경우에 사용하면 좋다. 
+
+
+
+이제는 조건을 지정하는 WHERE 문에 대해서 설명할 차례다. 기존의 AdventrueWorks를 가지고 설명해도 관계없지만 SQL Server를 처음 대하는 독자 대부분의 입장에서는 AdventureWorks의 구조가 복잡해서 한눈에 보기가 어렵다. 그래서 필자는 아주 간단하고, 보기 쉬운 테이블을 만들어서 주로 그 테이블을 사용하려고 한다. 이는 현실성은 조금 떨어져 보이지만, 어려운 SQL 구문을 이해하는데 훨씬 도움이 된다. 테이블의 구조에 부담이 없어져서 SQL  문법에 집중할수 있는 효과를 거둘 수 있을 것이다. AdventrueWorks도 필요한 경우에는 중간중간 계속 사용하게 될 것이다. 
+
+데이터베이스의 생성과 테이블의 생성은 8장에서 학습하겠지만 우리는 3장에서 이미 맛보기로 만들어본 경험이 있으므로 그리 어색하지는 않을 것이다. 혹 모르는 내용이 나와도 8장에서 자세히 다루므로 다음 실습은 그냥 따라하기만해도 관계없다. 
+
+이 데이터베이스는 간단히 인터넷 쇼핑몰 업체에서 운영하는 데이터베이스를 단순화한 구조라고 생각하면 된다(4장에서 했던 모델링의 결과와 비슷한 구조이다.)독자 대부분은 인터넷 쇼핑몰에서 물건을 사보았을 것이다. 구매자가 물건을 사기 위해서 회원가입을 하면, 기입한 회원 정보는 회원 테이블(userTbl)에 입력된다. 물론 더 많은 정보를 입력해야 하지만 그냥 간단히 아이디/이름/출생년도/거주지역/휴대폰국번/전화번호/키/가입일 등만 입력하는 것으로 하자. 회원가입을 한 후에 인터넷 쇼핑몰에서 물건을 구입하면 회원이 구매한 정보는 구매 테이블(buyTbl)에 기록된다. 그러면 이 쇼핑몰의 배송 담당자는 구매 테이블을 통해서 회원이 주문한 물건을 준비하고, 구매 테이블의 아이디와 일치하는 회원 테이블의 아이디를 찾아서 그 행의 주소로 회원에게 물품을 배송한다. 
+
+예를 들어, 배송 담당자는 구매 테이블(buyTbl)의 아이디 KBS라는 사람이 구매한 운동화 2개, 노트북 1개, 청바지 3벌을 포장한 후에 회원 테이블(userTbl)의 KBS라는 아이디를 찾는다. 그리고 이름은 김범수, 주소는 경남, 연락처는 011-222-2222를 포장학스에 적어서 배송할 것이다. 지금 이야기한 이 당연한(?) 과정을 SQL 문에서도 거의 같은 방식으로 수행하게 된다. 지금은 그냥 감만 잡아놓고 차근차근 학습해 보자. 
+
+
+
+
+실습 2 : 앞으로 책의 전 과정에서 사용할 데이터베이스와 테이블을 생성해 보자. 
+
+아직 배우지 않은 문장이 많이 나올 것이므로 잘 이해되지 않더라도우선은 똑같이 진행해보자. 앞으로 하나씩 배워나갈 것이다. 
+
+0. 기존의 쿼리 창을 닫고, 새로운 쿼리 창을 연다. 이번에 입력할 쿼리는 앞으로 다른 장에서도 많이 사용된다. 그러므로 이번 실습에서 입력한 쿼리를 저장해 놓으면 나중에 편리하다. 
+
+1. 우선 DB를 만들자
+
+*지금부터 입력하는 SQL 문은 추후에 다시 사용할 수 있다. 그러므로 앞 번호의 SQL 문을 지우지말고 해당 번호의 SQL 문을 마우스로 드래그한 후에 실행해 보자. 
+
+USE tempdb;
+GO
+CREATE DATABASE sqlDB;
+
+*만약 전에 sqlDB를 만든적이 있다면 다음 쿼리문으로 먼저 삭제한 후 다시 만들자 
+
+USE tempdb;
+DROP DATABASE sqlDB;
+
+
+2. 테이블을 만들자. 
+USE sqlDB;
+CREATE TABLE userTb1 -- 회원테이블
+( userID char(8) NOT NULL PRIMARY KEY, --사용자 아이디
+name	nvarchar(10) NOT NULL, -- 이름
+birthYear  int NOT NULL, --출생년도
+addr	nchar(2) NOT NULL, --지역(경기, 서울, 경남 식으로 2글자만 입력)
+mobile	char(3), --휴대폰의 국번(011, 016, 017, 018, 019, 010 등)
+mobile2 char(8), --휴대폰의 나머지 전화번호(하이픈제외)
+height	smallint, --키
+mDate	date -- 회원 가입일
+);
+GO
+CREATE TABLE buyTb1 -- 회원 구매 테이블
+( num int IDENTITY NOT NULL PRIMARY KEY, -- 순번(PK)
+userID char(8) NOT NULL FOREIGN KEY REFERENCES userTb1(userID), --아이디 (FK)
+prodName nchar(6) NOT NULL, --물품명
+groupName 	nchar(4), --분류
+price 	int	NOT NULL, --단가
+amount	smallint	NOT NULL -- 수량
+);
+GO
+
+*문자형 중에서 확실히 한글을 사용하지 않는다면 CHAR, VARCHAR로 지정하고, 한글이 들어갈 수도 있다면 NCHAR, NVARCHAR로 지정하도록 한다. 상세한 설명은 잠시 후에 나온다. 
+
+
+※ 여기서 잠깐
+데이터베이스 개체의 이름을 식별자(Identifier)라고 한다. 데이터베이스 개체란 SQL 서버, 데이터 베이스, 테이블, 열 , 인덱스 뷰, 트리거, 프로시저 등과 같은 개체들을 의미한다. SQL Server에서 이러한 개체를 정의할 때는 몇 가지 규칙을 따라야 한다. 즉데이터베이스 개체에 이름을 줄 때 따라야 할 규칙이다. 
+
+* 제일 앞에 특수문자가 들어오면 안 된다. 단 @,_,#은 예외다(예: abcd, @abcd, _abcd, #abcd등은 가능하다. 또한 한글도 가능하지만 권장하지 않는다).
+* 예약어를 사용하면 안 된다(예:CREATE TABLE select (...)는 안 된다. 되도록 []를 권장한다(예:CREATE TABLE [My Table](...), SELECT * FROM [My Table], SELECT * FROM 학생 테이블" 등은 가능하다).
+*개체에 이름을 줄 때는 되도록 알기 쉽게 주는 것이 좋고 너무 길게 주는 것보다는 짧으면서도 이름만으로도 어떤 것인지 파악할 수 있는 것이 바람직하다. 다음은 좋지 않은 예다. 
+
+CREATE TABLE abc -> 어떤 테이블인지 의미를 파악할 수 없음
+CREATE TABLE sales (Price of Production] int, ...) -> 열 이름이 의미 파악은 쉽게 되지만 너무 길다
+CREATE TABLE test.test (...) -> 스키마 이름과 테이블 이름이 같다. 바람직하지 않다. 
+
+
+
+3. [그림6-10]과 같은 데이터를 입력해 보자(각각의 INSERT 문을 한 줄씩 쓰자)
+INSERT INTO userTbl VALUES('LSG', '이승기', 1987, '서울', '011', '1111111', 182, '2008-8-8');
+INSERT INTO userTbl VALUES('KBS', '김범수', 1979, '경남', '011', '2222222', 173, '2012-4-4');
+INSERT INTO userTbl VALUES('KKH', '김경호', 1971, '전남', '019', '3333333', 177, '2007-7-7');
+INSERT INTO userTbl VALUES('JYP', '조용필', 1950, '경기', '011', '4444444', 166, '2009-4-4');
+INSERT INTO userTbl VALUES('SSK', '성시경', 1979, '서울', NULL, NULL, 186, '2013-12-12');
+INSERT INTO userTbl VALUES('LJB', '임재범', 1963, '서울', '016', '6666666', 182, '2009-9-9');
+INSERT INTO userTbl VALUES('YJS', '윤종신', 1969, '경남', NULL, NULL, 170, '2005-5-5');
+INSERT INTO userTbl VALUES('EJW', '은지원', 1972, '경북', '011', '8888888', 174, '2014-3-3');
+INSERT INTO userTbl VALUES('JKW', '조관우', 1965, '경기', '018', '9999999', 172, '2010-10-10');
+INSERT INTO userTbl VALUES('BBK', '바비킴', 1973, '서울', '010', '0000000', 176, '2013-5-5');
+GO
+INSERT INTO buyTb1 VALUES('KBS', '운동화', NULL, 30, 2);
+INSERT INTO buyTb1 VALUES('KBS', '노트북', '전자', 1000, 1);
+INSERT INTO buyTb1 VALUES('JYP', '모니터', '전자', 200, 1);
+INSERT INTO buyTb1 VALUES('BBK', '모니터', '전자', 200, 5);
+INSERT INTO buyTb1 VALUES('KBS', '청바지', '의류', 50, 3);
+INSERT INTO buyTb1 VALUES('BBK', '메모리', '전자', 80, 10);
+INSERT INTO buyTb1 VALUES('SSK', '책', '서적', 15, 5);
+INSERT INTO buyTb1 VALUES('EJW', '책', '서적', 15, 2);
+INSERT INTO buyTb1 VALUES('EJW', '청바지', '의류', 50, 1);
+INSERT INTO buyTb1 VALUES('BBK', '운동화', NULL, 30, 2);
+INSERT INTO buyTb1 VALUES('EJW', '책', '서적', 15, 1);
+INSERT INTO buyTb1 VALUES('BBK', '운동화', NULL, 30, 2);
+
+※ 문자형(char, varchar, nchar, nvarchar)에 데이터를 입력하려면 ' '로 묶어줘야 한다. 앞 SQL 문에서는 생략해지만, 한글을 입력할 경우에는 그 앞에 대문자 N을 붙여주는 것이 좋다. 예를 들어 이승기로 쓰는 것보다는 N'이승기'로 쓰는 것이 좋다 상세한 이유는 7장에서 설명하겠다. 
+
+
+4. 데이터를 확인해 보자. 두 문장을 따로 실행해 보자. 
+
+SELECT * FROM userTb1;
+SELECT * FROM buyTb1;
+
+* 회원 테이블의 결과 순서가 입력한 순서와 다른 이유는 userID를 기본 키(Primary Key)로 지정했으므로 자동으로 클러스터 인덱스가 생성돼서 입력할 때 userID열로 정렬되기 때문이다. 이에 대해서는 9장에서 자세히 다룬다. 
+
+5. 앞으로는 이 책의 많은 부분에서 이 sqlDB를 사용하게 될 것이다. 혹시 실수로 이 DB가 변경되어도 다시 입력하는 번거로움이 없게 꼭 백업해두자. 우선 백업할 폴더를 윈도 탐색기에서 생성해 놓는다(필자의 경우엔 C:\SQL\폴더를 미리 생성해 놓았다)
+
+USE tempdb;
+BACKUP DATABASE sqlDB To DISK = 'C:\SQL\sqlDB2012.bak' WITH INIT;
+
+메시지:
+파일 1에서 데이터베이스 sqlDB, 파일 sqlDB에 대해 312개의 페이지를 처리했습니다. 
+파일 1에서 데이터베이스 sqlDB, 파일 sqlDB_log에 대해 2개의 페이지를 처리했습니다. 
+BACKUP DATABASE이(가) 314개의 페이지를 0.463초 동안 처리했습니다.(5.282MB/초)
+
+6. 또한 <저장> 버튼을 클릭하거나 Ctrl + s를 눌러 지금 입력한 쿼리를 c:\SQL\sql2012.sql로 저장해 두자. 이제 다음에 필요할 때는 조금씩 수정해서 다시 사용하면 된다. 
+
+7. 열린 쿼리 창을 모두 닫는다. 
+
+
+
+
+※ 특정한 조건의 데이터만 조회하는 <SELECT... FROM .... WHERE>
+
+
+(1) 기본적인 WHERE 절
+WHERE절은 조회할때 특정한 조건을 줘서, 원하는 데이터만 보고 싶을 때 사용하는데, 형식은 다음과 같다. 
+
+SELECT 필드이름 FROM 테이블이름 WHERE 조건식;
+
+만약 Where 조건없이 다음을 조회해 보자. 
+USE sqlDB;
+SELECT * FROM userTb1;
+
+지금 userTb1은 우리가 10건의 데이터만 넣었지만, 만약 실제로 대형 인터넷 쇼핑몰의 가입회원이라고 생각하면 수백만 명이 될 수도 있다. 그렇다면 전체 데이터가 스크롤되어 넘어가는 데에도 시간이 많이 걸릴 것이다. 만약 지금 찾는 이름이 김경호라면 수백만 건을 조회한 후에 스크롤해서 찾을 필요는 없다. 
+
+SELECT * FROM WHERE name = '김경호';
+
+
+(2) 관계 연산자의 사용
+1970년 이후에 출생하고, 신장이 182 이상인 사람의 아이디와 이름을 조회해 보자. 
+SELECT userID, name FROM userTb1 where birthYear >= 1970 AND height >= 182;
+
+이승기, 성시경 두 고객만 결과로 나올 것이다. 
+
+이번에는 1970년 이후에 출생했거나, 신장이 182이상인 사람의 아이디와 이름을 조회해 보자. 
+
+SELECT userID, name FROM userTb1 WHERE birthYear >= 1970 OR height >= 182;
+
+7명이 결과가 나올 것이다. ...했거나, ...또는 등은 OR 연산자를 사용하면 된다. ...하고, ...면서 ...그리고 등의 조건은 AND 연산자를 이용하면 된다. 
+
+이렇듯 조건 연산자(=, <. >, <=, >=, <>, !=등)와 관계 연산자(NOT, AND, OR등)를 잘 조합하면 다양한 조건의 쿼리를 생성할 수 있다. 
+
+
+(3) BETWEEN AND, IN(), LIKE
+이번에는 키가 180~183 인 사람을 조회해 보자. 
+SELECT name, height FROM userTb1 WHERE height > 180 AND height <= 183;
+
+같은 것으로 BETWEEN AND를 사용할 수 있다. 
+SELECT name, height FROM userTb1 WHERE height BETWEEN 180 and 183;
+
+키의 경우에는 숫자로 구성되어 있어 연속적인 값을 가지므로 BETWEEN...AND를 사용했지만 지역이 경남이거나 전남이거나 경북인 사람을 찾을 경우에 연속된 값이 아니므로 BETWEEN...AND를 사용할 수 없다. 
+
+지역이 경남, 전남, 경북인 사람의 정보를 확인해 보자. 
+
+SELECT name, addr, FROM userTb1 WHERE addr='경남' OR addr='전남' OR addr='경북';
+
+이와 같이 연속적인(Continuous)값이 아닌 이산적인(Discrete)값을 찾을 때는 IN()을 사용할 수 있다. 
+
+SELECT name, addr FROM userTb1 WHERE addr IN ('경남, '전남', '경북);
+
+문자열의 내용을 검색하려면 LIKE 연산자를 사용할 수 있다. 
+
+SELECT name, height FROM userTb1 WHERE name LIKE '김%';
+
+앞의 조건은 성이 김씨이고 그 뒤는 무엇이든(%) 허용한다는 의미다. 즉 김이 제일 앞글자인 것들을 추출한다. 그리고 한 글자와 매치하려면 '_'를 사용한다. 다음은 맨 앞 글자가 한글자이고, 그 다음이 종신인 사람을 조회해 준다. 
+
+SELECT name, height FROM userTb1 WHERE name LIKE '_종신';
+
+이 외에도 %와 _를 조합해서 사용할 수 있다. 조건에 '_용%'이라고 사용하면 앞에 아무거나 한 글자가 오고 두 번째는 용 그리고 세번째 이후에는 몇글자든 아무거나 오는 값을 추출해 준다. 예를 들어 조용필, 사용한 사람, 이용해 줘서 감사합니다. 등의 문자열이 해당될 수 있다. 
+
+※%나 _가 검색할 문자열의 제일 앞에 들어가는 것은 SQL Server 성능에 아주 나쁜 영향을 끼칠 수 있다. 예를 들어, name 열을 %용이나, _용필 등으로 검색하면 name 열에 인덱스가 있더라도 인덱스를 사용하지 않고 전체 데이터를 검색하게 된다. 지금은 데이터 양이 얼마되지 않으므로 그 차이를 느낄 수 없겠으나, 대용량 데이터를 사용할 경우에는 아주 비효율적인 결과를 낳게된다. 인덱스(Index)에 대해서는 9장에서 상세히 다루겠다. 
+
+※ 194페이지 (3)부터 작성시작

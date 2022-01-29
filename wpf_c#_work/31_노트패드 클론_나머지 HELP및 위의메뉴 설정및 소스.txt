@@ -1,0 +1,891 @@
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+
+
+public partial class NotepadClone
+{
+	void AddEditMenu(Menu menu)
+	{
+		//탑 레벨 Edit menu
+		MenuItem itemEdit = new MenuItem();
+		itemEdit.Header = "_Edit";
+		menu.Items.Add(itemEdit);
+
+		//Undo 메뉴 항목
+		MenuItem itemUndo = new MenuItem();
+		itemUndo.Header = "_Undo";
+		itemUndo.Command = ApplicationCommands.Undo;
+		itemEdit.Items.Add(itemUndo);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Undo, UndoOnExecute, UndoCanExecute));
+
+		//Redo 메뉴 항목
+		MenuItem itemRedo = new MenuItem();
+		itemRedo.Header = "_Redo";
+		itemRedo.Command = ApplicationCommands.Redo;
+		itemEdit.Items.Add(itemRedo);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Redo, RedoOnExecute, RedoCanExecute));
+
+		itemEdit.Items.Add(new Separator());
+
+		//Cut, Copy, Paste, Delete 메뉴 항목
+		MenuItem itemCut = new MenuItem();
+		itemCut.Header = "Cu_t";
+		itemCut.Command = ApplicationCommands.Cut;
+		itemEdit.Items.Add(itemCut);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Cut, CutOnExecute, CutCanExecute));
+
+		MenuItem itemCopy = new MenuItem();
+		itemCopy.Header = "_Copy";
+		itemCopy.Command = ApplicationCommands.Copy;
+		itemEdit.Items.Add(itemCopy);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy, CopyOnExecute, CutCanExecute));
+
+		MenuItem itemPaste = new MenuItem();
+		itemPaste.Header = "_Paste";
+		itemPaster.Command = ApplicationCommands.Paste;
+		itemEdit.Items.Add(itemPaster);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Paste, PasteOnExecute, PasteCanExecute));
+		
+		MenuItem itemDel = new MenuItem();
+		itemDel.Header = "De_lete";
+		itemDel.Command = ApplicationCommands.Delete;
+		itemEdit.Items.Add(itemDel);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Delete, DeleteOnExecute, CutCanExecute));
+
+		itemEdit.Items.Add(new Separator());
+
+		//별도의 메소드가 Find, FindNext, Replace를 담당
+		AddFindMenuItems(itemEdit);
+
+		itemEdit.Items.Add(new Separator());
+
+		//Select All 메뉴 항목
+		MenuItem itemAll = new MenuItem();
+		itemAll.Header = "Select_All";
+		itemAll.Command = ApplicationCommands.SelectAll;
+		itemEdit.Items.Add(itemAll);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.SelectAll, SelectAllOnExecute));
+
+		//커스텀 RoutedUICommand는 Time/Date 항목을 필요로 함
+		InputGestureCollection coll = new InputGestureCollection();
+		coll.Add(new KeyGesture(Key.F5));
+		RoutedUICommand commTimeDate = new RoutedUICommand("Time/_Date", "TimeDate", GetType(), coll);
+
+		MenuItem itemDate = new MenuItem();
+		itemDate.Command = commTimeDate;
+		itemEdit.Items.Add(itemDate);
+		CommandBindings.Add(new CommandBinding(commTimeDate, TimeDateOnExecute));
+	}
+	//Redo 이벤트 핸들러
+	void RedoCanExecute(object sender, CanExecuteRoutedEventArgs args)
+	{
+		args.CanExecute = txtbox.CanRedo;
+	}
+	void RedoOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		txtbox.Redo();
+	}
+	//Undo 이벤트 핸들러
+	void UndoCanExecute(object sender, CanExecutedRoutedEventArgs args)
+	{
+		args.CanExecute = txtbox.CanUndo;
+	}
+	void UndoOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		txtbox.Undo();
+	}
+	//Cut 이벤트 핸들러
+	void CutCanExecute(object sender, CanExecutedRoutedEventArgs args)
+	{
+		args.CanExecute = txtbox.SelectedText.Length > 0;
+	}
+	void CutOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		txtbox.Cut();
+	}
+	//Copy Delete 이벤트 핸들러
+	void CopyOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		txtbox.Copy();
+	}
+	void DeleteOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		txtbox.SelectedText = "";
+	}
+	//Paste 이벤트 핸들러
+	void PasteCanExecute(object sender, CanExecuteRoutedEventArgs args)
+	{
+		args.CanExecute = Clipboard.ContainsText();
+	}
+	void PasteOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		txtbox.Paste();
+	}
+	//SelectAll 이벤트 핸들러
+	void SelectAllOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		txtbox.SelectAll();
+	}
+	//Time/Date 이벤트 핸들러
+	void TimeDateOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		txtbox.SelectedText = DateTime.Now.ToString();
+	}
+}
+
+Edit 메뉴에서 비교적 어려운 부분은 찾기, 다음 찾기, 바꾸기에 대한 커맨드이다. 이 커맨드 들은 모달리스 대화상자와 관련 있다. 찾기와 바꾸기 대화상자는 처음 작성했던 추상 클래스 FindReplaceDialog와 아주 유사한데, 이 클래스는 찾기와 바꾸기 대화상자 모두에 공통으로 사용되는 모든 컨트롤을 갖고 있다. 클래스는 복잡하지 않은데, 대화상자의 Grid에 컨트롤을 배치하는 것이 대부분이다. 모달리스 대화상자이기 때문에 Window를 상속받은 클래스와는 약간 다르게 보일 것이다. 대화상자는 취소 버튼을 갖고 있지만 사용자는 윈도우를 닫는것으로 대화상자를 종료하기 때문에 모달리스 대화상자에서는 필요 없다. 그래서 모든 취소 버튼은 Close 메소드를 호출한다. 
+
+모달리스 대화상자가 필요로 하는 것은 public 이벤트이다. FindReplaceDialog가 정의하는 3개의 이벤트는 (클래스의 최상위에서)FindNext, Replace, ReplaceAll이고, 그 이벤트와 연결되는 3개의 버튼이 대화상자에 있다. 이 이벤트는 사용자가 버튼을 눌렀으며 어떤 작업이 일어나야 한다는 사실을 모달리스 대화상자에게 알리는 방법을 제공한다. 
+
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+
+abstract class FindReplaceDialog : Window
+{
+	//Public 이벤트
+	public event EventHandler FindNext;
+	public event EventHandler Replace;
+	public event EventHandler ReplaceAll;
+
+	//protected 필드
+	protected Label lblReplace;
+	protected TextBox txtboxFind, txtboxReplace;
+	protected CheckBox checkMatch;
+	protected GroupBox groupDirection;
+	protected RadioButton radioDown, radioUp;
+	protected Button btnFind, btnReplace, btnAll;
+
+	//public 프로퍼티
+	public string FindWhat
+	{
+		set { txtboxFind.Text = value; }
+		get { return txtboxFind.Text;	 }
+	}
+	public string ReplaceWith
+	{
+		set { txtboxReplace.Text = value;	}
+		get { return txtboxReplace.Text;	}
+	}
+	public bool MatchCase
+	{
+		set { checkMatch.IsChecked = value; 	}
+		get { return (bool)checkMatch.IsChecked;	}
+	}
+	public Direction Direction
+	{
+		set
+		{
+			if(value == Direction.Down)
+				radioDown.IsChecked = true;
+			else
+				radioup.IsChecked = true;
+		}
+		get
+		{
+			return (bool)radioDown.IsChecked ? Direction.Down : Direction.Up;
+		}
+	}
+	//protected 생성자(추상 클래스이기 때문)
+	protected FindReplaceDialog(Window owner)
+	{
+		//공용 대화상자 프로퍼티를 설정
+		ShowInTaskbar = false;
+		WindowStyle = WindowStyle.ToolWindow;
+		SizeToContent = SizeToContent.WidthAndHeight;
+		WindowStartupLocation = WindowStartupLocation.CenterOwner;
+		Owner = owner;
+
+		//자동으로 크기가 변하는 3개의 행과 열을 가진 Grid를 생성
+		Grid grid = new Grid();
+		Content = grid;
+
+		for(int i=0; i<3; i++)
+		{
+			RowDefinition rowdef = new RowDefinition();
+			rowdef.Height = GridLength.Auto;
+			grid.RowDefinitions.Add(coldef);
+		}
+		
+		//찾을 내용: 레이블과 텍스트 박스
+		Label lbl = new Label();
+		lbl.Content = "Fi_nd what:";
+		lbl.VerticalAlignment = VerticalAlignment.Center;
+		lbl.Margin = new Thickness(12);
+		grid.Children.Add(lbl);
+		Grid.SetRow(lbl, 0);
+		Grid.SetColumn(lbl, 0);
+
+		txtboxFind = new TextBox();
+		txtboxFind.Margin = new Thickness(12);
+		txtboxFind.TextChanged += FindTextBoxOnTextChanged;
+		Grid.SetRow(txtboxFind, 0);
+		Grid.SetColumn(txtboxFind, 1);
+		
+		//바꿀 내용 : 레이블과 텍스트 박스
+		lblReplace = new Label();
+		lblReplace.Content = "Re_place with:";
+		lblReplace.VerticalAlignment = VerticalAlignment.Center;
+		lblReplace.Margin = new Thickness(12);
+		grid.Children.Add(lblReplace);
+		Grid.SetRow(lblReplace, 1);
+		Grid.SetColumn(lblReplace, 0);
+		
+		txtboxReplace = new TextBox();
+		txtboxReplace.Margin = new Thickness(12);
+		grid.Children.Add(txtboxReplace);
+		Grid.SetRow(txtboxReplace, 1);
+		Grid.SetColumn(txtboxReplace, 1);
+
+		//대 소문자 구분 체크 박스
+		checkMatch = new CheckBox();
+		checkMatch.Content = "Match _case";
+		checkMatch.VerticalAlignment = VerticalAlignment.Center;
+		checkMatch.Margin = new Thickness(12);
+		grid.Children.Add(checkMatch);
+		Grid.SetRow(checkMatch, 2);
+		Grid.SetColumn(checkMatch, 0);
+
+		//방향 (위로/아래로) 그룹 박스와 2개의 라디오 버튼
+		groupDirection = new GroupBox();
+		groupDirection.Header = "Direction";
+		groupDirection.Margin = new Thickness(12);
+		groupDirection.HorizontalAlignment = HorizontalAlignment.Left;
+		grid.Children.Add(groupDirection);
+		Grid.SetRow(groupDirection, 2);
+		Grid.SetColumn(groupDirection, 1);
+
+		StackPanel stack = new StackPanel();
+		stack.Orientation = Orientation.Horizontal;
+		groupDirection.Content = stack;
+
+		radioUp = new RadioButton();
+		radioUp.Content = "_Up";
+		radioUp.Margin = new Thickness(6);
+		stack.Children.Add(radioUp);
+
+		radioDown = new RadioButton();
+		radioDown.Content = "_Down";
+		radioDown.Margin = new Thickness(6);
+		stack.Children.Add(radioDown);
+
+		//버튼을 위한 스택 패널 생성
+		stack = new StackPanel();
+		stack.Margin = new Thickness(6);
+		grid.Children.Add(stack);
+		Grid.SetRow(stack, 0);
+		Grid.SetColumn(stack, 2);
+		Grid.SetRowSpan(stack, 3);
+
+		//버튼 4개
+		btnFind = new Button();
+		btnFind.Content = "_Find next";
+		btnFind.Margin = new Thickness(6);
+		btnFind.IsDefault = true;
+		btnFind.Click += FindNextOnClick;
+		stack.Children.Add(btnFind);
+
+		btnReplace = new Button();
+		btnReplace.Content = "_Replace";
+		btnReplace.Margin = new Thickness(6);
+		btnReplace.Click += ReplaceOnClick;
+		stack.Children.Add(btnReplace);
+
+		btnAll = new Button();
+		btnAll.Content = "Replace _All";
+		btnAll.Margin = new Thickness(6);
+		btnAll.Click += ReplaceAllOnClick;
+		stack.Children.Add(btnAll);
+
+		Button btn = new Button();
+		btn.Content = "Cancel";
+		btn.Margin = new Thickness(6);
+		btn.isCancel = true;
+		btn.Click += CancelOnClick;
+		stack.Children.Add(btn);
+
+		txtboxFind.Focus();
+	}
+	//텍스트를 찾게 되면 먼저 3개 버튼만 활성화
+	void FindTextBoxOnTextChanged(object sender, TextChangedEventArgs args)
+	{
+		TextBox txtbox = args.Source as TextBox;
+		btnFind.IsEnabled = btnReplace.IsEnabled = btnAll.IsEnabled = (txtbox.Text.Length > 0);
+	}
+	//FindNextOnClick 메소드는 OnFindNext 메소드를 호출하고, 여기에서 FindNext 이벤트 발생
+	void FindNextOnClick(object sender, RoutedEventArgs args)
+	{
+		OnFindNext(new EventArgs());
+	}
+	protected virtual void OnFindNext(EventArgs args)
+	{
+		if(FindNext != null)
+			FindNext(this, args);
+	}
+	//Replace 이벤트가 발생하면 ReplaceOnClick 메소드는 OnReplace method를 호출
+	void ReplaceOnClick(object sender, RoutedEventArgs args)
+	{
+		OnReplace(new EventArgs());
+	}
+	protected virtual void OnReplace(EventArgs args)
+	{
+		if(Replace != null)
+			Replace(this, args);
+	}
+	//ReplaceAll 이벤트가 발생하면 ReplaceAllOnClick 메소드는 OnReplaceAll 메소드를 호출
+	void ReplaceAllOnClick(object sender, RoutedEventArgs args)
+	{
+		OnReplaceAll(new EventArgs());
+	}
+	protected virtual void OnReplaceAll(EventArgs args)
+	{
+		if(ReplaceAll != null)
+			ReplaceAll(this, args);
+	}
+	//Cancel 버튼은 대화상자를 종료
+	void CancelOnClick(object sender, RoutedEventArgs args)
+	{
+		Close();
+	}
+}
+
+FindReplaceDialog에 정의된 3개의 이벤트는 .NET에서 오래전에 표준이 된 이벤트이다. 각 이벤트는 이벤트명의 앞에 On으로 시작하는 protected virtual 메소드와 연결된다. 이 On메소드들은 실제 이벤트에 의해 실행된다. 이 프로그램에서 각 On 메소드는 이벤트와 연결돼 있는 버튼의 Click 이벤트 핸들러에 의해 호출된다. 이 On 메소드에서 꼭 필요한 것은 아니지만 FindReplaceDialog에서 상속받은 클래스는 어떤 것이든 오버라이딩할 수 있다. 
+
+FindDialog 클래스는 FindReplaceDialog를 상속받으며, 원하지 않는 컨트롤은 보이지 않게 처리한다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+
+class FindDialog : FindReplaceDialog
+{
+	public FindDialog(Window owner) : base(owner)
+	{
+		Title = "Find";
+
+		//컨트롤 몇 개를 숨김
+		lblReplace.Visibility = Visibility.Collapsed;
+		txtboxReplace.Visibility = Visibility.Collapsed;
+		btnReplace.Visibility = Visibility.Collapsed;
+		btnAll.Visibility = Visibility.Collapsed;
+	}
+}
+
+ReplaceDialog 클래스는 Title 프로퍼티에 값을 지정하는 외에 더 많은 작업을 할 수 있지만 여기서는 이 정도로 끝내겠다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+
+class ReplaceDialog : FindReplaceDialog
+{
+	public ReplaceDialog(Window owner) : base(owner)
+	{
+		Title = "Replace";
+
+		//그룹 박스를 숨김
+		groupDirection.Visibility = Visibility.Hidden;
+	}
+}
+
+FindReplaceDialog 클래스도 텍스트 내용을 위나 아래 방향으로 검색하는 데에 이 열거형 객체를 사용한다. 
+
+enum Direction
+{
+	Down,
+	Up
+}
+
+
+NotepadClone.Find.cs 파일은 Edit 메뉴에서 3개의 찾기와 바꾸기 MenuItem 객체를 생성한다. 찾기와 바꾸기에 대한 Click 이벤트 핸들러는 상황에 따라 FindDialog 타입과 Replace Dialog 객체를 생성하고 FindReplaceDialog 클래스에 정의된 커스텀 이벤트를 이 이벤트 핸들러와 연결시킨다. 이 로직은 사용자가 대화상자의 버튼을 클릭했을 때 프로그램이 어떻게 이 사실을 알 수 있는지를 보여준다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+
+public partial class NotepadClone
+{
+	string strFindWhat = "", strReplaceWith = "";
+	StringComparison strcomp = new StringComparison.OrdinalIgnoreCase;
+	Direction dirFind = new Direction.Down;
+
+	void AddFindMenuItems(MenuItem itemEdit)
+	{
+		//Find 메뉴 항목
+		MenuItem itemFind = new MenuItem();
+		itemFind.Header = "_Find...";
+		itemFind.Command = ApplicationCommands.Find;
+		itemEdit.Items.Add(itemFind);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Find, FindOnExecute, FindCanExecute));
+
+		//커스텀 RoutedUICommand는 FInd next 항목이 필요
+		InputGestureCollection coll = new InputGestureCollection();
+		coll.Add(new KeyGesture(Key.F3));
+		RoutedUICommand commFindNext = new RoutedUICommand("Find_Next", "FindNext", GetType(), coll);
+
+		MenuItem itemNext = new MenuItem();
+		itemNext.Command = commFindNext;
+		itemEdit.Items.Add(itemNext);
+		CommandBindings.Add(new CommandBinding(commFindNext, FindNextOnExecute, FindNextCanExecute));
+
+		MenuItem itemReplace = new MenuItem();
+		itemReplace.Header = "_Replace...";
+		itemReplace.Command = ApplicationCommands.Replace;
+		itemEdit.Items.Add(itemReplace);
+		CommandBindings.Add(new CommandBinding(ApplicationCommands.Replace, ReplaceOnExecute, FindCanExecute));
+	}
+	//Find와 Replace를 위한 CanExecute 메소드
+	void FindCanExecute(object sender, CanExecuteRoutedEventArgs args)
+	{
+		args.CanExecute = (txtbox.Text.Length > 0 && OwnedWindows.Count == 0);
+	}
+	void FindNextCanExecute(object sender, CanExecuteRoutedEventArgs args)
+	{
+		args.CanExecute = (txtbox.Text.Length > 0 && strFindWhat.Length > 0);
+	}
+	//Find 메뉴 항목에 대한 이벤트 핸들러
+	void FindOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		//대화상자 생성
+		FindDialog dlg = new FindDialog(this);
+	
+		//프로퍼티 초기화
+		dlg.FindWhat = strFindWhat;
+		dlg.MatchCase = strcomp == StringComparison.Ordinal;
+		dlg.Direction = dirFind;
+
+		//이벤트 핸들러를 설정하고 대화상자를 출력
+		dlg.FindNext += FindDialogOnFindNext;
+		dlg.Show();
+	}
+	//FindNext 메뉴 항목에 대한 이벤트 핸들러, 문자열이 아직 없다면 F3 키로는 대화상자를 호출
+	void FindNextOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		if(strFindWhat == null || strFindWhat.Length == 0)
+			FindOnExecute(sender, args);
+		else
+			FindNext();
+	}
+	//Replace 메뉴 항목에 대한 이벤트 핸들러
+	void ReplaceOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		ReplaceDialog dlg = new ReplaceDialog(this);
+
+		dlg.FindWhat = strFindWhat;
+		dlg.ReplaceWith = strReplaceWith;
+		dlg.MatchCase = strcomp == StringComparison.Ordinal;
+		dlg.Direction = dirFind;
+
+		//Install 이벤트 핸들러
+		dlg.FindNext += FindDialogOnFindNext;
+		dlg.Replace += ReplaceDialogOnReplace;
+		dlg.ReplaceAll += ReplaceDialogOnReplaceAll;
+
+		dlg.Show();
+	}
+	//Find/Replace 대화상자의 Find Next 버튼에 대한 이벤트 핸들러를 설정
+	void FindDialogOnFindNext(object sender, EventArgs args)
+	{
+		FindReplaceDialog dlg = sender as FindReplaceDialog;
+
+		//대화상자의 프로퍼티를 구함
+		strFindWhat = dlg.FindWhat;
+		strcomp = dlg.MatchCase ? StringComparison.Ordinal:StringComparison.OrdinalIgnoreCase;
+		dirFind = dlg.Direction;
+
+		//실제로 찾기 위해 FindNext를 호출
+		FindNext();
+	}
+	//Replace 대화상자의 Replace 버튼에 대한 이벤트 핸들러를 설정
+	void ReplaceDialogOnReplace(object sender, EventArgs args)
+	{
+		ReplaceDialog dlg = sender as ReplaceDialog;
+
+		//대화상자의 프로퍼티를 구함
+		strFindWhat = dlg.FindWhat;
+		strReplaceWith = dlg.ReplaceWith;
+		strcomp = dlg.MatchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+
+		if(strFindWhat.Equals(txtbox.SelectedText, strcomp))
+			txtbox.SelectedText = strReplaceWith;
+
+		FindNext();
+	}
+	//Replace 대화상자의 Replace All 버튼에 대한 핸들러를 설정
+	void ReplaceDialogOnReplaceAll(object sender, EventArgs args)
+	{
+		ReplaceDialog dlg = sender as ReplaceDialog;
+		string str = txtbox.Text;
+		strFindWhat = dlg.FindWhat;
+		strReplaceWith = dlg.ReplaceWith;
+		strcomp = dlg.MatchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+
+		int index = 0;
+
+		while(index + strFindWhat.Length < str.Length)
+		{
+			index = str.IndexOf(strFindWhat, index, strcomp);
+
+			if(index != -1)
+			{
+				str = str.Remove(index, strFindWhat.Length);
+				str = str.Insert(index, strReplaceWith);
+				index += strReplaceWith.Length;
+			}
+			else
+				break;
+		}
+		txtbox.Text = str;
+	}
+	//일반적인 FindNext 메소드
+	void FindNext()
+	{
+		int indexStart, indexFind;
+
+		//검색의 시작 위치와 검색 방향은 dirFind 변수에 의해 결정됨
+		if(dirFind == Direction.Down)
+		{
+			indexStart = txtbox.SelectionStart + txtbox.SelectionLength;
+			indexFind = txtbox.Text.IndexOf(strFindWhat, indexStart, strcomp);
+		}else
+		{
+			indexStart = txtbox.SelectionStart;
+			indexFind = txtbox.Text.LastIndexOf(strFindWhat, indexStart, strcomp);
+		}
+
+		//IndexOf(또는 LastIndexOf) -1을 반환하지 않으면, 발견한 텍스트를 선택하고, 그렇지 않으면 메시지 박스를 출력
+		if(indexFind != -1)
+		{
+			txtbox.Select(indexFind, strFindWhat.Length);
+			txtbox.Focus();
+		}else
+		{
+			MessageBox.Show("Cannot find \"" + strFindWhat + "\"", Title, MessageBoxButton.OK, MessageBoxImage.Information);
+		}
+	}
+}
+
+Format 메뉴에는 2개의 메뉴 항목 Word Wrap과 FOnt가 있다. 표준 윈도우 노트패드에서 Word Wrap 옵션은 체크되거나 체크 해제된다. 그러나 노트패드 클론은 3가지 옵션 Text Wrapping.NoWrap, TextWrapping.Wrap, TextWrapping.Wrap-WithOverflow를 가질 것이다. PlainTextDocumentPaginaotr 클래스에서 이에 대한 인쇄 로직을 테스트 할 것이다. 
+
+MenuItem 을 상속받은 다음 클래스는 WordWrapMenuItem이며, 이 항목은 Format 메뉴에 나타날 것이다. Header 프로퍼티의 값은 Word Wrap이 되고, Items 컬렉션은 열거형 TextWrapping의 멤버에 해당하는 3개의 하위 메뉴 항목이 들어간다. 이 3개 항목은 각기 TextWrapping의 멤버 중 하나로 설정되는 Tag 프로퍼티를 갖는다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+
+public class WordWrapMenuItem : MenuItem
+{
+	//WordWrap 의존 프로퍼티 등록
+	public static DependencyProperty WordWrapProperty = DependencyProperty.Register("WordWrap", 
+									typeof(TextWrapping), typeof(WordWrapMenuItem));
+
+	//WordWrap 프로퍼티 정의
+	public TextWrapping WordWrap
+	{
+		set { SetValue(WordWrapProperty, value); 	}
+		get { return (TextWrapping)GetValut(WordWrapProperty);	}
+	}
+	//생성자는 Word Wrap 메뉴 항목을 생성
+	public WordWrapMenuItem()
+	{
+		Header = "_Word Wrap";
+
+		MenuItem item = new MenuItem();
+		item.Header = "_No Wrap";
+		item.Tag = TextWrapping.NoWrap;
+		item.Click += MenuItemOnClick;
+		Items.Add(item);
+
+		item = new MenuItem();
+		item.Header = "_Wrap";
+		item.Tag = TextWrapping.Wrap;
+		item.Click += MenuItemOnClick;
+		Items.Add(item);
+
+		item = new MenuItem();
+		item.Header = "Wrap with _Overflow";
+		item.Tag = TextWrapping.WrapWithOverflow;
+		item.Click += MenuItemOnClick;
+		Itemes.Add(item);
+	}
+	//현재 WordWrap 프로퍼티의 체크된 항목을 설정
+	protected override void OnSubmenuOpened(RoutedEventArgs args)
+	{
+		base.OnSubmenuOpened(args);
+
+		foreach(MenuItem item in Items)
+			item.IsChecked = ((TextWrapping)item.Tag == WordWrap);
+	}
+	//클릭된 항목에서 WordWrap 프로퍼티를 설정
+	void MenuItemOnClick(object sender, RoutedEventArgs args)
+	{
+		WordWrap = (TextWrapping)(args.Source as MenuItem).Tag;
+	}
+}
+
+WordWrapMenuItem 클래스는 public WordWrap 프로퍼티의 기본이 되는 WordWrapProperty라는 이름의 의존 프로퍼티를 정의한다. 클래스는 2개의 이벤트 핸들러에서 이 WordWrap프로퍼티를 참조한다. 
+
+OnSubmenuOpened 메소드는 WordWrap 프로퍼티의 현재 값과 Tag 프로퍼티가 일치하면 항목에 체크 표시를 해준다. MenuItemOnClick 메소드는 WordWrap 프로퍼티를 클릭된 항목의 Tag 프로퍼티로 설정한다. 
+
+WordWrapMenuItem 클래스가 TextBox를 참조하지 않는다는 데 주의하자. public 생성자, public WorkWrap 프로퍼티, public WordWrapProperty가 개별적이어서 클래스는 독립적인 것으로 보인다. 그렇다면 어떻게 TextWrapping 프로퍼티가 TextBox와 상호작용할 수 있을까?
+
+그 대답은 데이터 바인딩에 있으며, 다음의 NotepadClone 클래스 부분에서 보여줄 것이다. 
+
+
+
+
+using Petzold.ChooseFont;
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.WIndows.Data;
+using System.Windows.Media
+
+
+public partial class NotePadClone
+{
+	void AddFormatMenu(Menu menu)
+	{
+		//탑 레벨 Format 항목 생성
+		MenuItem itemFormat = new MenuItem();
+		itemFormat.Header = "F_ormat";
+		menu.Items.Add(itemFormat);
+
+		//자동 줄바꿈 메뉴 항목 생성
+		WordWrapMenuItem itemWrap = new WordWrapMenuItem();
+		itemFormat.Items.Add(itemWrap);
+
+		//TextWrapping 프로퍼티 항목과 텍스트 박스를 바인딩
+		Binding bind = new Binding();
+		bind.Path = new PropertyPath(TextBox.TextWrappingProperty);
+		bind.Source = txtbox;
+		bind.Mode = BindingMode.TwoWay;
+		itemWrap.SetBinding(WordWrapMenuItem.WordWrapProperty, bind);
+
+		//Font 메뉴 항목 생성
+		MenuItem itemFont = new MenuItem();
+		itemFont.Header = "_Font...";
+		itemFont.Click += FontOnClick;
+		itemFormat.Items.Add(itemFont);
+	}
+	//Font 항목 이벤트 핸들러
+	void FontOnClick(object sender, RoutedEventArgs args)
+	{
+		FondDialog dlg = new FontDialog();
+		dlg.Owner = this;
+
+		//폰트 대화상자의 텍스트 박스 프로퍼티를 설정
+		dlg.Typeface = new Typeface(txtbox.FontFamily, txtbox.FontStyle, txtbox.FontWeight, txtbox.FOntStretch);
+		dlg.FaceSize = txtbox.FontSize;
+
+		if(dlg.ShowDialog().GetValueOrDefault())
+		{
+			//폰트 대화상자 프로퍼티를 텍스트 박스에 설정
+			txtbox.FontFamily = dlg.Typeface.FontFamily;
+			txtbox.FontSize = dlg.FaceSize;
+			txtbox.FontStyle = dlg.Typeface.Style;
+			txtbox.FontWeight = dlg.Typeface.Weight;
+			txtbox.FontStretch = dlg.Typeface.Stretch;
+		}
+	}
+}
+
+WordWrapMenuItem 객체를 생성한 후에 Format 항목을 추가한다. 프로그램은 TextBox의 TextWrapping 프로퍼티와 WordWrapMenuItem 의 WordWrap 프로퍼티를 바인딩하기 위해 Binding 객체를 생성한다. 
+
+Binding bind = new Binding();
+bind.Path = new PropertyPath(TextBox.TextWrappingProperty);
+bind.Source = txtbox;
+bind.Mode = BindingMode.TwoWay;
+itemWrap.SetBinding(WordWrapMenuItem.WordWrapProperty, bind);
+
+이 방법이 데이터 바인딩을 정의하는 유일한 방법은 아니다. 코드에서 보이는 것처럼 TextBox는 데이터 소스이고, WordWrapMenuItem은 데이터의 타깃이다. 바인딩 모드는 타깃도 소스에 반영할 수 있게 TwoWay로 설정한다(이 방법이 데이터 변경이 반영되는 정삭적인 방법이다.)
+그러나 소스와 타깃을 변경하는 것이 더 쉽기는 하다. 
+
+Binding bind = new Binding();
+bind.Path = new PropertyPath(WordWrapMenuItem.WordWrapProperty);
+bind.Source = itemWrap;
+bind.Mode = BindingMode.TwoWay;
+txtbox.SetBinding(TextBox.TextWrappingProperty,bind);
+
+마지막 구문은 WordWrapMenuItem이 아닌 TextBox의 SetBinding 메소드를 호출하는 것에 주의하자. 
+
+Format 메뉴의 폰트 항목은 쉬운 부분이다(17장에서 살펴봤던 FOntDialog 클래스를 알고 있다면 쉬울 것이다.)Click 이벤트 핸들러는 FontDialog 객체를 생성하고, TextBox의 Typeface와 FaceSize 프로퍼티를 초기화 한다. 그런 후 사용자가 OK 를 클릭하면 TextBox 프로퍼티를 수정한다. 
+
+View 메뉴는 흔히 볼 수 있다. 상태바 항목만 하나 있는데, 프로그램의 상태바를 보여주거나 숨기는 기능을 한다. 이렇게 처리하기 위해서는 StatusBar의 Visibility 프로퍼티를 Visibility.Visible과 Visibility.Collapsed로 토글하면 된다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+
+
+public partial class NotepadClone
+{
+	MenuItem itemStatus;
+
+	void AddViewMenu(Menu menu)
+	{
+		//탑 레벨 View 항목을 생성
+		MenuItem itemView = new MenuItem();
+		itemView.Header = "_View";
+		itemView.SubmenuOpened += ViewOnOpen;
+		menu.Items.Add(itemView);
+		//View 메뉴의 상태바 항목을 생성
+		itemStatus = new MenuItem();
+		itemStatus.Header = _Status Bar";
+		itemStatus.IsCheckable = true;
+		itemStatus.Checked += StatusOnCheck;
+		itemStatus.Unchecked += StatusOnCheck;
+		itemView.Items.Add(itemStatus);
+	}
+	void ViewOnOpen(object sender, RoutedEventArgs args)
+	{
+		itemStatus.IsChecked = (status.Visibility == Visibility.Visible);
+	}
+	void StatusOnCheck(object sender, RoutedEventArgs args)
+	{
+		MenuItem item = sender as MenuItem;
+		status.Visibility = item.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+	}
+}
+
+이제는 기지개를 펴도 될 때가 되었다. 탑 레벨 메뉴의 마지막 항목은 Help 메뉴이지만 Help 메뉴 항목은 구현하지 않을 것이다. 25장에서 Help를 어떻게 생성하는지 보여주겠다. 이 Help메뉴는 About Notepad Clone 이라는 메뉴 항목 하나로 구성되며 이 항목을 클릭하면 AboutDialog 클래스를 실행한다. 
+
+
+using System;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+
+
+public partial class NotepadClone
+{
+	void AddHelpMenu(Menu menu)
+	{
+		MenuItem itemHelp = new MenuItem();
+		itemHelp.Header = "_Help";
+		itemHelp.SubmenuOpened += ViewOnOpen;
+		menu.Items.Add(itemHelp);
+
+		MenuItem itemAbout = new MenuItem();
+		itemAbout.Header = "_About " + strAppTitle + "...";
+		itemAbout.Click += AboutOnClick;
+		itemHelp.Items.Add(itemAbout);
+	}
+	void AboutOnClick(object sender, RoutedEventArgs args)
+	{
+		AboutDialog dlg = new AboutDialog(this);
+		dlg.ShowDialog();
+	}
+}
+
+다음에 나오는 AboutDialog 클래스의 생성자는 TextBlock 객체를 생성 하는 데 사용되는 몇 가지 속성을 구하기 위해 어셈블리에 접근하는 것으로 시작한다. 이 부분이 이 파일에서 웹 사이트의 URL이 하드 코딩되는 유일한 부분인데. Hyperlink 텍스트 엘리먼트를 보여주고 웹 브라우저가 시작될 때 Process.Start 메소드로 넘겨주게 된다. 
+
+
+
+using System;
+using System.Diagnostics; //Process 클래스를 위해
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media
+
+
+class AboutDialog : Window
+{
+	public AboutDialog(Window owner)
+	{
+		//어셈블리에서 속성을 구함
+		//속성에 접근하기 위해 executing assembly를 구함
+		Assembly asmbly = Assembly.GetExecutingAssembly();
+
+		//프로그램 이름을 위해 AssemblyTitle 속성을 구함
+		AssemblyTitleAttribute title = (AssemblyTitleAttribute)asmbly.GetCustomAttributes(typeof(AssemblyTitleAttribute), false)[0];
+		string strTitle = title.Title;
+
+		//AssemblyFileVersion 속성을 구함
+		AssemblyFileVersionAttribute version = (AssemblyFileVersionAttribute)asmbly.GetCustomAttributes(typeof(AssemblyFileVersionAttribute), 							false)[0];
+		string strVersion = version.Version.Substring(0, 3);
+
+		//AssemblyCopyright 속성을 구함
+		AssemblyCopyrightAttribute copy = (AssemblyCopyrightAttribute)asmbly.GeetCustomAttributes(typeof(AssemblyCopyrightAttribute),
+							false)[0];
+		string strCopyright = copy.Copyright;
+
+		//대화 상자의 표준 윈도우 프로퍼티
+		Title = "About " + strTitle;
+		ShowInTaskbar = false;
+		SizeToContent = SizeToContent.WidthAndHeight;
+		ResizeMode = ResizeMode.NoResize;
+		Left = owner.Left + 96;
+		Top = owner.Top + 96;
+
+		//윈도우 Content를 위한 스택 패널 생성
+		StackPanel stack = new StackPanel();
+		Content = stack;
+
+		//프로그램 명을 위한 텍스트 블록 생성
+		TextBlock txtblk = new TextBlock();
+		txtblk.Text = strTitile + " Version " + strVersion;
+		txtblk.FontFamily = new FontFamily("Times New Roman");
+		txtblk.FontSize = 32; //24 points
+		txtblk.FontStyle = FontStyles.Italic;
+		txtblk.Margin = new Thickness(24);
+		txtblk.HorizontalAlignment = HorizontalAlignment.Center;
+		stackMain.Children.Add(txtblk);
+
+		//copyright를 위한 텍스트 블록 생성
+		txtblk = new TextBlock();
+		txtblk.Text = strCopyright;
+		txtblk.FontSize = 20; //15point
+		txtblk.HorizontalAlignment = HorizontalAlignment.Center;
+		stackMain.Children.Add(txtblk);
+
+		//웹사이트 링크를 위한 텍스트 블록 생성
+		Run run = new Run("www.charlespetzold.com");
+		Hyperlink link = new Hyperlink(run);
+		link.Click += LinkOnClick;
+		txtblk = new TextBlock(link);
+		txtblk.FontSize = 20;
+		txtblk.HorizontalAlignment = HorizontalAlignment.Center;
+		stackMain.Children.Add(txtblk);
+
+		//Ok버튼 생성
+		Button btn = new Button();
+		btn.Content = "OK";
+		btn.IsDefault = true;
+		btn.IsCancel = true;
+		btn.HorizontalAlignment = HorizontalAlignment.Center;
+		btn.MinWidth = 48;
+		btn.Margin = new Thickness(24);
+		btn.Click += OkOnClick;
+		stackMain.Children.Add(btn);
+
+		btn.Focus();
+	}
+	//이벤트 핸들러
+	void LinkOnClick(object sender, RoutedEventArgs args)
+	{
+		Process.Start("http://www.charlepetzold.com");
+	}
+	void OkOnClick(object sender, RoutedEventArgs args)
+	{
+		DialogResult = true;
+	}
+}
+
+OK 버튼은 IsDefault와 IsCancel 프로퍼티를 모두 갖고 있는데, 이 프로퍼티를 true로 설정하면 사용자는 Enter 키와 Esc 키로 대화상자를 없앨 수 있다. 이 파일을 끝으로 NotepadClone 프로젝트는 완벽해졌다. 이미 언급했듯이 20장의 전반부에서 이 프로젝트를 기반으로 몇 개의 파일을 더 추가해서 XAML Cruncher라는 프로그래밍 도구를 만들것이다. 19장의 목적은 XAML을 소개하고 XAML Cruncher가 가치 있는 도구라는 사실을 확신시켜 줄 것 이다. 
