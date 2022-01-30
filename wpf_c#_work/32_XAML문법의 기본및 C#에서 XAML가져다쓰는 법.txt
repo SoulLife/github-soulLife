@@ -1,0 +1,487 @@
+CHAPTER 19장 : XAML
+다음과 같은 유효한 XML(Extensible Markup Language)코드를 하나 살펴보자. 
+
+<Button Foreground="LightSeaGreen" FontSize="24pt">
+	Hello, XAML!
+</Button>
+
+앞의 코드는 시작 태그와 종료 태그, 두 태그 사이의 컨텐트로 구성된 하나의 Button 타입 XML 엘리먼트이다. 시작 태그에는 Foreground와 FOntSize라는 2개의 속성 명세가 들어 있으며, 각기 큰따옴표나 작은따옴표 안에 속성값을 갖는다. 또한 엘리먼트의 컨텐트가 시작 태그와 종료 태그 내에 문자 데이터(XML 용어를 이용한)로 존재한다. 
+
+XML은 다양하게 응용할 수 있는 포괄적 목적의 마크업 언어이며, XAML은 그 중 한 형태라고 할 수 있다. 
+
+XAML(자멜이라고 발음)은 WPF의 프로그래밍 추가적인 인터페이스이다. 쉽게 알 수 있듯이 앞의 XML 코드도 역시 유효한 XAML 이며, Button은 System.WIndows.Controls 네임스페이스에 정의된 클래스이고, Foreground와 FontSize는 그 클래스의 프로퍼티이다. 텍스트 Hello, XAML!은 일반적으로 버튼 객체의 Content 프로퍼티에 입력되는 텍스트이다. 
+
+XAML은 대부분 객체의 생성과 초기화를 위해 설계됐다. 앞에서 언급한 XAML 코드는 다음의 동일한 C# 코드(약간은 커진)와 대응된다. 
+
+Button btn = new Button();
+btn.Foreground = Brushes.LightSeaGreen;
+btn.FontSize = 32;
+btn.Content = "Hello, XAML!"
+
+XAML 코드상에서는 LightSeaGreen이 Brushes 클래스의 멤버로서 명확하게 구별될 필요는 없음을 알 수 있다. 문자열 24pt는 24포인트 형식이며, 인쇄상에는 1/72인치이므로 장치 독립적 인 단위인 32와 대응된다. 때로는 XML이 약간 장황하게 느껴지지만(XAML은 어떤 점에서 그 장황함을 더 가증시킨다)대응되는 C# 코드보다는 대부분 XAML이 더 간결하다. 
+프로그램 내 창의 레이아웃은 계층적인 패널과 컨트롤, 엘리먼트로 구성된다. 이 계층은 XAML 안에서 중첩된 엘리먼트로 병렬적으로 구성된다. 
+
+<StackPanel>
+	<Button Foreground="LightSeaGreen" FontSize="24pt">
+		Hello, XAML!
+	</Button>
+
+	<Ellipse Fill="Brown" Width="200" Height="100" />
+
+	<Button>
+		<Image Source="http://www.charlespetzold.com/PetzoldTattoo.jpg"	Stretch="None" />
+	</Button>
+</StackPanel>
+
+앞의 XAML 코드는 Button과 Ellipse와 또 다른 Button을 자식으로 두고 있다. 첫 번째 Button에는 텍스트 컨텐트가 있으며, 두 번째 Button에는 Image 컨텐트가 있다. Ellipse와 Image 엘리먼트는 컨텐트가 없으므로 괄호를 닫기 전에 슬래스를 넣는 XML의 빈 엘리먼트 문법(empty-element syntax)을 사용해 종료 태그를 대체한다. 또한 Image 엘리먼트의 Stretch 속성은 Stretch 열거형(enumeration)의 멤버 이름을 참조해 값을 할당한다. 
+
+가끔 XAML 파일은 레이아웃을 정의하고 이벤트 핸들러를 연결하는 Window 파생 클래스 생성자를 대체한다. 또한 이벤트 핸들러는 일반적으로 C# 형태의 코드로 기술되지만 이벤트 핸들러를 XAML 의 데이터 바인딩으로 대체하는 것도 가능하다. 
+
+XAML을 사용하면 애플리케이션의 외형과 기능을 분리할 수 있다. 프로그래머가 엘리먼트와 컨트롤 사이의 상호작용 구현에 집중하는 동안, 디자이너는 XAML 파일로 매력적인 인터페이스를 제작할 수 있다. 
+
+프로그래머의 옆 자리를 차지하고 있는 그래픽 디자이너가 없다 하더라도 비주얼 스튜디오 자체에는 XAML을 생성하는 내장 디자이너가 포함되어 있기 때문에 특별히 걱정할 필요없다. 윈도우 폼용 비주얼 스튜디오 디자이너의 경우처럼, C# 코드를 생성하는 디자이너보다는 XML을 생성하는 디자이너가 당연히 선호된다. C# 코드를 생성하는 디자이너는 생성된 코드를 반드시 나중에 읽어야 하고 때로 특정 형식에 의존적일 수도 있기 때문에, 프로그래머는 이것을 건드릴 수 없다. 그러나 XML은 사람과 컴퓨터 모두가 편집할 수 있고 문법만 맞는다면 아무런 문제될 것이 없다. 
+
+디자이너의 XAML 코딩 능력에 관계없이 프로그래머라면 XAML 문법을 배워둬야 할 것이다. 그리고 무언가를 배우려면 직접 해보는 것이 최선이다. 필자는 모든 WPF 프로그래머가 XAML에 익숙하고 코딩에 능숙해야 한다고 생각하기 때문에 앞으로 그 방법에 대해 설명할 것이다. 
+
+앞에서 선보인 XAML코드는 큰 XAML 문서 속에서 부분적으로 찾아볼 수는 있겠지만 그 자체로 동작하기에는 약간 모호한 면이 있다. Button 엘리먼트가 뭘까? 셔츠 버튼? 전자제품의 버튼? 아니면 선거 운동의 기장(campaign button)을 뜻하는 걸까? XML 문서는 명확해야 한다. 따라서 두 문서에서 같은 엘리먼트 이름을 서로 다른 목적으로 사용한다면 그것은 각기 명확히 구분돼야 한다. 
+
+이러한 이유 때문에 XML 네임스페이스가 고안되었으며, WPF 프로그래머가 생성하는 XAML 문서와 셔츠 버튼을 만드는 제조업자가 생성한 XMl 문서는 전혀 다른 네임스페이스를 갖게 된다. 
+
+도큐먼트 내의 xmlns 속성은 기본적인 XMl 네임스페이스로 선언되며, 네임스페이스 선언이 있는 곳의 엘리먼트와 자식 엘리먼트에게 모두 적용된다. 또한 XML 네임스페이스 이름은 유일하고 영속적이므로 URL을 사용하는 것이 일반적이다. WPF 프로그램에서 사용하는 XAML의 URL은 다음과 같다. 
+
+http://schemas.microsoft.com/winfx/2006/xaml/presentation
+
+이 URL 내엔 아무 것도 없으므로 굳이 이 웹페이지에 들어가 볼 필요는 없다. 이것은 단지 Button이나 StackPanel, Image와 같은 XAML 엘리먼트를 구별하기 위해 마이크로소프트가 고안한 네임스페이스의 이름일 뿐이다. 
+
+19장의 앞부분에 보인 XAML 코드는 xmlns 속성과 적절한 네임스페이스를 추가함으로써 다음과 같이 완전한 XAML 문서로 바꿀 수 있다. 
+
+<Button xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Foreground="LightSeaGreen" FontSize="24pt">
+	Hello, XAML!
+</Button>
+
+메모장과 같은 편집기를 이용해 위의 구문을 작은 XAML파일로 작성하고 파일을 식별하기 위한 주석을 단 후 다음과 같은 형태의 파일로 하드디스크 드라이브에 저장하면 된다. 
+
+<Button xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Foreground="LightSeaGreen" FontSize="24pt">
+	Hello, XAML!
+</Button>
+
+앞과 같이 기술한 소스 코드는 이 책의 도서 정보 페이지(Microsoft Press나 에이콘출판사 웹사이트)에서 다운 받을 수 있으니, 타이핑하기가 귀찮다면 이 책의 Chapter 19 디렉토리에서 파일을 찾아 사용하면 된다. 
+
+WinFx 확장이 .NET에 인스톨되어있거나 윈도우 비스타를 사용하고 있다면 일반 프로그램을 실행할 때처럼 탐색기에서 파일을 찾아 더블클릭하거나 명령 행 프롬포트에서 실행하는 방법으로 파일을 실행해보자. 그러면 마이크로소포트의 인터넷 익스플로러가 뜨고 주소 창 밑의 네비게이션 버튼 몇 개를 제외한 클라이언트 영역에 버튼이 채워져 있는 것을 볼 수 있다. 
+이동할 수 있는 곳이 없기 때문에 네비에시녀 버튼은  비활성화되어 있을 것이다(비스타를 사용중이라면 네비게이션 버튼은 나타나지 않는데 그 기능이 인터넷 익스플로러 자체 네비게이션 버튼과 통홥되었기 때문이다)
+
+XamlButton.xaml과 같은 파일은 느슨한 XAMl 혹은 스탠드얼론 XAML(역자주: 어느 코드에도 속하지 않는 독립된 XAML 파일)로 부르는데, xaml파일 확장자는 PresentationHost.exe와 연결되어 있다. XAML을 실행하면 PresentationHost.exe가 호출되어 인터넷 익스플로러에 의해 호스팅될 수 있는 Page 타입의 객체(FrameworkElement로부터 상속받은 Window와 약간 흡사한 클래스)를 생성한다. 그리고 PresentationHost.exe 프로그램은 로드된 XAML을 실제 Button 객체로 변환한 후 이 객체를 Page의 컨텐트 프로퍼티에 저장한다. 
+
+XAML에 에러가 있을 경우 인터넷 익스플로러는 에러를 알려주며, 인터넷 익스플로러의 자세히(More Information)버튼을 누르면 PresentationHost.exe의 존재와 스택 트레이스를 확인할수 있다. 스택 트레이스의 참고할만한 많은 메소드 중에 특히 System.Windows.Markup 네임스페이스의 XamlReader.Load라는 정적 메소드를 볼 수 있다. 이것은 XAML을 객체로 변환하는 메소드인데, 나중에 사용 방법을 간단히 살펴보자. 
+
+XamlButton.xaml을 로컬 하드 디스크 드라이브에서 실행하는 것 외에도 웹사이트에 파일을 넣고 실행할 수 있지만 이 경우 보통 .xaml 확장자의 MIME 타입을 등록해야 하는데, 서버상에서 .htaccess라는 이름의 파일에 다음과 같은 한 줄을 추가하면 된다. 
+
+AddType application/xaml+xml xaml
+
+다음에 Button, Ellipse, ListBox를 자식으로 가진 StackPanel을 생성하는 스탠드얼론 XAML 파일이 있다. 
+
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+
+<StackPanel
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+
+	<Button HorizontalAlignment="Center" Margin="24">
+		Hello, XAML!
+	</Button>
+	Ellipse Width="200" Height="100" Margin="24" Stroke="Red" StrokeThickness="10" />
+
+	<ListBox Width="100" Height="100" Margin="24">
+		<ListBoxItem>Sunday</ListBoxItem>
+		<ListBoxItem>Monday</ListBoxItem>
+		<ListBoxItem>Tuesday</ListBoxItem>
+		<ListBoxItem>Wedesday</ListBoxItem>
+		<ListBoxItem>Thursday</ListBoxItem>
+		<ListBoxItem>Friday</ListBoxItem>
+		<ListBoxItem>Saturday</ListBoxItem>
+	</ListBox>
+
+</StackPanel>
+
+XML 파일은 하나의 루트 엘리먼트만을 가지는데, 이 파일에서는 StackPanel이 루트 엘리먼트이다. StackPanel의 시작 태그와 종료 태그 사이의 컨텐트에는 다음곽 ㅏㅌ은 3개의 자식이 있다. 첫 번째 Button 엘리먼트는 이미 앞에서 본 것과 유사하고, 두 번째 Ellipse 엘리먼트는 5개의 속성(Ellipse 클래스의 프로퍼티와 대응되는)을 가지고 있는데 내부에 컨텐트가 없기 때문에 빈 엘리먼트 문법이 사용됐다. 마지막 ListBox 엘리먼트는 7개의 ListBoxItem엘리먼트를 자식으로 가지고 있는데, 각 ListBoxItem은 문자열을 컨텐트로 가진다. 
+
+XAML 파일은 일반적으로 전체 엘리먼트 트리를 형성한다. PresentationHost.exe가 XAML파일을 로드할 때 각 트리 속에 엘리먼트가 생성되고 초기화될 뿐만 아니라 엘리먼트가 비주얼 트리로 조립된다. 
+
+이런 스탠드얼론 XAML 파일을 실행할 때 인터넷 익스플로러의 제목 표시줄은 파일 경로를 보여주지만 일반적으로 실제 애플리케이션은 이 텍스트를 바꾼다. 다음과 같이 Page를 루트엘리먼트로 생성하고 WindowTitle 프로퍼티에 원하는 텍스트를 설정한 후 StackPanel을 Page의 자식으로 생성하면 변경할 수 있다. 
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" WindowTitle ="Xaml Page">
+	<StackPanel>
+		<Button HorizontalAlignment="Center" Margin="24">
+			Hello, XAML!
+		</Button>
+
+		<Ellipse Width="200" Height="100" Margin="24" Stroke="Red" StrokeThickness="10" />
+
+		<ListBox Width="100" Height="100" Margin="24">
+			<ListBoxItem>Sunday</ListBoxItem>
+			<ListBoxItem>Monday</ListBoxItem>
+			<ListBoxItem>Tuesday</ListBoxItem>
+			<ListBoxItem>Wedesday</ListBoxItem>
+			<ListBoxItem>Thursday</ListBoxItem>
+			<ListBoxItem>Friday</ListBoxItem>
+			<ListBoxItem>Saturday</ListBoxItem>
+		</ListBox>
+	</StackPanel>
+</Page>
+
+Window를 루트 엘리먼트로 한 스탠드얼론 XAML 파일을 만들고 싶어도 이것은 불가능하다. 왜냐하면 PresentationHost.exe는 루트 엘리먼트를 어떤 것의 자식으로 만드는데, Window 객체는 그 어떤 것의 자식도 될 수 없기 때문이다. 그러나 스탠드얼론 XAML 파일의 루트 엘리먼트는 Window를 제외하고는 FrameworkElement를 상속받는 것이면 어떤 것도 될 수 있다. 
+
+작지만 완전한 XAML 문서를 포함한 다음과 같은 문자열 변수(예를 들면 strXaml과 같은)를 정의하는 C# 프로그램이 있다고 생각해보자. 
+
+string strXaml = 
+	"<Button xmlns='http://schemas.microsoft.com/winfx/2006/presentation'" + 
+	"	Foreground='LightSeaGreen' FontSize='24pt'>" +
+	"	Click me!" +
+	"</Button>";
+
+쉬운 구분을 위해 속성에는 큰 따옴표 대신 작은따옴표를 사용했다. 이제 Button 객체를 생성하고 초기화하는 앞의 문자열을 파싱하는 프로그램을 작성할 수 있겠는가? 확실히 이것의 구현을 위해선 많은 리플렉션을 사용해야 하고, FOreground와 FontSize 프로퍼티를 설정하기 위해 사용된 데이터에 대한 가정이 필요할 것이다. 따라서 이런 파서가 이미 제공되고 있다는 것에 우리는 놀랄 이유가 없다. System.Windows.Markup 네임스페이스에 있는 XamlReader 클래스의 Load라는 정적 메소드는 XAML을 파싱해 초기화된 객체로 전환한다.(게다가 XamlWriter.Save는 반대로 객체로부터 XAML을 생성한다)
+
+WPF 프로그램은 XamlReader.Load을 사용해 XAML 덩어리를 객체로 전환한다. 루트 엘리먼트에 자식 엘리먼트가 있으면 그 엘리먼트도 마찬가지로 변환되고 XAML 계층에 의해 수반된 비주얼 트리 속에 통합된다. 
+
+XamlReader.Load를 사용하기 위해선 당연히 System.Windows.Markup을 위한 using문을 사용해야 할 뿐만 아니라 XamlReader.Load가 필요로 하는 XML 관계 클래스를 포함한 System.Xml.dll 어셈블리의 참조 역시 필요하다. 불행히도 XamlReader.Load는 문자열 인자를 바로 받을 수 없는데 이 때문에 로드할 XAML 문자열을 메소드를 통해 원하는 타입의 객체로 변환한 후 넘겨야 한다. 
+
+Button btn = (Button).XamlReader.Load(strXaml); //동작 안함!
+
+XamlReader.Load는 Stream 객체나 XmlReader객체를 요구한다. 그 작업을 위한 한 가지 방법은 다음과 같이 MemoryStream을 사용하는 것인데(이 코드를 위해서 System.IO 네임스페이스를 using문으로 선언해야 함)StreamWriter로 MemoryStream 속의 문자열을 인자로 넘기고 이 MemoryStream을 XamlReader.Load에 전달하는 방법이다. 
+
+MemoryStream memory = new MemoryStream(strXaml.Length);
+StreamWriter writer = new StreamWriter(memory);
+writer.Write(strXaml);
+writer.Flush();
+memory.Seek(0, SeekOrigin.Begin);
+object obj = XamlReader.Load(memory);
+
+다음 코드는 System.Xml과 System.IO를 사용한 좀 더 매끄러운 방법이다. 
+
+StringReader strreader = new StringReader(strXaml);
+XmlTextReader xmlreader = new XmlTextReader(strreader);
+object obj = XamlReader.Load(xmlreader);
+
+사실 다음과 같이 거의 구분이 쉽지 않은 구문을 사용할 수도 있다. 
+
+object obj = XamlRedader.Load(new XmlTextReader(new StringReader(strXaml)));
+
+다음은 앞에서 보인 strXaml 문자열을 정의하고 그 안에 작은 XAML 문서를 객체로 변환한후 그 객체를 Window의 Content 프로퍼티로 설정하는 프로그램이다. 
+
+
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
+using System.Xml;
+
+public class LoadEmbeddedXaml : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new LoadEmbeddedXaml());
+	}
+	public LoadEmbeddedXaml()
+	{
+		Title = "Load Embedded Xaml";
+
+		string strXaml = 
+			"<Button xmlns='http://schemas.microsoft.com/" +
+					"winfx/2006/xaml/presentation'" + 
+			"	Foreground='LightSeaGreen' FontSize='24pt'>" +
+			"	Click me!" +
+			"</Button>";
+		StringReader strreader = new StringReader(strXaml);
+		XmlTextReader xmlreader = new XmlTextReader(strreader);
+		object obj = XamlReader.Load(xmlreader);
+
+		Content = obj;
+	}
+}
+
+이 프로그램은 XamlReader.Load로부터 반환된 객체가 사실 Button 객체라는 것을 인식하기 때문에 아래와 같이 그것을 Button으로 변환할 수 있다. 
+
+Button btn = (Button)XamlReader.Load(xmlreader);
+
+그후 코드에 이벤트 핸들러가 있으면 그것을 연결한다
+
+btn.Click += ButtonOnClick;
+
+이제 프로그램에 버튼을 생성하고 초기화하는 명확한 코드만 있으면 이 버튼으로 원하는 작업을 수행할 수 있다. 
+
+당연히 XAML을 문자열 변수에 저장하는 것은 약간 어리석은 짓이다. 따라서 실행 파일 내에 있는 리소스처럼 실행 중에 XAML을 로딩해 객체로 변환하는 것이 아마도 더 나은 방법일 것이다. 
+
+그럼 LoadXamlResource라는 이름을 가진 빈 프로젝트를 하나 시작해보자. System.Xml 어셈블리 참조를 다른 WPF 어셈블리와 같이 추가하고 프로젝트 메뉴에서 새 항목 추가를 선택한다(또는 프로젝트 이름에서 마우스 오른쪽 버튼을 클릭하고 새 항목 추가를 선택한다) XML 파일 템플릿을 선택하고 이름을 LoadXamlResource.xml으로 정한다.( 이 파일의 확장자를 .xaml 대신에 .xml를 부여하면 약간 수월한 점이 있는데 그것은 .xaml 확장자를 사용하면 비주얼 스튜디오가 XAML 디자이너를 불러오고 파일에 대한 잘못된 가정을 시도하는 경우가 있기 때문이다) 다음의 XML 파일을 살펴보자. 
+
+
+
+<StackPanel
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<Button Name="MyButton" HorizontalAlignment = "Center" Margin="24">
+		Hello, XAML!
+	</Button>
+
+	<Ellipse Width="200" Height="100" Margin="24" Stroke="Red" StrokeThickness="10" />
+
+	<ListBox Width="100" Height="100" Margin="24">
+			<ListBoxItem>Sunday</ListBoxItem>
+			<ListBoxItem>Monday</ListBoxItem>
+			<ListBoxItem>Tuesday</ListBoxItem>
+			<ListBoxItem>Wedesday</ListBoxItem>
+			<ListBoxItem>Thursday</ListBoxItem>
+			<ListBoxItem>Friday</ListBoxItem>
+			<ListBoxItem>Saturday</ListBoxItem>
+	</ListBox>
+</StackPanel>
+
+보다시피 이 파일은 스탠드 얼론 XamlStack.xaml 파일과 매우 유사하다. 가장 큰 차이는 Button 객체에 Name 속성을 포함시켰으며, 이 Name 프로퍼티는 FrameworkElement에 의해 정의된 것이다. 
+
+비주얼 스튜디오에서는 LoadXamlResource.xml파일에서 마우스 오른쪽 버튼을 클릭한 후 속성을 선택하고 빌드 작업이 Resource로 설정되었는지 확인하는 것이 매우 중요하다. 그렇지 않으면 프로그램이 이것을 리소스로 로드하지 않기 때문이다. 
+
+LoadXamlResource 프로젝트는 Window를 상속받은 클래스를 가진 약간은 평범한 형태의 다음과 같은 C# 파일을 가지고 있다. 
+
+
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
+
+
+public class LoadXamlResource : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new LoadXamlResource());
+	}
+	public LoadXamlResource()
+	{
+		Title = "Load Xaml Resource";
+
+		Uri uri = new Uri("pack://application:,,/LoadXamlResource.xml");
+		Stream stream = Application.GetResourcesStream(uri).Stream;
+		FrameworkElement el = XamlReader.Load(stream) as FrameworkElement;
+		Content =el;
+
+		Button btn = el.FindName("MyButton") as Button;
+
+		if( btn != null)
+			btn.Click += ButtonOnClick;
+	}
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		MessageBox.Show("The button labeled '" + (args.SOurces as Button).Content + "' has been clicked");
+	}
+}
+
+생성자는 XML 리소스를 위한 Uri 객체를 생성하고 StreamResourceInfo 객체를 반환하기 위한 Application.GetResourceStream 정적 프로퍼티를 사용한다. StreamResourceInfo는 리소스를 위한 Stream 객체를 반환하는 Stream이라는 이름의 프로퍼티를 포함하며, 이 Stream 객체가 XamlReader.Load의 인자가 되어 반환되는 객체(StackPanel 타입 객체)를 Window의 Content 프로퍼티에 할당한다. 
+
+일단 객체가 XAML로부터 변환되어 창의 비주얼 트리의 일부가 되면 FindName 메소드를 사용해서 엘리먼트 트리상에서 특정한 이름으로 엘리먼트를 찾는 것이 가능하며, 그 후 버튼에 이벤트 핸들러를 연결하거나 그밖에 다른 일을 할 수 있다. 이것이 아마도 실행 시에 로드한 XAML에게 이벤트 핸들러를 연결할 수 있는 가장 간단한 방법일 것이다. 
+
+다음은 약간의 변화가 있는데 프로젝트 이름이 LoadXamlWindow이고 이전과 같이 이 XML 파일은 반드시 빌드 작업이 Resource로 설정돼야 한다. 
+
+
+<Window xmlns="http://schmas.microsoft.com/winfx/2006/xaml/presentation" Title="Load Xaml Window" SizeToContent="WidthAndHeight"
+	ResizeMode = "CanMinimize">
+	<StackPanel>
+		<Button HorizontalAlignment="Center" Margin="24">
+			Hello, XAML!
+		</Button
+
+		<Ellipse Width="200" Height="100" Margin="24" Stroke="Red" StrokeThickness="10" />
+
+		<ListBox Width="100" Height="100" Margin="24">
+			<ListBoxItem>Sunday</ListBoxItem>
+			<ListBoxItem>Monday</ListBoxItem>
+			<ListBoxItem>Tuesday</ListBoxItem>
+			<ListBoxItem>Wedesday</ListBoxItem>
+			<ListBoxItem>Thursday</ListBoxItem>
+			<ListBoxItem>Friday</ListBoxItem>
+			<ListBoxItem>Saturday</ListBoxItem>
+		</ListBox>
+	</StackPanel>
+</Window>			
+
+
+이 XAML 파일은 Window를 루트 엘리먼트로 가지고 있으며 시작 태그에는 Title, SizeToContent, ResizeMode라는 3가지 속성이 포함됐음을 알 수 있다. 또한 뒤에 두 속성은 각 프로퍼티와 관계된 열거형으로부터 멤버가 할당됐다.
+
+Window는 스탠드얼론 XAML 파일에서는 루트 엘리먼트가 될 수 없다. 왜냐하면 PresentationHost.exe가 XAML을 어떤 것의 자식으로 변환하기 때문이다. 다행히 아래의 프로그램은 XAML 리소스가 Window 객체인 것을 인식하기 때문에 Window를 상속받거나 Window 자체를 직접 생성하지 않는다. 
+
+
+
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
+
+public class LoadXamlWindow
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+
+		Uri uri = new Uri("pack://application:,,/LoadXamlWindow.xml");
+		Stream stream = Application.GetResourceStream(uri).Stream;
+		Window win = XamlReader.Load(stream) as Window;
+
+		win.AddHandler(Button.ClickEvent, new RoutedEventHandler(ButtonOnClick));
+
+		app.Run(win);
+	}
+	static void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		MessageBox.Show("The button labeled '" + (args.Source as Button).Content + "' has been clicked");
+	}
+}
+
+Main 메소드는 Application 객체를 생성하고 XAML을 로드한후 XamlReader.Load의 반환 값을 Window 객체로 변환하며, 버튼 클릭 이벤트 핸들러를 비주얼 트리 속에서 찾아 연결하지 않고 WIndow의 AddHandler를 호출해 연결한다. 마지막으로 Main 메소드는Application의 RUn 메소드에 Window 객체를 인자로 전달한다. 
+
+다음은 Open File 대화상자를 사용해서 XAML 파일을 하드디스크에서 로드하는 프로그램이다. 이 프로그램은 지금까지 19장에서 선보인 XAML 파일과 .xml 확장자를 가진 파일을 로드할 수 있다. 
+
+using Microsoft.Win32;
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
+using System.Xml;
+
+public class LoadXamlFile : Window
+{
+	Frame frame;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new LoadXamlFile());
+	}
+	
+	public LoadXamlFile()
+	{
+		Title = "Load XAML File";
+
+		DockPanel dock = new DockPanel();
+		Content = dock;
+
+		//Open File 대화상자 생성
+		Button btn = new Button();
+		btn.Content = "Open File...";
+		btn.Margin = new Thickness(12);
+		btn.HorizontalAlignment = HorizontalAlignment.Left;
+		btn.Click += ButtonOnClick;
+		dock.Children.Add(btn);
+		DockPanel.SetDock(btn, Dock.Top);
+
+		//로드한 XAML을 호스팅할 Frame을 생성
+		frame = new Frame();
+		dock.Children.Add(frame);
+	}
+
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		OpenFileDialog dlg = new OpenFileDialog();
+		dlg.Filter = "XAML Files (*.xaml)|*.xaml|All files (*.*)|*.*";
+
+		if((bool)dlg.ShowDialog())
+		{
+			try
+			{
+				//XmlTextReader로 파일을 읽음
+				XmlTextReader xmlreader = new XmlTextReader(dlg.FileName);
+
+				//XAML을 객체로 변환
+				object obj = XamlReader.Load(xmlreader);
+
+				//Window면 Show 메소드 호출
+				if(obj is Window)
+				{
+					Window win = obj as Window;
+					win.Owner = this;
+					win.Show();
+				}
+				//그렇지 않으면 Frame의 COntent로 설정
+				else
+					frame.Content = obj;
+			}catch(Exception exc)
+			{
+				MessageBox.Show(exc.Message, Title);
+			}
+		}
+	}
+}
+
+여기서 보듯이 ButtonOnClick 메소드에서 OpenFileDialog를 사용해 파일명을 얻은 후 XAML을 로딩하는 것은 프로그램 내에서 리소스로 XAML을 로드하는 것보다 약간 쉬워 보인다. 이 파일명은 XMlTextReader 생성자로 바로 전달되며 그 객체가 XamlReader.Load에 넘겨진다. 
+
+XamlReader.Load로부터 반환된 객체가 Window이면 메소드는 특별한 로직을 가지는데, 그것은 Window 객체의 Owner 프로퍼티를 자기 자신으로 설정하고 마치 모달리스 대화상자처럼 Show 메소드를 호출하는 것이다(메인 애플리케이션 창을 닫으면 XAML로부터 로드된 창은 애플리케이션이 종료되는 것을 막기 위해 여전히 떠있다는 것을 안 후 필자는 Owner 프로퍼티를 설정하는 코드를 삽입했다. 하지만 이것이 여전히 정상적이라는 생각이 들지 않았다. 20장 XAML Cruncher프로그램에서는 이것의 대안으로 Application의 ShutdownMode 프로퍼티를 ShutdownMode.OnMainWindowClose로 설정했다)
+
+지금까지 실행 중에 XAML 엘리먼트 트리를 로딩하기 위한 몇 가지 방법을 살펴보았다. 또한 어떻게 XAML을 로드한 코드가 다양한 엘리먼트를 트리에서 찾고 이벤트 핸들러를 연결시키는지 보았다. 
+
+사실 실제 애플리케이션에서는 XAML을 소스 코드와 함께 컴파일하는 것이 더 보편적이고 효율적이다. 또한 XAML을 컴파일하는 방법에는 분명히 스탠드얼론 XAML에서는 할 수 없는 매력적인 점이 명백히 존재한다. 이 중에 하나가 XAML 안에 이벤트 핸들러 이름을 직접 명시하는 것이다. 이벤트 핸들러는 C# 코드 안에 있는 것이 일반적이지만 XAML 안에 C# 코드를 내장할 수도 있다. 다만 이것은 XAML을 나머지 프로젝트와 함께 컴파일할 때만 해당된다. 일반적으로 프로젝트는 그 안의 모든 페이지나 창(대화상자 포함)에 해당하는 하나의 XAML 파일과 그것과 관계된 코드 파일(코드 비하인드 파일이라고 주로 불림)을 가지고 있다. 하지만 경우에 따라서 원하는 만큼 얼마든지 XAML을 프로젝트에 사용할 수 있다. 
+
+지금까지 본 XAML은 WPF의 클래스와 프로퍼티만을 사용했다. 하지만 XAML이 WPF만을 위한 마크업 언어는 아니다. WPF는 XAML의 응용 사례 중에 하나라고 생각하는 것이 맞고, 실제 XAML은 WPF가 아닌 전혀 다른 애플리케이션 프레임워크와 함께 사용될 수도 있다(예를 들면 Windows Workflow Foundation(WWF)은 XAML을 사용하는 또다른 응용 사례이다. )
+
+XAML 명세는 WPF를 포함한 다른 어떤 XAML 응용 영역에서도 사용할 수 있는 다양한 엘리먼트와 속성을 정의한다. 이 엘리먼트와 속성은 WPF 네임스페이스와는 다른 XML 네임스페이스와 관계된다. XAML 고유 엘리먼트나 속성을 사용하고 싶다면 두 번째 네임스페이스 선언을 XAML 파일에 포함시켜야 하는데 그 선언은 다음 URL을 참조한다. 
+
+http://schemas.microsoft.com/winfx/2006/xaml
+
+이것은 WPF을 참조하는 네임스페이스에서 마지막 presentation 경로를 제외하고는 거의 흡사하다. 다음의 WPF 네임스페이스 선언은 계속해서 이 책의 모든 XAML 파일에서 선보일 것이다 
+
+xmlns=http://schemas.microsoft.com/winfx/2006/xaml/presentation
+
+XAML 고유 엘리먼트와 속성을 위한 네임스페이스는 관례적으로 접두어 x 함께 선언된다. 
+
+xmlns:x=http://schemas.microsoft.com/winfx/2006/xaml
+
+물론 XML이란 문자로 시작하지만 않는다면 다른 어떠한 접두어든 사용이 가능하지만 접두어로 x는 이미 많은 XAMl 파일에서 굳건하게 약속처럼 사용하고 있다. 
+
+원론적으로 XAML 자체와 관련된 네임스페이스가 기본 네임스페이그 되고 WPF를 두 번째 네임스페이스로 지정하는 것이 더 일리가 있지만 XAML에 의해 정의된 엘리먼트와 속성은 그다지 많지 않기 때문에 복잡함을 피하기 위해서 WPF 엘리먼트와 관련된 것을 기본 네임스페이스로 지정하는 것이 가장 현실적일 것으로 생각된다. 
+
+19장에서는 Class 속성과 Code 엘리먼트에 관한 예제들을 보게 되는데, 그것은 WPF 네임스페이스가 아닌 XAML 네임스페이스에 속한 것들이다. XAML 네임스페이스는 관례적으로 접두어 x 와 결합되고 Class 속성과 Code 엘리먼트는 XAML 파일에서 x:Class와 x:Code 같은 참조 방법으로 나타난다. 
+
+x:Class 속성은 XAML 파일의 루트 엘리먼트에서만 볼 수 있다. 이 속성은 XAML이 프로젝트의 일부로 컴파일될 때만 사용할 수 있으며 느슨한 XAML이나 프로그램이 실행 중에 로드한 XAML에서는 보이지 않는다. x:Class 속성은 다음과 같은 형태이다.
+
+x:Class="Mynamespace.MyClassName"
+
+x:Class 속성은 Window 루트 엘리먼트 속에서 매우 자주 보이며 XAML 파일은 다음과 같은 전체적인 구조를 가지고 있다. 
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+	x:Class="MyNamespace.MyClassName"
+	...>
+		...
+</Window>
+
+여기서 참조된 MyNamespace 네임스페이스는 애플리케이션 프로젝트와 관계된 .NET 네임스페이스(공용 언어 런타임이나 CLR 네임스페이스라고도 불림)이다. 앞으로 자주 동일한 네임스페이스와 클래스 이름을 가진 XAML과 대응되는 Window 클래스를 C#으로 작성하게 될 것이며 이것은 partial 키워드로 정의한다. 
+
+public namespace MyNamespace
+{
+	public partial class MyClassName : Window
+	{
+		...
+	}
+}
+
+이것은 주로 이벤트 핸들러나 몇 가지 초기화 코드를 포함하는 코드 비하인드 파일이며, XAML 파일에서 정의된 컨트롤이나 엘리먼트를 지원한다. XAML 파일과 코드 비하인드, 파일은 본질적으로 같은 클래스의 각기 다른 부분이며, 대개 Windows 타입의 클래스이다. 
+
+일단 다시 한번 빈 프로젝트를 열고 CompileXamlWindow라는 이름으로 프로젝트를 시작해보자. 이 프로젝트에 2개의 파일을 만들 예정인데, 하나는 CompileXamlWindow.xaml라는 XAML 파일이고 다른 하나는 CompileXamlWindow.cs라는 C# 파일이다. 이 두 파일은 Petzold.CompileXamlWindow.CompileXamlWindow라는 검증된 이름을 가진 클래스의 각기 다른 부분이다. 
+
+XAML 파일을 먼저 생성해보자. 빈 프로젝트에서 XML 파일 타입의 새로운 항목을 추가하고 CompileXamlWindow.xaml라는 이름을 붙인다. 비주얼 스튜디오는 디자이너를 띄우겠지만 무시하고 소스 창의 왼쪽 아래 코너에 있는 Xaml 탭을 Design 탭 대신에 선택해보자. 
+
+CompileXamlWindow.xaml 파일의 프로퍼티를 확인해 빌드 작업이 Page인지 반드시 확인하고 아니라면 Page로 설정한다(이전에 LoadXamlResource와 LoadXamlWindow 프로젝트에서 XAML 파일의 확장자로 .xml을 사용하라고 지적했는데, 이제부턴 .xaml 확장자를 사용하라고 말하고 싶다. 사실 확장자에 어떤 것을 사용하던지 상관은 없지만 빌드 작업은 중요하다. 이전 프로젝트의 XAML 파일은 실행 파일의 리소스가 되었지만 이번 프로젝트에서는 파일을 컴파일하기 때문에 빌드 작업을 Page로 설정해야 한다)
+
+CompileXamlWindow.xaml 파일은 LoadXamlWindow.xml 파일과 약간 흡사한데,첫 번째 큰 차이는 접두어 x를 가진 두 번째 네임스페이스를 선언한 것이다. 또한 루트 엘리먼트에 있는 x:Class 속성에는 Window를 상속받은 Petzold.CompileXamlWindow.CompileXamlWindow 라는 검증된 이름의 클래스를 명시한다. 
+
+
+
+
