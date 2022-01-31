@@ -1,0 +1,200 @@
+※ GROUP BY, HAVING, 집계함수
+(1) GROUP BY
+이제는 SELECT 형식 중에서 GROUP BY, HAVING 절에 대해서 파악해보자. 
+[WITH < common_table_expression>]
+SELCT select_list [ INTO new_table ]
+[ FROM table_source ]
+[ WHERE search_condition ]
+[ GROUP BY group_by_expression ]
+[ HAVING search_condition ]
+[ ORDER BY order_expression [ASC | DESC]
+
+먼저 GROUP BY 절을 살펴보자. 이는 말 그대로 그룹으로 묶어주는 역할을 한다. sqlDB의 구매 테이블(buyTb1)에서 사용자(userTb1)가 구매한 물품의 개수(amount)를 보려면 다음과 같이 하면 된다
+USE sqlDB;
+SELECT userID, amount FROM buyTb1 ORDER BY userID;
+
+앞의 결과를 보면사용자별로 여러 번의 물건 구매가 이루어져서, 각각의 행이 별도로 출력된다. BBK 사용자의 경우에는 5+10+2+2=19개를 구매했다. 합계를 낼 때 직접 전자계산기 두드려서 계산한다면 SQL Server를 사용할 이유가 없을 것이다. 
+
+이럴 때는 집계 함수를 사용하면 된다. 집계 함수(Aggregate Function)는 주로 GROUP BY 절과 함께 쓰이며 데이터를 그룹화(Grouping)해주는 기능을 한다. 상세한 내용은 잠시 후에 살펴보자. 
+
+앞의 결과에서 우리가 원하는 바는 BBK:19개, EJW:4개, JYP:1개, KBS:6개, SSK:5개와 같이 각 사용자(userID)별로 구매한 개수(amount)를 합쳐서 출력하는 것이다. 이럴 경우에는 집계 함수인 SUM()과 GROUP BY 절을 사용하면 된다. 즉 사용자(userID)별로 GROUP BY 로 묶어준 후에 SUM()함수로 구매 개수(amount)를 합치면 된다
+
+SELECT userID, SUM(amount) FROM byTb1 GROUP BY userID;
+
+그런데 SUM(amount)의 결과 열에는 제목이 없다. 앞에서 배운 별칭(alias)을 사용해서 결과를 보도록 하자. 
+
+SELECT userID AS [사용자아이디], SUM(amount) as [총구매개수] FROM buyTb1 GROUP BY userID;
+
+이번에는 구매액의 총합을 출력해 보자. 구매액은 가격(Price) * tnfid(amount)이므로, 총합은 SUM()을 사용하면 된다. 
+
+SELECT userID as [사용자아이디], SUM(price * amount) as [총구매액] FROM buyTb1 GROUP BY userID;
+
+
+
+(2) 집계 함수
+SUM() 외에 자주 사용되는 집계 함수는 다음 표와 같다. 
+
+함수명			설명
+AVG()			평균을 구한다.
+MIN()			최소값을 구한다.
+MAX()			최대값을 구한다.
+COUNT()			행의 개수를 샌다
+COUN_BIG()		개수를 센사, 단 결과값이 bigint 형이다
+STDEV()			표준편차를 구한다
+VAR()			분산을 구한다. 
+
+전체 구매자가 구매한 물품의 개수(amount)의 평균을 구해보자. 
+
+SELECT AVG(amount) as [평균구매개수] FROM buyTb1;
+
+평균 구매 개수의 결과가 2로 나왔다. 그런데 사실은 약 2.9166개이다. 이렇게 결과가 잘 못 나온 이유는 구매 개수(amount)의 데이터 형식이 정수형이므로 그 연산 결과도 정수형으로 나오게 된 것이다. 
+
+이러한 논리적 오류를 범하지 않으려면, 정수형을 실수로 변환해주는 CAST() 또는 CONVERT() 함수를 사용하거나, 간단히 amount에 1.0을 곱해도 된다. CAST()/CONVERT() 함수의 사용법은 7장의 데이터 형식에 대해서 공부한 후에 자세한 사용법을 알아보자. 
+
+SELECT AVG(amount * 1.0) AS [평균구매개수] FROM buyTb1;
+또는
+SELECT AVG(CAST(amount AS DECIMAL(10, 6)) AS [평균구매개수] FROM buyTb1;
+
+
+이번에는 각 사용자별로 한 번 구매할 때 물건을 평균 몇 개 구매했는지를 알아 보자.
+
+GROUP BY 를 사용하면 된다. 
+
+SELECT userID, AVG(amount * 1.0) AS [평균구매개수] FROM buyTb1 GROUP BY userID;
+
+다른 예를 살펴보자. 가장 큰 키와 가장 작은 키의 회원 이름과 키를 출력하는 쿼리를 만들어서 직접 실행해 보자. 다음과 같이 작성되었는가? 그런데 오류가 나올 것이다. 
+
+SELECT MAX(height), MIN(height) FROM userTb1
+
+오류메시지:
+메시지 8120, 수준 16, 상태 1, 줄 1
+열 'userTb1.name이(가) 집계 함수나 GROUP BY 절에 없으므로 SELECT 목록에서 사용할 수 없습니다. 
+
+GROUP BY 없이는 별도의 이름 열(name)을 집계 함수와 같이 사용할 수 없다는 메시지이다. 그래서 다음과 같이 고쳐보았다. 
+SELECT MAX(height), MIN(height) FROM userTb1 GROUP BY Name;
+
+역시 원하는 결과가 아니다. 그냥 모두 다 나왔다. 
+이런 경우에는 앞에서 배운 하위쿼리와 조합을 하는 것이 가장 쉽다. 
+
+SELECT name, height FROM userTb1 WHERE height = (SELECT MIN(height) FROM userTb1) OR height = (SELECT MAX(height) FROM userTb1);
+
+이번에는 휴대폰이 있는 사용자의 수를 세어보자. 
+SELECT COUNT(*) FROM userTb1;
+
+앞의 쿼리 결과는 전체 회원인 10명이 나올 것이다. 휴대폰이 있는 회원만 카운트하려면 휴대폰 열 이름(mobile1)을 지정해야 한다. 그럴 경우에 NULL 값인 것은 제외하고 카운트 한다. 
+
+SELECT COUNT(mobile1) AS [휴대폰이 있는 사용자] FROM userTb1;
+
+이번에는 메시지 탭을 클릭해 보자. 
+
+친절하게(?) Null 값이 제거되었다는 메시지까지 나온다. 즉 휴대폰이 없는 사용자를 제외한 사용자 8명의 인원수가 정확히 나왔다 [그림 6-10]을 보면 성시경과 윤종신만 휴대폰이 없다)
+
+이제는 간단히 성능과 관련된 실습을 해보자. 
+
+행의 개수를 세려면 그냥 간단히 SELECT * FROM 테이믈명을 수행하면 그 행의 개수를 쿼리창에서 확인할 수 있다. 하지만 COUNT() 함수를 사용하는 것과 성능면에서 많은 차이가 난다. 
+
+
+※ 실습 3 :  COUNT() 함수와 SELECT의 결과를 비교해 보자. 
+
+0. 데이터의 건수가 약 2만여 건이 되는 AdventrueWorks DB의 Sales.Customer를 사용해 보자. 
+
+1. 프로파일러를 사용해 보자.
+1-1 SSMS 메뉴의[도구] > [SQL Server profiler] 선택해서 프로파일러를 실행하고[ 서버에 연결]창에서 <연결> 버튼을 클릭한다. 
+
+1-2 추적 속성에서 추적 이름을 입력하고 [템플릿 사용]에서 TSQL_Duration을 선택하고 <실행> 버튼을 클릭한다. 
+
+1-3 SSMS의 쿼리 창에 다음 SQL 문장을 수행해 보자. 
+
+USE AdventureWorks;
+GO
+SELECT * FROM Sales.Customer;
+GO
+SELECT COUNT(*) FROM Sales.Customer;
+
+1-4 결과를 보면 첫 번째 쿼리는 우측 하단에 조회된 개수 행이 나오고, 두 번째 쿼리는 COUNT(*)의 결과값이 나온다. 당연히 같은 테이블이므로 둘 다 개수는 같다. 
+
+1-5 프로파일러를 보면 그냥 전체를 SELECT한 문장과, SELECT COUNT(*)문장의 Duration 차이가 확연히 드러난다. 
+
+* Duration은 이벤트(이 경우에는 쿼리문)가 실행하는데 걸리는 시간(밀리초)이므로 수치가 작을수록 빨리 수행된다.는 의미이다. 
+
+결론적으로 행의 개수를 파악하려고 SELECT * ... 구문을 사용하는 것은 SQL Server에 많은 부하를 준다. 그러므로 직접 테이블을 조회한 후에 사용하는 것보다. 필요한 집계함수를 적절히 사용할 필요가 있다. 
+
+예를 들어, 어떤 필드의 값을 전부 합쳐야하는 응용프로그램을 만들 경우에, 전체를 조회해서 가져온 후에 다시 그것을 더하는 방법은 바람직하지 않다. 간단히 SUM()함수를 이용해서 조회하는 것이 훨씬 효율적이다. 
+
+
+2. SUM() 함수와 다른 방식의 성능을 비교해 보자. 
+
+2-1 우선 건수가 많은 임시테이블을 생성해 보자. 다음 구문을 사용하면 #tmpTbl은 약 144건의 임시 테이블이 될 것이다. 이해되지 않아도 그냥 임시 테이블에 대량의 데이터를 입력하는 것이라고 생각해 보자. 
+
+USE sqlDB;
+SELECT num, price, amount INTO #tmpTbl FROM buyTb1;
+GO
+INSERT INTO #tmpTbl 
+	SELECT a.price, a.mount FROM #tmpTbl a, #tmpTbl b;
+GO
+
+*임시 테이블은 테이블 이름 앞에 # 또는 ##표시가 붙은 것이다. 이는 이름처럼 임시로 사용하는 테이블이다. 자세한 사항은 8장에서 다루게 될 것이다. 
+
+2-2 먼저 프로파일러의 메뉴에서 [편집] > [추적 창 지우기]를 선택해서 다시 초기화시키자. 
+
+2-3 SUM() 함수를 사용해서 총 구매액을 구해 보자. 쿼리 창에서 다음을 실행한다. 
+
+SELECT SUM(price * amount) FROM #tmpTbl;
+
+합계 출력 값이 나왔을 것이다(값 자체는 별로 중요하지 않다) 프로파일러를 보면 상당히 짧은 시간이 걸린 것을 확인할 수 있다. 
+
+2-4 SUM() 함수를 사용하지 않고, 같은 결과를 내보자. 다음 구문은 모두 입력한 후에 마우스로 모두 선택해서 한번에 실행해야 한다. 
+
+* 다음 구문은 이해하기가 어려울 것이다. 이 구문을 이해하려면 변수 및 프로그래밍 기법을 알아야 한다. 이는 7장의후반부에 나오는 것들이다. 그래서 이해를 못해도 된다. 단지 SUM()을 구현하려면 복잡한 프로그래밍이 필요하고, 그 성능 또한 함수 하나를 사용하는 것보다 훨씬 떨어진다는 정도로만 이해하자. 7장까지 학습을 마친 후에 이 구문을 보면 훨씬 쉽게 느껴질 것이다. 
+
+DECLARE @table_bigint -- @table은 총 구매액을 누적시킬 변수
+DECLARE @priceXamount int -- @priceXamount는 각 행의 가격과 수량을 곱한 값을 저장할 변수
+DECLARE @num int -- @num은 구매 테이블의 순번열의 증가
+DECLARE @count int -- @count는 전체 행 숫자
+
+SET @total = 0
+SET @num=1
+
+SELECT @count=COUNT(*) FROM #tmpTbl
+
+SET @count = @count + 1
+
+WHILE @count <> @num
+BEGIN	
+	SELECT @priceXamount = price * amount FROM #tmpTbl
+		WHERE num = @num
+	SET @num = @num + 1
+	SET @total = @total + @priceXamount
+END
+
+PRINT @total
+
+
+2-5 프로파일러를 보면 경우 140여건인데도 성능 차이가 다음과 같이 확연히 난다. 
+
+2-6 프로파일러를 종료한다. 저장할 필요는 없다. 
+
+
+결론적으로 적절히 사용하는 집계 함수는 한 번씩 직접 처리하는 것보다 훨씬 좋은 성능을 낸다. 
+
+
+
+(3)Having 절
+앞에서 했던 SUM()을 다시 사용해서 사용자별 총 구매액을 보자
+USE sqlDB;
+GO
+SELECT userID AS [사용자], SUM(price * amount) AS [총구매액] FROM userTb1 GROUP BY userID;
+
+그런데 이 중에서 총 구매액이 1,000 이상인 사용자에게만 사은품을 증정하고 싶다면 앞에서 배운 조건을 포함하는 WHERE 구문을 생각했을 것이다. 
+SELECT userID AS [사용자], SUM(price * amount) AS [총구매액] FROM buyTb1 WHERE SUM(price*amount) > 1000 GROUP BY userID;
+
+오류 메시지 :
+메시지 147, 수준 15, 상태 1, 줄 3
+집계가 HEVING 절이나 SELECT 목록에 포함된 하위쿼리 내에 없으면 WHERE 절에 나타날 수 없습니다. 또한 집계 중인 열은 외부 참조입니다. 
+
+오류 메시지를 보면 집계 함수는 WHERE 절에 나타날수 없다는 뜻이다. 이럴 떄 사용되는 것이 HAVING 절이다. HAVING은 WHERE와 비슷한 개념으로 조건을 제한하는 것이지만, 집계 함수에 대해서만 조건을 제한하는 것이라고 생각하며 된다. 그리고 HAVING절은 꼮 GROUP BY 절 다음에 나와야 한다. 순서가 바뀌면 안된 다.
+
+추가로 총 구매액이 적은 사용자부터 나타내려면 ORDER BY를 사용하면 된다.
+
+SELECT userID AS [사용자], SUM(price*amount) AS [총구매액] FROM buyTb1
+GROUP BY userID HAVING SUM(price*amount) > 1000 ORDER BY SUM(price*amount);
