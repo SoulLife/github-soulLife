@@ -1,0 +1,822 @@
+CHAPTER 20 : 프로퍼티와 속성
+19장에서 소개한 XamlReader.Load 메소드는 여기서 유용한 프로그래밍 도구를 제공할 것이다. TextBox에 TextChanged 이벤트 핸들러를 연결한다고 생각해보자. 그리고 이 TextChanged 이벤트 핸들러는 TextBox에 XAML이 입력됨에 따라서 그 XAML을 XamlReader.Load로 넘겨주고 결과로 나온 객체를 보여준다. 이때 XamlReader.Load는 try 블록 내에서 호출할 필요가 있는데 입력되는 텍스트가 완성되기 전까지는 유효하지 않은 XAMl 이기 때문이다. 하지만 이것은 XAML 입력에 대한 즉각적인 반응을 볼 수 있으므로 XAML 을 배우는데 있어서 훌륭한 도구이면서 동시에 흥미로운 도구일 것이다. 
+
+이것이 XAML Cruncher 프로그램에 대한 대전제이다. XAML Cruncher는 메모장 클론 상에서 개발되는데, XAML Cruncher가 메모장 클론의 클라이언트 영역을 채우는 TextBox를 Grid로 대체한다. Grid의 첫 번째 셀에는 TextBox가 있으며, 다른 영역에는 GridSplitter를 사이에 두고 Frame 컨트롤이 있다. 또한 TextBox에 입력되는 XAML을 XamlReader.Load가 성공적으로 객체로 변환하면 그 객체는 Frame의 Content로 설정된다. 
+
+XamlCruncher 프로젝트는 NotepadClone 프로젝트의 NotepadCloneAssemblyInfo.cs을 제외한 모든 파일을 포함하며 NotepadCloneAssemblyInfo.cs 파일을 다음과 같은 내용으로 대체한다. 
+
+
+using System.Reflection;
+[assembly: AssemblyTitle("XAML Cruncher")]
+[assembly: AssemblyProduct("XamlCruncher")]
+[assembly: AssemblyDescription("Programming Tool Using XamlReader.Load")]
+[assembly:AssemblyCompany("www.charlespetzold.com")]
+[assembly: AssemblyCopyright("\x00A9 2006 by Charles Petzold")]
+[assembly: AssemblyVersion("1.0.*")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
+
+NotepadCloneSettings 클래스는 사용자의 기호에 따라 저장된 여러 가지 항목이 있던 것을 기억할 것이다. 하지만 XamlCruncherSettings 클래스는 NotepadCloneSettings를 상속받고 3가지 항목만을 추가한다. 첫 번째 Orientation 항목은 TextBox와 Frame의 위치를 제어하며, 메뉴를 통해 컨트롤 하나를 다른 하나의 위에 놓을 수도 있고 나란히 놓을 수도 있다. 두 번째는 사용자 기호에 따라 탭 키를 누를 때 몇 개의 공백을 삽입하는가를 설정하는 것인데 탭 키를 다루는 일반적인 TextBox를 오버라이딩해 탭 대신 설정된 공백을 삽입한다. 세 번째는 프로그램을 처음 실행하거나 File 메뉴의 New 를 선택했을 때 나오는 간단한 XAML을 설정하는 것인데 메뉴에서 현재 TextBox에 있는 내용을 시작 문서로 저장할 수 있다. 
+
+using System;
+using System.Windows;
+using System.Windows.Control;
+using System.Windows.Input
+
+public class XamlCruncherSettings : Petzold.NotepadClone.NotepadCloneSettings
+{
+	//사용자 기호에 관한 기본 설정
+	public Dock Orientation = Dock.Left;
+	public int TabSpaces = 4;
+
+	public string StartupDocument = 
+		"<Button xmlns=\"http://schemas.microsoft.com/winfx" + "/2006/xaml/Presentation\"\r\n" + 
+		"	xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\">\r\nHello, XAML!\r\n</Button>\n";
+
+	//NotepadCloneSettings 내의 기본 설정을 초기화하는 생성자
+	public XamlCruncherSettings()
+	{
+		FontFamily = "Lucida Console";
+		FontSize = 10 / 0.75;
+	}
+}
+
+덧붙여 XamlCruncherSettings 생성자는 기본 폰트를 10포인트의 Lucida Console 고정 간격 폰트로 바꾸는데, XAML Cruncher 프로그램을 실행한 후에 원하는 폰트로 바꿀 수 있다. 
+
+다음은 NotepadClone에서 파생된 XamlCruncher 클래스를 살펴보자. 이 클래스는 Window의 새로운 컨텐트가 될 Grid를 생성하고 Xaml이라는 최상위 메뉴와 그에 따린 6개의 하위 메뉴를 생성한다. 
+
+using System;
+using System.IO;					//StringReader를 위한 지시자
+using System.Text;					//StringBuilder를 위한 지시자
+using System.Windows;
+using System.Windows.Control;
+using System.Windows.Controls.Primitives;		//StatusBarItem을 위한 지시자
+using System.Windows.Input
+using System.Windows.Markup;			//XamlReader.Load를 위한 지시자
+using System.Windows.Media;
+using System.Windows.Threading; 			//DispatcherUnhandledExceptionEventArgs를 위한 지시자
+using System.Xml;					//XmlTextReader를 위한 지시자 
+
+
+class XamlCruncher : Petzold.NotepadClone.NotepadClone
+{
+	Frame frameParent; 		//XAML에 의해 생성된 객체를 보여주기 위한 Frame
+	Window win; 			//XAML로부터 생성된 Window
+	StatusBarItem statusParse;		//파싱 에러나 성공을 보여줌
+	int tabspaces = 4;			//탭 키를 눌렀을 때
+
+	//로드된 설정
+	XamlCruncherSettings settingXaml;
+
+	//메뉴 항목 관리
+	XamlOrientationMenuItem itemOrientation;
+	bool isSuspendParsing = false;
+
+	[STAThread]
+	public new static void Main()
+	{
+		Application app=  new Application();
+		app.ShutdownMode = ShutdownMode.OnMainWindowClose;
+		app.Run(new XamlCruncher());
+	}
+
+	//파싱 중단을 위한 public 프로퍼티
+	public bool IsSuspendParsing
+	{
+		set { isSuspendParsing = value;	}
+		get { return isSuspendParsing;	}
+	}
+
+	//생성자
+	public XamlCruncher()
+	{
+		//File Open과 Save 대화상자를 위한 필터
+		strFilter = "XAML Files(*.xaml)|*.xaml|All Files(*.*)|*.*";
+
+		//DockPanel을 찾은 후 그것에서 TextBox를 제거
+		DockPanel dock = txtbox.Paren as DockPanel;
+		dock.Children.Remove(txtbox);
+
+		//3개의 열과 행으로 구성된 Grid를 생성, 크기는 모두 0
+		Grid grid = new Grid();
+		dock.Children.Add(grid);
+
+		for(int i=0; i<3; i++)
+		{
+			RowDefinition rowdef = new RowDefinition();
+			rowdef.Height = new  GridLength(0);
+			grid.RowDefinitions.Add(rowdef);
+
+			ColumnDefinition coldef = new ColumnDefinition();
+			coldef.Width = new GridLength(0);
+			grid.ColumnDefinitions.Add(coldef);
+		}
+		
+		//첫째 열과 행의 크기를 100으로 초기화
+		grid.RowDefinitions[0].Height = new GridLength(100, GridUnitType.Star);
+		gird.ColumnDefinitions[0].Width = new GridLength(100, GridUnitType.Star);
+
+		//2개의 GridSplitter 컨트롤을 Grid에 추가
+		GridSplitter split = new GridSplitter();
+		split.HorizontalAlignmnet = HorizontalAlignment.Stretch;
+		split.VerticalAlignment = VerticalAlignment.Center;
+		split.Height = 6;
+		grid.Children.Add(split);
+		Grid.SetRow(split, 1);
+		Grid.SetColumn(split, 0);
+		Grid.SetColumnSpan(split, 3);
+
+		split = new GridSplitter();
+		split.HorizontalAlignment = HorizontalAlignment.Center;
+		split.VerticalAlignment = VerticalAlignment.Stretch;
+		split.Width = 6;
+		grid.Children.Add(split);
+		Grid.SetRow(split, 0);
+		Grid.SetColumn(split, 1);
+		Grid.SetRowSpan(split, 3);
+
+		//XAML 객체를 보여주기 위한 Frame 생성
+		frameParent = new Frame();
+		frameParent.NavigationUIVisibility = NavigationUIVisibility.Hidden;
+		grid.Children.Add(frameParent);
+
+		//TextBox를 Grid에 붙임
+		txtbox.TextChanged += TextBoxOnTextChanged;
+		grid.Children.Add(txtbox);
+
+		//로드된 설정을 XamlCruncherSettings로 형 변환
+		settingXaml = (XamlCruncherSettings)settings;
+
+		//Xaml 메뉴를 최상위 메뉴로 삽입
+		MenuItem itemXaml = new MenuItem();
+		itemXaml.Header = "_Xaml";
+		menu.Items.Insert(menu.Items.Count-1, itemXaml);
+
+		//XamlOrientationMenuItem을 생성하고 메뉴에 추가
+		itemOrientation = new XamlOrientationMenuItem(grid, txtbox, frameParent);
+		itemOrientation = settingsXaml.Orientation;
+		itemXaml.Items.Add(itemOrientation);
+
+		//탭에 공백을 삽입하기 위한 메뉴
+		MenuItem  itemTabs = new MenuItem();
+		itemTabs.Header = "_Tab Spaces...";
+		itemTabs.Click += TabSpacesOnClick;
+		itemXaml.Items.Add(itemTabs);
+
+		//파싱을 중단하기 위한 메뉴
+		MenuItem itemNoParse = new MenuItem();
+		itemNoParse.Header = "_Suspend Parsing";
+		itemNoParse.IsCheckable = true;
+		itemNoParse.SetBinding(MenuItem.IsCheckedProperty, "IsSuspendparsing");
+		itemNoParse.DataContext = this;
+		itemXaml.Items.Add(itemNoParse);
+
+		//Reparse하기 위한 커맨드
+		InputGestureCollection collGest = new InputGestureCollection();
+		collGest.Add(new KeyGesture(Key.F6));
+		RoutedUICommand commReparse = new RoutedUICommand("_Reparse", "Reparse", GetType(), collGest);
+
+		//Reparse를 위한 메뉴
+		MenuItem itemReparse = new MenuItem();
+		itemReparse.Command = commReparse;
+		itemXaml.Items.Add(itemReparse);
+
+		//Reparse를 위한 커맨드 바인딩
+		CommandBindings.Add(new CommandBinding(commReparse, ReparseOnExecuted));
+
+		//창을 보여주기 위한 커맨드
+		collGest = new InputGestureCollection();
+		collGest.Add(new KeyGesture(Key.F7));
+		RoutedUICommand commShotWin = new RoutedUICommand("Show _Window", ShowWindow", GetType(), collGest);
+
+		//창을 보여주기 위한 메뉴
+		MenuItem itemShowWin = new MenuItem();
+		itemShowWin.Command = commShowin;
+		itemXaml.Items.Add(itemShowWin);
+
+		//창을 보여주기위한 커맨드 바인딩
+		CommandBindings.Add(new CommandBinding(commShowWin, ShowWindowOnExecuted, ShowWindowCanExecute));
+
+		//Save as Startup Document 메뉴
+		MenuItem itemTemplate = new MenuItem();
+		itemTemplate.Header = "Save as Startup _Document";
+		itemTamplate.Click += NewStartupOnClick;
+		itemXaml.Items.Add(itemTemplate);
+
+		//Help 메뉴 상에 도움말을 삽입
+		MenuItem itemXamlHelp = new MenuItem();
+		itemXamlHelp.Header = "_Help...";
+		itemXamlHelp.Click += HelpOnClick;
+		MenuItem itemHelp = (MenuItem)menu.Items[menu.Items.Count - 1];
+		itemHelp.Items.Add(0, itemXamlHelp);
+
+		//새로운 StatusBar 항목
+		statusParse = new StatusBarItem();
+		status.Items.Insert(0, statusParse);
+		status.Visibility = Visibility.Visible;
+
+		//여타 예외 상황들에 대한 핸들러를 설정
+		//코드가 미치는 새로운 특징이나 변화를 표시
+		Dispatcher.UnhandleException == DispatcherOnUnhandledException;
+	}
+
+	//NewOnExecute 핸들러를 오버라이딩해 TextBox에 StartupDocument를 넣음
+	protected override void NewOnExecute(object sender, ExecutedRoutedEventArgs args)
+	{
+		base.NewOnExecute(sender, args);
+
+		string str = ((XamlCruncherSettings)settings).StartupDocument;
+
+		//다음 Replace 메소드가 \r\n을 올바르게 삽입하게 함
+		str = str.Replace("\r\n", "n");
+
+		//라인 피트를 캐리지 리턴 라인 피드로 바꿈
+		str = str.Replace("\n", "\r\n");
+		txtbox.Text = str;
+		isFileDirty = false;
+	}
+	//XamlCruncherSettings를 로드하게 LoadSettings를 오버라이딩
+	protected override object LoadSettings()
+	{
+		return XamlCruncherSettings.Load(typeof(XamlCruncherSettings), strAppData);
+	}
+	//메뉴에서 Orientation을 저장하는 OnClosed 오버라이딩
+	protected override void OnClosed(EventArga args)
+	{
+		settingsXaml.Orienation = itemOrientation.Orientation;
+		base.OnClosed(args);
+	}
+
+	//XamlCruncherSettings 객체를 저장하는 SaveSettings를 오버라이딩
+	protected override void SaveSettings()
+	{
+		((XamlCruncherSEttings)settings).Save(strAppData);
+	}
+
+	//Tab Spaces 메뉴 핸들러
+	void TabSpacesOnCLick(object sender, RoutedEventArgs args)
+	{
+		XamlTabSpacesDialog dlg = new XamlTabSpacesDialog();
+
+		dlg.Owner = this;
+		dlg.TabSpaces = settingsXaml.TabSpaces;
+
+		if((bool)dlg.ShowDialog().GetValueOrDefault())
+		{
+			settingsXaml.TabSpaces = dlg.TabSpaces;
+		}
+	}
+
+	//Reparse 메뉴 핸들러
+	void ReparseOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		Parse();
+	}
+	
+	//Show Window 메뉴 핸들러
+	void ShowWindowCanExecute(object sender, CanExecuteRoutedEventArgs args)
+	{
+		args.CanExecute = (win != null);
+	}
+	void ShowWindowOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		if(win != null)
+			win.Show();
+	}
+
+	//Save as New Startup Document 메뉴 핸들러
+	void NewStartupOnClick(object sender, RoutedEventArgs args)
+	{
+		((XamlCruncherSettings)settings).StartupDocument = txtbox.Text;
+	}
+
+	//Help 메뉴 핸들러
+	void HelpOnClick(object sender, RoutedEventArgs args)
+	{
+		Uri uri = new Uri("pack://application:,,/XamlCruncherHelp.xaml");
+		Stream stream = Application.GetResourceSetram(uri).Stream;
+
+		Window win = new Window();
+		win.Title = "XAML Cruncher Help";
+		win.Content = XamlReader.Load(stream);
+		win.Show();
+	}
+
+	//OnPreviewKeyDown이 탭 키를 공백으로 대체
+	protected override void OnPreviewKeyDown(KeyEventArgs args)
+	{
+		base.OnPreviewKeyDown(args);
+
+		if(args.Source == txtbox && args.Key == key.Tab)
+		{
+			string strInsert = new string(' ', tabspaces);
+			int iChar = txtbox.SelectionStart;
+			int iLine = txtbox.GetLineIndexFromCharacterIndex(iChar);
+
+			if(iLine != -1)
+			{
+				int iCol = iChar - txtbox.GetCharacterIndexFromLineIndex(iLine);
+				strInsert = new string(' ', settingsXaml.TabSpaces - iCol % settingsXaml.TabSpaces);
+			}
+			txtbox.SelectedText = strInsert;
+			txtbox.CaretIndex = txtbox.SelectionStart + txtbox.SelectionLength;
+			args.Handled = true;
+		}
+	}
+	//TextBoxOnTextChanged가 XAML의 파싱을 수행
+	void TextBoxOnTextChanged(object sender, TextChangedEventArgs args)
+	{
+		if(IsSuspendParsing)
+			txtbox.Foreground = SystemColors.WindowTextBrush;
+		else
+			Parse();
+	}
+
+	//일반적인 Parse 메소드이며, Reparse 메뉴도 이 메소드를 역시 호출함
+	void Parse()
+	{
+		StringReader strreader = new StringReader(txtbox.Text);
+		XmlTextReader xmlreader = new XmlTextReader(strreader);
+
+		try
+		{
+			object obj = XamlReader.Load(xmlreader);
+			txtbox.Foreground = SystemColors.WindowTextBrush;
+
+			if(obj is Window)
+			{
+				win = obj as Window;
+				statusParse.Content = "Press F7 to display Window";
+			}else
+			{
+				win = null;
+				frameParent.Content = obj;
+				statusParse.Content = "OK";
+			}
+		}catch(Exeception exc)
+		{
+			txtbox.Foreground = Brushes.Red;
+			statusParse.Content = exc.Message;
+		}
+	}
+
+	//XAML 객체가 예외 상황으로 빠질 때 요구되는 UnhandledException 핸들러
+	void DispatcherOnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs args)
+	{
+		statusParse.Content = "Unhandled Exception " + args.Exception.Message;
+		args.Handled = true;
+	}
+}
+
+클래스 아래 부분 있는 Parse 메소드는 XAML을 파싱하는데, XamlReader.Load가 예외 상황을 발생했을 때 TextBox의 텍스트 전체를 붉은색으로 표시하고 예외 상황 메시지를 상태 표시줄에 표시한다. 그외 정상적인 XAML의 경우에는 객체를 Frame 컨트롤의 COntent 프로퍼티에 설정하는데 Window 객체를 위해서는 특별히 F7 키를 눌렀을 때 독립된 창을 띄워주는 기능을 구현한다. 
+
+때로는 XAML로부터 생성된 엘리먼트 트리 속에서 예외 상황이 발생하기도 하는데, 이것은 XAML로부터 생성된 객체가 애플리케이션의 일부분이기 때문이다. 이 예외 상황은 XAML Cruncher가 이유 없이 종료되는 것을 유발하기 때문에 이경우에 프로그램은 UnhandledException 이벤트 핸들러를 통해 상태 표시줄에 메시지를 표시한다. 하지만 이 이벤트는 남의 버그 코드를 다루는 XAML Cruncher와 같은 프로그램이 아니면 다루지 않는 것이 일반 적이다. 
+
+메뉴는 작은 대화상자를 통해 탭의 공백 개수를 변경할 수 있는데, 대화상자의 배치는 다음의 XAML 파일에서 볼 수 있다. 
+
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.XamlCruncher.XamlTabSpacesDialog" Title ="Tab Spaces" WindowStyle="ToolWindow"
+	ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+
+	<StackPanel>
+		<StackPanel Orientation="Horizontal">
+			<Label Margin="12,12,6,12">
+				_Tab spaces (1-10)
+			</Label>
+			<TextBox Name="txtbox" TextChanged="TextBoxOnTextChanged"	Margin="6,12,12,12"/>
+		</Stack>
+
+		<StackPanel Orientation="Horizontal">
+			<Button Name="btnOk" Click="OkOnClick" IsDefault="True" IsEnabled="False" Margin="12">
+				OK
+			</Button>
+
+			<Button IsCancel="True" Margin="12">
+				Cancel
+			</Button>
+		</StackPanel>
+	</StackPanel>
+</Window>
+
+이 XAML 파일은 19장의 내용이 이해된다면 전혀 새로울 것이 없다. 다음 코드 비하인드 파일은 public TabSacpes 프로퍼티와 2개의 이벤트 핸들러를 정의한다. 
+
+using System;
+using System.Windows;
+using System.Windows.Control;
+
+public partial class XamlTabSpacesDialog
+{
+	public XamlTabSpacesDialog()
+	{
+		InitializeComponent();
+		txtbox.Focus();
+	}
+	public int TabSpaces
+	{
+		set { txtbox.Text = value.ToString();	}
+		get { return Int32.Parse(txtbox.Text);	}
+	}
+
+	void TextBoxOnTextChanged(object sender, TextChangedEventArgs args)
+	{
+		int result;
+		btnOk.IsEnabled = (Int32.TryParse(txtbox.Text, out result) && result > 0 && result < 11);
+	}
+
+	void OkOnClick(object sender, RoutedEventArgs args)
+	{
+		DialogResult = true;
+	}
+}
+
+이 클래스는 TextBox의 Text 프로퍼티를 직접적으로 접근할 수 있는 TabSpaces라는 프로퍼티를 정의한다. 여기에서 접근자는 Int32 구조체의 정적 Parse 메소드를 예외 처리하지 않고 호출하는데, 이것은 TextChanged 이벤트 핸들러에서 입력된 수가 정적 TryParse 메소드를 통해 0보다 크거나 11보다 작은 수일 때만 OK 버튼을 활성화시키기 때문에 가능하다.
+
+XamlCruncher 클래스는 사용자가 Tab Spaces 메뉴를 선택했을 때 이 대화상자를 호출하는데, 다음은 그 메뉴 항목을 위한 Click 이벤트 핸들러의 전체 내용이다. 
+
+XamlTabSpacesDialog dlg = new XamlTabSpacesDialog();
+dlg.Owner = this;
+dlg.TabSpaces = settingsXaml.TabSpaces;
+if( (bool)dlg.ShowDialog().GetValueOrDefault())
+{
+	settingsXaml.TabSpaces = dlg.TabSpaces;
+}
+
+Owner 프로퍼티의 설정을 통해 XAML 파일 속에 명세된 WindowStartupLocation이 올바르게 동작 될 수 있다. 또한 이 대화상자에서 사용자가 Cancel 버튼을 클릭해 대화상자를 닫았는데도 TabSpaces 프로퍼티의 값이 변경된다면 문제가 있기 때문에 TabSpaces 프로퍼티는 사용자가 OK 버튼을 눌렀을 때만 값이 변경되게 한다. 
+
+TextBox와 Frame의 위치를 바꾸는 메뉴는 4개의 작은 그림으로 TextBox와 Frame의 변경 가능한 위치를 보여주는 클래스가 있다. 이 클래스는 사용자가 새로운 위치를 선택했을 때 Grid상에 엘리먼트들을 재배치한다. 
+
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Control;
+using System.Windows.Media;
+
+
+class XamlOrientationMenuItem : MenuItem
+{
+	MenuItem itemChecked;
+	Grid grid;
+	TextBox txtbox;
+	Frame frame;
+
+	//Dock 타입의 Orientation public 프로퍼티
+	public Dock Orientation
+	{
+		set
+		{
+			foreach(MenuItem item in Items)
+				if(item.IsChecked = (value == (Dock)item.Tag))
+					itemChecked = item;
+		}
+		get
+		{
+			return (Dock)itemChecked.Tag;
+		}
+	}
+
+	//생성자는 3개의 인자를 요구함
+	public XamlOrientationMenuItem(Grid grid, TextBox txtbox, Frame frame)
+	{
+		this.grid = grid;
+		this.txtbox = txtbox;
+		this.frame = frame;
+
+		Header = "_Orientation";
+
+		for(int i=0; i<4; i++)
+			Items.Add(CreateItem((Dock)i));
+
+		(itemCheck = (MenuItem) Items[0]).IsCheckted = true;
+	}
+
+	//Dock 설정상의 각 메뉴를 생성
+	MenuItem CreateItem(Dock dock)
+	{
+		MenuItem item = new MenuItem();
+		item.Tag = dock;
+		item.Click += ItemOnClick;
+		item.Checked += ItemOnCheck;
+
+		//메뉴에 보일 2개의 문자열
+		FormattedText formtxt1 = CreateFormattedText("Edit");
+		FormattedText formtxt2 = CreateFormattedText("Display");
+		double widthMax = Math.Max(formtxt1.Width, formtxt2.Width);
+
+		//DrawingVisual과 DrawingContext 생성
+		DrawingVisual vis = new DrawingVisual();
+		DrawingContext dc = vis.RenderOpen();
+
+		//박스로 둘러싸인 텍스트를 그림
+		switch(dock)
+		{
+			case Dock.Left: //왼쪽에서 편집하고 오른쪽에서 보여줌
+				BoxText(dc, formtxt1, formtxt1.Width, new Point(0, 0));
+				BoxText(dc, formtxt2, formtxt2.Width, new Point(formtxt1.Width + 4, 0));
+				break;
+			case Dock.Top: //위쪽에서 편집하고 아래쪽에서 보여줌
+				BoxText(dc, formtxt1, widthMax, new Point(0, 0));
+				BoxText(dc, formtxt2, widthMax, new Point(0, formtxt1.Height + 4));
+				break;
+			case Dock.Right: //오른쪽에서 편집하고 왼쪽에서 보여줌
+				BoxText(dc, formtxt2, formtxt2.Width, new Point(0, 0));
+				BoxText(dc, formtxt1, formtxt1.Width, new Point(formtxt2.Width + 4, 0));
+				break;	
+			case Dock.BOttom: //아래쪽에서 편집하고 위쪽에서 보여줌
+				BoxText(dc, formtxt2, widthMax, new Point(0, 0));
+				BoxText(dc, formtxt1, widthMax, new Point(0, formtxt2.Height + 4));
+				break;
+		}
+		dc.Close();
+		//visual의 Drawing을 바탕으로 해 Image 객체 생성
+		DrawingImage drawimg = new DrawingImage(vis.Drawing);
+		Image img = drawimg;
+
+		//메뉴의 헤더를 Image 객체에 설정
+		item.Header = img;
+
+		return img;
+	}
+	//귀찮은 FormattedText 인자 다루기
+	FormattedText CreateFormattedText(string str)
+	{
+		return new FormattedText(str, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(SystemFonts.MenuFontFamily,
+						SystemFonts.MenuFontStyle, SystemFonts.MenuFontWeight, FontStretches.Normal),
+						SystemFOnts.MenuFontSize, SystemColors.MenuTextBrush);
+	}
+	//사각으로 둘러싸인 텍스트를 그림
+	void BoxText(DrawingContext dc, FormattedText formtxt, double width, Point pt)
+	{
+		Pen pen = new Pen(SystemColors.MenuTextBrush, 1);
+
+		dc.DrawRectangle(null, pen, new Rect(pt.X, pt.Y, width + 4, formtxt.Height + 4));
+		double X = pt.X + (width - formtxt.Width) / 2;
+		dc.DrawText(formtxt, new Point(X+2, pt.Y + 2));
+	}
+
+	//클릭했을 때 항목을 체크하거나 체크 해제함
+	void ItemOnClick(object sender, RoutedEventArgs args)
+	{
+		itemChecked.IsChecked = false;
+		itemChecked = args.Source as MenuItem;
+		itemChecked.IsCheckted = true;
+	}
+
+	//체크된 항목에 따라 위치를 변경
+	void ItemOnCheck(object sender, RoutedEventArgs args)
+	{
+		MenuItem itemChecked = args.Source as MenuItem;
+
+		//둘째와 셋째의 열과 행을 0으로 초기화
+		for(int i=0; i< 3; i++)
+		{
+			grid.RowDefinitions[i].Height = new GridLength(0);
+			grid.ColumnDefinitions[i].Width = new GridLength(0);
+		}
+		//TextBox와 Frame셀을 0으로 초기화
+		Grid.SetRow(txtbox, 0);
+		Grid.SetColumn(txtbox, 0);
+		Grid.SetRow(frame, 0);
+		Grid.SetColumn(frame, 0);
+
+		//열과 행을 위치 설정에 따라 설정
+		switch((Dock)itemChecked.Tag)
+		{
+			case Dock.Left:	//왼쪽에서 편집하고 오른쪽에서 보여줌
+				grid.ColumnDefinitions[1].Width = GridLength.Auto;
+				grid.ColumnDefinitions[2].Width = new GridLength(100, GridUnitType.Star);
+				Grid.SetColumn(frame, 2);
+				break;
+			case Dock.Top:	//위쪽에서 편집하고 아래쪽에서 보여줌
+				grid.RowDefinitions[1].Height = GridLength.Auto;
+				grid.RowDefinitions[2].Height = new GridLength(100, GridUnitType.Star);
+				Grid.SetRow(frame, 2);
+				break;
+
+			case Dock.Right:	//오른쪽에서 편집하고 왼쪽에서 보여줌
+				grid.ColumnDefinitions[1].Width = GridLength.Auto;
+				grid.ColumnDefinitions[2].Width = new GridLength(100, GridUnitType.Star);
+				Grid.SetColumn(txtbox, 2);
+				break;
+
+			case Dock.Bottom:	//아래쪽에서 편집하고 위쪽에서 보여줌
+				grid.RowDefinitions[1].Height = GridLength.Auto;
+				grid.RowDefinitions[2].Height = new GridLength(100, GridUnitType.Star);
+				Grid.SetRow(txtbox, 2);
+				break;
+		}
+	}
+}
+
+XamlCruncher 클래스 생성자는 최상위 Help 메뉴와 하위 메뉴를 추가하는데, 이것은 이 프로그램과 메뉴들에 대한 짧은 설명을 포함한 별도의 창을 띄운다. 수년 동안 도움말 파일은 Rich Text Format(RTF)이나 대중적이지만 유별난 마크업 언어인 HTML로 저장되어 왔다. 
+
+하지만 이제 새로운 기술 규약을 소개하고 RichTextBox로부터 생성된 객체 타입인 FlowDocument 객체로 도움말 파일을 작성해볼 차례이다. 초기 버전의 XAML Cruncher에서는 다음 XAML 파일을 손으로 직접 작성했는데 그것은 엘리먼트들이 Paragraph, Bold, Italic과 같이 거의 문자열로 구성된 것들이기 때문이었다. 
+
+
+<FlowDocument xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	TextAlignment="Left">
+
+	<Paragraph TextAlignment="Center" FontSize="32" FontStyle="Italic" LineHeight="24">
+		XAML Cruncher
+	</Paragraph>
+
+	<Paragraph TextAlignment="Center">
+		&#x00A9; 2006 by Charles Petzold
+	</Paragraph>
+
+	<Paragraph FontSize="16pt" FontWeight="Bold" LineHeight="16">
+		Introduction
+	</Paragraph>
+
+	<Paragraph>
+		XAML Cruncher is a sample program from Charles Petzold's book
+		<Italic>
+			Applications = Code + Markup:
+			A Guide to the Microsoft Windows Presentation Foundation
+		</Italic>
+		published by Microsoft Press in 2006.
+		XAML Cruncher provides a convenient way to learn about and expreiment
+		with XAML, the Extensible Application Markup Language.
+	</Paragraph>
+
+	<Paragraph>
+		XAML Cruncher consists of an Edit section (in which you enter and edit
+		a XAML document) and a Display section that shows the object created
+		from the XAML. If the XAML document has errors, the text is displayed
+		in red and the status bar indicates the problem.
+	</Paragraph>
+
+	<Paragraph FontSize="16pt" FontWeight="Bold" LineHeight="16">
+		Xaml menu
+	</Paragraph>
+
+	<Paragraph>
+		The <Bold>Orientation</Bold>menu item lets you choose whether you
+		want the Edit and Display sections of XAML Cruncher arranged
+		horizontally or vertically.
+	</Paragraph>
+
+	<Pragraph>
+		The <Bold>Tab Spaces</Bold> menu item displays a dialog box that lets 
+		you choose the number of spaces you want inserted when you press the Tab key. Changing this item does not change any indentation
+		already in the current document.
+	</Pragraph>
+
+	<Pragraph>
+		There are times when your XAML document will be so complex that it
+		takes a little while to convert it into an object. You may want to
+		<Bold>Suspend Parsing</Bold> by checking this item on the
+		<Bold>Xaml</Bold> menu.
+	</Pragraph>
+
+	<Pragraph>
+		If you've suspended parsing, or if you want to reparse the XAML file, 
+		select <Bold>Reparse</Bold> from the menu or press F6.
+	</Pragraph>
+
+	<Pragraph>
+		If the root element of your XAML is <Italic>Window</Italic>,
+		XAML Cruncher will not be able to display the <Italic>Window</Italic>
+		object in it's own window.
+		Select the <Bold>Show Window</Bold> menu item or press F7 to view
+		this window.
+	</Pragraph>
+
+	<Pragraph>
+		When you start up XAML Cruncher (and whenever you select
+		<Bold>New</Bold> from the <Bold>File</Bold> menu), the Edit window
+		displays a simple startup document.
+		If you want to use the current document as the startup document,
+		select the <Bold>Save as Startup Document</Bold> item.
+	</Pragraph>
+</FlowDocument>
+
+이 파일은 마이크로소프트 비주얼 스튜디오의 XamlCruncher 프로젝트에서 반드시 Resource로 지정되어야 한다. 왜냐하면 비주얼 스튜디오는 이 파일을 Page로 바꾸려 하지만 XamlCruncher 코드에서는 이것이 Resource로 다뤄져야 하기 때문이다. 또한 HelpOnClick 이벤트 핸들러에서는 다음과 같이 리소스의 URI 객체를 먼저 얻고 Stream을 생성한다. 
+
+Uri uri = new Uri("pack://application:,,/XamlCruncherHelp.xaml");
+Stream stream = Application.GetResourceStream(uri).Stream;
+
+그 다음에 메소드는 Window를 생성하고 Title을 설정하며 다음과 같이 리소스를 참조하는 Stream을 XamlReader.Load에 넘기고, 그 후 반환되는 FlowDocument 객체를 Content 프로 퍼티에 설정한다. 
+
+Window win = new Window();
+win.TItle = "XAML Cruncher Help";
+win.Content = XamlRender.Load(stream);
+win.Show();
+
+이 방법 외에 몇 가지 다른 대안이 있는데, 그 중 하나는 Frame 컨트롤을 생성하고 그것의 Source 프로퍼티에 직접 Uri 객체를 설정하는 것이다. 
+
+Frame frame = new Frame();
+frame.Source = new Uri("pack://application:,,/XamlCruncherHelp.xaml");
+
+그후 Window를 생성하고 이것의 컨텐트에 Frame을 설정한다
+
+Window win = new Window();
+win.Title = "XAML Cruncher Help";
+win.COntent = frame;
+win.Show();
+
+세 번째 방법은 도움말 창을 정의하는 XamlHelpDialog.xaml을 부르는 XAML 파일을 생성하는 것이다. 
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	Title="XAML Cruncher Help"	x:Class="Petzold.XamlCruncher.XamlHelpDialog">
+	<Frame Source="XamlCruncherHelp.xaml" />
+</Window>
+
+Frame 컨트롤의 Source 프로퍼티를 설정할 때 간결해진 문법에 주목할 필요가 있는데, 이것은 HelpOnCLick 메소드에서 다음과 같은 세 구문을 줄일 수 있다. 
+
+XamlHelpDialog win = new XamlHelpDialog();
+win.IntiializeComponent();
+win.show();
+
+XAML에 정의된 XamlHelpDialog 객체를 생성한 후에 메소드는 InitializeComponent(보통 코드 비하인드 파일에서 수행되는 작업)와 Show를 호출하게 된다. 한 가지 흥미로운 사실은 이 방법에서 FlowDocument를 정의하는 XamlCruncherHelp.xaml의 빌드 작업 설정으로 Resource와 Page 둘다를 허용한다는 것인데, 후자의 경우 XAML 파일은 컴파일된 BAML 파일 형태로 .EXE 파일에 저장된다. 
+
+도움말 파일을 보여주는 방법은 일단 뒤로 하고 드디어 XAML Crunch가 완성되어 써볼수 있게 됐다. 앞으로 20장의 많은 부분과 나머지 장에서 XAML Cruncher나 유사한 프로그램에서 생성되고 돌아갈수 있는 스탠드얼론 XAML 파일을 많이 볼 수 있을 것이다. 
+
+그럼 XAML Cruncher가 기본으로 생성하는 다음의 간단한 XAMl 파일과 함께 시작해보자. 
+
+<Button xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	Hello, XAML!
+</Button>
+
+정적 XamlReader.Load 메소드는 구문을 파싱하고 Button 타입의 객체를 생성한다. XamlReader.Load가 실제로 XAML을 파싱하고 그것으로부터 하나 이상의 객체를 생성하기 때문에 필자는 앞으로 편의상 XamlReader.Load 메소드를 파서라고 간단히 칭할 것이다. 
+
+.NET에는 윈도우 폼과 ASP.NET(Active Server Pages)에서 사용되는 3가지의 Button 클래스가 있다. 하지만 한 가지 의문은 어떻게 파서가 이 XAML에 있는 Button 객체를 생성하기 위해 필요한 클래스를 저것 중에 찾을 수 있냐는 것이다. 알다시피 XAML은 2개의 XML 네임스페이스를 가지고 있다. 하지만 XAML에는 System.Windows.Controls와 같은 공용 언어 런타임 네임스페이스를 포함하지 않으며, System.Windows.Controls.Button 클래스가 존재하는 PresentationFramework.dll 어셈블리를 참조하지도 않는다. 왜 파서는 검증된 클래스 이름이나 using 지시자를 별도로 요구하지 않을까?
+
+한 가지 해답은 WPF 애플리케이션이 Button 클래스가 존재하는 Windows Forms 어셈블리나 ASP.NET 어셈블리를 참조하지는 않지만 확실히 PresentationFramework.dll 어셈블리는 참조한다는 것이다. 왜냐하면 이 어셈블리에 XamlReader 클래스가 존재하기 때문이다. 그런데 WPF 애플리케이션이 System.Windows.Forms.dll이나 System.Web.dll을 참조하고 이 어셈블리가 애플리케이션에 의해 로드되는데도 파서는 여전히 어떤 버튼 클래스가 필요한지 알고 있다. 
+
+이 미스터리의 비밀은 PresentationFramework.dll 어셈블리 속에 있다. 이 어셈블리느에는 수많은 커스텀 속성이 있는데(애플리케이션은 이 속성을 Assembly 객체의 GetCustomAttributes을 호출해 얻는다)이 속성 중에서 몇 가지는 XmlnsDefinitionAttribute 타입이다. 이 클래스는 2개의 중요한 XmlNamespace와 ClrNamespace라는 프로퍼티를 포함한다. PresentationFramework 속의 XmlnsDefinitionAttribute 객체 중 하나는 XmlNamespace를 http://schemas.microsoft.com/winfx/2006/xaml/presentation으로 설정하고 ClrNamespace프로퍼티를 System.Windows.Controls으로 설정하며, 문법은 다음과 같다
+
+[assembly:XmlnsDefinition
+("http://schemas.microsoft.com/winfx/2006/xaml/presentation", "System.Windows.Controls")]
+
+다른 XmlnsDefinition 속성은 이 XML 네임스페이스를 System.Windows,System.Windows.Controls.Primitives, System.Windows.Input, System.Windows.Shapes 등과 같은 CLR 네임스페이스로 설정된다.
+
+XAML 파서는 애플리케이션이 로드한 모든 어셈블리(있다면)속의 XmlnsDefinition 속성을 검사하는데, 이 속성 중에 하나의 XML 네임스페이스라도 XAML 파일의 XML 네임스페이스와 맞으면 파서는 이 어셈블리 내에서 Button 클래스를 찾을 때에 어떤 CLR 네임스페이스를 필요한지 알 수 있다. 
+
+그런데 프로그램이 XmlnsDefinition에 동일한 XML 네임스페이스를 가지고 완전히 다른 Button 클래스를 가진 어셈블리를 참조한다면 파서에는 당연히 문제가 될 수 있다. 하지만 그런 일은 흑자가 마이크로소프트의 XML 네임스페이스를 사용한 어셈블리를 만들거나, 마이크로소프트 직원이 큰 실수를 저지르지 않는 한 거의 일어날 수 없다. 
+
+그럼 이제 XAML Cruncher에서 Width 프로퍼티를 설정해 실제 너비를 가진 버튼을 만들어 보자. 
+<Button xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Width="144">
+	Hello, XAML!
+</Button>
+
+파서는 리플렉션으로부터 Button이 Width 프로퍼티를 가지고 있다는 것을 알 수 있고, 이 프로퍼티가 double 타입이거나 System.Double과 같은 CLR 타입이라는 것도 역시 알 수 있다. 하지만 대부분 XML 속성에서 Width의 값은 사실 문자열이기 때문에 파서는 이 문자열을 double 타입의 객체로 변환해야 한다. 이것이 꽤 사소하게 들리겠지만 실제로 Double 구조체는 문자열을 숫자로 바꾸는 정적 Parse 메소드를 가지고 있다. 
+
+일반적으로 변환은 생각보다 그리 간단하지 않다. 특히 다음과 같이 너비를 인치로 표현하는 경우를 생각해 볼 수 있다. 
+
+Width=1.5in"
+
+"in"과 숫자 사이에 공백이 들어갈 수도 있고, 대문자나 혹은 소문자로 표기될 수도 있다. 
+
+Width="1.5 IN"
+
+과학적 표기에는 다음과 같은 표현도 허용한다. 
+Width = "15e-lin"
+
+숫자로 명시하지 않을수도 있으며, 여기에는 대소문자 문제도 존재한다
+Width="NaN"
+
+Width 프로퍼티에는 해당되지 않지만 다른 double 속성은 Infinity나 -Infinity를 사용할수도 있고 미터법을 사용할 수도 있다. 
+
+Width="3.81cm"
+
+또는 인쇄(typographical)에 관련된 지식이 있다면 프린터 포인트를 사용할 수도 있을 것이다. 
+
+Width = "108pt"
+
+Double.Parse 메소드는 과학적 표기, NaN, Infinity는 지원하지만 "in", "cm"또는 "pt" 문자열은 허용하지 않는다. 따라서 이것은 반드시 다른 곳에서 미리 처리되어야 할 것이다. 
+
+XAML 파서가 double 프로퍼티를 만나면 System.ComponentModel 네임스페이스 내의 DoubleConverter 클래스를 찾게 되는데, 이 것은 수많은 변환 클래스중의 하나이다. 이 변환 클래스는 전부 TypeConverter에서 상속되고 ConverteFromString 메소드를 포함하며 이 경우에는 아마도 궁극적으로 Double.Parse 메소드를 사용해 변환을 수행할 것이다. 
+
+유사하게 Margin(Thickness 타입의)을 설정할 때 파서는 System.Windows 네임스페이스 내의 ThicknessConverter 클래스를 찾게되는데, 이 컨버터는 4면 모두를 다음과 같이 하나의 값으로 설정할 수 있게 한다. 
+
+Margin="48"
+
+아니면 첫 번째 값으로 왼쪽 면과 오른쪽 면을, 두 번째 값으로 위쪽 면과 아래쪽 면을 설정할수도 있다. 
+
+Margin="48 96"
+
+이 두 숫자 사이에 콤마를 사용해 구분할수도 있으며 4개의 숫자를 사용해 왼쪽 위쪽, 오른쪽, 아래쪽을 설정할 수도 있다
+Margin="48 96 24 192"
+
+여기에 in나 cm 혹은 pt를 사용하고 싶으면 다음과 같이 숫자와 측정법 문자사이에는 공백이 없어야 된다. 
+
+Margin="1.27cm 96 18pt 2in"
+
+XAML을 비주얼 스튜디오 편집기로 입력할 때 실제 파서보다 더 엄격한 규칙이 적용되는데, XAML이 부합되지 않으면 경고 메시지를 보여주고 Thickness 객체를 정의할 경우에는 값 사이에 콤마를 더 선호한다. 
+
+불리언 값의 경우는 일반적으로 true 또는 false를 대소문자의 구별 없이 사용할 수 있다. 
+
+IsEnabled = "FaLSe"
+
+하지만 비주얼 스튜디오는실제로 True와 False를 더 선호하며 프로퍼티에 열거형 멤버를 설정할 때는 EnumConverter 클래스가 속성 설정에 열거형 멤버 그 자체를 사용하게 요구한다. 
+
+HorizontalAlignment="Center"
+
+돌이켜보면 FontStretch, FOntStyle, FontWeight 프로퍼티는 열거형 멤버로 설정되지 않고 정적 FontStretches, FOntStyles, FontWeights 클래스의 프로퍼티로 설정됐다. 그것은 FOntStretchConverter, FOntStyleConverter, FontWeightConverter 클래스가 그 정적 프로퍼티를 직접 사용할수 있게 해주기 때문에 FontFamily에는 문자열을, FOntSize에는 double을 바로 설정할 수 있는 것이다. 
+
+FontFamily="Times New Roman"
+FontSize = "18pt"
+FontWeight="Bold"
+FontStyle="Italic"
+
+이제 새로운 것을 살펴보자. 여기에 5개의 점을 가진 별을 만드는 Star.xaml라는 이름의 XAML 파일이 있다. 

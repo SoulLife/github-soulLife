@@ -1,0 +1,177 @@
+(2)재귀적 CTE
+재귀적 CTE는 다른 것에 비해서 이해하기가 조금 어렵다. 재귀적이라는 의미는 자기 자신을 반복적으로 호출한다는 의미를 내포한다. 간단한예를 들어서 이해해 보자. 회사의 부서장과 직원의 관계를 예로 들어보자. 
+
+						나사장(사장)				레벨0
+▼			▼					▼
+이영업(영업이사)		김재무(재무이사)				최정보(정보이사)		레벨1
+▼			▼		▼			▼
+한과장			김부장		이부장			윤차장			레벨2
+					▼	▼		▼
+					우대리	지사원		이주임			레벨3
+[그림 6-55]간단한 조직도 예
+앞의 간단한 조직도 예를 보면 전혀 어려울 것이 없다. 사장인 나사장은 레벨0이고 , 3명의 이사는 레벨1, 과장/차장/부장급은 레벨2, 나머지 대리/사원급은 레벨 3으로 정해졌다. 
+
+이것을 테이블로 만들어보자 
+
+*실제라면 사번을 기본키로 해야겠지만, 테이블의 단순화와 이해의 명확성을 위해서 직원 이름을 기본키로했다. 
+
+직원이름(EMP) - 기본 키		상관 이름(MANAGER)		부서(DEPARTMENT)
+나사장				없음(NULL)			없음(NULL)
+김재무				나사장				재무부
+김부장				김재무				재무부
+이부장				김재무				재무부
+우대리				이부장				재무부
+지사원				이부장				재무부
+이영업				나사장				영업부
+한과장				이영업				영업부
+최정보				나사장				정보부
+윤차장				최정보				정보부
+이주임				윤차장				정보부
+
+지금은 데이터가 몇개 없고, 처음에 트리 구조로 먼저 데이터를 작성했으므로 앞의 테이블을 봐도 상관과 부하 직원의 관계가 보일 수 있지만, 실무에서 많은 직원들이 트리 구조가 없이 앞의 테이블만 가지고는 도저히 누가 누구의 상관인지를 파악하기가 어렵다. 특히 사원번호 등이 코드로 되어 있다면 더욱 그러할 것이다. 
+
+우선 재귀적 CTE의 기본 형식은 다음과 같다. 형식만 잘 이해해 보자. 
+
+WITH CTE_테이블이름(열이름)
+AS
+(
+	<쿼리문1 : SELECT * FROM 테이블A>
+	UNION ALL
+	<쿼리문2 : SELECT * FROM 테이블A JOIN CTE_테이블이름>
+)
+SELECT * FROM CTE_테이블이름;
+
+앞의 구문에서 <쿼리문1>을 앵커 멤버(Anchor Member:AM)이라고 부르고, <쿼리문2>를 재귀멤버 (Recursive Member:RM)라고 지칭한다. 
+
+작동원리를 살펴보면 
+
+1) <쿼리문1>을 실행한다. 이것이 루틴의 최초 호출에 해당한다. 그리고 기본값은 0으로 초기화된다. 
+2) <쿼리문2>을 실행한다. 기본값을 기본값+1로 증가시킨다. 그런데 SELECT의 결과가 빈것이 아니라면, CTE_테이블이름을 다시 재귀적으로 호출한다. 
+3) 계속 2번을 반복한다. 단 SELECT의 결과가 아무것도 없다면 재귀적인 호출이 중단된다. 
+4) 외부의 SELECT문을 실행해서 앞 단계에서의 누적된 결과(UNION ALL)을 가져온다. 
+
+정도로 요약할 수 있겠다. 좀 어렵게 느껴진다면 바로 실습을 통해서 이해해 보자. 
+
+
+
+
+실습4 : 하나의 테이블에서 회사의 조직도가 출력되게 재귀적 CTE를 구현해 보자. 
+
+0. 우선 앞의 테이블을 정의하고 데이터를 입력해 보자. 
+USE sqlDB;
+CREATE TABLE empTbl (emp NCHAR(3), manager NCHAR(3), department NCHAR(3));
+
+0-2 표와 같은 데이터를 입력해보자. 
+INSERT INTO empTbl VALUES('나사장', NULL, NULL);
+INSERT INTO empTbl VALUES('김재무', '나사장', '재무부');
+INSERT INTO empTbl VALUES('김부장', '김재무', '재무부');
+INSERT INTO empTbl VALUES('이부장', '김재무', '재무부');
+INSERT INTO empTbl VALUES('우대리', '이부장', '재무부');
+INSERT INTO empTbl VALUES('지사원', '이부장', '재무부');
+INSERT INTO empTbl VALUES('이영업', '나사장', '영업부');
+INSERT INTO empTbl VALUES('한과장', '이영업', '영업부');
+INSERT INTO empTbl VALUES('최정보', '나사장', '정보부');
+INSERT INTO empTbl VALUES('윤차장', '최정보', '정보부');
+INSERT INTO empTbl VALUES('이주임', '윤차장', '정보부');
+
+
+1. 재귀적 CTE의 구문 형식에 맞춰서 쿼리문을 만들어 보자. 아직 조인(Join)을 배우지 않아서 <쿼리문2>부분이 좀 어렵겠지만, 형식대로 empTbl과 empCTE를 조인하는 방식이다. 어려우면 그냥 결과를 위주로 보자. 
+
+WITH empCTE(empName, mgrName, dept, level)
+AS
+(
+	SELECT emp, manager, department, 0 FROM empTbl
+	WHERE manager IS NULL --상관이 없는 사람이 바로 사장
+	UNION ALL
+	SELECT AA.emp, AA.manager, AA.department, BB.level+1
+	FROM empTbl AS AA INNER JOIN empCTE AS BB
+	ON AA.manager = BB.empName
+	WHERE level < 2
+)
+SELECT * FROM empCTE ORDER BY dept, level;
+
+
+AA, BB는 각 테이블의 별칭을 붙여준 것이다. 즉 AA.emp는 empTbl.emp(empTbl테이블의 emp열)과 같은 의미이다. 
+
+앞의 결과는 [그림6-55]의 조직도 그림과 같은 결과이다. 두 개를 동시에 살펴보면 같다는 것을 알 수 있다. 
+
+
+2. 그래도[그림6-55]처럼 보이지 않으므로 쿼리문을 약간 수정해서 [그림6-55]와 더욱 비슷하게 만들어 보자. 
+
+WITH empCTE(empName, mgrName, dept, level)
+AS
+(
+	SELECT emp, manager, department, 0 FROM empTbl
+	WHERE manager IS NULL --상관이 없는 사람이 바로 사장
+	UNION ALL
+	SELECT AA.emp, AA.manager, AA.department, BB.level+1
+	FROM empTbl AS AA INNER JOIN empCTE AS BB
+	ON AA.manager = BB.empName
+)
+SELECT replicate(' ㄴ', level) + empName AS [직원이름], dept [직원부서] FROM empCTE ORDER BY dept, level;
+
+replicate(문자, 개수)함수는 해당 문자를 개수만큼 반복하는 함수이다. 그러므로 레벨에 따라서 'ㄴ'문자를 출력함으로써 트리 구조 형태로 보여지는 효과를 줬다.
+
+
+
+3. 이번에는 사원급을 제외한 부장/차장/과장급까지만 출력해 보자. 레벨 2이므로 간단히 WHERE level <2만 <쿼리문2>부분에 추가해 주면 된다. 
+
+WITH empCTE(empName, mgrName, dept, level)
+AS
+(
+	SELECT emp, manager, department, 0 FROM empTbl
+	WHERE manager IS NULL --상관이 없는 사람이 바로 사장
+	UNION ALL
+	SELECT AA.emp, AA.manager, AA.department, BB.level+1
+	FROM empTbl AS AA INNER JOIN empCTE AS BB
+	ON AA.manager = BB.empName
+	WHERE level < 2
+)
+SELECT replicate(' ㄴ', level) + empName AS [직원이름], dept [직원부서] FROM empCTE ORDER BY dept, level;
+
+CTE에 대해서는 이 정도로 마치겠다. 개념이 좀 어렵기도 하고, 배우지 않은 내용까지 포함되어서 더욱 어렵게 느껴졌을 것이다. 그러나 SQL을 좀 더 익힌 후에 다시 본다면 그때는 훨씬 더 쉽게 여겨질 것이다. 
+
+이렇게해서 다음의 SELECT문의 기본형식을 모두 살펴보았다. 처음에 보았을 때는 무슨 암호(?)처럼 보였던 다음의 형식이 이제는 그렇게 생소하게 보이지는 않을 것이다. 
+
+
+[ WITH <common_table_expression>]
+SELECT select_list [ INTO new_table ]
+[ FROM table_source ]
+[WHERE search_condition ]
+[GROUP BY group_by_expression ]
+[ HEVING search_condition ]
+[ORDER BY order_expression [ ASC | DESC ] ]
+
+SELECT 문은 가장 많이 사용되는 쿼리문이며, 가장 쉬우면서도 동시에 가장 어려운 부분이기도 하다. 
+
+이책에서 다룬 내용은 일부일 뿐이므로 앞으로 실무에서 적용할 더욱 전문적인 고급 SQL을 익히려면 다른 SQL 책이나 도움말, 인터넷 등을 통해서 더욱 깊게 학습하기 바란다. 이쯤에서 SQL 문의 분류에 대해서 짧게 살펴보고, 계속 기본 SQL 문인 INSERT / UPDATE / DELETE를 익혀보자. 
+
+
+
+※ T-SQL 의 분류
+SQL 문은 크게 DML, DDL, DCL로 분류된다
+
+(1)DML
+DML(Data Manipulation Language: 데이터 조작 언어)은 데이터를 조작(선택, 삽입, 수정, 삭제)하는데 사용되는 언어다. DML 구문이 사용되는 대상은 테이블의 행이다. 그러므로 DML을 사용하려면 꼭 그 이전에 테이블이 정의되어 있어야 한다. 
+
+*단 SELECT INTO는 테이블이 없어도 생성해준다. 
+
+SQL 문 중에 SELECT, INSERT, UPDATE, DELETE가 이 구문에 해당된다. 또 트랜잭션(Transaction)이 발생하는 SQL도 이 DML이다. 
+
+트랜잭션이란 쉽게 표현하면, 테이블의 데이터를 변경(입력, 수정, 삭제)할 때 실제 테이블에 완전히 적용하지 않고 임시로 적용시키는 것을 말한다. 그래서 만약 실수가 있었을 경우에 임시로 적용시킨 것을 취소시킬수 있게 해준다. 
+
+*SELECT도 트랜잭션을 발생시키기는 하지만 INSERT/UPDATE/DELETE와는 조금 성격이 다르므로 별도로 생각하는 것이 좋다. 
+
+
+
+(2) DDL
+DDL(Data Definition Language: 데이터 정의 언어)은 데이터베이스, 테이블, 뷰, 인덱스 등의 데이터베이스 개체를 생성, 삭제, 변경하는 역할을 한다. 자주 사용하는 DDL은 CREATE, DROP, ALTER등이다. DDL은 이번 장 이후부터 종종 나오게 되므로 그때마다 다시 살펴보자. 한 가지 기억할 것은 DDL은 트랜잭션을 발생시키지 않는다는 것이다. 따라서 되돌림(ROLLBACK)이나 완전적용(COMMIT)을 시킬수가 없다. 즉 DDL 문은 실행 즉시 SQL Server에 적용된다.
+
+*예외로 CREATE TABLE 문 등은 트랜잭션을 발생시키기는 하지만 특별히 신경쓰지 않아도 된다. 
+
+
+(3) DCL
+DCL(Data Control Language: 데이터 제어 언어)은 사용자에게 어떤 권한을 부여하거나 빼앗을 때 주로 사용하는 구문으로 GRANT/REVOKE/DENY등이 이에 해당된다. 이 구문들은 2권(관리와 응용)에서 알아볼 것이다. 
+
+
+※ 233페이지 (2)부터 작성시작
