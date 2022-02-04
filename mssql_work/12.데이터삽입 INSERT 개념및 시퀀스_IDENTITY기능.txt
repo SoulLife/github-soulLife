@@ -1,0 +1,187 @@
+Section02 : 데이터의 변경을 위한 SQL문
+
+※ 데이터의 삽입 : INSERT
+INSERT는 테이블에 데이터를 삽입하는 명령어이다. 어렵지 안혹 간단하다. 기본적인 형식은 다음과 같다. 
+
+INSERT [INTO] <테이블> [(열1, 열2, ...) ] VALUES (값1, 값2, ...)
+
+
+※여기서 잠깐
+SQL Server 2005부터 Insert/Update/Delete 문도 CTE의 사용이 가능하다. 즉 다음과 같은 형식이 지원된다.
+[WITH CTE_테이블명()...]
+INSERT [INTO] <CTE_테이블명>...
+
+
+INSERT 문은 별로 어려울 것이 없으며, 몇 가지만 주의하면 된다. 우선 테이블 이름 다음에 나오는 열은 생략 가능하다. 하지만 생략할 경우에 VALUES 다음에 나오는 값들의 순서 및 개수가 테이블이 정의된 열 순서 및 개수와 같아야 한다. 
+
+USE tempDB;
+CREATE TABLE testTbl1 (id int, userName nchar(3), age int);
+GO
+INSERT INTO testTbl1 VALUES(1, '홍길동', 25);
+
+* tempDB는 SQL Server 서비스가 재가동되면(컴퓨터를 재부팅해도 같음)그 내부의 내용은 모두 삭제된다. 그러므로 지금처럼 임시로 사용하는 것은 괜찮지만, 잠시라도 저장되어야 할 테이블을 tempDB에 생성하는 것은 위험한 일이다. 
+
+만약 앞의 예에서 id와 이름만을 입력하고 나이를 입력하고 싶지않다면, 다음과 같이 테이블 이름 뒤에 입력할 열의 목록을 나열해 줘야 한다. 
+
+INSERT INTO testTbl1(id, userName) VALUES(2, '한가인');
+
+이 경우 생략한 age에는 NULL값이 들어간다. 
+
+열의 순서를 바꿔서 입력하고 싶을 때는 꼭 열 이름을 입력할 순서에 맞춰 나열해 줘야 한다. 
+
+INSERT INTO testTbl1(userName, age, id) VALUES('조인성', 29, 3);
+
+
+
+(2) 자동으로 증가하는 IDENTITY
+테이블의 속성이 IDENTITY로 지정되어 있다면 INSERT에서는 해당 열이 없다고 생각하고 입력하면 된다. IDENTITY는 자동으로 1부터 증가하는 값을 입력해 준다. 또 CREATE TABLE 에서 DEFAULT 문장으로 기본값을 설정해 놓았을때, INSERT를 사용할 때 별도의 값을 입력하지 않고 지정해 놓은 디폴트 값을 그대로 사용하려면 값이 입력될 자리에 'DEFAULT'라고 써주면 된다. 
+
+USE tempDB;
+CREATE TABLE testTbl2
+(id int IDENTITY,
+userName nchar(3),
+age int,
+nation nchar(4) DEFAULT '대한민국');
+GO
+INSERT INTO testTbl2 VALUES('강동원', 27, DEFAULT);
+
+그런데 만약 강제로 IDENTITY값을 입력하고 싶다면 다음과 같이수행하면 된다.
+SET IDENTITY_INSERT testTbl2 ON;
+GO
+INSERT INTO testTbl2(id, userName, age, nation) VALUES(11, '키아누', 31, '미국');
+
+주의사항은 IDENTITY_INSERT를 ON으로 변경한 테이블은 꼭 입력할 열을 명시적으로 지정해 줘야 한다. 만약 이 문장을 생략하면 오류가 발생한다. 
+
+INSERT INTO testTbl2 VALUES(12, '장만옥', 35, '중국');
+
+오류메시지:
+메시지 8101, 수준 16, 상태 1, 줄1
+테이블 testTbl2에 있는 ID 열의 명시적 값은 열 목록이 사용되고 IDENTITY_INSERT가 ON일 때만 지정할 수 있습니다. 
+
+다시 IDENTITY_INSERT를 OFF로 변경하고 입력하면, id 값은 최대값+1부터 자동입력된다. 
+
+SET IDENTITY_INSERT testTbl2 OFF;
+INSERT INTO testTbl2 VALUES('다꾸앙', 23, '일본');
+SELECT * FROM testTbl2;
+
+열의 이름을 잊어버렸을 때는 다음과 같이 시스템 저장 프로시저를 사용하면 열의 목록 및 기타 정보를 출력해 준다. 
+
+EXECUTE sp_help 테이블이름;
+
+또 특정 테이블에 설정된 현재의 IDENTITY 값을 확인하려면 다음 형식을 사용하면 된다. 
+
+SELECT IDENT_CURRENT('테이블이름');
+또는
+SELECT @@IDENTITY;
+
+IDENT_CURRENT는 특정 테이블을 지정해서 그 테이블에 설정된 IDENTITY 값을 확인할 수 있으며, @@IDENTITY는 현재의 세션(쿼리 창)에서 가장 최근에 생성된 ID의 값을 확인할 수 있다. 
+
+
+(3) SEQUENCE
+이번에는 IDENTITY와 같은 효과를 내기 위해 SQL Server 2012부터 제공되는 시퀀스(Sequence)개체를 사용해 보자. 앞의 testTbl2와 같은 방식을 사용해 보자. 
+
+* SEQUENCE는 오라클에서는 전부터 제공하던 개체인데, SQL Server에서 오라클과 같은 방식으로 제공하려고 새로 추가된 개체다. 
+
+우선앞 testTbl2와 같이 testTbl3을 생성해 보자. 단 이번에는 IDENTITY를 사용하지 않는다. 
+USE tempDB;
+CREATE TABLE testTbl3
+(id int,
+userName nchar(3),
+age int,
+nation nchar(4) DEFAULT '대한민국');
+GO
+
+시퀀스를 생성해 보자. 시작값은 1로, 증가값도 1로 설정한다. 
+CREATE SEQUENCE idSEQ
+START WITH 1 -- 시작값
+INCREMENT BY 1; -- 증가값
+GO
+
+데이터를 입력한다. 시퀀스를 입력하려면 NEXT VALUE FOR 시퀀스이름을 사용하면 된다. 
+
+INSERT INTO testTbl3 VALUES(NEXT VALUE FOR idSEQ, '강동원', 27, DEFAULT);
+
+강제로 id 열에 다른 값을 입력하고 싶다면 id 열에는 아무것도 지정하지 않았으므로 그냥원하는 값을 입력하면 된다. 그리고 시퀀스의 시작값을 다시 설정해준 후에 계속 시퀀스를 입력하면 된다. 결과는 앞에서 했던 IDENTITY와 같다. 
+
+INSERT INTO testTbl3 VALUES(11, '키아누', 31, '미국');
+GO
+ALTER SEQUENCE idSEQ
+	RESTART WITH 12; -- 시작값을 다시 설정
+GO
+INSERT INTO testTbl3 VALUES(NEXT VALUE FOR idSEQ, '다꾸앙', 23, '일본');
+SELECT * FROM testTbl3;
+
+시퀀스의 활용을 하나 더 살펴보면, 특정 범위의 값이 계속 반복되어서 입력되게 할 수도 있다. 
+
+예를 들어, 100, 200, 300이 반복되어 입력되게 다음과 같이 설정할 수도 있다. 
+
+CREATE TABLE testTbl4(id INT);
+GO
+CREATE SEQUENCE cycleSEQ
+START WITH 100
+INCREMENT BY 100
+MINVALUE 100 --최소값
+MAXVALUE 300 -- 최대값
+CYCLE; --반복설정
+GO
+INSERT INTO testTbl4 VALUES(NEXT VALUE FOR cycleSEQ);
+INSERT INTO testTbl4 VALUES(NEXT VALUE FOR cycleSEQ);
+INSERT INTO testTbl4 VALUES(NEXT VALUE FOR cycleSEQ);
+INSERT INTO testTbl4 VALUES(NEXT VALUE FOR cycleSEQ);
+GO
+SELECT * FROM testTbl4;
+
+시퀀스를 DEFAULT와 함께 사용하면 IDENTITY와 마찬가지로 값 표기를 생략해도 자동으로 입력되게 설정할 수 있다. 
+
+USE tempDB;
+CREATE SEQUENCE autoSEQ;
+START WITH 1
+INCREMENT BY 1;
+GO
+CREATE TABLE testTbl5
+( id int DEFAULT(NEXT VALUE FOR autoSEQ),
+userName nchar(3)
+);
+GO
+INSERT INTO testTbl5(userName) VALUES ('강동원');
+INSERT INTO testTbl5(userName) VALUES ('키아누');
+INSERT INTO testTbl5(userName) VALUES ('다꾸앙');
+
+※여기서 잠깐
+SQL Server2008부터 여러 개의 행을 한꺼번에 입력하는 기능을 지원한다. 
+3건을 입력하려면 지금까지 다음과 같이 3개의 문장으로 입력했는데,
+
+INSERT INTO 테이블이름 VALUES(값1, 값2..);
+INSERT INTO 테이블이름 VALUES(값3, 값4..);
+INSERT INTO 테이블이름 VALUES(값5, 값6..);
+
+3건의 데이터를 한 문장에서 다음과 같이 입력할 수도 있다. 
+INSERT INTO 테이블이름 VALUES(값1, 값2...) , (값3, 값4...), (값5, 값6...);
+
+
+(4)대량의 샘플데이터 생성
+이번에는 샘플 데이터를 입력하는 경우를 생각해 보자. 지금까지 했던 방식으로 직접 키보드로 입력하려면 많은 시간이 걸릴 것이다. 이럴 때 INSERT INTO ... SELECT 구문을 사용할수 있다. 이는 다른 테이블의 데이터를 가져와서 대량으로 입력하는 효과를 낸다. 
+
+INSERT INTO 테이블이름(열이름1, 열이름2, ...)
+SELECT 문;
+
+물론 SELECT 문의 결과 열의 개수는 INSERT할 테이블의 열 개수와 같아야 한다. 
+
+AdventureWorks의 데이터를 가져와서 입력해 보자. 
+
+USE tempDB;
+CREATE TABLE testTbl6(id int, Fname nvarchar(50), Lname nvarchar(50));
+
+GO
+INSERT INTO testTbl6
+SELECT BusinessEntityID, FirstName, LastName
+FROM AdventureWorks.Person.Person;
+
+결과 메시지:
+(19972개 행이 영향을 받음)
+
+이렇듯 기존의 대량의 데이터를 샘플데이터로 사용할 때 INSRT INTO ... SELECT 문은 아주 유용하다. 아예 테이블 정의까지 생략하고 싶다면 앞에서 배웠던 SELECT... INTO 구문을 다음과 같이 사용할 수도 있다. 
+
+USE tempDB;
+SELECT BusinessEntityID AS id, FIrstName as Fname, LASTName as Lname INTO testTbl7
+FROM AdventureWorks.Person.Person;
