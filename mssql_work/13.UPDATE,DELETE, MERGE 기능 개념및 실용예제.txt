@@ -1,0 +1,133 @@
+※ 데이터의 수정 : UPDATE
+기존에 입력되어 있는 값을 변경하려면 UPDATE 문을 다음과 같은 형식으로 사용한다. 
+UPDATE 테이블이름 SET 열1=값1, 열2=값2... WHERE 조건;
+
+UPDATE도 사용법은 간단하지만 주의할 사항이 있다. WHERE 절은 생략이 가능하지만 WHERE 절을 생략하면 테이블의 전체 행이 변경되므로, WHERE 절을 꼭 써줘야 한다. 
+
+다음 예는 Kim 의 전화번호를 없음으로 변경하는 예다. 10건이 변경될 것이다. 
+
+UPDATE testTbl6 SET Lname = '없음' WHERE Fname = 'Kim';
+
+만약 실수로 WHERE 절을 빼먹고 UPDATE testTbl3 SET Lname = '없음'을 실행했다면 전체 행의 Lname이 모두 없음으로 변경된다. 실무에서도 이러한 실수가 종종 일어날수 있으므로 주의가 필요하다. 원상태로 복구하려면 복잡한 절차가 많이 필요할 뿐만 아니라 다시 되돌릴수 없는 경우도 있다. 
+
+가끔은 전체 테이블의 내용을 변경하고 싶을 때 WHERE 를 생략할 수도 있는데, 예를 들어 구매 테이블에서 현재 단가가 모두 1.5배 인상되었다면 다음과 같이 사용할 수도 있다. 
+
+USE sqlDB;
+UPDATE buyTbl SET price = price * 1.5;
+
+
+
+
+※ 데이터의 삭제 : DELETE
+DELETE도 UPDATE와 거의 비슷한 개념이다. DELETE는 행 단위로 삭제하는데, 형 식은 다음과 같다. 
+
+DELETE 테이블이름 WHERE 조건;
+
+만약 WHERE문이 생략되면 전체 데이터를 삭제한다. 
+
+testTbl3에서 'Kim' 사용자가 필요없다면 다음과 같은 구문을 사용하면 된다. 
+
+USE tempDB;
+DELETE testTbl6 WHERE Fname = 'Kim';
+
+이 예에서는 10건의 행이 삭제될 것이다. 
+
+만약 대용량의 테이블이 더 이상 필요없다면 어떻게 삭제하는 것이 좋을까? 실습을 통해서 효율적으로 삭제해 보자. 또 트랜잭션의 개념도 함께 살펴보자. 
+
+
+※실습 5 : 대용량의 테이블을 삭제해 보자. 
+
+0. 대용량의 테이블 세 개를 생성해 보자. AdventureWorks에서 약 12만 건이 있는 테이블을 복사해서 사용하겠다. 
+
+USE tempdb;
+SELECT * INTO bigTbl1 FROM AdventureWorks.Sales.SalesOrderDetail;
+SELECT * INTO bigTbl2 FROM AdventureWorks.Sales.SalesOrderDetail;
+SELECT * INTO bigTbl3 FROM AdventureWorks.Sales.SalesOrderDetail;
+GO
+
+1. SSME 메뉴의 [도구] > [SQL Server Profiler]를 실행해서, 추적 이름은 적절히 넣고, 템플릿 사용에서 TSQL_Duration으로 선택한 후<실행> 버튼을 클릭한다. 
+
+2. SSMS 쿼리창에서 먼저 DELETE, DROP, TRUNCATE 문으로 새 테이블 모두 삭제한다. 세 구문 모두 테이블의 행을 삭제한다(단 DROP문은 테이블 자체를 삭제한다)
+
+DELETE FROM bigTbl1;
+GO
+DROP TABLE bigTbl2;
+GO
+TRUNCATE TABLE bigTbl3;
+
+3. Profiler를 비교하면, DELETE만 시간이 오래 걸리고 나머지는 짧은 시간이 걸린 것을 확인할 수 있다. 
+
+DML 문인 DELETE는 트랜잭션 로그를 기록하는 작업 때문에 삭제가 오래 걸린다. 수 백만 건 또는 수천만 건의 데이터를 삭제할 경우에 밤새도록 삭제할 수도 있다. DDL 문인 DROP 문은 테이블 자체를 삭제한다. 그리고 DDL은 트랜잭션을 발생시키지 않는다. 고 했다. 역시 DDL 문인 TRUNCATE 문의 효과는 DELETE와 같지만 트랜잭션 로그를 기록하지 않아서 속도가 무척 빠르다. 그러므로 대용량의 테이블 전체 내용을 삭제할 때 테이블 자체가 필요 없을 경우에는 DROP으로 삭제하고, 테이블의 구조는 남겨놓고 싶다면 TRUNCATE로 삭제하는 것이 효율적이다. 트랜잭션에 대해서는 10장에서 상세히 알아보겠다. 
+
+
+※ 조건부 데이터 변경 : MERGE
+SQL Server 2008부터 제공되는 MERGE 문은 하나의 문장에서 경우에 따라서 INSERT, UPDATE, DELETE를 수행할 수 있는 구문이다. MERGE 문의 형식은 다음과 같다.
+
+[ WITH <common_table_expression> [,...n] ]
+MERGE
+	[ TOP ( expression ) [ PERCENT ] ]
+	[ INTO ] <target_table> [  WITH ( <merge_hint> ) ]
+		[ [ AS ] table_alias ]
+	USING <table_source>
+	ON <merge_search_condition>
+	[ WHEN MATCHED [ AND <clause_search_condition> ]
+		THEN <marge_matched> ] [...n ]
+	[ WHEN NOT_MATCHED [ BY TARGET ] [ AND <clause_search_condition> ]
+		THEN <merge_not_matched> ]
+	[ WHEN NOT MATCHED BY SOURCE [ AND <clause_search_condition> ]
+		THEN <merge_matched> ] [ ...n ]
+	[ <output_clause> ]
+	[ OPTION ( <query_hint> [,..n ] ) ]
+;
+
+역시 별로 간단해 보이지 않는다. 간단한 실습 예를 통해서 그 사용법을 익혀보자. 
+
+
+실습 6 : MERGE 구문의 활용을 연습해 보자. 
+
+이번 예의 간단한 시나리오는 다음과 같다. 멤버 테이블(memberTBL)에는 기존 회원들이 있는데, 이 멤버 테이블에 직접 INSERT, DELETE, UPDATE를 사용하면 안 된다. 그리고회원의 가입, 변경, 탈퇴가 생기면 변경 테이블(changeTBL)에 INSERT 문으로 회원의 변경 사항을 입력한다. 변경 테이블의 변경 사항은 신규가입/주소 변경/회원탈퇴 3가지라고 가정하겠다. 
+
+변경 테이블의 작성이 완료된 후에 MERGER 구문으로 변경 테이블의 내용이 신규가입이면 멤버 테이블에 새로 회원을 등록해주고, 주소 변경이면 멤버 테이블의 주소를 변경하고 회원 탈퇴면 멤버 테이블에서 해당 회원을 삭제하게 SQL 문을 작성해 보자. 
+
+
+1. 우선 멤버 테이블(memberTBL)을 정의하고 데이터를 입력해보자. 지금은 연습 중이므로 기존 userTBL에서 아이디, 이름, 주소만 가져와서 간단히 만들겠다. 앞에서 배운 SELECT...INTO를 활용하면 된다. 
+
+USE sqlDB;
+SELECT userID, name, addr INTO memberTBL FROM userTb1;
+SELECT * FROM memberTBL;
+
+2. 변경 테이블(changeTBL)을 정의하고 데이터를 입력해 보자. 1명의 신규가입, 2명의 주소 변경, 2명의 회원 탈퇴가 있는 것으로 가정해보자. 
+
+CREATE TABLE changeTBL
+( changeType NCHAR(4), -- 변경 사유
+userID char(8),
+name nvarchar(10),
+addr nchar(2) );
+GO
+INSERT INTO changeTBL VALUES
+('신규가입', 'TPN', '티파니', '미국'),
+('주소변경', 'LSG', null, '제주'),
+('주소변경', 'LJB', null, '영국'),
+('회원탈퇴', 'BBK', null, null),
+('회원탈퇴', 'SSK', null, null);
+
+
+3. 이제는 변경사유(changeType)열에 의해서 기존 멤버 테이블의 데이털르 변경 한다. 5개행이 영향을 받을 것이다. 
+
+MERGE memberTBL AS M -- 변경될 테이블(target 테이블)
+	USING changeTBL AS C -- 변경할 기준이 되는 테이블(source 테이블)
+	ON	M.userID = C.userID --userID를 기준으로 두 테이블을 비교한다. 
+	--target 테이블에 source 테이블의 행이 없고, 사유가 신규가입이라면 새로운 행을 추가한다. 
+	WHEN NOT MATCHED AND changeType = '신규가입' THEN
+		INSERT(userID, name, addr) VALUES(C.userID, C.name, C.addr)
+		--target 테이블에 source 테이블의 행이 있고, 사유가 주소변경이라면 주소를 변경한다
+	WHEN MATCHED AND changeType = '주소변경' THEN
+		UPDATE SET M.addr = C.addr
+		--target 테이블에 source 테이블의 행이 있고, 사유가 회원탈퇴라면 해당 행을 삭제한다. 
+	WHEN MATCHED AND changeType = '회원탈퇴' THEN
+		DELETE;
+
+4. 멤버 테이블을 조회해 보자. 계획대로 1개 행이 추가되고, 2개 행은 삭제, 2개 행은 주소가 변경되었다. 
+SELECT * FROM memberTBL;
+
+이상으로 SQL Server에서 사용되는 기본적인 SQL 문에 대해서 살펴봤다. 다음 장에서는 추가로 고급 용도의 SQL 문을 만드는 방법을 알아보겠다. 
