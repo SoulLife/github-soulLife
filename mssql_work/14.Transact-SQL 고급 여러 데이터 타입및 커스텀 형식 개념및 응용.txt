@@ -1,0 +1,193 @@
+7장 Transact-SQL 고급
+
+Section01 : SQL Server의 데이터 형식
+앞에서 SELECT/INSERT/UPDATE/DELETE 문에 대해서 살펴보았다. 앞 장의 내용 정도만 충분히 숙지해도 기본적인 SQL 문은 만들수 있다. 이제는 지금까지 은연 중에 계속 사용했지만 특별히 이야기하지 않았던 SQL Server의 데이터 형식(Data Types)에 대해서 살펴보겠다. 원래 이 부분이 SQL 문을 배우기 전에 나오는 것이 순서라고 생각되나, 처음에 그냥 나열만 해서는 이해하기 어렵고 별 흥미도 느끼지 못할거 같아서 SQL 문이 어느정도 익숙해진 지금에서야 소개한다. 
+
+영문 용어인 Data Type은 데이터 형식, 데이터형, 자료형, 데이터 타입 등 다양하게 불릴수 있지만 SQL Server의 도움말에서는 데이터 형식으로 표기하고 있어서 필자도 이를 따르겠다. 
+
+SELECT 문을 더욱 잘 활용하고 테이블을 효율적으로 생성하려면 데이터 형식을 반드시이해해야 한다. 
+
+
+※ SQL Server에서 지원하는 데이터 형식의 종류
+SQL Server에서 데이터 형식의 종류는 30개 가까이 된다. 이를 모두 외우는 것은 무리이며, 거의 쓰이지 않는 것도 있으니 그럴 필요도 없다. 또한 각각의 바이트 수나 숫자의 범위를 외우는 것도 당장 SQL Server를 학습하는데 큰 도움이 되는 것은 아니다(필요 없다는 이야기가 아니라, 당장 모두 외울 필요가 없다는 의미다)
+
+우선은 꼭 필요한 것만 눈으로 한번 익히는 시간을 갖도록 하자. 잘 사용하지 않는 것은 추후에 다시 이 부분을 참조하거나, 도움말을 찾아 보는 것이 좋겠다. 자주 사용되는 것은 이름 앞에 별표(★)를 핸 ㅗㅎ았으니 유심히 보자. 
+
+
+(1) 숫자 데이터 형식
+숫자형 데이터 형식은 정수, 실수 등의 숫자를 표현한다. 
+
+데이터 형식		바이트 수		숫자 범위			설명
+★BIT			1		0 또는 1 또는 NULL	Boolean 형인 참(True, 1), 거짓(False,0)에 사용
+★TINYINT		1		0 ~ 255			양의 정수
+★SMALLINT		2		-32,768 ~ 32,767		정수
+★INT			4		약 -21억 ~ +21억		정수
+★BIGINT			8		-2의(53승)~ +2(53승)-1	정수
+★DECIMAL(p.[s])		5~17		-10의(38승)~+10의(38승)-1	고정 정밀도(p)와 배율(s)을 가진 숫자형, 예)decimal(5,2)는 전체 자릿수를 5자리로 하
+								되,그 중 소수점 이하를 2자리로 하겠다는 의미
+NUMERIC			5~17		-10의(38승)~+10의(38승)-1	DECIMAL과 같은 데이터 형식
+★FLOAT[(p)]		4~8					P가 25미만이면 4바이트, 25이상이면 8바이트의 크기를 할당
+REAL			4					FLOAT(24)와 같음
+MONEY			8		-2의(63승)~+2의(63승)-1	화폐 단위로 사용
+SMALLMONEY		4		약 -21억 ~ +21억		화폐 단위로 사용
+
+
+DECIMAL, NUMERIC, MONEY, SMALLMONEY 데이터 형식은 정확한 수치를 저장하게 되고, FLOAT, REAL은 근사치의 숫자를 저장한다. 대신 FLOAT, REAL은 상당히 큰 숫자를 저장할수 있는 장점이 있다. 
+
+그러므로 소수점이 들어간 실수를 저장하려면 DECIMAL을 사용하는 것이 바람직하다. 예로 -99999.99부터 + 999999.99까지의 숫자를 저장할 경우에는 DECIMAL(8,2)로 설정하면 된다. 
+
+
+(2)문자 데이터 형식
+데이터 형식		바이트 수			설명
+★CHAR[(n)]		0~8,000			고정길이 문자형, Character 의 약자
+★NCHAR[(n)]		0~8,000			글자로는 0~4,000자 유니코드 고정길이 문자형. NationalCharacter의 약자
+★VARCHAR[(n | max)]	0~2의(31승)-1(2GB)	가변길이 문자형, n을 사용하면 1~8,000까지 크기를 지정할수 있고, max로 지정하면 최대 2GB 크기를 지
+						정할수 있음. Variable Character의 약자
+★NVARCHAR[(n | max)]	0~2의(31승)-1		유니코드 가변길이 문자형, n을 사용하면 1~4,000까지 크기를 지정할수 있고, max로 지정하면 최대 2GB
+						크기를 지정할수 있음 National Variable Character의 약자
+BINARY[(n)]		0~8,000			고정길이의 이진 데이터 값
+★VARBINARY[(n | max)]	0~2의(31승)-1		가변길이의 이진 데이터 값, n을 사용하면 1~8,000까지 크기를 지정할 수 있고 max로 지정하면 최대 2GB
+						크기를 지정할 수 있음 이미지/동영상 등을 저장하기 위해 사용됨 Variable Binary의 약자 
+
+*문자형 데이터에 TEXT, NTEXT, IMAGE 데이터 형식이 있는데, 이는 SQL Server 2012이후에는 제거될 예정이므로, 대신 VARCHAR(MAX), NVARCHAR(MAX), VARBINARY(MAX)를 사용해 보자. 
+
+
+CHAR 형식은 고정길이 문자형으로 자릿수가 고정되어 있다. 예를 들어 CHAR(100)에 'ABC' 3바이트만 저장해도 100바이트를 모두 확보한 후 앞에 3바이트를 사용하고 뒤의 97 바이트는 낭비하게 되는 결과가 나온다. VARCHAR 형식은 가변길이 문자형으로 VARCHAR(100)에 'ABC' 3바이트를 저장할 경우에 3바이트만 사용하게 된다. 그래서 공간을 효율적으로 운영할 수 있다. 하지만 대용량 데이터베이스를 사용할 때 4글자 미만을 저장하게 될 경우에는 CHAR 형식으로 설정하는 것이 INSERT/UPDATE 할 때 더좋은 성능을 발휘한다. 
+
+또 한글(유니코드)을 저장하려면 CHAR나 VARCHAR 형식으로 정의할 경우에는 2배의 자릿수를 준비해야 한다. 즉 최대 3글자의 한글을 저장하고자 한다면 CHAR(6) 또는 VARCHAR(6)로 데이터 형식을 지정해야 한다. 한글은 2바이트의 자리를 차지하기 때문이다. 이러한 문제를 간단히 하려면, NCHAR이나 NVARCHAR 형식을 사용하면 된다. 이 데이터 형식은 한글뿐 아니라 다른 나라 언어의 문제까지 해결해 준다. 예를 들어, NCHAR(3)으로 지정하면 한글, 중국어, 일본어, 프랑스어, 영어 등 모든 언어를 무조건 3글자로 저장할수 있어서 더 단순하고 명확하게 문자 데이터를 입력할 수 있다. 
+
+하지만 만약 한글(유니코드)을 저장하지 않고 영어만 저장할 것이 확실하다면 NCHAR/NVARCHAR보다 CHAR/VARCHAR가 더 공간을 적게 차지하여 성능 향상에 도움이 된다. 예를 들어 회원의 아이디는 영어로만 작성하는 것이 대부분이므로 CHAR/VARCHAR로 지정하는 것이 바람직하겠다. 특히 대용량 데이터베이스에서는 더욱 그렇다. 
+
+
+
+(3) 날짜와 시간 데이터 형식
+데이터형식		바이트 수			설명
+DATETIME		8			날짜는 1753-1-1~9999-12-31까지 저장되며, 시간은 00:00:00~23:59:59.997까지 저장됨 정확도는 밀리초
+						(1/1000초)단위까지 인식함, 형식은 "YYYY-MM-DD 시:분:초" 사용됨
+★DATETIME2		6~8			날짜는 0001-1-1~9999-12-31까지 저장, 시간은 00:00:00~23:59:59.9999999까지 저장됨, 정확도는 100
+						나노초 단위까지 인식함. 형식은 "YYYY-MM-DD 시:분:초" 사용됨(DATETIME의 확장형으로 생각 하면됨)
+★DATE			3			날짜는 0001-1-1~9999-12-31까지 저장. 날짜 형식만 사용됨 "YYYY-MM-DD" 형식으로 사용됨
+★TIME			5			00:00:00.0000000~23:59:59.9999999까지 저장. 정확도는 100나노초 단위까지 인식됨 "시:분:초" 형식으
+						로 사용됨
+DATETIMEOFFSET		10			DATETIME2와 거의 비슷하지만 표준 시간대를 인식하며 24시간제를 기준으로 하는 시간도 표시해 줌 형
+						식은 "YYYY-MM-DD 시:분:초 + 표준시간" 형식으로 사용됨
+SMALLDATETIME		4			날짜는 1900-1-1~2079-6-6까지 저장, 정확도는 분 단위까지 인식됨
+
+* DATETIME2, DATE, TIME, DATETIMEOFFSET 형식은 SQL Server 2008부터 지원되는 데이터 형식이다. 
+
+
+SELECT CAST('2014-10-19 12:35:29.123' AS datetime) AS 'datetime'
+SELECT CAST('2014-10-19 12:35:29.1234567 + 12:15' AS datetime2(7)) AS 'datetime2'
+SELECT CAST('2014-10-19 12:35:29.1234567 + 12:15' AS date) AS 'date'
+SELECT CAST('2014-10-19 12:35:29. 1234567 + 12:15' AS time(7)) AS 'time'
+SELECT CAST('2014-10-19 12:35:29. 1234567 + 12:15' AS datetimeoffset(7) AS 'datetimeoffset'
+SELECT CAST('2014-10-19 12:35:29.123' AS smalldatetime) AS 'smalldatetime'
+
+
+(4)기타 데이터 형식
+데이터형식		바이트 수			설명
+ROWWERSION		8			VARBINARY(8)과 같으며, 데이터베이스 내에서 자동으로 생성된 고유 이진 숫자를 표시함. SQL Server 내
+						부적으로 사용되는 것이라서 신경쓸 필요는 없음
+SYSNAME		128			NVARCHAR(128)과 같으며 데이터베이스 개체의 이름에 사용됨 SQL Server 내부적으로 사용됨
+★CURSOR		1			T-SQL 커서를 변수로 처리함
+★TABLE			N/A			테이블 자체를 저장, 임시 테이블과 비슷한 기능
+UNIQUEIDENTIFIER		16			복제(Replication)에서 사용되는 자료형으로, 유일성을 보장하기 위한 GUID 값을 저장함
+SQL_VARIANT		N/A			다른 데이터 형식의 저장이 가능한 데이터 형
+HIERARCHYID		N/A			계층 구조가 있는 테이블을 만들거나 다른 위치에 있는 데이터의 계층 구조를 참조할 수 있음
+★XML			N/A			XML 데이터를 저장하기 위한 형식으로 최대 2GB 저장됨
+★GEOMETRY/GEOGRAPHY	N/A			공간 데이터 형식으로 선, 점 및 다각형 같은 공간 데이터 개체를 저장하고 조작할수 있음
+
+*XML은 SQL Server 2005부터 지원되는 데이터 형식이며, HIERARCHYID, GEOMETRY/GEOGRAPHY는 SQl Server 2008부터 지원되는 데이터 형식이다. XML은 13장에서, GEOMETRY/GEOGRAPHY는 2권(관리와 응용)에서 자세히 알아볼 것이다. 
+
+
+※ 여기서 잠깐
+ISO 형식의 표준 데이터 형식의 호환성을 위해서 SQL Server에서는 다음은 동일한 용어로 사용된다. 
+SQL Server			ISO 표준(동의어)
+CHAR(n)				Character(n)
+VARCHAR(n)			Character Varyign(n)
+VARBINARY			BINARY Varying
+DECIMAL				Dec
+FLOAT				Double Precision
+INT				Integer
+NCHAR(n)			National Character(n)
+NVARCHAR(N)			National Character Varying(n)
+ROWWERSION			Timestamp
+
+다음과 같이 테이블을 정의할수 있다. 
+CREATE TABLE isoTable
+( 	
+	charData	Character(2),
+	varcharData	Character Varying(2),
+	varbinaryData	Binary Varying,
+	decimalData	Dec,
+	floatData		Double Precision,
+	intData		Integer,
+	ncharData	National Character(2),
+	nvarcharData	National Character Varying(2),
+	rowversionData	Timestamp);
+
+
+(5) 사용자 정의 데이터 형식
+사용자 정의 데이터 형식(User-Defined Data Types: UDT)(또는 사용자 정의 형식)은 기존의 데이터 형식에 별칭을 붙이는 것으로, 사용 편의성 때문에 주로 사용한다. 예를 들어 이름을 저장하기 위한 데이터 형식이 NCHAR(10)이라면, 편리하게 myTypeName 등으로 붙일 수 있다. 
+
+사용자 정의 데이터 형식은 SSMS의 개체 탐색기에서 [데이터베이스] > [해당 데이터베이스] > [프로그래밍 기능] > [유형] > [사용자 정의 데이터 형식]에서 정의할 수 있다. 
+
+다음 그림은 'myTypeName'이라는 이름의 사용자 정의 형식을 10자의 NCHAR형태로 정의하는 방법이다. 
+
+* 사용자 정의 형식은 최대 약21억 바이트를 사용할 수 있다. 또한 사용자 정의 데이터 형식은 .NET 어셈블리와 관련이 깊다(.NET과 관련된 것은 책의 범위를 벗어나므로 책에서는 언급하지 않는다)
+
+사용자 정의 데이터 형식을 T-SQL로 지정하려면 CREATE TYPE 문을 사용한다. 
+CREATE TYPE 사용자정의데이터형식_이름 FROM 기존데이터형식 NULL 또는 NOT NULL;
+
+앞의 SSMS에서 사용한 예를 CREATE TYPE 문으로 정의하면 다음과 같다. 
+
+USE AdventureWorks;
+CREATE TYPE myTypeName FROM nchar(10) NOT NULL;
+
+* SQL Server 2008부터는 테이블 형식의 사용자 정의 데이터 형식도 지원하며, 이를 저장 프로시저의 매개 변수로도 사용할 수 있다. 이에 대해서는 11장에서 살펴보자. 
+
+
+
+(6)VARCHAR(MAX)/NVARCHAR(MAX)/VARBINARY(MAX)
+SQL Server는 LOB(Large Object:대량의 데이터)를 저장하기 위해서 VARCHAR(MAX), NVARCHAR(MAX), VARBINARY(MAX)데이터 형식을 지원한다. 지원되는 데이터 크기는 2의(31승)-1 바이트까지  저장할수 있다. 이는 약 2GB 크기의 파일을 하나의 데이터로 저장할수 있다는 의미다. 예로 장편소설과 같은 큰 텍스트 파일이라면, 그 내용을 전부 NVARCHAR(MAX)형식으로 지정된 하나의 컬럼에 넣을 수 있고, 동영상 파일과 같은 큰 바이너리 파일이라면, 그 내용을 전부 VARBINARY(MAX)형식으로 지정된 하나의 컬럼에 넣을 수 있다. 즉 다음과 같은 구성이 가능하다. 
+
+앞의 예를 보면 영화 대본 열에는 영화 대본 전체가 들어가고, 영화 동영상 열에는 실제 영화 파일 전체가 들어갈 수 있다 또한 VARCHAR(MAX), NVARCHAR(MAX), VARBINARY(MAX)는 일반적인 VARCHAR(N)형식과 같이 사용 가능하다. 이에 해당하는 실습은 함수를 몇개 사용해야 하므로 잠시 후에 관련 함수를 배우고 나서 해보자. 
+
+
+※여기서 잠깐
+LOB 데이터 중에서 이미지, 동영상, 음악 등의 이진 데이터를 BLOB(Binary Large Objects)라고 부른다. 이러한 BLOB 데이터를 저장하려면 VARBINARY(MAX)형식을 사용하면 되는데, VARBINARY(MAX)는 최대 크기가 2GB까지의 파일만 저장할 수 있다. 그래서 2GB 크기 이상의 파일을 저장하려면 FILESTREAM을 사용해야 한다. FILESTREAM은 윈도 운영체제의 파일시스템인 NTFS를 사용하는데 파일 크기에 제한이 없으며 ,저장, 추출 성능 또한 상당히 뛰어나다. 참고로 FILESTREAM은 SQL Server 2008부터 제공되었다. 또한 FILESTREAM을 기반으로 SQL Server 2012부터는 FIleTable이라는 새로운 테이블도 제공한다. FILESTREAM과 FileTable에 대한 자세한 내용과 실습은 2권(관리와 응용)에서 다루겠다. 
+
+
+
+(7)유니코드 데이터
+문자 데이터를 저장하고 관리할 경우, 각 국가별 코드 페이지가 달라서 서로 호환되지 않는 문제점이 있다. 즉, 데이터베이스에 한국어만 사용할 경우에는 별 문제가 없지만, 한국어/중국어/일본어를 동시에 사용할 경우에는 코드 페이지가 서로 달라서 많은 문제점을 일으키게 된다. 이러한 데이터 형식이 CHAR, VARCHAR, VARCHAR(MAX)이다. 방금 이야기했듯이 한 국가의 언어만을 처리하는 데는 이 데이터 형식이 전혀 문제가 없지만, 여러 언어를 처리한다면 NCHAR, NVARCHAR, NVARCHAR(MAX)형식을 사용해야 한다. 여기서 N은 National의 약자로 유니코드를 의미한다. 이 데이터 형식을 사용하게 되면, 전 세계의 어느 언어를 저장하든지 서로 충돌하는 상황이 발생하지 않는 장점이 있다. 유니코드 데이터 형식인 NCHAR, NVARCHAR ,NVARCHAR(MAX)는 CHAR, VARCHAR, VARCHAR(MAX)와 같이 사용하면 되지만, 다음의 몇 가지 차이점이 있다. 
+
+* 유니코드 문자를 저장할 때는 내부적으로 더 넓은 공간이 필요하다. 즉 CHAR(4)는 4바이트지만 NCHAR(4)는 8바이트를 내부적으로 차지한다. 
+*NCHAR의 열의 최대 크기는 8,000이 아닌 그의 절반인 4,000이다. 이유는 유니코드는 2바이트의 공간을 요구하기 때문이다. 
+* 유니코드의 상수를 지정하려면 N 문자열과 같은 형식을 사용한다. 
+* 유니코드는 문자에만 관련된 이야기며, 숫자/날짜 등에서는 전혀 신경을 쓸 필요가 없다. 
+
+참고로 SQL Server2012는 Unicode Standard 버전 3.2를 지원한다. 
+
+데이터베이스를 다른 국가의 언어와 호환할 예정이 아니라면 유니코드와 관련된 내용은 무시해도 된다. 간단히 이야기하면 유니코드는 다양한 국가의 문자를 동시에 저장할 때 사용된다. 그래서 NCHAR 또는 NVARCHAR 형식에 문자를 입력할 때 N'문자열'형식(꼭 대문자 N이어야 함)을 취하는 것을 권장하는 것이며, N을 생략해도 한글 운영체제에서 한글/영문만 입력하는데 별 문제가 없다. 
+
+*다음은 자주 틀리는 부분이므로 주의하기 바란다. 
+USE tempdb;
+CREATE TABLE uniTest( korName nvarchar(10) );
+GO
+INSERT INTO uniTest VALUES( N'손연재');	--맞음
+INSERT INTO uniTest VALUES('손연재');		--맞음
+INSERT INTO uniTest VALUES(n'손연재');	--틀림
+
+
+
+
+※여기서 잠깐
+유니코드와 관련해서 혼란스럽다면, 필드에 한글/중국어/일본어 데이터가 입력될 예정이라면 NCHAR, NVARCHAR 형식으로 데이터 형식을 지정하고, 영어 및 기호(키보드에서 사용되는 0~9,@,#,$,% 등의 기호)만 들어갈 예정이라면, CHAR VARCHAR형식으로 지정한다는 정도만 기억하고 있으면 된다. 다음은 좋은 예이다. 
+
+CREATE TABLE person(
+id int, --사용자 ID
+korName nvarchar(10), --한글 이름(한글 사용)
+engName varchar(20), --영문 이름(영어만 사용)
+email varchar(30)	--이메일 주소(영어&기호만 사용)
+);
