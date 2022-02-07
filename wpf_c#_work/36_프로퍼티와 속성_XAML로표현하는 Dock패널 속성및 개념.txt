@@ -1,0 +1,189 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Markup;
+
+public class DumpContentPropertyAttributes
+{
+	[STAThread]
+	public static void Main()
+	{
+		//PresentationCore와 PresentationFramework가 로드되는지 확인
+		UIElement dummy1 = new UIElement();
+		FrameworkElement dummy2 = new FrameworkElement();
+
+		//컨텐트 프로퍼티와 클래스를 저장할 SortedList
+		SortedList<string, string> listClass = new SortedList<string, string>();
+		//문자열을 포맷팅
+		string strFormat = "{0, -35}{1}";
+
+		//로드한 어셈블리를 순회하는 루프
+		foreach(AssemblyName asmblyname in Assembly.GetExecutingAssembly().GetReferencedAssemblies())
+		{
+			//타입 루프
+			foreach(Type type in Assembly.Load(asmblyname).GetTypes())
+			{
+				//커스텀 속성 루프(상속받지 않은 것에 한해 false로 인자를 설정!)
+				foreach(object obj in type.GetCustomAttributes(typeof(ContentPropertyAttribute), true))
+				{
+					//ContentPropertyAttribute이면 리스트에 추가
+					if(type.IsPublic && obj as ContentPropertyAttribute != null)
+						listClass.Add(type.Name, (obj as ContentPropertyAttribute).Name);
+				}
+			}
+		}
+		//결과 출력
+		Console.WriteLine(strFormat, "Class", "Content Property");
+		Console.WriteLine(strFomrat, "-----", "-------------------");
+
+		foreach(string strClass in listClass.Keys)
+			Console.WriteLine(strFormat, strClass, listClass[strClass]);
+		}
+	}
+}
+DockPanel이나 Grid와 같은 엘리먼트는 다음과 같은 문법의 C# 코드를 사용함으로써 프로퍼티를 연결한다. 
+
+DockPanel.SetDock(btn, Dock.Top);
+
+이 코드는 btn 컨트롤을 DockPanel의 윗부분에 도킹시킨다는 의미인데, btn이 DockPanel의 자식이 아닐경우에는 아무것도 일어나지 않는다. 앞의 코드는 8장에서 본 것과 같이 정적 SetDock 메소드를 다음과 같이 동일하게 쓸 수 있다. 
+btn.SetValue(DockPanel.DockProperty, Dock.Top);
+
+XAML에서는 다음과 같은 문법으로 표현된다. 
+<Button DockPanel.Dock="Top" ... />
+
+다음은 6장의 DockAroundTheBlock 프로그램을 상기시키는 작은 스탠드 얼론 XAML 파일이다. 
+
+
+<DockPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Button Content="Button No. 1" DockPanel.Dock="Left" />
+	<Button Content="Button No. 2" DockPanel.Dock="Top" />
+	<Button Content="Button No. 3" DockPanel.Dock="Right" />
+	<Button Content="Button No. 4" DockPanel.Dock="Bottom" />
+	<Button Content="Button No. 5" />
+</DockPanel>
+
+Grid는 특히 XAML에서 잘 사용되는데 그것은 열과 행을 정의하는 RowDefinition과 ColumnDefinition이 각기 Grid.RowDefinitions와 Grid.ColumnDefinitions 프로퍼티 속에서 한 줄로 표현이 가능해 C#에서처럼 장황하지 않기 때문이다. 다음 XAML을 보자. 
+
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Grid.RowDefinitions>
+		<RowDefinition Height="100" />
+		<RowDefinition Height="Auto" />
+		<RowDefinition Height="100*" />
+	</Grid.RowDefinitions>
+	<Grid.ColumnDefinitions>
+		<ColumnDefinition Width="33*" />
+		<ColumnDefinition Width="Auto" />
+		<ColumnDefinition Width="67*" />
+	</Grid.ColumnDefinitions>
+
+	<Button Content="Button No. 1" Grid.Row="0" Grid.Column="0" />
+	<Button Content="Button No. 2" Grid.Row="1" Grid.Column="0" />
+	<Button Content="Button No. 3" Grid.Row="2" Grid.Column="0" />
+
+	<GridSplitter HorizontalAlignment="Center" Width="6" Grid.Row="0" Grid.Column="1" Grid.RowSpan="3" />
+
+	<Button Content="Button No. 4" Grid.Row="0" Grid.Column="2" />
+	<Button Content="Button No. 5" Grid.Row="1" Grid.Column="2" />
+	<Button Content="Button No. 6" Grid.Row="2" Grid.Column="2" />
+</Grid>
+
+기본 Height와 Width를 1*로 설정하고자 하면 다음 XAML 문법을 사용해 RowDefinition과 ColumnDefinition 엘리먼트를 기술할 수 있다. 
+
+<RowDefinition />
+
+첨부 프로퍼티만이 점을 포함할 수 있는 유일한 속성은 아니다. 클래스 이름과 그 뒤에 프로퍼티 이름을 명시한 속성으로 엘리먼트의 프로퍼티를 정의할 수도 있으며, 이 클래스 이름은 속성이 있는 곳의 엘리먼트 이름이나 상위 클래스 혹은 같은 종속성이 있는 프로퍼티의 소유 클래스 이름이 될 수 있다. 예를 들면 다음은 모두 Button 엘리먼트를 위한 유효한 속성이다. 
+
+Button.Foreground="Blue" TextBlock.FontSize ="24pt" FrameworkElement.HorizontalAlignment="Center" ButtonBase.VerticalAlignment="Center"
+UIElement.Opacity="0.5"
+
+어떤 경우에는 프로퍼티가 정의되어 있지 않은 엘리먼트 속에서 클래스 이름과 프로퍼티 이름을 포함하는 속성을 사용할 수 있는데 다음 예제를 보자. 
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	HorizontalAlignment="Center" TextBlock.FontSize="16pt" TextBlock.Foreground="Blue" >
+	<TextBlock>
+		Just a TextBlock
+	</TextBlock>
+	<Button>
+		Just a Button
+	</Button>
+</StackPanel>
+
+이 XAML 파일은 StackPanel 엘리먼트 안에서 FontSize와 Foreground 프로퍼티를 설정하는데, StackPanel이 이 프로퍼티를 가지지 않기 때문에 이 프로퍼티가 정의된 클래스가 프로퍼티 앞에 명시되어야 한다. 결과적으로 이 속성은 TextBlock과 Button 모두가 16포인트의 폰트 크기를 가지게 하는데, 흥미로운 사실은 오직 TextBlock만이 파란색 전경색을 갖는다는 것이다. 
+
+또한 클래스와 이벤트 이름을 속성으로 사용함으로써 이벤트 핸들러를 설정할 수도 있는데, 이 핸들러는 자식 엘리먼트에게 영향을 미치게 된다. 다음 RoutedEventDemo 프로젝트의 경우 2개의 파일을 포함하는데, RoutedEventDemo.xaml과 RoutedEventDemo.cs이다. 다음 XAML 파일은 ContextMenu 엘리먼트 안에 MenuItem.Click 속성을 포함하고 있고, 핸들러는 TextBlock의 컨텍스트 메뉴를 가지는 MenuItem 엘리먼트에 적용된다. 
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.RoutedEventDemo.RoutedEventDemo" Title="Routed Event Demo">
+	<TextBlock Name="txtblk" FontSize="24pt" HorizontalAlignment="Center" ToolTip="Right Click to display context menu">
+		TextBlock with Context Menu
+		<TextBlock.ContextMenu>
+			<ContextMenu MenuItem.Click="MenuItemOnClick">
+				<MenuItem Header="Red" />
+				<MenuItem Header="Orange" />
+				<MenuItem Header="Yellow" />
+				<MenuItem Header="Green" />
+				<MenuItem Header="Blue" />
+				<MenuItem Header="Indigo" />
+				<MenuItem Header="Violet" />
+			</ContextMenu>
+		</TextBlock.ContextMenu>
+	</TextBlock>
+</Window>
+
+C# 파일에 이벤트의 실제 핸들러가 있다. 코드를 보면 이벤트가 발생한 MenuItem 객체가 RoutedEventArgs 객체의 Source 프로퍼티이고, MenuItem 텍스트를 Color 객체로 변환하기 위해서 정적 ColorConverter.ConvertFromString 메소드를 사용한 것을 알 수 있다. 
+	
+using System;
+using System.Windows;
+using System.Windows.Control;
+using System.Windows.Input
+using System.Windows.Media
+
+public partial class RoutedEventDemo : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new RoutedEventDemo());
+	}
+	public RoutedEventDemo()
+	{
+		InitializeComponent();
+	}
+	void MenuItemOnClick(object sender, RoutedEventArgs args)
+	{
+		string str = (args.Source as MenuItem).Header as string;
+		Color clr = (Color)ColorConverter.ConvertFromString(str);
+		txtblk.Foreground = new SolidColorBrush(clr);
+	}
+}
+
+지금까지 엘리먼트와 속성에 점을 포함할 수 있는 여러 가지 사례를 보았다. 이제 정리해 보자. 엘리먼트 이름이 점을 포함하지 않는다면 그것은 항상 클래스나 구조체의 이름이어야 한다. 
+
+<Button ... />
+
+엘리먼트 이름에 점을 포함하는 경우 엘리먼트 이름은 클래스나 구조체의 이름 뒤에 클래스 구조 속의 프로퍼티 이름이 뒤따르게 되는데, 이것이 프로퍼티 엘리먼트 이다. 
+
+<Button.Background>
+...
+</Button.Background>
+
+이 특정 엘리먼트는 반드시 Button 엘리먼트의 자식이 되어야 하고, 시작 태그에서는 절대 속성을 가질 수가 없다. 이 엘리먼트는 또한 반드시 프로퍼티의 타입으로 변환 가능한 컨텐트(예를 들면 간단히 Brush로 변환 가능한 텍스트 문자열 "Red"나 "#FF0000")나 같은 타입의 자식 엘리먼트를 프로퍼티로 가져야 한다(예를 들면 Brush나 Brush를 상속받은 어떤 클래스).
+
+속성 이름에는 보통 점을 포함하지 않는다. 
+<... Background="Red" ... >
+
+이 속성은 그 속성이 있는 엘리먼트의 프로퍼티와 대응되는데, 속성이 점을 포함할 경우는 첨부 프로퍼티일 때뿐이다. 
+<... DockPanel.Dock="Left" ...>
+
+이 첨부 프로퍼티는 보통 DockPanel의 자식 속에서 볼 수 있지만 필수 조건은 아니다. 그러나 이 첨부 프로퍼티가 DockPanel 의 자식이 아닌 엘리먼트에서 나오면 그것은 가볍게 무시된다. 
+점이 있는 속성은 또한 라우팅 입력 이벤트의 경우이다. 
+
+<... MenuItem.Click="MenuItemOnClick" ...>
+
+이 속성은 MenuItem 속이 아닌(이 경우 속성 이름이 간단히 Click이 될 수 있기 때문이다) 다수의 MenuItem 엘리먼트를 자식으로 가진 엘리먼트 속에 있는 것이 가장 상식적이다. 또한 다음과 같이 자식으로 상속될 프로퍼티 정의에 점이 포함되는 것이 가능하다. 
+<... TextBlock.FontSize="24pt" ... >
+
+이제 까지 본 많은 사례를 통해 XAML이 동일한 C# 코드보다 더 간략하고, 패널과 컨트롤이 있는 창과 같은 계층적 구조를 표현하는 데 더 적합하다는 생각이 들 것이다. 하지만 마크업은 일반적으로 C# 언어보다는 훨씬 제한적인데, 흐름 제어에 대한 개념이 거의 없고, 간단한 변수 공유조차도 XAMl에는 있다고 볼 수 없기 때문이다. 하지만 XAML에는 이러한 단점을 보완하고도 남을 충분한 장점이 있으며, 앞으로 이것을 21장에서 볼 수 있을 것이다. 

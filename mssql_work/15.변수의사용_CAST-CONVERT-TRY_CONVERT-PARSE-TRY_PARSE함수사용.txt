@@ -1,0 +1,156 @@
+※ 변수의 사용
+T-SQL도 다른 일반적인 프로그래밍 언어처럼 변수(variable)를 선언하고 사용할수 있다. 변수의 선언과 값의 대입은 다음의 형식을 따른다. 
+
+변수의 선언 : DECLARE @변수이름 데이터형식;
+변수에 값 대입 : SET @변수이름 = 변수의 값;
+변수의 값 출력 : SELECT @변수이름;
+
+변수는 일시적으로 사용되는 것이므로 재사용되지 않는다. 즉 한 번의 실행 이후에는 바로 소멸된다. 
+
+
+실습1 : 변수의 사용을 실습해 보자. 
+
+0. SSMS에서 새 쿼리 창을 열고, 앞의 실습에서 sqlDB의 데이터가 변경되었을 수도 있으니 백업할 것을 복원시켜놓자(C:\SQL\sqlDB2012.bak 파일이 없는 독자는 6장의 <실습2>를 다시 수행하거나, 책의 사이트인 http://brain.hanb.co.kr/sql2012/에서 sqlDB2012.bak을 내려받아서 C:\SQL\에 저장하자)
+
+USE tempdb;
+RESTORE DATABASE sqlDB FROM DISK = 'C:\SQL\sqlDB2012.bak' WITH REPLACE;
+
+*RESTORE 구문이 너무 오래 걸리거나, 오류가 발생하는 경우에는 다른 쿼리 창에서 sqlDB를 사용하고 있는 경우가 대부분이다. 그럴 때는 모든 쿼리 창을 닫고, <새 쿼리> 를 클릭해서 새 쿼리 창을 연 후에, 다시 RESTORE시켜 본다. 그래도 안 되면 SQL Server Management Studio를 닫고 다시 실행한 후에 해본다. 
+
+
+1. 변수를 몇개 지정하고, 변수에 값을 대입한 후에 출력해 본다(전체를 한 번에 선택해서 실행한다)
+USE sqlDB;
+
+DECLARE @myVar1 INT;
+DECLARE @myVar2 SMALLINT, @myVar3 DECIMAL(5, 2);
+DECLARE @myVar4 NCHAR(20);
+
+SET @myVar1 = 5;
+SET @myVar2 = 3;
+SET @myVar3 = 4.25;
+SET @myVar4 = '가수 이름==> ';
+
+SELECT @myVar1;
+SELECT @myVar2 + @myVar3;
+SELECT @myVar4, Name FROM userTb1 WHERE height > 180;
+
+변수의 값은 일반적인 SELECT.. FROM 문과도 같이 사용할 수 있다. 
+
+* DECLARE로 선언한 변수는 실행 후에 즉시 사라진다. 즉 다음 두 문장을 한 문장씩 선택해서 따로 실행하면 오류가 발생한다. 
+DECLARE @myVar1 INT;
+SET @myVar1 = 5;
+
+그러므로 DECLARE 변수가 선언되었다면, 그 변수가 사용되는 부분까지 모두 한 번에 드래그해서 선택한 후에 실행해야 하는 것이다. 자주 실수하는 부분이므로 주의하자. 
+
+2. TOP 구문의 내부의 변수를 사용해 본다.
+
+DECLARE @myVar INT;
+SET @myVar = 3;
+SELECT TOP(@myVar) Name, height FROM userTb1 ORDER BY height;
+
+
+
+※ 데이터 형식과 관련된 시스템 함수들
+데이터 형식과 관련된 함수는 자주 사용되므로 잘 기억하자. 
+
+(1) 데이터 형식 변환 함수
+가장 일반적으로 사용되는 데이터 형식 변환은 CAST()와 CONVERT() 함수를 사용한다. 둘은 형식만 다를뿐 거의 비슷한 기능을 한다. 그리고 SQL Server 2012부터는 데이터 형식 변환과 관련된 TRY_CONVERT(), PARSE(), TRY_PARSE() 세 개 함수가 추가되었다. 
+
+TRY_CONVERT()는 CONVERT()와 같지만 변환에 실패할 경우에 Null값을 반환한다. 
+그리고 PARSE()와 TRY_PARSE()함수는 문자열에서 날짜/시간 및 숫자 형식으로 변환하는 경우에 사용된다. TRY_PARSE()도 TRY()와 같지만 변환에 실패할 경우에 Null값을 반환한다. 
+
+특히 ,CAST()와 CONVERT()는 자주 사용되는 함수이므로 사용법을 잘 알아두도록 하자. 
+
+CAST ( expression AS 데이터형식 [ (길이) ])
+
+CONVERT ( 데이터형식[(길이)], expression [, 스타일 ])
+
+TRY_CONVERT (데이터형식[(길이)], expression [, 스타일 ] )
+
+PARSE(문자열 AS 데이터형식)
+TRY_PARSE (문자열 AS 데이터형식)
+
+사용 예를 보면 좀 더 쉽게 이해가 갈 것이다. 다음은 sqlDB의 구매테이블(buyTbl)에서 평균 구매 개수를 구하는 쿼리문이다. 
+
+USE sqlDB;
+SELECT AVG(amount) AS [평균구매개수] FROM buyTb1;
+
+그런데 결과는 2가 나왔다. 그 이유는 수량(amount)의 데이터 형식이 정수형(INT)이므로, 정수형과 정수형의 계산 결과는 정수형이 되기 때문이다. 
+
+이것을 다음 과 같이 CAST()함수나 CONVERT(), TRY_CONVERT() 함수를 사용할수 있다. 
+
+SELECT AVG(CAST(amount AS FLOAT)) AS [평균 구매개수] FROM buyTb1;
+또는
+SELECT AVG(CONVERT(FLOAT, amount) ) AS [평균구매개수] FROM buyTb1;
+또는
+SELECT AVG(TRY_CONVERT(FLOAT, amount) ) AS [평균구매개수] FROM buyTb1;
+
+이번에는 단가/수량의 결과를 살펴보자. 둘다 INT형이므로 결과도 int 형이다. 
+
+SELECT price, amount, price/amount AS [단가/수량] FROM buyTb1;
+
+결과 중 두 개(5행, 8행)은 정수이므로 정확한 값이 아니다. 이를 CAST()함수나 CONVERT() 또는 TRY_CONVERT()함수를 사용해서 실수로 변환해보자. 그리고 출력되는 값을 소수점 아래 2자리까지만 출력해 보자. 
+
+SELECT price, amount, CAST(CAST(price AS FLOAT) / amount AS DECIMAL(10, 2) ) AS [단가/수량] FROM buyTb1;
+
+
+※ 여기서 잠깐
+SQL Server 2008부터는 CONVERT() 함수에서 이진(binary) 데이터와 문자(char, nchar)데이터의 상호 변환도 가능하다. 예를 들어 다음의 쿼리는 안녕이라는 결과를 출력해 준다. 
+SELECT CONVERT(nchar(2), 0x48C55B1, 0);
+
+
+특별히 문자열을 변환할 경우에는 PARSE()나 TRY_PARSE()를 사용할 수 있다. 
+SELECT PARSE('2012년 12월 12일' AS DATE);
+
+PARSE()가 실패할 경우에는 오류가 발생되지만, TRY_PARSE()는 정상적으로 실행되고 Null값을 반환한다. 
+
+SELECT PARSE('123.45' AS INT);
+SELECT TRY_PARSE('123.45' AS INT);
+
+앞의 첫 문장은 쿼리에서 오류가 발생되지만, 두 번째 문장은 오류는 발생하지 않고 Null을 반환한다. 
+
+TRY_CONVERT()및 TRY_PARSE()는 프로그래밍에서 오류가 나도 계속 진행하고자 할 경우에 유용하게 사용될 수 있다. 
+
+
+(2) 암시적인 형 변환
+형 변환 방식에는 명시적인 변환과 암시적인 변환, 두 가지가 있다. 명시적인 변환이란 앞에서 한 CAST() 또는 CONVERT() 함수를 이용해서 데이터 형식을 변환하는 것을 말한다. 암시적인 변환이란 CAST()나 CONVERT()함수를 사용하지 않고 형이 변환되는 것을 말한다. 다음의 예를 보자. 
+
+DECLARE @myVar1 char(3);
+SET @myVar1 = '100';
+SELECT @myVar1 + '200'; -- 문자와 문자를 더함(정상)
+SELECT @myVar1 + 200; --문자와 정수를 더함(정상: 정수로 암시적 형 변환)
+SELECT @myVar1 + 200.0; --문자와 실수를 더함(정상: 실수로 암시적 형 변환)
+
+첫 번째 결과인 문자+문자=문자의 정상적인 결과가 나왔다. 그런데 두 번째와 세 번째는 문자+숫자라서 더할수가 없지만 암시적인 변환이 일어나서 문자 + 정수=정수, 문자+실수=실수라는 결과가 나온 것이다. 모두 정상적인 결과이다. 이것을 직접 명시적인 변환으로 고치면 다음과 같다. 
+
+DECLARE @myVar1 char(3);
+SET @myVar1 = '100';
+SELECT @myVar1 + '200'; -- 문자와 문자를 더함 (정상)
+SELECT CAST(@myVar1 AS INT) + 200; --정수로 변환후 연산
+SELECT CAST(@myVar1 AS DECIMAL(5, 1)) + 200.0; --실수로 변환후 연산
+
+이처럼 암시적인 변환과 명시적인 변환 중에서 어느 것이 더 편리한가? 마치 암시적인 변환이 코딩량을 줄여줄 수 있는 것처럼 보일 수도 있지만, 조금 불편하더라도 명시적인 변환을 사용하는 것을 권장한다. 암시적인 변환을 믿고 사용하게 될 경우에는 약간의 착오로 결과가 엉뚱하게 나오는 사고(?)가 발생할 소지가 항상 있다. 
+
+암시적인 변환, 명시적인 변환과 관련된 표는 SQL Server 2012 도움말에 다음과 같이 되어있다. 외울 필요는 없으며 혹시 나중에 필요하게 되면 참조하자. 표를 보면 서로 변환되지 않는 데이터 형식도 있다. 
+
+그 외에 형 변환을 할 때 주의할 사항은 숫자에서 문자로 변환할 때 문자의 자릿수를 잘 고려해야 한다는 점이다. 
+
+DECLARE @myVar2 DECIMAL(10, 5);
+SET @myVar2 = 10.12345;
+SELECT CAST(@myVar2 AS NCHAR(5));
+
+오류 메시지:
+메시지 8115, 수준 16, 상태 2, 줄 3
+expression을(를) 데이터 형식 nvarchar(으)로 변환하는 중 산술 오버풀로 오류가 발생했습니다. 
+
+이 오류는 10.12345를 문자로 변환하게 되면 8글자로 변환되므로, 문자형 8자리 이상이 필요해서 나오는 오류이다. NCHAR(5)를 NCHAR(8)이상으로 수정한 후에 사용해야 한다. 또 한 가지는 실수를 정수로 변환할 때 자릿수가 잘릴 수 있다는 점을 고려해야 한다. 
+
+DECLARE @myVar3 DECIMAL(10, 5);
+SET @myVar3 = 10.12345;
+SELECT CAST(@myVar3 AS INT);
+
+DECLARE @myVar4 DECIMAL(10, 5);
+SET @myVar4 = 10.12345;
+SELECT CAST(@myVar4 AS DECIMAL(10, 2));
+
+두 결과는 모두 오류는 아니지만 첫 번째는 결과가 10으로, 두 번째는 결과가 10.12로 자릿수가 잘리는 점을 유의해야 한다.
