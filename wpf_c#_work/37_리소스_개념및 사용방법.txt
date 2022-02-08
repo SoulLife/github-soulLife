@@ -1,0 +1,202 @@
+CHAPTER 21장 : 리소스
+창이나 대화상자를 위한 XAML을 코딩할 때를 생각해보자. 컨트롤에 두 가지 폰트를 사용하려 하는데, 창 안에 한 컨트롤은 큰 폰트를 사용하고 다른 컨트롤은 작은 폰트를 사용한다. 어떤 컨트롤이 큰 폰트를 사용할지 작은 폰트를 사용할지는 결정했는데, 실제 정확한 폰트 크기를 정하지 못했다면 최종적으로 값을 정하기 전에 직접 시도해보고 싶을 것이다. 
+
+원초적인 방법은 XAML에 FontSize 값을 다음과 같이 하드 코딩해 넣는 것이다. 
+
+FontSize="14pt"
+
+폰트의 크기를 나중에 결정한다면 바꾸기 기능을 간단히 사용할 수도 있을 것이다. 하지만 코드가 적을 때는 바꾸기가 유용하지만 프로그래머로서 이것이 이 문제의 근본적인 해결책은 아니라는 것을 알 것이다. 폰트 크기와 같은 간단한 경우 이외에 복잡한 그라디언트 브러시를 다룬다고 생각해보자. 프로그램 전체에 복사와 붙여넣기로 XAML을 작성한 후 브러시를 미세 조정할 필요가 있다면 바꾸기 자체가 엄청난 작업이 될 수 있다. 
+
+이 문제를 C# 코드에서는 그라디언트 브러시를 복사하거나 폰트 값을 하드 코딩하지는 않을 것이다. 목적을 명확히 하고 효율성을 향상시키기 위해 객체에 대한 변수를 정의하거나 Window 클래스에 상수 필드 몇 개를 정의할 것이다 
+
+const double fontsizeLarge = 14 / 0.75;
+const double fontsizeSmall = 11 / 0.75;
+
+이것을 정적 읽기 전용 값으로도 정의할 수 있다. 
+static readonly double fontsizeLarge = 14 / 0.75;
+static readonly double fontsizeSmall = 11 / 0.75;
+
+상수는 컴파일 시에 반영되며 그것이 사용된 곳 전부에 값이 대체되지만 정적 변수는 실행시에 반영된다는 차이점이 있다. 
+
+이 방법은 C# 프로그래밍에서는 일반적인데, 다행히 XAMl 내에서도 리소스로 객체를 선언하고 그것을 재사용할 수 있다. 
+
+21장에서 설명할 리소스는 이 책의 앞부분에서 설명한 리소스와는 상당히 다르다. 이전에 본 비주얼 스튜디오에서 프로젝트 내의 특정 파일에 빌드 작업을 Resource로 설정해 컴파일하는 방법은 사실 정확히 말하면 어셈블리 리소스라고 할 수 있다. 이 리소스는 대부분 아이콘이나 비트맵과 같은 바이너리 파일이 일반적인데, 19장에서는 XML 파일로 이 방법을 사용하는 것에 대해서도 살펴보았다. 이 어셈블리 리소스는 어셈블리(실행 파일이나 동적 링크 라이브러리)에 저장하거나 실제 리소스 파일 이름을 참조하는 Uri 객체를 정의하는 것으로 접근할 수 있다. 
+
+21장에서 다룰 리소스는 때로는 지역적으로 정의된 형태의 리소스로 참조되는데, 그 이유는 그것이 XAML 내에서 정의되고(때로는 C# 코드 내에서)일반적으로 애플리케이션 내의 엘리먼트, 컨트롤, 페이지, 창과 관련이 있기 때문이다. 이 리소스는 오직 리소스가 정의된 엘리먼트 내에서나 그 엘리먼트의 자식 내에서만 사용이 가능하며, 이것이 XAML에서 C# 정적 읽기 전용 필드를 대체하는 대안쯤으로 생각할 수 있을 것이다. 정적 읽기 전용 필드와 같이 리소스는 실행 시에 한 번 생성되며, 그것을 참조하는 엘리먼트에 공유된다. 
+
+리소스는 ResourceDictionary 타입의 객체로 저장되고 ResourceDictionary 타입의 Resources 프로퍼티를 정의할 수 있는 기본적인 3개의 클래스에는 FrameworkElement, FrameworkContentElement, Application이 있다. ResourceDictionary 내의 각 항목은 객체를 색별하는 키와 함께 저장되는데, 보통 이 키는 문자열이다. XAML은 이 리소스 키를 정의하기 위한 목적으로 x:Key 속성을 정의한다. 
+
+FrameworkElement를 상속받은 엘리먼트는 Resources 컬렉션을 가질 수가 있는데, 대부분 Resources 절은 엘리먼트 상단에 프로퍼티 엘리먼트 문법으로 정의된다. 
+
+<StackPanel>
+	<StackPanel.Resources>
+		...
+	</StackPanelResources>
+</StackPanel>
+
+위의 Resources 절에 정의된 리소스는 StackPanel과 StackPanel의 자식 전체에서 사용될수 있는데, Resources절 내의 각 리소스는 다음과 같은 형태를 가진다. 
+
+<SomeType x:key="myKey" ...>
+	...
+</SomeType>
+
+이 객체의 프로퍼티는 프로퍼티 속성 문법이나 프로퍼티 엘리먼트 문법으로 설정할 수 있는데, XAML 엘리먼트가 마크업 확장으로 키를 사용해 리소스를 참조한다. 용어의 의미가 내포하고 있듯이 마크업 확장은 XAML 내에서 정의된 특별한 키워드인데, 리소스를 참조하기 위해 사용하는 마크업 확장은 StaticResource이다. 
+
+필자는 21장을 2개의 다른 폰트 크기를 사용하는 문제로 시작했다. 다음 스탠드얼론 XAML 파일은 StackPanel의 Resources 컬렉션 속에 있는 두 개의 폰트 크기 리소스를 어떻게 정의하는지와 StackPanel의 자식 엘리먼트가 그 리소스를 어떻게 참조하는지 보여준다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:s="clr-namespace:System;assembly=mscorlib">
+	<StackPanel.Resources>
+		<s:Double x:key="fontsizeLarge">
+			18.7
+		</s:Double>
+		<s:Double x:Key "fontsizeSmall">
+			14.7
+		</s:Double>
+	</StackPanel.Resources>
+
+	<Button HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24">
+		<Button.FontSize>
+			<StaticResource ResourceKey="fontsizeLarge" />
+		</Button.FontSize>
+		Button with large FontSize
+	</Button>
+
+	<Button HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" FontSize="{StaticResource fontsizeSmall}">
+		Button with small FontSize
+	</Button>
+</StackPanel>
+
+StackPanel 엘리먼트 태그는 System(clr-namespace:System;assembly=mscorlib) 네임스페이스를 위한 XML 네임스페이스를 접두어 s로 정의하는데, 이것으로 Resources 컬렉션 내에서 Double 구조체를 참조할 수 있다. 
+
+StackPanel의 Resource절에는 fontsizeLarge와 fontsizeSmall이라는 키를 가진 2개의 Double 객체를 선언하는데, 어떤 Resources 사전 속에서도 이 키는 유일해야 한다. 또한 설정된 18.7과 14.7이라는 값은 폰트 크기 14포인트, 11포인트와 동일하다. 
+
+StackPanel이나 StackPanel 자식 엘리먼트에서 이 리소스를 사용하기 위해서는 Static Resource 마크업 확장을 이용한 두 가지 방법이 있다. 첫 번째 Button은 FontSize 프로퍼티 엘리먼트를 사용해 리소스를 참조하는데, StackResource 엘리먼트의 ResourceKey 속성에 원하는 항목의 키를 설정했다. 
+
+<Button.FontSize>
+	<StaticResource ResourceKey="fontsizeLarge" />
+</Button.FontSize>
+
+이보다 더 일반적인 방법으로는 두 번째 Button에서 사용된 방법이다. FontSize 속성에 StaticResource와 키 이름을 명시한 후 중괄호로 묶는 방법이다. 
+
+FontSize="{StaticResource fontsizeSmall}"
+
+이 문법을 잘 기억해 놓기 바란다. 이것은 이번 장에서 많이 볼 수 있으며, 23장에서 다루는 데이터 바인딩에서도 많이 사용된다. 중괄호로 둘러싸는 것은 그 안에 마크업 확장이 있다는 것을 암시한다. 하지만 여기 StaticResource라는 클래스는 사실 존재하지 않는다. 다만 MarkupExtension에서 상속받은 StaticResourceExtension 클래스가 있는데, 이것이 ResourceKey 프로퍼티를 가지고 있다. StaticResource가 마크업 확장으로 분류되는 이유는 이것이 일반적으로 C# 코드에서 가능했던 방법을 XAML에서 제공하기 때문이다. 여기서 StaticResourceExtension 클래스는 특정한 키로 원하는 값을 사전에서 찾아 제공하는 역할을 한다. 
+
+앞으로 이번 장에서는 x:Static과 DynamicResource라는 2개의 또다른 마크업 확장을 볼 것이다. 이것도 마찬가지로 중괄호로 묶이며, 이 중괄호는 XAML 파서에 마크업 확장의 존재를 알린다. 또한 이 중괄호 안에서는 추가적인 따옴표가 들어올 수 없다. 
+
+자주 있는 상황은 아니지만 문자열에 마크업 확장을 포함하지 않은 다음과 같은 중괄호를 써야 할 때가 있을 것이다. 
+
+<!-- 제대로 동작 안함! -->
+<TextBlock Text="{just a little text in here}" />
+
+이때 XAML 파서가 just 라는 이름의 마크업 확장을 찾지 않게 하려면 빈 중괄호 쌍을 다음과 같이 삽입한다. 
+
+<!-- 문제없이 동작함! -->
+<TextBlock Text="{}{just a little text in here}" />
+
+Resource절은 대체로 엘리먼트의 최상단에 정의되어 있는데, 리소스가 참조되기 전에 미리 정의돼야 하기 때문이다. 즉 선행 참조는 허용되지 않는다. 
+
+한 Resources 컬렉션에서 모든 키는 서로 유일해야 하지만 2개의 서로 다른 Resource 컬렉션에서는 동일한 키가 사용될 수 있다. 리소스를 찾을 때 검색은 리소스를 참조하는 엘리먼트의 Resources 컬렉션에서 시작되어 키를 찾을 때까지 트리를 순회해 올라간다. 다음 XML 파일에서 이 과정을 설명한다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	Orientation="Horizontal">
+	<StackPanel.Resources>
+		<SolidColorBrush x:key="brushText" Color="Blue" />
+	</StackPanel.Resources>
+	<StackPanel>
+		<StackPanel.Resources>
+			<SolidColorBrush x:Key="brushText" Color="Red" />
+		</StackPanel.Resources>
+		
+		<Button HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" Foreground="{StaticResource brushText}">
+			Button with Red text
+		</Button>
+	</StackPanel>
+
+	<StackPanel>
+		<Button HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" Foreground="{StaticResource brushText}">
+			Button with Blue text
+		</Button>
+	</StackPanel>
+</StackPanel>
+
+앞에 정의되어 있는 3개의 StackPanel 엘리먼트 중 첫 번째 StackPanel은 수평 방향으로 설정되어 있고, 나머지 두 StackPanel 엘리먼트가 그것의 자식으로 속해있다. 또한 이 두 자식 StackPanel 엘리먼트는 각기 하나의 버튼을 포함한다. 
+
+부모 StackPanel에는 brushText라는 키를 가진 파란색의 SolidColorBrush가 Resources 컬렉션에 정의되어 있다. 또한 첫 번째 자식 StackPanel은 brushText라는 동일한 이름의 키로 빨간색의 SolidColorBrush를 정의했다. 2개의 버튼은 그것의 Foreground 프로퍼티를 brushText키를 이용해 설정했는데, 첫 번째 버튼은(빨간색 브러시를 가진 StackPanel에 속한) 빨간색 문자열을 출력하고, 두번째 brushText라는 리소스를 가지지 않은 StackPanel에 있는 버튼은 부모의 리소스를 사용해 문자열을 파란색으로 출력한다. 
+
+같은 이름으로 리소스를 정의하는 것은 24장에서 설명할 스타일에서는 특히 강력한 기술이다. 스타일은 다수의 엘리먼트에서 사용할 수 있는 프로퍼티를 정의하고 이 엘리먼트가 특정 이벤트나 프로퍼티 변화에 어떻게 반응할지를 정의할 수도 있기 때문이다. 실제 WPF 프로그램에서 대부분의 Resources 컬렉션은 스타일을 정의하는 데 쓰이는데, 그것은 스타일의 매우 중요하기 때문이다. 따라서 리소스에 대한 내용을 먼저 이해하는 것이 이런 근본적인 개념을 이해하는 데 좋은 기초가 될 것이다. 이번 장에서는 주로 엘리먼트와 컨트롤을 위한 프로퍼티를 정의하기 위해 사용되는 리소스에 대해서만 다룰 것이며, 추가적인 내용은 24장에서 다뤄질 것이다. 
+
+리소스는 각 리소스를 위한 객체가 생성되었을 때만 공유될 수 있는데, 리소스가 참조되지 않으면 객체조차 생성되지 않는다. 
+
+그럼 엘리먼트나 컨트롤을 리소스로 정의하는 것이 가능할까? 물론 가능하다. ResourceLookupDemo.xaml 안의 Resources 절 중 하나는 다음과 같은 것을 포함한다.
+
+<Button x:key="btn" FontSize="24">
+	Resource Button
+</Button>
+
+그후 Button을 다음 문법을 사용해 StackPanel(또는 자식 StackPanel이나 리소스를 어디에 정의한 위치에 따라)의 자식으로 사용할 수 있다. 
+
+<StaticResource Resource:Key="btn" />
+
+이것은 문제없이 동작한다. 하지만 한 번만 가능하다. 리소스로 생성된 Button 객체는 하나의 객체이므로그 Button이 패널의 자식이라면 이 Button은 동일한 패널 속에서 다른 것의 자식이나 다른 패널의 자식이 될 수 없다. 또한 StaticResource 엘리먼트로 이 Button을 참조하는 순간 이 Button에 대해 어떤 것도 변경할 수 없기 때문에 리소스로 Button을 생성하는 것은 특별한 장점이 없다. 그럼 무엇이 중요한 것일까?
+
+컨트롤과 엘리먼트를 리소스로 정의하고 싶다는 것은 엘리먼트의 프로퍼티 전부가 아닌 그 중에서 필요한 몇 개 엘리먼트의 프로퍼티를 설정하기 위해 리소스의 사용을 고려하는 것일 것이다. 이것은 24장에서 보게 될 스타일이 제공하는 것이다. 
+
+리소스가 대부분 C# 코드보다는 XAML 속에서 정의되지만 C# 코드상에서도 엘리먼트의 Resources 컬렉션에 객체를 다음과 같이 추가하는 것이 가능하다. 
+
+stack.Resources.Add("brushText", new SolidColorBrush(Colors.Blue));
+
+앞을 보면 리소스가 여러 엘리먼트나 컨트롤 사이에서 공유되는 하나의 객체임이 명백해진다. 여기의 Add 메소드는 ResourceDictionary에서 정의된 메소드이고 첫 번째 인자는 object 타입으로 정의되어 있는데, 이것에는 주로 문자열이 사용되는 것이 일반적이다. Resources 컬렉션을 정의하는 3개의 중요한 클래스(FrameworkElement, FrameworkContentElement, Application는 키를 사용해 리소스를 검색하는 FindResource 메소드를 정의하는데, 이 메소드가 StaticResourceExtension이 리소스를 찾을 때 사용하는 메소드이다. 
+
+엘리먼트가 FindResource 메소드를 호출하는 데 있어서 흥미로운 사실은 이것이 엘리먼트의 Resources 컬렉션에서 특정 리소스를 찾을 뿐만 아니라 엘리먼트 트리상에 있는 엘리먼트의 조상에서도 리소스를 찾는다는 것이다. 따라서 필자의 추측으로는 FindResource가 다음과 같이 구현되어 있을 것이라고 생각된다. 
+
+public object FindResource(object key)
+{
+	object obj = Resources[key];
+	if(obj != null)
+		return obj;
+	if(Parent != null)
+		return Paren.FindResource(key);
+	return Application.Current.FindResource(key);
+}
+
+재귀적으로 엘리먼트 트리를 검색하는 것은 단순히 Resources를 키로 색인하는 것에 비해 FindResource를 더 가치 있게 만든다. 또한 엘리먼트 트리의 검색이 끝났을 때 FindResource는 Application 속에 있는 Resources 사전도 조사한다. 이 Application 객체의 Resources 컬렉션은 애플리케이션의 전체적인 설정이나 스타일 테마를 위해 사용한다. 
+
+지금까지 필자는 비주얼 스튜디오에서 빈 프로젝트를 생성해 코드를 작성하는 것을 권장했다. 이것은 비주얼 스튜디오가 제공하는 것으로 인해 느끼는 혼란을 없애고 WPF 자체에 대한 이해를 돕기 위함이었다. 하지만 이제 리소스를 접했기 때문에 비주얼 스튜디오가 제공하는 프로그래밍 스타일에 대한 확고한 의지를 이해하는 데 문제가 없을 것이다. 
+
+비주얼 스튜디오를 사용해 GradientBrushResourceDemo라는 WPF Application타입의 프로젝트를 생성해보자. 비주얼 스튜디오는 사용자의 입력을 기다리는 Resources절을 이미 포함한 App.xaml파일을 생성한다. 
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="GradientBrushResourceDemo.App" StartupUri="Window1.xaml">
+	<Application.Resources>
+	
+	</Application.Resources>
+</Application>
+
+이것은 애플리케이션 범위의 Resources 절이 WPF 프로그래밍에서 얼마나 중요한지를 알려주는 대목이다. Resources 절을 사용해 애플리케이션 범위의 그라디언트 브러시를 정의해보자. 그러면 새로운 MyApp.xaml 파일은 다음과 같은 형태로 정의된다. 
+
+<Application x:Class="GradientBrushResourceDemo.App"  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" StartupUri="Window1.xaml">
+	<Application.Resources>
+		<LinearGradientBrush x:Key = "brushGradient" StartPoint="0,0" EndPoint="1,1">
+			<LinearGradientBrush.GradientStops>
+				<GradientStop Offset="0" Color="Black" />
+				<GradientStop Offset="0.5" Color="Green" />
+				<GradientStop Offset="1" Color="Gold" />
+			</LinearGradientBrush.GradientStops>
+		</LinearGradientBrush>
+	</Application.Resources>
+</Application>
+
+비주얼 스튜디오는 App.xaml 파일을 위한 App.xaml.cs 코드 비하인드 파일을 생성하는데, 이 것이 실제로 많은 일을 하지는 않는다. 또한 비주얼 스튜디오가 생성한 Window1.xaml 파일은 Window 엘리먼트와 Grid 엘리먼트를 기본으로 정의한다. 
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="GradientBrushResourceDemo.Window1" Title="GradientBrushResourceDemo" Height="300" Width="300" >
+	<Grid>
+
+	</Grid>
+</Window>
+
+최초의 Window1.xaml.cs 코드 비하인드 파일은 간단하게 InitializeComponent만을 호출한다. 

@@ -1,0 +1,155 @@
+(3)스칼라 함수
+SQL Server는 많은 기본 제공 함수를 포함하고 있다. 기본 제공 함수는 크게 행 집합 함수, 집계 함수, 순위 함수, 스칼라 함수로 분류할 수 있다. 그 중, 스칼라 함수란 단일 값에 적용이 되어서 단일 값의 결과를 돌려주는 함수들을 말한다. SQL Server 에서 제공하는 기본 제공 스칼라 함수의 종류는 구성 함수, 변환 함수, 커서 함수, 날짜 및 시간 함수, 논리 함수, 수치 연산 함수, 메타 데이터 함수, 보안 함수, 문자열 함수, 시스템 함수, 시스템 통계 함수, 텍스트 및 이미지 함수 등으로 나눠진다. 
+
+그 중에서 자주 사용되는 것을 소개하겠다. 각각 소개된 함수의 <예> 부분을 직접 쿼리 창에서 실행해 보기 바란다. 그러면 더 빨리 이해될 것이다. 
+
+* 기본 제공 함수 중에서 집계 함수는 6장에서 Group By 절과 함께 알아봤고, 순위 함수도 이번 장에서 잠시 후에 다룬다. 
+
+1). 구성함수 : 현재 구성에 대한 정보를 알 수 있다. 
+
+@@LANGID		현재 설정된 언어의 코드 번호 및 언어를 확인할 수 있다. 
+@@LANGUAGE		<예> SELECT @@LANGID; 한국어의 경우에는 29가 출력된다. 다른 언어의 ID는 sp_helplanguage 저장 프로시저를 실행하면 확인할
+			수있다. 
+
+@@SERVERNAME		현재 인스턴스의 이름을 확인할 수 있다. 
+			<예> SELECT @@SERVERNAME;
+
+@@SERVICENAME		서비스의 이름을 돌려준다
+			<예> SELECT @@SERVICENAME
+			기본 인스턴스인 경우에는 MSSQLSERVER를 명명된 인스턴스의 경우에는 설치할 때 지정한 인스턴스 이름을 돌려준다. 
+
+@@SPID			현재 사용자 프로세스의 세션 ID를 반환
+			<예> SELECT @@SPID AS 'ID', SYSTEM_USER AS [로그인 사용자], USER AS [사용자];
+			현재 세션 ID번호, 로그인 사용자, 사용자를 돌려준다
+
+@@VERSION		현재 설치된 SQL Server의 버전, CPU 종류, 운영체제 버전의 정보를 알려준다. 
+			<예> SELECT @@VERSION;
+
+2) 날짜 및 시간 함수 : 날짜 및 시간 입력 값에 대한 함수
+SYSDATETIME()		현재의 날짜와 시간을 돌려준다.
+			<예> SELECT SYSDATETIME(), GETDATE();
+
+DATEADD()		날짜에 더한 결과를 돌려준다. 
+			<예> SELECT DATEADD(day, 100, '2014/10/10');
+			2014년 10월 10일부터 100일 후의 날짜를 돌려준다. day대신에 , year, month, week, hour, minute, second등이 올 수 있다. 
+
+DATEDIFF()		두 날짜의 차이를 돌려준다. 
+			<예> SELECT DATEDIFF(week, GETDATE(), '2022/10/19');	현재부터 2022년 10월 19일까지 남은 주를 알려준다. 
+
+DATENAME()		날짜의 지정한 부분만 돌려준다
+			<예>SELECT DATENAME(weekday, '2022/10/19'); 2022년 10월 19일이 무슨 요일인지 알려준다. 
+
+DATEPART()		지정된 날짜의 년 또는 월 또는 일을 돌려준다. 
+			<예> SELECT DATEPART(year, GETDATE());
+			현재 년도를 돌려준다. 
+
+DAY()			지정된 날짜의 일/월/년을 돌려준다
+MONTH()			<예> SELECT MONTH('2022/10/19');
+YEAR()			2022년 10월 19일의 월인 10을 돌려준다. 
+
+DATEFROMPARTS()			SQL Server 2012부터 제공하는 함수들로 문자열을 각각 입력하면
+DATETIME2FROMPARTS()		해당하는 데이터 형식의 값을 반환한다. 예를 들어
+DATETIMEFROMPARTS()		DATEFROMPARTS()는 연, 월, 일을 입력하면 Date 값을 반환한다. 
+DATETIMEOFFSETFROMPARTS()	<예> SELECT DATEFROMPARTS('2022', '10', '19');
+SMALLDATETIMEFROMPARTS()	'2022-10-19'을 돌려준다
+TIMEFROMPARTS()
+
+EOMONTH()		SQL Server 2012부터 제공하는 함수로, 입력한 날짜에 포함된 달의 마지막 날을 돌려준다. 
+			<예> SELECT EOMONTH('2015-3-3'); 2015년 3월의 마지막 날짜를 돌려준다. 
+			<예> SELECT EOMONTH(GETDATE(), 3);
+			오늘 날짜에서 3개월 후의 마지막 날짜를 돌려준다. 
+
+
+3) 수치 연산 함수
+ABS()			수식의 절대값을 돌려준다. 
+			<예> SELECT ABS(-100); 절대값인 100을 돌려준다. 
+
+ROUND()			자릿수를 올려서 돌려준다.
+			<예> SELECT ROUND(1234.5678, 2), ROUND(1234.5678, -2);  1234.5700과 1200.0000을 돌려준다.
+
+RAND()			0~1까지의 임의의 숫자를 돌려준다
+			<예> SELECT RAND();
+
+SQRT()			제곱근 값을 돌려준다
+			<예> SELECT SQRT(10); 10의 제곱근인 약 3.16을 돌려준다. 
+
+POWER()			거듭제곱 값을 돌려준다
+			<예> SELECT POWER(3, 2);	3의 2제곱인 9를 돌려준다. 
+
+
+이 외에도 DEGREES, ACOS, EXP , ASIN, FLOOR, SIGN, ATAN, LOG, SIN, ATN2, LOG10, CEILING, PI, SQUARE, COS, TAN, COT, RADIANS 등이 있다. 
+
+
+4) 메타 데이터 함수 : 데이터베이스 및 데이터 베이스 개체의 정보를 반환한다. 
+COL_LENGTH()	테이블 컬럼의 길이를 돌려준다. 
+		<예> USE sqlDB; SELECT COL_LENGTH('userTbl', 'name'); nvarchar형이나 nchar형은 지정한 것보다 2배의 크기가 나온다. 
+
+DB_ID()		DB의 ID 또는 DB의 이름을 돌려준다
+DB_NAME	<예> SELECT DB_ID(N'AdventureWorks'); SELECT DB_NAME(5);
+		DB_ID()는 AdventureWorks DB의 id 번호인 5를 돌려주고, DB_NAME()은 5번 DB의 이름인 AdventrueWorks 를 돌려준다. (이건 필자의 경우임)
+
+OBJECT_ID()	Object의 ID 또는 Object의 이름을 돌려준다. 
+OBJECT_NAME()	<예> SELECT OBJECT_ID(N'sqlDB.dbo.userTbl'); 
+		SELECT OBJECT_NAME(2445575913); OBJECT_ID()는 개체의 ID를 돌려주고, OBJECT_NAME()은 개체 이름을 돌려준다. 
+
+
+5) 논리 함수 : 논리 연산을 수행한다. 
+CHOOSE()	SQL Server 2012부터 제공하는 함수다. 여러 값 중에서 지정된 위치의 값을 반환한다. 
+		<예> SELECT CHOOSE(2, 'SQL', 'Server', '2012', 'DVD'); 2번째 문자열인 'Server'를 돌려준다. 
+
+IIF()		SQL Server 2012부터 제공하는 함수다. 파라미터로 수식, 참일 때, 거짓일 때 3개가 사용된다.
+		<예> SELECT IIF( 100 > 200, '맞다', '틀리다'); 수식이 거짓이므로 틀리다를 돌려준다. 
+
+
+6) 문자열 함수 : 문자열을 조작한다. 활용도가 높으므로 잘 알아두도록 한다. 
+ASCⅡ()		문자의 아스키 코드값을 돌려주거나 아스키 코드값의 문자를 돌려준다(0~255 범위). 
+		<예> SELECT ASCⅡ('A'), CHAR(65);  65와 'A'를 돌려준다 
+
+CONCAT()	SQL Server 2012부터 제공되는 함수로, 둘 이상의 문자열을 연결한다. 이전 버전에서는 대신 + 로 문자열을 연결하면 된다. 
+		<예> SELECT CONCAT('SQL ', 'Server ', 2012)또는 SELECT 'SQL ' + 'SERVER ' + '2012'; 'SQL SERVER 2012'를 돌려준다. 
+
+UNICODE()	문자의 유니코드 값을 돌려주거나 유니코드값의 문자를 돌려준다(0~63365범위)
+NCHAR()		<예> SELECT UNICODE('가'), NCHAR(44032); 44032와 '가'를 돌려준다. 
+CHARINDEX()	문자열의 시작 위치를 돌려준다. 
+		<예> SELECT CHARINDEX('Server', 'SQL Server 2012'); 'SQL Server 2012'에서 'SERVER'가 시작되는 위치인 5를 돌려준다. 
+
+LEFT()		왼쪽/오른쪽/지정 위치부터 지정한 수만큼을 돌려준다
+RIGHT()		<예> SELECT LEFT('SQL Server 2012', 3), RIGHT('SQL Server 2012', 4); 'SQL Server 2012'에서 왼쪽의 세 글자 'SQL'과 오른쪽 네 글자
+		'2012'를 돌려준다. 
+
+SUBSTRING()	지정한 위치부터 지정한 개수의 문자를 돌려준다. 
+		<예> SELECT SUBSTRING(N'대한민국화이팅', 3, 2); 대한민국화이팅에서 3번째부터 두 글자인 민국을 돌려준다. 
+
+LEN()		문자열의 길이를 돌려준다
+		<예> SELECT LEN('SQL Server 2012'); 'SQL Server 2012'의 글자수 15를 돌려준다. 
+
+LOWER()		소문자를 대문자로, 대문자를 소문자로 변경한다
+UPPER()		<예> SELECT LOWER('abcdEFGH'), UPPER('abcdEFGH'); 'abcdefgh'와 'ABCDEFGH'를 돌려준다. 
+
+LTRIM()		왼쪽 공백문자 및 오른쪽 공백문자를 제거해 준다. 
+RTRIM()		<예> SELECT LTRIM('  공백앞뒤두개  '), RTRIM('  공백앞뒤두개  '); '공백앞뒤두개'와 '공백앞뒤두개'를 돌려준다. 
+
+REPLACE()	문자열의 내용을 지정한 것으로 찾아서 바꾼다. 
+		<예> SELECT REPLACE ('SQL Server 2012', 'Server', '서버');  SQL Server 2012에서 Server를 찾아서 서버로 바꾼다. 
+
+REPLICATE()	문자열을 지정한 수만큼 반복한다
+		<예> SELECT REPLICATE('SQL', 5); 'SQL'을 5번 반복하여 돌려준다. 
+
+REVERSE()	문자열의 순서를 거꾸로 만든다. 
+		<예> SELECT REVERSE('SQL Server 2012'); '2102 revreS LQS'를 돌려준다 
+
+SPACE()		공백을 지정한 수만큼 반복한다. 
+		<예> SELECT SPACE(5); '     '(공백 5개)를 돌려준다. 
+
+STR()		숫자를 문자로 변환한다. (CAST나 CONVERT를 대신 사용 권장)
+
+STUFF()		문자를 지정한 위치의 개수만큼 삭제한 후에 새로운 문자를 끼워넣는다. 
+		<예> SELECT STUFF('SQL 서버 2012', 5, 2, 'Server'); 'SQL 서버 2012'의 5번째부터 2글자('서버')를 삭제한 후에 'Server'를 끼워 넣는다. 
+
+FORMAT()	SQL Server 2012부터 제공되는 함수로 지정된 형식으로 출력한다. 표준 형식은 FORMAT(value, format)을 갖는데, value는 출력할 값이고,
+		format은 출력할 형식이다. 
+		<예> SELECT FORMAT(GETDATE(), 'dd/MM/yyyy'); 현재 날짜의 '일-월-연도'를 돌려준다. 
+
+그외에도 스칼라 함수에는 더 많은 함수들이 있지만, 아직 배우지 않은 내용이 많이 들어가서 별도로 소개해도 큰 도움이 될것 같지가 않다. 우선은 이정도로 마치고 다른 부분에 필요할 때마다 설명하겠다. 
+
+함수에 대해서 어느정도 익혔으므로 함수도 활용할 겸해서, MAX 지정자에 대한 실습을 해보자
