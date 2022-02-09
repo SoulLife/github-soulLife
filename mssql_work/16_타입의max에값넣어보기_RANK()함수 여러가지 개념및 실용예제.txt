@@ -1,0 +1,102 @@
+실습2 :  max 형의 데이터 형식을 이용해서 대량의 데이터를 입력해 보자. 
+
+1. max 형의 데이터를 정의한다. 
+USE tempDB;
+CREATE TABLE maxTbl
+( col1 VARCHAR(MAX),
+  col2 NVARCHAR(MAX));
+
+기존이 각각 1,000,000(백만)개 문자의 대량 데이터를 입력해 보자. 
+
+INSERT INTO maxTbl VALUES(REPLICATE('A', 1000000), REPLICATE('가',10000000));
+
+3. 입력된 값을 크기를 확인해 보자. 
+
+SELECT LEN(col1) AS [VARCHAR(MAX)], LEN(col2) AS [NVARCHAR(MAX)] FROM maxTbl;
+
+그런데 예상한대로 되지 않았다. 입력된 값은 MAX로써 2GB까지 들어갈 수 있게 지정했으나, 결과는 그 SQL Server의 제한인 VARCHAR는 8,000 문자 NVARCHAR는 
+4,000 문자만 들어간 것이 확인된다. 
+
+4. VARCHAR(MAX)및 NVARCHAR(MAX)데이터 형식에 8,000 바이트가 넘는 양을 입력하려면 입력할 문자를 CAST() 함수나 CONVERT() 함수로 형 변환을 시켜준 후에 입력해야 한다. 
+
+DELETE FROM maxTbl;
+INSERT INTO maxTbl VALUES(REPLICATE(CAST('A' AS VARCHAR(MAX)), 10000000), REPLICATE(CONVERT(NVARCHAR(MAX), '가'), 10000000) );
+
+SELECT LEN(col1) AS [VARCHAR(MAX)], LEN(col2) AS [NVARCHAR(MAX)] FROM maxTbl;
+
+5. 이번에는 입력된 데이터의 내용을 수정해 보자. 'A'는 'B'로 '가'는 '나'로 변경해 보자. 
+시간이 좀 걸릴 것이다. 
+UPDATE maxTbl SET col1 = REPLACE( (SELECT col1 FROM maxTbl), 'A', 'B'), col2 = REPLACE( (SELECT col2 FROM maxTbl), '가', '나');
+
+6. 데이터가 잘 변경되었는지 확인해 보자. 그냥 SELECT 를 하면 앞부분만 보이므로 SUBSTRING() 함수나 REVERSE() 함수를 써서 뒤쪽 부분이 바뀌었는지 확인해 보자. 
+SELECT REVERSE( (SELECT col1 FROM maxTbl) );
+SELECT SUBSTRING( (SELECT col2 FROM maxTbl), 999991, 10);
+
+7. 이제는 데이터를 변경하는 함수인 STUFF()와 UPDATE에서 제공해주는 열이름 , WRITE()를 이용해서 데이터를 변경해 보자. 어느 것이 성능이 좋은지도 확인해보자. 먼저 SSMS 메뉴의 [도구] > [SQL Server 프로파일러]를 선택해서 SQL Server 프로파일러를 실행한 후, <연결> 버튼을 클릭해 연결한다. [추적 속성] 창에서 추적 이름은 적절히 입력하고, 템플릿 사용은 TSQL_Duration 으로 지정해 놓고 <실행> 버튼을 클릭한다. 
+
+8. STUFF() 를 이용해서 각 데이터의 마지막 10글자를 'C'와 '다'로 변경해보자. 
+
+UPDATE maxTbl SET col1 = STUFF( (SELECT col1 FROM maxTbl), 999991, 10, REPLICATE('C', 10)),
+col2 = STUFF( (SELECT col2 FROM maxTbl), 999991, 10, REPLICATE('다', 10));
+
+9. 열이름.WRITE() 함수를 이용해서 제일 끝의 5글자를 'D'와 '라'로 변경해보자. 
+
+UPDATE maxTbl SET col1.WRITE('DDDDD', 999996, 5), col2.WRITE('라라라라라', 999996, 5);
+
+UPDATE 구문의 열이름.WRITE() 함수는 VARCHAR(MAX)및 NVARCHAR(MAX)데이터 형식의 열에 사용하는 함수로써, 기존의 내용을 변경시켜 준다. 원형은.WRITE(새로 입력될 문자, 문자 시작 위치, 길이)의 형식이며, 문자 시작 위치에서 길이만큼을 잘라낸 후에, '새로 입력될 문자'를 그위치에 복사해 넣는다. 
+
+10. 프로파일러에서 성능 차이를 확인해 보자. STUFF() 함수에 비해서, .WRITE() 를 사용하는 것이 훨씬 더 빠르다. 그러므로 VARCHAR(MAX)및 NVARCHAR(MAX)데이터 형식의 내용을 수정할 경우에는 되도록 열이름.WRITE() 함수를 사용하자. 
+
+11. 제대로 데이터가 입력되었는지 확인해 보자. 
+SELECT REVERSE( (SELECT col1 FROM maxTbl));
+SELECT REVERSE( (SELECT col2 FROM maxTbl));
+
+
+(3) 순위 함수
+집계 함수는 GROUP BY 절에서 이미 설명하였으므로 이번에는 순위 함수를 알아 보자. SQL Server 2005부터 RANK(), NTILE(), DENSE_RANK(), ROW_NUMBER() 등 4가지 순위 함수를 제공한다. 이 기능은 순번을 처리할 때 필요했던 복잡한 과정들을 단순화하 시켜서 쿼리의 작성 시간을 단축시켜 준다. 잘 알아두면 유용하게 사용할 수 있을 것이다. 
+
+순위 함수는 한 마디로 결과에 순번 또는 순위(등수)를 매기는 역할을 하는 함수이다. 순위 함수의 형식은 다음과 같다. 
+
+<순위함수이름>() OVER( [PARTITION BY <partition_by_list>]
+ORDER BY <order_by_list>)
+순위 함수의 가장 큰 장점은 구문이 단순하다는 점이다. 단순한 구문은 코드를 명확하게 만들고, 쉽게 수정할 수 있다. 또한 효율성(성능)도 뛰어나다. 즉, SQL Server에 부하를 최소화하면서 순위를 매기는 결과를 준다. 직접 실습을 통해서 사용법을 익혀보자. 
+
+
+
+실습3 : 순이 함수를 실습해 보자. 
+
+0. 데이터 베이스는 sqlDB를 사용하겠다. sqlDB는 그 구조가 간단하여 순위 함수를 쉽게 이해하는 데 도움을 준다. 6장[그림6-10]에 그 구조가 나와 있으며 6장 <실습2>에서 데이터베이스 및 테이블을 만들었다. 
+
+1. 회원 테이블(userTbl)에서 키가 큰 순으로 순위를 정하고 싶을 경우에는 ROW_NUMBER() 함수를 사용하면 된다. 
+
+USE sqlDB;
+SELECT ROW_NUMBER() OVER(ORDER BY height DESC)[키큰순위], name, addr, height FROM userTb1;
+
+그런데 같은 키의 경우에는 특별한 출력 순서를 지정하지 않았다. 키가 같은 경우에는 이름 가나다순으로 정렬하게 수정해 보자. 
+
+USE sqlDB;
+SELECT ROW_NUMBER() OVER(ORDER BY height DESC, name ASC)[키큰순위], name, addr, height FROM userTb1;
+
+2. 이번에는 전체 순위가 아닌 각 지역별로 순위를 주고 싶은 경우를 생각해보자. 즉, 경기별, 경남별 등 지역으로 나눈 후에 키 큰 순위를 매기는 경우이다. 이 경우에는 PARTITION BY절을 사용하면 된다. 
+SELECT addr, ROW_NUMBER() OVER(PARTITION BY addr ORDER BY height DESC, name ASC)[지역별키큰순위],name, height FROM userTb1;
+
+경기 , 경남, 서울의 경우에는 각 지역별로 별도의 순위가 매겨져 있다. 데이터의 개수가 작아서 그리 효과적이지 않은 듯 하지만 대량의 데이터에서는 큰 효과를 느낄 수 있다. 
+
+3. 이번에는 전체 순위 결과를 다시 살펴보자. 
+앞 1번의 결과를 보면 임재범과 이승기는 키가 같은 182인데도 키 순위가 2등과 3등으로 나뉘어져 있다. 같은 키인데도 3등이 된 사람의 입장에서는 상당히 불공평하게 느껴질 것이다. 이럴 경우에 두 개의 데이터를 같은 등수로 처리하는 함수가 DENSE_RANK() 함수이다. 
+
+SELECT DENSE_RANK() OVER(ORDER BY height DESC)[키큰순위], name, addr, height FROM userTb1;
+
+4. 앞의 결과가 만족스러울 수도 있겠지만, 2등이 두명 나온 후에 3등(김경호)이 나왔다. 어떤 경우에는 2등이 두명이라면 2등, 2등, 4등 식으로 3등을 빼고 4등부터 순위를 매길 필요도 있다. 이럴 때는 RANK() 함수를 사용하면 된다. 
+
+SELECT RANK() OVER(ORDER BY height DESC)[키큰순위], name, addr, height FROM userTb1;
+
+5. 이번에는 전체 인원을 키순으로 세운 후에, 몇 개의 그룹으로 분할하고 싶은 경우이다. 예를 들면 10명의 사용자를 키순으로 세운후에, 2개의 반으로 분반하고 싶은 경우를 들수 있다. 이럴 때는 단순히 5명씩 나눠지면 된다. 이때 사용하는 함수가 NTILE(나눌 그룹 개수)함수다. 
+
+SELECT NTILE(2) OVER(ORDER BY height DESC)[반번호], name, addr, height FROM userTb1;
+
+그런데 반을 3개로 분리하면 어떻게 될까? 답부터 이야기하면 우선 똑같이 나눈 후에, 나머지 인원을 처음 그룹부터 하나씩 배당하게 된다. 이 예에서는 1반 3명, 2반 3명, 3반 3명으로 한 후에 남는 1명을 처음인 1반에 할당한다. 만약 4개로 분리하면 1반 2명, 2반 2명, 3반 2명, 4반 2명으로 나눈후에 남는 2명을 1반과 2반에 한명씩 할당한다. 결국 1반 3명, 2반 3명, 3반 2명, 4반 2명으로 배정된다. 
+
+SELECT NTILE(4) OVER(ORDER BY height DESC)[반번호], name, addr, height FROM userTb1;
+
+이상으로 순위 함수를 소개하였다. 유용하게 사용할수 있으므로 사용법을 잘 기억해 두자.
