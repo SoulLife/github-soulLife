@@ -1,0 +1,74 @@
+(4)분석 함수
+SQL Server 2012부터 제공되는 분석 함수는 집계 함수와 같이 행 그룹을 기반으로 계산되지만, 여러 개의 행을 반환할 수 있다. 분석 함수를 이용하면 이동 평균, 백분율, 누계 등의 결과를 계산할수 있다. 분석 함수의 종류로는 CUME_DIST(), LEAD(), FIRST_VALUE(), PERCENTILE_CONT(), LAG(), PERCENTILE_DISC(), LAST_VALUE(), PERCENT_RANK()등이 있다. 역시 실습을 통해 그 용도를 익혀보자. 
+
+
+실습4 : 분석 함수를 실습해 보자. 
+
+1. 회원테이블(userTbl)에서 키가 큰 순서로 정렬한 후에 다음 사람과 키 차이를 미리 알려면 LEAD() 함수를 사용할 수 있다. 
+
+USE sqlDB;
+SELECT name, addr, height as [키], height - (LEAD(height, 1, 0) OVER (ORDER BY height DESC)) AS [다음사람과 키 차이] FROM userTbl;
+
+LEAD()함수에서 사용되는 인자는 열이름, 다음 행 위치, 다음 행이 없을 경우 값을 지정할 수 있다. 여기서는 height 열을 사용했고, 다음 1번째 행(즉, 바로 다음 행)을 비교 대상으로 했다. 또 다음 행이 없는 경우에는 다음 행을 0으로 간주한다. 그래서 마지막 조용필은 다음 행이 없으므로 키 차이는(height-0)인 자신의 키가 출력되었다. OVER 절에서는 키 순서로 정렬했다. 
+
+거의 같은 용도로 LAG() 함수를 사용할 수 있는데, LEAD()가 다음 행과의 차이라면 LAG()는 이전 행과의 차이를 구하는 것만 다를 뿐이다. 
+
+
+2. 이번에는 지역별로 가장 키가 큰 사람과의 차이를 알고 싶다면 FIRST_VALUE()를 활용하면 된다. 예로 바비킴의 경우 자신이 속한 지역(서울)의 가장 큰 키인 성시경의 키 186cm와 자신이 몇 cm 차이가 나는지 출력할 수 있다. 
+
+SELECT addr, name, height AS [키], height - (FIRST_VALUE(height) OVER (PARTITION BY addr ORDER height DESC) AS [지역별 가장 큰 키와 차이] FROM userTbl;
+
+
+OVER 문장의 PARTITION BY addr에 의해서 지역별로 그룹화 한다. 또 ORDER BY height DESC에 의해서 키로 내림차순 정렬한 후에, FIRST_VALUE(height)로 각 지역 별 첫 번째 값(즉 가장 큰 키)을 추출하게 된다. 서울 지역의 결과를 보면 이해가 갈것 이다. 
+
+3. 누적 합계를 내보자. 예를 들어, 현 지역에서 자신과 키가 같거나 자신보다 큰 인원의 백분율을 구할 수 있다 CUME_DIST()함수를 사용해 보자. 
+
+SELECT addr, name, height AS [가입일], (CUME_DIST() OVER (PARTITION BY addr ORDER BY height DESC)) * 100 AS [누적인원 백분율%] FROM userTbl;
+
+경기 결과를 보면 조관우는 전체 경기 인원 2명중에서 자신보다 키가 크거나 같은 사람이 1명(자신포함)이므로 50%가 된다. 또 조용필은 2명 중에서 자신보다 키가 크거나 같은 사람이 2명이므로 100%가 출력되었다. 
+
+지금 필자가 든 예는 기존 테이블을 사용하느라 부자연스럽게 느껴지겠지만, 다른 예로 직원별 연봉이 소속 부서 중에서 몇 퍼센트 안에 드는지 확인하는 경우에는 유용하게 사용될수 있다.  또 PERCENT_RANK()도 CUME_DIST()와 유사한 기능을 한다. 
+
+
+4. 이번에는 각 지역별로 키의 중앙값을 계산하고싶다면 PERCENTILE_CONT() 문을 사용할 수 있다. 
+
+SELECT DISTINCT addr, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY height) OVER (PARTITION BY addr) AS [지역별 키의 중앙값] FROM userTbl;
+
+PERCENTILE_CONT()의 인자로는 0.0~1.0 사이의 백분율 값이 올 수 있다. 이 예에서는 0.5를 입력했으므로 정확히 중앙값에 해당된다. WITHIN GROUP에는 정렬할 열을 지정한다. 예에서는 키로 정렬한 후에 그 중앙값(0.5)을 찾게 된다. PERCENTILE_DISC()도 같은 용도로 사용할 수 있지만 PERCENTILE_CONT()가 적절한 값을 보관하여 결과를 반환하는 반면, PERCENTILE_DISC()는 정확한 위치값(중위수)을 추출하는데 사용된다. 즉 반환값은 항상 열의 값중 하나가 된다. 
+
+
+(5) PIVOT/UNPIVOT 연산자
+PIVOT 연산자는 한 열에 포함된 여러 값을 출력하고, 이를 여러 열로 변환하여 테이블 반환 식을 회전하고 필요하면 집계까지 수행할 수 있다. 또한 UNPIVOT은 PIVOT의 반대되는 연산을 수행한다. 
+
+다음 예를 보자
+
+왼쪽은 판매자 이름, 판매 계절, 판매 수량 으로 구성된 테이블이다. 이를 각 판매자가 계절별로 몇 개 구매했는지 표로 나타내고 싶을때 PIVOT 연산자를 활용할 수 있다. 
+
+우선 PIVOT의 원형은 다음과 같다. 
+
+PIVOT (집계함수(열) 
+	FOR 새로운 열로 변경할 열 이름
+	IN (열 목록) AS 피벗이름)
+
+
+실습5 : 간단한 PIVOT 연산자를 실습해 보자. 
+
+1.[그림7-31]과 같은 샘플 테이블을 만든다. 
+USE tempdb;
+CREATE TABLE pivotTest
+( uName NCHAR(3),
+	season NCHAR(2),
+	amount INT );
+
+2.[그림7-31]의 왼쪽 표와 같게 데이터를 9건 입력한다. 
+
+INSERT INTO pivotTest VALUES('김범수', '겨울', 10), ('윤종신', '여름', 15), ('김범수', '가을', 25), ('김범수', '봄', 3), ('김범수', '봄', 37), ('윤종신', '겨울', 40),
+('김범수', '여름', 14), ('김범수', '겨울', 22), ('윤종신', '여름', 64);
+SELECT * FROM pivotTest;
+
+
+3. PIVOT 연산자를 수행한다 [그림7-31]의 오른쪽과 같은 결과가 나온다. 
+
+SELECT * FROM pivotTest PIVOT( SUM(amount) FOR season IN ([봄], [여름], [가을], [겨울])) AS resultPivot;
+
+간단한 예여서 별로 어렵지 않았을 것이다. PIVOT은 한눈에 테이블 내용을 파악할 수 있는 장점이 있으므로 종종 유용하게 사용된다. 

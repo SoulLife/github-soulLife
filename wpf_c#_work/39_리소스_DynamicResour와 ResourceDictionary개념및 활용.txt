@@ -1,0 +1,167 @@
+이것은 생각보다 어렵지 않은데 다음 SolidColorBrush 타입 객체를 반환하는 마크업 확장을 생각해 보자.
+{x:Static SystemColors.ActiveCaptionBrush}
+
+따라서 다음 마크업 확장은 당연히 ResourceKey 타입 객체를 반환해야 한다. 
+
+{x:Static SystemColors.ActiveCaptionBrushKey}
+
+ResourceKey 타입의 객체는 정확히 StaticResource가 원하는 것이다. 따라서 탁월한 통찰력과 용감무쌍함을 발휘해 StaticResource 표현 안에 x:Static 표현을 넣어보자. 
+
+Foreground ="{StaticResource {x:Static SystemColors.ActiveCaptionBrushKey}}"
+
+그렇다 이것은 문제 없이 동작한다. 하나의 중괄호 쌍이 또 다른 중괄호 쌍 안에 들어있고 이 전체 표현은 2개의 오른쪽 중괄호에서 끝나게 된다. 이 새로운 Foreground 설정은 기능적으로 다음의 기존 설정과 완전히 같다. 
+
+Foreground="{xStatic SystemColors.ActiveCaptionBrush}"
+
+SystemColors.ActiveCaptionBrushKey 에 의해 참조된 리소스는 SystemColors.ActiveCaptionBrush에 의해 직접 반환된브러시와 동일한 SolidColorBrush이다. 
+
+
+하지만 이런 문법은 사실 장점이 없다. 왜냐하면 새로운 XAML 파일을 작동시키고 시스템 색을 변경해도 마찬가지로 Label의 전경색은 자동으로 바뀌지 않기 때문이다. 
+
+이제 이 대체 문법에 약간의 변화를 가해 StaticResource를 이번 장에서 소개될 세 번째이자 마지막 마크업 확장인 DynamicResource로 바꿔보자. 
+
+Foreground="{DynamicResource {x:Static SystemColors.ActiveCaptionBrushKey}}"
+
+동작한다. 이제 시스템 색을 변경해도 Label의 문자열 색이 제목 표시줄의 색에 따라 변하는 것을 볼 수 있다. 
+
+완벽한 이해를 위해 DynamicResource의 프로퍼티 엘리먼트 문법을 살펴보자. DisplayCurrentDateTime.xaml안에서 Foreground 프로퍼티가 프로퍼티 엘리먼트로 표현되기 위해 Label의 종료 태그가 필요하다. 
+
+<Label ...>
+	<Label.Foreground>
+		<DynamicResource>
+			<DynamicResource.ResourceKey>
+				<x:Static Member="SystemColors.ActiveCaptionBrushKey" />
+			</DynamicResource.ResourceKey>
+		</DynamicResource>
+	</Label.Foreground>
+</Label>
+
+리소스에 접근하기 위한 StaticResource와 DynamicResource는 모두 키를 필요로 하고 이 키를 사용해 객체에 접근하는데, StaticResource에서는 키가 객체에 접근할 때 한번 사용되고 접근한 객체를 유지하는 반면 DynamicResource는 키가 계속 유지되어 객체가 필요할때마다 접근한다. 
+
+사용자가 시스템 색을 바꾸면 윈도우는 색이 바뀌었다는 시스템 메시지를 전송한다. 이때 애플리케이션은 일반적으로 이 메시지를 받아 창을 갱신하는데 WPF에서는 이 갱신이 모든 엘리먼트의 OnRender를 호출하는 InvalidateVisual의 호출로 전환된다. 이때 엘리먼트의 Foreground 프로퍼티가 동적 리소스를 참조하면 가지고 있던 키를 브러시에 접근하기 위해 사용한다. 이것은 전체 엘리먼트를 재생성하는 것은 아니기 때문에 시스템 색을 변경하면 Label의 문자열 색은 변해도 Label의 컨텐트인 날짜와 시간은 여전히 갱신되지 않고 남아있다. 
+
+DynamicResource의 제일 중요한 목적은 시스템 색과 같은 시스템 리소스를 접근하는 것이기 때문에 너무 많은 것을 바라지 말자. 리소스가 변경되었을 때 알려주는 개념은 사실 없다. 컨트롤과 엘리먼트를 다른 객체의 프로퍼티 변경에 따라 갱신하고 싶다면 23장에서 소개될 데이터 바인딩을 사용해야 한다. 
+
+일반적으로 리소스가 정의되기 이전에 그것을 선행해 참조할 수는 없기 때문에 StaticResource 마크업 확장에 의해 참조된 리소스는 파일이나 그 조상 엘리먼트에 반드시 정의돼있어야 한다. 하지만 때로 리소스가 정의되기 이전에 참조할 필요가 있을 수 있다. 예를 들어 패널의 시작 태그에 아래와 같이 리소스 절에 정의된 리소스를 참조하는 Background 속성을 포함하는 경우이다. 
+
+<StackPanel Background="{StaticResource mybrush}">
+	<StackPanel.Resources>
+		<SolidColorBrush x:Key="mybrush" .../>
+	</StackPanel.Resources)
+	...
+
+이것은 동작하지 않을 것이다. 대신 Background 속성을 시작 태그에서 제거하고 프로퍼티 엘리먼트 문법을 다음과 같이 사용한다. 
+
+<StackPanel>
+	<StackPanel.Resources>
+		<SolidColorBrush x:key="mybrush" ... />
+	</StackPanel.Resources>
+	<StackPanel.Background>
+		<StaticResource ResourceKey="mybrush" />
+	</StackPanel.Background>
+	...
+
+아니면 StaticResource를 DynamicResource로 바꿔서 리소스가 실제로 패널을 그릴 때까지 리소스 접근을 지연시킨다. 
+
+리소스로 생성한 브러시는 그 자체가 시스템 색에 바탕을 두고 있다. 다음 스탠드얼론 XAML 은 2개의 브러시를 리소스로 정의한다. LinearGradientBrush는 활성화된 제목 표시줄 색상과 비활성화된 제목 표시줄 색상으로 표현한 그라디언트를 정의했고, 두 번째 SolidColorBrush는 DynamicResource를 통해 SystemColors.ActiveCaptionColorKey를 사용한다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	Background="{DynamicResource {x:Static SystemColors.InactiveCaptionBrushKey}}" >
+	<StackPanel.Resources>
+		<LinearGradientBrush x:Key="dynabrush1"	StartPoint="0 0" EndPoint="1 1">
+			<LinearGradientBrush.GradientStops>
+				<GradientStop Offset="0" Color="{DynamicResource{x:Static SystemColors.ActiveCaptionColorKey}} " />
+				<GradientStop Offset="1" Color="{DynamicResource{x:Static SystemColors.InactiveCaptionColorKey}}" />
+			</LinearGradientBrush.GradientStops>
+		</LinearGradientBrush>
+
+		<SolidColorBrush x:key="dynabrush2"	Color="{DynmaicResource {x:Static SystemColors.ActiveCaptionColorKey}}" />
+	</StackPanel.Resources>
+
+	<Label HorizontalAlignment="Center" FontSize="96" Content="Dynamic Resources" Background="{StaticResource dynabrush1}" 
+		Foreground="{StaticResource dynabrush2}" />
+</StackPanel>
+
+2개의 리소스는 SystemColor.ActiveCaptionColorKey와 SystemColors.InactiveCaptionColorKey를 참조하기 위해 DynamicResource를 사용했다. 이것은 참조를 위한 키지만 (DynamicResource에 의해 사용됐기 때문이다) 브러시를 참조하지 않고 색을 참조했다. 왜냐하면 이것이 두 GradientStop 객체의 Color 프로퍼티를 설정해야 하기 때문이다. 
+
+이 프로그램은 3가지 형태로 색을 칠한다. 위쪽에서 DynamicResource를 사용해 StackPanel의 배경색을 SystemColors.InactiveCaptionBrushKey로 설정했고 아래쪽 Label은 지역적으로 정의된 2개의 리소스로 그것의 배경색과 전경색을 칠한다. 하지만 이 경우 두 리소스는 정적 리소스로 참조된다. 
+
+시스템 색이 변경되면 지역 리소스로 정의된 두 브러시는 새로운 Color 프로퍼티를 얻어 색을 변경한다. LinearGradientBrush와 SolidColorBrush 객체는 서로를 대체할 수 없지만 동일한 객체에서 파생되었기 때문에 Label 엘리먼트는 이 두 객체를 참조해 객체가 변경될때 Label의 Background와 Foreground 프로퍼티를 시스템 색의 변경에 따라 함께 변경할 수 있다. 
+
+그런데 Label의 Background와 Foreground속성을 DynamicResource로 변경하면 프로그램은 더 이상 시스템 색의 변경에 반응하지 않는다. 문제는 DynamicResource는 키에 의해 참조된 객체가 재생성되기를 바라는데, 실제 참조한 브러시 객체는 재생성되지 않기 때문이다. 따라서 DynamicResource는 Foreground와 Background프로퍼티를 갱신하는 데 전혀 영향을 못 미친다(적어도 이것이 내가 생각한 최고의 설명이다)
+
+시스템 색이나 시스템 설정과 연관된 키를 자신만의 리소스 정의에서 사용할 수도 있는데, 이 경우 지역 리소스 정의가 시스템 설정에 우선한다. 다음 스탠드 얼론 XAML 파일은 이번장의 앞부분에 소개된 ResourceLookupDemo.xaml 프로그램의 변형이다. 
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	Orientation="Horizontal">
+	<StackPanel>
+		<StackPanel.Resources>
+			<SolidColorBrush x:Key="{x:Static SystemColors.ActiveCaptionBrushKey}" Color="Red" />
+		</StackPanel.Resources>
+		<Button HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" 
+			Foreground="{DynamicResource{x:Static SystemColors.ActiveCaptionBrushKey}}">
+			Button with Red text
+		</Button>
+	</StackPanel>
+	<StackPanel>
+		<Button HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" 
+			Foreground="{DynamicResource {x:Static SystemColors.ActiveCaptionBrushKey}}">
+			Button with Blue text
+		</Button>
+	</StackPanel>
+</StackPanel>
+
+첫 번째 내장된 StackPanel만이 SystemColors.ActiveCaptionBrushKey에서 얻어진 키를 사용해 빨간색 브러시를 정의하는 Resources절을 포함하고 있다. 이 StackPanel 속에 있는 버튼은 따라서 빨간색 브러시를 가지므로 버튼의 문자열이 빨간색으로 표현되고 나머지 버튼은 활성화된 제목 표시줄 색의 브러시를 가지기 때문에 시스템 색을 변경할 때처럼 버튼의 색도 동적으로 변경된다. 따라서 스탠드얼론 리소스 정의가 시스템 설정에 우선함을 알 수 있다. 
+
+리소스를 사용함에 따라 다수의 애플리케이션에서 이 리소스를 공유하고 싶을 때가 있다. 이것은 회사 제품의 애플리케이션에 스탠드얼론 룩앤필을 부여하는 등의 자체적인 스타일의 집합을 개발했을 때 더욱 절실하다. 
+
+다수의 프로젝트에서 공유하고 싶은 리소스는 ResourceDictionary를 루트 엘리먼트로 하는 XAML 파일에 모을 수 있는데, 리소스는 이 루트 엘리먼트의 자식이 된다. 다음에 하나의 리소스를 포함하는(여러 개를 포함할 수도 있지만)리소스 사전을 보자. 
+
+<ResourceDictionary  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<LinearGradientBrush x:Key="brushLinear">
+		<LinearGradientBrush.GradientStops>
+			<GradientStop Color="Pink" Offset="0" />
+			<GradientStop Color="Aqua" Offset="1" />
+		</LinearGradientBrush.GradientStops>
+	</LinearGradientBrush>
+</ResourceDictionary>
+
+다음 예제도 리소스 사전에 하나의 리소스를 포함하고 있다. 
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<RadialGradientBrush x:Key="brushRadial">
+		<RadialGradientBrush.GradientStops>
+			<GradientStop Color="Pink" Offset="0" />
+			<GradientStop Color-"Aqua" Offset="1" />
+		</RadialGradientBrush.GradientStops>
+	</RadialGradientBrush>
+</ResourceDictionary>
+
+이제 UseCommonResources 프로젝트에서 MyResources1.xaml와 MyResources2.xaml에 정의된 리소스를 사용해보자. 이 2개의 파일을 프로젝트에 추가하고 빌드 작업은 Page나 Resource 어느것으로 설정해도 상관없다(Page가 바람직한데 XAML을 BAML파일로 변환하는 컴파일을 하는 중에 몇 가지 예비 작업이 미리 되기 때문이다.) 애플리케이션의 프로젝트를 위한 정의 파일속에는 다음과 같은 파일 속에 포함된 Resources 절을 가질수 있다. 
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" StartupUri="UseCommonResourcesWindow.xaml">
+	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="MyResources1.xaml" />
+				<ResourceDictionary Source="MyResources2.xaml" />
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
+	</Application.Resources>
+</Application>
+
+파일의 Resources절에는 ResourceDictionary 엘리먼트가 있다. 이 ResourceDictionary는 다수의 ResourceDictionay 객체 컬렉션을 파일 이름으로 참조하는 MergedDictionaries 프로퍼티를 정의한다. 하나의 리소스 사전만을 가지고 있다면 굳이 ResourceDictionary.MergedDictionaries 프로퍼티 엘리먼트를 사용할 것 없이 ResourceDictionary 객체 내부에서 리소스 사전을 참조할 수 있다. 
+
+다수의 리소스 사전은 결과적으로 합쳐지기 때문에 여러 파일에서 동일한 키를 사용하는 상황이 발생하면 먼저 나온 리소스가 나중에 나오는 리소스로 교체돼 버린다
+
+또한 애플리케이션 정의 파일 이외에 XAMl 파일의 Resources절에서 ResourceDictionary 를 삽입할 수도 있는데, 이 경우에는 애플리케이션 전체에서 리소스를 사용할 수 없고 그 파일 안에서만 사용할 수 있다. 
+
+이제 MyResources1.xaml와 MyResources2.xaml 파일에서 정의된 리소스를 사용하는 Window엘리먼트를 완성했다. 
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Use Common Resources" Background="{StaticResource brushLinear}">
+	<Button FontSize="96pt" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{StaticResource brushRadial} ">
+		Button
+	</Button>
+</Window>
+
+XAML과 같은 새로운 언어를 배울 때 개발자가 난관에 봉착하지 않게 언어가 적절하게 설계되어 있을까 하는 걱정이 수반되기 마련이다. 이런 언어에서는 코드의 반복을 최소화하는 것이 중요한데, 앞에서 본 리소스는 객체를 한번 정의하고 애플리케이션 전체를 통해 재사용할 수 있을 뿐만 아니라 리소스를 자체적인 ResourceDictionary 파일에 저장함으로써 다수의 애플리케이션에서 공유될수 있기 때문에 코드의 중복을 피하기 위한 큰 도구를 선사한다. 
