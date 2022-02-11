@@ -1,0 +1,63 @@
+Section 02 : 조인
+지금까지 우리는 대개 하나의 테이블을 다루는 작업을 위주로 수행했다. 지금까지 익힌 것을 바탕으로 두 개 이상의 테이블이 서로 관계되어 있는 상태를 고려해 보자
+
+조인(Join)이란 두 개 이상의 테이블을 서로 묶어서 하나의 결과 집합으로 만들어내는 것을 의미한다 지금부터 나오는 것은 1장에서 이미 나온 이야기도 있지만 조인을 이해하려면 꼭 필요한 개념이므로 복습을 겸해서 다시 살펴보자. 
+
+데이터베이스의 테이블은 중복과 공간 낭비를 피하고 데이터의 무결성을 위해서 여러 개의 테이블로 분리하여 저장한다. 그리고 이 분리된 테이블들은 서로 관계(Relaction)를 맺고 있다. 그 중에서 간단하지만 가장 많이 사용되는 보편적인 관계가 6장[그림 6-10]에 나타난 sqlDB의 userTbl과 buyTbl의 관계인 1대다의 관계이다. 이 데이터베이스는 간단한 가상 쇼핑몰에서 운영하는 데이터베이스라고 가정한 것이며 [그림6-10]은 그 중에서 회원의 기본 정보(userTbl)와 회원이 구매한 구매 정보(buyTbl)만 표시한 것이다. 1대다 관계란 한쪽 테이블에는 하나의 값만 존재해야 하지만 다른 쪽 테이블에서는 여러 개가 존재할 수 있는 관계다 [그림6-10]을 계속 보면서 살펴보자. 
+
+먼저 회원테이블(userTbl)을 보자. '김범수' 사용자는 회원가입 시에 ID 'KBS'를 생성했다. 그런데 만약 이 'KBS'를 다른 사람도 사용할 수 있을까? 아이디 열은 Primary Key로 지정되어 있으므로 절대 같은 아이디를 사용할 수가 없다. 그래서 KBS는 하나만 존재한다. 이것이 1대다 관계에서 1이다. 
+
+이번에는 구매 테이블(buyTbl)을 살펴보자. 만약 구매 테이블의 아이디 열을 회원 테이블과 같이 Primary Key로 지정한다면 어떻게 될까? 그럴 경우에는 Primary Key는 한 번 만 들어갈수 있으므로 KBS라는 아이디를 가진 사람은 물건을 한 번 구매한 이후에는 두 번 다시 이가상 쇼핑몰에서 물건을 살 수가 없다. 그래서 한 명의 회원이 당연히 여러 건의 구매를 할 수있게 설정되어야 한다. 이러한 설정이 바로 1대다 관계의 설정인 것이다. 그래서 회원 테이블의 아이디는 Primary Key로 지정한 것이며, 구매 테이블의 아이디는 Primary Key와 관련되는 Foreign Key로 지정한 것이다. 
+
+이러한 1대다 관계는 현실의 많은 업무에서 발견할 수 있다. 회사원 테이블과 급여 테이블도 마찬가지다. 회사원은 한 명이 여러 번의 급여를 받아야 하므로 1대다 관계이다. 또 학생과 학점 테이블의 관계도 마찬가지이다. 학생 한명이 여러 과목의 학점을 받아야 하므로 1대다 관계로 설정된다. 
+
+여기서는 직접 조인을 다루는 SQL 문을 [그림 6-10]의 관계를 기준으로 두 테이블을 조인(Join)해서 결과를 추출하는 방법을 통해 익혀보겠다. 
+
+
+
+※ INNER JOIN(내부 조인)
+조인 중에서 가장 많이 사용되는 조인이다. 대개의 업무에서 조인은 INNER JOIN을 주로 사용한다. 일반적으로 JOIN이라고 이야기하면 이 INNER JOIN을 지칭하는 것이다. 
+
+INNER JOIN을 사용하는 경우를 생각해보자. 지금 구매 테이블을 보면, 물건을 구매한 사용자의 아이디와 물건 등의 정보만 나타난다. 그런데 이 물건을 배송하려면 구매한 회원의 주소를 알아야 한다. 이 회원의 주소 정보를 알려고 주소 정보가 있는데 회원 테이블과 결합하는 조인이 INNER JOIN이다. 우선 형식을 살펴보자. 
+
+SELECT <열 목록> FROM <첫 번째 테이블> INNER JOIN <두 번째 테이블 > ON <조인될 조건> [WHERE 검색조건]
+
+앞의 형식에서 INNER JOIN을 그냥 JOIN이라고만 써도 INNER JOIN 으로 인식한다. 
+
+구매 테이블중에서 'JYP'라는 아이디를 가진 사람이 구매한 물건을 발송하려고 이름/주소/연락처 등을 조인해서 검색하려면 다음과 같이 사용하면 된다. 
+
+USE sqlDB;
+SELECT * FROM buyTbl INNER JOIN userTbl ON buyTbl.userid = userTbl.userid WHERE buyTbl.userid = 'JYP';
+
+*ON 구문과 WHERE 구문에는 테이블이름.열이름의 형식으로 되어있다. 그렇게 해야 하는 이유는 두 개의 테이블(buyTbl, userTbl)에 같은 열 이름이 모두 있기 때문이다. 그래서 두 개 테이블을 결합하는 경우에 같은 열 이름이 있다면 꼭 '테이블명.열이름'형식으로 표기해줘야 한다. 
+
+앞의 결과를 생성하려면 다음 그림과 같은 과정을 거친다. 
+
+우선 구매 테이블의 userid(buyTbl.userid)인 'JYP'을 추출하게 된다. 그리고 'JYP'와 같은 값을 회원테이블의 userid(userTbl)열에서 검색한 후, 'JYP'라는 아이디를 찾게 되면 구매 테이블과 회원 테이블의 두 행을 결합(JOIN)한다.
+
+만약 WHERE buyTbl.userid = 'JYP' 를 생략하게 되면 buyTbl의 모든 행에 대해서 앞과 같은 방식으로 반복하게 되는 것이다. WHERE를 뺀 결과는 다음과 같다. 
+
+열의 항목이 너무 많은것 같아서 복잡해 보이므로, 이번에는 필요한 열만 추출해보자. 아이디/이름/구매물품/주소/연락처만 추출해 보자. 
+
+SELECT userid, name, prodName, addr, mobile1 + mobile2 AS [연락처] FROM buyTbl INNER JOIN userTbl ON buyTbl.userid = userTbl.userid;
+
+오류메시지 :
+메시지 209, 수준 16, 상태 1, 줄 1
+열이름 userid이(가) 불확실합니다. 
+
+열 이름 userid 가 불확실하다는 오류 메시지가 나왔다. userid의 경우에는 두 테이블 모두에 들어 있어서 어느 테이블의 userid를 추출할지 명시해 줘야 한다. 이 경우에는 어느 테이블의 userid를 추출하든지 같은 값이기는 하지만 지금은 buyTbl을 기준으로 하는것 이므로 buyTbl의 userid가 더 정확하다. 
+
+SELECT buyTbl.userid, name, prodName, addr, mobile1 + mobile2 AS [연락처] FROM buyTbl INNER JOIN userTbl ON buyTbl.userid = userTbl.userid;
+
+*다음과 같은 WHERE 구문으로도 INNER JOIN을 표현할 수 있다. 하지만 호환성 등의 문제로 별로 권장하지 않는 방식이다. 개발자에 따라서 다음의 방식으로 조인하는 경우도 있으니 알아둘 필요는 있다. 
+
+SELECT buyTbl.userid, name, prodName,addr, mobile1 + mobile2 AS [연락처] FROM buyTbl, userTbl WHERE buyTbl.userid = userTbl.userid;
+
+예상대로 구매 테이블의 12건에 대해서 각각의 구매자 이름/주소 /연락처 등을 조회할수 있었다. 
+
+코드를 좀 더 명확히 하려면 SELECT 다음의 컬럼 이름(열 이름)에도 모두 테이블이름.열이름 식으로 붙여주자. 
+
+SELECT buyTbl.userid, userTbl.name, buyTbl.prodName, userTbl.addr, userTbl.mobile1 + userTbl.mobile2 AS [연락처] FROM buyTBL INNER JOIN userTbl 
+ON buyTbl.userid = userTbl.userid;
+
+각 열이 어느 테이블에 속한 것인지는 명확해 졌지만 코드가 너무 길어져 오히려 복잡해 보인다. 이를 간편하게 하려면 다음과 같이 각 테이블에 별칭(Alias)을 줄 수 있다. 다음 코드는 앞과 같지만 훨씬 간결하다.
