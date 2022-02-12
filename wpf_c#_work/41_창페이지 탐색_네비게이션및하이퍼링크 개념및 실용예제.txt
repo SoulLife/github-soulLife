@@ -1,0 +1,396 @@
+using System;
+using System.Windows;
+using System.Windows.Control;
+using System.Windows.Ink;
+
+public class EraserToolDialog : StylusToolDialog
+{
+	//생성자가 StylusToolDialog 상에서 몇 가지 관계없는 컨트롤을 숨김
+	public EraserToolDialog()
+	{
+		Title = "Eraser Tool";
+		chkboxPressure.Visibility = Visibility.Collapsed;
+		chkboxHighlighter.Visibility = Visibility.Collapsed;
+		lstboxColor.Visibility = Visibility.Collapsed;
+	}
+	//public 프로퍼티가 컨트롤을 초기화하고 값을 반환함
+	public StylusShape EraserShape
+	{
+		set
+		{
+			txtboxHeight.Text = (0.75 * value.Height).ToString('F1");
+			txtboxWidth.Text = (0.75 * value.Width).ToString("F1");
+			txtboxAlgle.Text = value.Rotation.ToString();
+
+			if(value is EllipseStylusShape)
+				radioEllipse.IsChecked = true;
+			else
+				radioRect.IsChecked = true;
+		}
+		get
+		{
+			StylusShape eraser;
+			double width = Double.Parse(txtboxWidth.Text) / 0.75;
+			double height = Double.Parse(txtboxHeight.Text)/ 0.75;
+			double angle = Double.Parse(txtboxAngle.Text);
+			if((bool)radioEllipse.IsChecked)
+				eraser = new EllipseStylusShape(width, height, angle);
+			else
+				eraser = new RectangleStylusShape(width, height, angle);
+		
+			return eraser;
+		}
+	}
+}
+
+이 클래스는 StylusShape(InkCanvas가 정의하는 EraserShape 프로퍼티와 같다) 타입의 EraserShape 프로퍼티를 새로 정의하고 몇 가지 외관상 차이점과 관계된 부분을 제외하고는 StylusToolDialog의 DrawingAttributes 프로퍼티를 다루는 것과 코드가 거의 유사하다. 
+
+Tools 메뉴는 Stylus 와 Eraser 항목을 가지는데, YellowPadWidow.Tools.cs 파일은 항목에 따라 StylusToolDialog와 EraserToolDialog를 띄워준다. 
+
+using System;
+using System.Windows;
+using System.Windows.Control;
+
+public partial class YellowPadWindow : Window
+{
+	//StylusToolDialog를 띄우고 DrawingAttributes를 사용함
+	void StylusToolOnClick(object sender, RoutedEventArgs args)
+	{
+		StylusToolDialog dlg = new StylusToolDialog();
+		dlg.Owner = this;
+		dlg.DrawingAttributes = inkcanv.DefaultDrawingAttributes;
+
+		if((bool)dlg.ShowDialog().GetValueOrDefault())
+		{
+			inkcanv.DefaultDrawingAttributes = dlg.DrawingAttributes;
+		}
+	}
+	//EraserToolDialog를 띄우고 EraserShape를 사용
+	void EraserToolOnClick(object sender, RoutedEventArgs args)
+	{
+		EraserToolDialog dlg = new EraserToolDialog();
+		dlg.Owner = this;
+		dlg.EraserShape = inkcanv.EraserShape;
+
+		if((bool)dlg.ShowDialog().GetValueOrDefault())
+		{
+			inkcanv.EraserShape = dlg.EraserShape;
+		}
+	}
+}
+
+이제 아까 건너뛰었던 Edit 메뉴로 가보자. 이전에 언급했듯이 Stylus-Mode 메뉴의 Select 항목을 선택하면 하나 이상의 선을 선택할 수 있다. InkCanvas에는 클립보드에 선택된 선을 복사하기 위한 CopySelection와 CutSelection 메소드가 있으며, CutSelection 메소드의 경우에는 복사 후에 선들의 집합에서 선택된 선을 삭제한다. 또한 InkCanvas는 클립보드에 항목을 붙여넣기 할 수 있는지 여부를 알 수 있는 CanPaste 메소드와 그 항목을 실제로 InkCanvas에 붙이는 Paste 메소드를 정의하기 때문에 Edit 메뉴의 기본적인 항목은 다음에서 보듯이 꽤 쉽게 구현할 수 있다. 
+
+using System;
+using System.Windows;
+using System.Windows.Control;
+using System.Windows.Ink;
+using System.Windows.Input
+
+public partial class YellowPadWindow : Window
+{
+	//선이 선택돼 있으면 Format 항목을 활성화
+	void EditOnOpened(object sender, RoutedEventArgs args)
+	{
+		itemFormat.IsEnabled = inkcanv.GetSelectedStrokes().Count > 0;
+	}
+	//선이 선택돼있으면 Cut, Copy, Delete 항목을 활성화
+	void CutCanExecute(object sender, CanExecutedRoutedEventArgs args)
+	{
+		args.CanExecute = inkcanv.GetSelectedStrokes().Count > 0;
+	}
+	//InkCanvas 내의 메소드를 이용해 Cut과 Copy를 구현
+	void CutOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		inkcanv.CutSelection();
+	}
+	void CopyOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		inkcanv.CopySelection();
+	}
+	//클립보드 내 항목이 붙여 넣기가 가능하면 Paste 항목을 활성화
+	void PasteCanExecute(object sender, CanExecutedRoutedEventArgs args)
+	{
+		args.CanExecute = inkcanv.CanPaste();
+	}
+	//InkCanvas 내의 메소드를 이용해 Paste를 구현
+	void PasteOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		inkcanv.Paste();
+	}
+	//Delete를 직접 구현
+	void DeleteOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		foreach(Stroke strk in inkcanv.GetSelectedStrokes())
+			inkcanv.Strokes.Remove(strk);
+	}
+	//Select All 항목 : 모든 선을 선택
+	void SelecteAllOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		inkcanv.Select(inkcanv.Strokes);
+	}
+	//Format Selection 항목 : StylusToolDialog 호출
+	void FormatOnClick(object sender, RoutedEventArgs args)
+	{
+		StylusToolDialog dlg = new StylusToolDialog();
+		dlg.Owner = this;
+		dlg.Title = "Format Selection";
+
+		//처음 선택된 선의 DrawingAttributes를 얻음
+		StrokeCollection strokes = inkcanv.GetSelectedStrokes();
+
+		if(strokes.Count > 0)
+			dlg.DrawingAttributes = strokes[0].DrawingAttributes;
+		else
+			dlg.DrawingAttributes = inkcanv.DefaultDrawingAttributes;
+
+		if((bool)dlg.ShowDialog().GetValueOrDefault())
+		{
+			//선택된 모든 선의 DrawingAttributes를 설정
+			foreach(Stroke strk in strokes)
+				strk.DrawingAttributes = dlg.DrawingAttributes;
+		}
+	}
+}
+
+선이 필수적으로 먼저 선택돼야 하는 메뉴를 활성화시키기 위해서는 StrokeCollection 타입의 객체를 반환하는 InkCanv의 GetSelectedStrokes 메소드를 사용한다. 
+
+선택된 선의 서식을 바꾸는 기능을 처음에는 구현할 생각이 없었지만 StylusToolDialog의 제목만 바꿔 재사용함으로써 간단히 구현해 보았다. 파일의 아랫부분 코드를 보면 첫 번째 선택된 선의 DrawingAttributes 프로퍼티로 대화상자를 초기화하고 그 후 그 대화상자가 새로 생성한 DrawingAttributes 객체에 의해 선택된 모든 선을 다시 설정한다. 
+
+YellowPadWindow.Help.cs 파일은 Help 메뉴의 2개 항목을 처리한다. 2개의 항목 모두 대화상자를 호출하는데, Help 항목은 YellowPadHelp 타입의 모달리스 대화상자를 띄우고 About 항목은 YellowPadAboutDialog 타입의 모달 대화상자를 띄운다 
+
+using System;
+using System.Windows;
+using System.Windows.Control;
+using System.Windows.Input
+
+public partial class YellowPadWindow : Window
+{
+	//Help 항목 : YellowPadHelp 를 모달리스 대화상자로 띄움
+	void HelpOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		YellowPadHelp win = new YellowPadHelp();
+		win.Owner = this;
+		win.Show();
+	}
+	// About 항목 : YellowPadAboutDialog를 띄움
+	void AboutOnClick(object sender, RoutedEventArgs args)
+	{
+		YellowPadAboutDialog dlg = new YellowPadAboutDialog();
+		dlg.Owner = this;
+		dlg.ShowDialog();
+	}
+}
+YellowPadHelp에 대한 설명은 필요한 지식을 먼저 배운 다음 22장의 끝에서 다루도록 하겠다. 다음 YellowPadAboutDialog.xaml 파일은 About 대화상자의 컨트롤 배치를 담당한다. 
+
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.YellowPad.YellowPadAboutDialog" Title="About YellowPad" ShowInTaskbar ="False" WindowStartupLocation="CenterOwner"
+	SizeToContent="WidthAndHeight" ResizeMode="NoResize">
+	<StackPanel>
+		<!-- 프로그램이름 -->
+		<TextBlock HorizontalAlignment="Center" Margin="12" FontSize="48">
+			<Italic>Yellow Pad</Italic>
+		</TextBlock>
+
+		<!-- 프로그램이 나온 책의 표지 -->
+		<Image Source="Images\BookCover.jpg" Stretch="None" Margin="12" />
+
+		<!-- 저작권과 서명을 위한 Image 엘리먼트 -->
+		<Image Name="imgSignature" Stretch="None" Margin="12" />
+
+		<!-- 웹사이트 링크 -->
+		<TextBlock HorizontalAlignment="Center" FontSize="20">
+			<Hyperlink NavigateUri="http://www.charlespetzold.com" RequestNavigate="LinkOnRequestNavigate" >
+				www.charlespetzold.com
+			</Hyperlink>
+		</TextBlock>
+		
+		<!-- OK 버튼 -->
+		<Button HorizontalAlignment="Center" MinWidth="60" Margin="12" IsDefault="True" IsCancel="True">
+			OK
+		</Button>
+	</StackPanel>
+</Window>
+
+이 파일은 2 개의 Image 엘리먼트를 포함한다. 첫 번째 Image 엘리먼트는 이 책의 표지 비트맵 이미지를 프로젝트의 디렉토리에서 로드하는 것이며, 두 번째 Image 엘리먼트는 Source 프로퍼티는 없지만 imgSignature라는 Name 프로퍼티를 가지고 YellowPadAboutDialog.cs 속의 C# 코드에서 Source 프로퍼티가 설정된다. 필자는 YellowPad 프로그램으로 "XAMLDrawing File" 형식의 Signature.xaml 파일을 생성했는데, 이 파일을 Resource로 빌드 작업을 설정해 YellowPad 프로젝트에 포함했다. YellowPadAboutDialog 생성자는 이 리소스의 Strem을 얻은 후 XamlReader.Load을 사용해 Drawing 객체로 변환한다. 그러면 XAML 파일의 두 번째 Image 엘리먼트의 Source 프로퍼티에 변환한 Drawing 객체를 DrawingImage를 통해 간단히 설정할 수 있다. 
+
+
+using System;
+using System.Diagnostics; //Process 클래스를 위한 네임스페이스
+using System.IO;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Markup;
+using System.Windows.Navigation; //RequestNavigateEventArgs를 위한 네임스페이스
+
+public partial class YellowPadAboutDialog
+{
+	public YellowPadAboutDialog()
+	{
+		InitializeComponent();
+
+		//저작권/서명 관련 Drawing 객체를 읽은 후 Image 엘리먼트에 설정함
+		Uri uri = new Uri("pack://application:,,/Images/Signature.xaml");
+		Stream stream = Application.GetResourceStream(uri).Stream;
+		Drawing drawing = (Drawing)XamlReader.Load(stream);
+		stream.Close();
+
+		imgSignature.Source = new DrawingImage(drawing);
+	}
+	//하이퍼링크가 클릭되면 필자의 웹사이트로 이동함
+	void LinkOnRequestNavigate(object sender, RequestNavigateEventArgs args)
+	{
+		process.Start(args.Uri.OriginalString);
+		args.Handled = true;
+	}
+}
+
+YellowPadAboutDialog.xaml 파일의 Hyperlink 엘리먼트를 보자. 이 링크를 클릭하면 웹 브라우저에서 필자의 웹사이트를 볼 수 있다. 이 기능은 이미 18장. NotepadClone의 AboutDialog 클래스에서 정의된 유사한 Hyperlink 엘리먼트에서 본적이 있지만 그때는 다음과 같이 Click 이벤트 핸들러를 설정했다. 
+
+void LinkOnClick(object sender, RoutedEventArgs args)
+{
+	Process.Start("http://www.charlespetzold.com");
+}
+
+반면 YellowPadAboutDialog.xaml 파일은 NavigateUri 프로퍼티와 RequestNavigate 이벤트 핸들러를 다음과 같이 설정한다. 
+
+<Hyperlink NavigateUri="http://www.charlespetzold.com" RequestNavigate="LinkOnRequestNavigate">
+	www.charlespetzold.com
+</Hyperlink>
+
+YellowPadAboutDialog.cs의 LinkOnRequestNavigate 핸들러는 다음과 같다. 
+void LinkOnRequestNavigate(object sender, RequestNavigateEventArgs args)
+{
+	Process.Start(args.Uri.OriginalString);
+	args.Handled = true;
+}
+
+이 이벤트 핸들러는 NavigateUri 프로퍼티에 할당된 URI를 Process.Start에 전달한다. 이 것은 코드를 약간 보편화시키지만 기존의 Click 이벤트를 사용한 방법보다 불필요하게 장황한 면이 있다. 
+
+또한 XAML 속의 Hyperlink 엘리먼트에 원하는 실제 URI를 던져주면 Hyperlink는 별도의 코드 없이 그곳으로 가는 것이 더 상식적인 듯하다. Hyperlink 엘리먼트의 RequestNavigate 이벤트 속성을 지우고 컴파일해보자. 링크를 클릭했을 때 아무 일도 일어나지 않을 것이다. 하지만 클릭하기 이전에 Hyperlink가 Process.Start처럼 기본 웹 브라우저를 띄우지 않을까 예상했을 수도 있고, 아니면 About 상자의 모든 내용이 원하는 웹페이지로 바뀌진 않을까 예상했을지도 모른다. 
+
+후자를 기대했다면 아주 비슷하게 예상한 것이다. 창이나 프레임 같은 껍데기만 있다면 Hyperlink 를 정확히 후자처럼 만들 수 있다. YellowPadAboutDialog.xaml 안에서 Window를 NavigationWindow로 바꾸고 StackPanel을 NavigationWindow.Content 프로퍼티 엘리먼트로 감싸보자(NavigationWindow는 WPF에서 Window를 상속받은 유일한 클래스이다. ) 그리고 Hyperlink 엘리먼트에서 RequestNavigate 이벤트 속성을 삭제하고 재컴파일 해보자. 
+
+이제 About 상자를 호출하면 약간 다른 종류의 창이 열리는 것을 볼 수 있다. 위쪽에 흔히 네비게이션 크롬(navigation chrome)이라 부르는 가로 막대가 있고 거기에 2개의 비활성화된 왼쪽, 오른쪽 화살표 버튼이 있는데, 이것은 인터넷 익스플로러에서 볼 수 있는 뒤로 가기, 앞으로 가기 버튼이다. 이제 필자의 웹사이트를 클릭하게 되면 그 웹사이트가 About 상자의 내용을 교체하고 뒤로 가기 버튼이 활성화된다. 뒤로 가기 버튼을 클릭하면 다시 About 상자로 되돌아 갈 수 있다. 
+
+드디어 WPF 네비게이션 애플리케이션의 세계에 들어온 것을 환영한다. 방금 보았듯이 Hyperlink 엘리먼트를 기본적으로 이벤트 핸들러가 없으면 동작하지 않는다. 하지만 Hyperlink가 NavigationWindow(혹은 Frame 엘리먼트)내에 들어있을 때 그것의 링크를 클릭하면 NavigateUri 프로퍼티에 설정된 페이지로 자동으로 이동하게 된다. 위와 같이 NavigateUri 프로퍼티는 웹사이트의 URI를 참조할수도 있지만 일반적으로는 프로그램 내의 다른 XAML 파일 이름을 많이 참조한다. 
+
+극단적으로 말해 NavigationWindow와 Frame을 사용하면 WPF 엘리먼트, 컨트롤, 그래픽의 강력함 등을 포기하지 않으면서 WPF 애플리케이션을 웹사이트처럼 구성할 수 있다. 
+
+다음 NavigationDemo 프로젝트는 몇 가지 기본적인 탐색 기술을 보여준다. 프로젝트는 5개의 XAML 파일과 하나의 C# 파일로 구성돼 있는데, 첫 번째 XAML 파일은 이 애플리케이션의 정의 파일이다. 
+
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.NavigationDemo.myApp" StartupUri="NavigationDemoWindow.xaml" />
+
+StartupUri 속성은 NavigationDemoWindow.xaml 이 초기 애플리케이션 창임을 명시한다. 이 NavigationDemoWindow.xaml 의 루트 엘리먼트는 NavigationWindow이고 그것의 Source 속성은 다른 XAML 파일로 설정된다. 
+
+<NavigationWindow xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	Title="Navigation Demo" FontSize="24" Source="Page1.xaml" />
+
+Source는 NavigationWindow가 Window에서 상속받은 몇 개의 프로퍼티 중 하나이다. Frame역시 Source 프로퍼티가 있는데, Frame과 NavigationWindow 둘 다 ContentControl을 상속받았기 때문이다. 하지만 이 두 엘리먼트의 Content를 설정하게 되면 Content 프로퍼티는 Source 프로퍼티에 우선한다. 그런데 NavigationWindow나 Frame을 사용하는 이유가주로 탐색을 위한 것이므로 Content 보다는 Source 프로퍼티를 사용하는 것이 일반적이다. 
+
+앞에서 본 NavigationWindow는 다음 Page1.xaml을 참조한다. 
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"  Title="Page 1" WindowTitle="Navigation Demo: Page 1">
+	<TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" >
+		Go to
+		<Hyperlink NavigateUri="Page2.xaml">Page 2</Hyperlink>
+	</TextBlock>
+</Page>
+
+NavigationWindow이나 Frame의 Source 프로퍼티를 반드시 Page를 루트 엘리먼트로 한 XAML 파일로 설정할 필요는 없다(코드상에서 Source 프로퍼티를 Page 타입의 객체로 설정할 필요가 없다) 하지만 Page는 네비게이션 애플리케이션에 적합한 여러 가지 기능을 가지고 있는데, 이 기능 중에 2가지를 Page1.xaml 파일에서 확인할 수 있다. Title 프로퍼티는 뒤로 가기, 앞으로 가기 버튼에서 보이는 방문 페이지 목록에 들어가는 문자열이다.(이 목록을 통해 이전 탐색 페이지로 이동할 수 있다.) 그리고 WindowTitle 프로퍼티는 NavigationWindow의 Title 프로퍼티를 오버라이딩해 창의 제목을 설정하는 것이다(여기서도 Page가 네비게이션 애플리케이션에 적합하게 설계됐다는 것을 볼 수 있는데, Page 엘리먼트는 오직 NavigationWindow와 Frame의 자식만 될 수 있다)
+
+Page1.xaml 에는 그밖에 NavigateUri를 Page2.xaml로 설정한 Hyperlink 엘리먼트를 내장한 TextBlock이 있다. 다음 Page2.xaml을 살펴보자. 
+
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.NavigationDemo.Page2" Title="Page 2" WindowTitle="Navigation Demo: Page 2">
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="33*" />
+			<RowDefinition Height="33*" />
+			<RowDefinition Height="33*" />
+		</Grid.RowDefinitions>
+		<TextBlock Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+			RequestNavigate event handled for navigation to
+			<Hyperlink NavigateUri="Page3.xaml" RequestNavigate="HyperlinkOnRequestNavigate">
+				page 3</Hyperlink>
+		</TextBlock>
+		<Button Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Click="ButtononClick">
+			Click to go to Page 1
+		</Button>
+		<TextBlock Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+			Go to
+			<Hyperlink NavigateUri="http://www.charlespetzold.com">
+				Petzold's Web site</Hyperlink>
+		</TextBlock>
+	</Grid>
+</Page>
+
+Page2.xaml파일 내의 Page 엘리먼트는 Page1.xaml의 Page보다는 약간 복잡한데, 동적 링크를 레이블로 가진 2개의 TextBlock엘리먼트와 하나의 Button 을 포함하기 때문이다. 
+
+첫 번째 TextBlock은 RequestNavigate 이벤트를 위한 핸들러를 명시한 Hyperlink 엘리먼트를 포함하고, 두 번째 Button은 Click 이벤트 핸들러를 명시하며 마지막 세 번째 Hyperlink는 로컬 XAML 페이지가 아닌 필자의 웹사이트를 가리키는 NavigateUri 프로퍼티만을 포함한다. 
+
+Page2.xaml은 앞에서 말한 2개의 이벤트 핸들러를 구현한 코드 비하인드 파일을 필요로 한다. 따라서 Page2.xaml에는 Page1.xaml에는 없는 x:Class 속성을 포함하며 다음 코드 비하인드 파일 생성자에서는 2개의 이벤트 핸들러를 연결하기 위한 InitializeComponent 메소드가 호출된다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Control;
+using System.Windows.Documents;
+using System.Windows.Navigation;
+
+
+public partial class Page2
+{
+	public Page2()
+	{
+		InitializeComponent();
+	}
+	void ButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		NavigationService.Navigate(new Uri("Page1.xaml", UriKind.Relative));
+	}
+	void HyperlinkOnRequestNavigate(object sender, RequestNavigateEventArgs args)
+	{
+		NavigationService.Navigate(args.Uri);
+		args.Handled = true;
+	}
+}
+
+ButtonOnClick 메소드에는 NavigationWindow에서 정의된 Navigate 메소드를 호출해 NavigateionWindow로 Page1.xaml 파일을 탐색한다. 하지만 Page2 클래스는 기본적으로 중요한 Navigate 메소드를 가진 NavigationWindow 객체에 직접 접근할 수 없다. NavigationWindow를 얻는 방법 중에서 한 가지는 정적 Application.Current 프로퍼티를 통해 Application의 MainWindow 프로퍼티에 접근하는 방법이다. 
+
+NavigationWindow navwin = (Application.Current.MainWindow as NavigationWindow);
+
+이제 navwin 객체를 통해 탐색을 위한 Navigate 메소드를 호출할 수 있다. 하지만 Page2.cs 파일은 좀 더 쉬운 방법을 사용한다. Page 클래스는 Navigate 메소드를 가진 NavigationService 프로퍼티를 정의한다. 이 NavigationService 객체는 Page 객체 전체에서 접근이 가능하며 Page를 부분으로 하는 NavigationWindow의 탐색 기능에 접근할 수 있는 경로를 마련해준다(NavigationService 프로퍼티가 있기 때문에 Page가 네비게이션 애플리케이션에 적합하다고 할수 있다. Page 이외의 클래스에서 탐색 기능이 필요할 때에는 정적 NavigationService.GetnavigationService 메소드를 사용해 NavigationService 객체를 얻을 수 있다. 단 Navigate를 호출하는 클래스는 반드시 NavigatiionWindow나 Frame 속에 있어야 한다)
+
+Navigate 메소드는 Uri나 객체를 필요로 한다 ButtonOnClick 메소드에서 호출한 Navigate 메소드 인자인 Uri 생성자의 두 번째 인자는 Page1.xaml 의 파일 경로가 현재 XAML 파일인 Page2.xaml의 파일 경로라는 것을 의미한다. 
+
+RequestNavigate 이벤트 핸들러에서는 Navigate 메소드로 넘기는 Uri가 Page2.xaml 파일의 hyperlink 엘리먼트 내에 명시된 것임을 제외하면 이전과 유사하게 페이지를 탐색한다. 또한 이벤트 핸들러에서 탐색을 끝낸 뒤에는 더 이상 수행할 작업이 없으므로 Handled 프로퍼티를 true로 설정한다. 
+
+이 예제에서의 이벤트 핸들러에서 Navigate를 직접 호출하는 것은 Hyperlink가 자동으로 수행하는 것에 비해 장점이 없다고 할 수 있지만 특정 링크를 분석해야 할 필요가 있을 때 유용할 수 있다. 마지막 Page3.xaml파일은 Page1.xaml과 유사한 형태로 NavigationDemo 프로젝트를 끝낸다. 상단에는 TextBox가 위치하고 하단에 Page1.xaml로 되돌아가기 위한 링크가 있다. 
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Page 3" WindowTitle="Navigation Demo: Page 3>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="50*" />
+			<RowDefinition Height="50*" />
+		</Grid.RowDefinitions>
+		<TextBox Grid.Row="0" MinWidth="2in" Margin="48" HorizontalAlignment="Center" VerticalAlignment="Top" />
+		<TextBlack Grid.Row="2" Margin="48" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+			Go back to
+			<Hyperlink NavigateUri="Page1.xaml">
+				Page 1</Hyperlink>
+		</TextBlock>
+	</Grid>
+</Page>
+
+이 애플리케이션을 통해 탐색을 하면서 NavigationWindow 의 상단에 위치한 뒤로 가기, 앞으로 가기 벝느을 주시해볼 필요가 있다. NavigationWindow는 이 두 버튼에 대응하는 2개의 스택에 방문한 페이지를 저장한다. 따라서 Navigate 메소드를 통해 페이지를 탐색하면 이전에 탐색했던 페이지는 뒤로가기 버튼의 스택에 계속 삽입되고 앞으로 가기 버튼의 스택은 삭제된다. 이 뒤로가기 버튼을 클릭하면 현재 페이지는 앞으로 가기 버튼의 스택에 삽입되고 뒤로가기 버튼의 스택에서 가져온 페이지를 탐색하게 되며, 앞으로 가기 버튼을 클릭하면 현재 페이지를 뒤로 가기 버튼의 스택에 삽입하며 앞으로 가기 버튼의 스택에서 가져온 페이지를 탐색한다. 이 두 탐색을 프로그램적으로도 접근할 수도 있는데, 이것은 이번 장의 뒷부분에서 살펴본다. 
+
+Page3.xaml의 상단에는 TextBox가 있다. 탐색 중에 이곳에 어떤 것을 타이핑해 입력하고 나중에 하이퍼링크를 통해 다시 Page3.xaml로 되돌아오면 이 TextBox가 비어 있음을 확인할 수 있다. 하지만 뒤로가기 나 앞으로 가기 버튼으로 Page3.xaml을 다시 방문하면 타이핑해넣은 것이 계속 남아있는 것을 볼 수 있다. 
+
+NavigationWindow를 사용하면 탐색하면서 창의 전체 내용이 바뀐다. 하지만 때로 창의 일부분만 탐색에 할당하고 싶을 때도 있을 것이고 창의 여러 부분에서 독립적인 탐색이 필요할 때도 있을 것이다. 이런 경우에 Frame을 사용할 수 있다. 
+
+FrameNavigationDemo 프로젝트는 FrameNavigationDemo.App.xaml과 FrameNavigationWindow.xaml이라는 2개의 파일을 가지고 있고 NavigationDemo 프로젝트에서 4개의 Page 파일 링크를 가져온다. Page2 클래스에는 Petzold.NavigationDemo의 네임스페이스가 있기 때문에 FrameApplicationDemoApp.xaml 애플리케이션 정의 파일은 간단히 같은 네임스페이스를 정의함으로써 이전 NavigationDemo와의 통합을 쉽게 한다. 
