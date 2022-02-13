@@ -1,0 +1,62 @@
+※ CROSS JOIN(상호 조인)
+CROSS JOIN은 한쪽 테이블의 모든 행들과 다른 쪽 테이블의 모든 행을 조인시키는 기능을 한다. 그래서 CROSS JOIN 의 결과 개수는 두 테이블 개수를 곱한 개수가 된다. 
+
+다음 그림과 같은 조인이 발생한다. 회원 테이블의 첫 행이 구매테이블의 모든 행과 조인되고, 그것을 회원 테이블의 모든 행이 반복하는 것이다. 그러므로 회원 테이블의 개수인 10개와 구매 테이블의 개수인 12개가 곱해져서 120개의 결과가 된다. 이러한 CROSS JOIN을 카티션곱(Cartesian Product)이라고도 부른다. 
+
+회원 테이블과 구매 테이블의 CROSS JOIN 구문은 다음과 같다. 
+USE sqlDB;
+SELECT * FROM buyTbl CROSS JOIN userTbl;
+
+*CROSS JOIN을 하려면 앞과 같은 구문으로 WHERE 구문없이 FROM 절에 테이블 이름들을 나열해도 된다. 
+권장하는 바는 아니다. 
+SELECT * FROM buyTbl, userTbl;
+
+CROSS JOIN에는 ON 구문을 사용할 수 없다. CROSS JOIN의 용도는 테스트로 사용할 많은 용량의 데이터를 생성할 때 주로 사용한다. 예를 들어 AdventrueWorks DB에서 약 12만 건이 있는 Sales.SalesOrderDetail 테이블과 약 3만건이 있는 Sales.SalesOrderHeader를 CROSS JOIN 시키면 12 X 3만 = 약 36억 건의 데이터를 생성할 수 있다. 진짜로 데이터를 생성하면 시스템이 다운되거나 디스크 용량이 모두 찰 수 있으므로 개수만 카운트해보자. COUNT(*) 함수는 INT 형이라서 약21억 이상은 오버플로우가 나므로 COUNT_BIG(*)함수를 사용해 보자. 
+
+USE AdventrueWorks;
+SELECT COUNT_BIG(*) AS [데이터개수] FROM Sales.SalesOrderDetail CROSS JOIN Sales.SalesOrderHeader;
+
+*큰 샘플 데이터를 실제로 생성하고자 한다면 SELECT ... INTO와 함께 사용하면 된다. 
+
+
+
+
+※ SELF JOIN(자체 조인)
+SELF JOIN은 별도의 구문이 있는 것이 아니라 자기 자신과 자기 자신이 조인한다는 의미이다. 이런 것을 사용하는 경우의 대표적인 예가 6장 <실습4> 에서 생성했던 empTbl이다. 
+
+6장 [그림6-55]의 간단한 조직도를 다시 살펴보자. 그리고 바로 이어서 나온 데이터 표를 보자. 이부장을 보면 이부장은 직원이므로 직원이름 열에 있다. 그러면서 동시에 우대리와 지사원의 상관이어서 상관이름 열에도 있다. 
+
+이렇듯 하나의 테이블에 같은 데이터가 있되 의미는 다른 경우에는, 두 테이블을 서로 SELF JOIN 시켜서 정보를 확인할 수 있다. 만약 우대리 상관의 부서를 확인하고 싶다면 다음과 같이 사용할 수 있다. 
+
+* 지금 샘플로 사용하는 empTbl에는 직원의 전화번호, 주소 등에 대한 정보를 생략했지만 실무에서는 우대리 상관의 연락처를 알고싶다거나, 주소를 알고싶을 때 같은 방식으로 사용할 수 있다. 
+
+
+여러분은 다음 쿼리가 실행되지 않을 것이다 <실습 1>에서 sqlDB2012.bak으로 복원시켰기에 6장 <실습4>에서 생성한 empTbl이 없을 것이다. 그냥 참조만 하자. 
+
+USE sqlDB;
+SELECT A.emp AS [부하직원], B.emp AS [직속상관], B.department AS [직속상관부서] FROM empTbl A INNER JOIN empTbl B
+ON A.magager = B.emp WHERE A.emp = '우대리';
+
+
+
+※ UNION/ UNION ALL/EXCEPT/INTERSECT
+
+UNION은 두 쿼리의 결과를 행으로 합치는 것을 말한다. 다음 그림을 보면 쉽게 이해가 될 것이다. 
+
+형식은 다음과 같다. 
+SELECT 문장1 UNION [ALL] SELECT 문장2
+
+대신 SELECT 문장1과 SELECT 문장2의 결과열의 개수가 같아야 하고, 데이터 형식도 각 열단위로 같거나 서로 호환되는 데이터 형식이어야 한다. 당연히 문장1의 결과는 INT인데, 문장2의 결과는 CHAR라면 오류가 발생할 것이다. 또한 열 이름은[그림7-51]에 표현되어 있듯이 문장1의 열 이름을 따른다. UNION만 사용하면 중복된 열은 제거되고 데이터가 정렬되어 나오며, UNION ALL을 사용하면 중복된 열까지 모두 출력된다. 
+
+USE sqlDB;
+SELECT stdName, addr FROM stdTbl UNION ALL SELECT clubName, roomNo FROM clubTbl;
+
+
+EXCEPT는 두 번째 쿼리에 해당하는 것을 제외하는 구문이다. 예를 들어 sqlDB의 사용자를 모두 조회하되 전화가 없는 사람을 제외하고자 한다면 다음과 같이 사용하면 된다. 
+
+SELECT name, mobile1 + mobile2 AS [전화번호] FROM userTbl EXCEPT SELECT name, mobile1 + mobile2 FROM userTbl WHERE mobile1 IS NULL ;
+
+
+EXCEPT와 반대로 두 번째 쿼리에 해당되는 것만 조회하려면 INTERJECT를 사용하면 된다. 예로 전화가 없는 사람만 조회하고자 할 때 다음과 같이 사용한다. 
+
+SELECT name, mobile1 + mobile2 AS [전화번호] FROM userTbl INTERSECT SELECT name, mobile1 + mobile2 FROM userTbl WHERE mobile1 IS NULL;
