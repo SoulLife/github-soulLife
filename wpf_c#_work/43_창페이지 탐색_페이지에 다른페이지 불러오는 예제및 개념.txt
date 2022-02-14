@@ -1,0 +1,338 @@
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.ComputerDatingWizard.WizardPage3">
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+		<Grid.ColumnDefintions>
+			<ColumnDefinition Width="50*" />
+			<ColumnDefinition Width="50*" />
+		</Grid.ColumnDefinitions>
+
+		<!-- Mother's maiden name을 위한 TextBox -->
+		<StackPanel Orientation="Horizontal" Grid.ColumnSpan="2" Margin="12">
+			<Label>
+				Mother's Maiden Name:
+			</Label>
+			<TextBox Name="txtboxMom" Width="100" />
+		</StackPanel>
+
+		<!-- Favorite Pet을 위한 GroupBox -->
+		<GroupBox Grid.Row="1" Grid.Column="0" Name="grpboxPet" Header="Favorite Pet" Margin="12">
+			<StackPanel>
+				<RadioButton Content="Dog" Margin="6" IsChecked="True" />
+				<RadioButton Content="Cat" Margin="6" />
+				<RadioButton Content="Iguana" Margin="6" />
+			</StackPanel>
+		</GroupBox>
+
+		<!-- Income Level을 위한 GroupBox -->
+		<GroupBox Grid.Row="1" Grid.Column="1" Name="grpboxIncome" Header="Income Level" Margin="12" >
+			<StackPanel>
+				<RadioButton Content="Right" Margin="6" IsChecked="True" />
+				<RadioButton Content="So-so" Margin="6" />
+				<RadioButton Content="Freelancer" Margin="6" />
+			</StackPanel>
+		</GroupBox>
+
+		<!-- 오른쪽 아래 구석에 위치한 탐색 버튼 -->
+		<Grid Grid.Row="3" Grid.ColumnSpan="2">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
+			<Button Grid.Column="1" Click="PreviousButtonOnClick" MinWidth="72" Margin="6" Content="&lt; Previous" />
+			<Button Grid.Column="2" Click="FinishButtonOnClick" MinWidth="72" Margin="6" Content="Finish &gt;" />
+		</Grid>
+	</Grid>
+</Page>
+
+다음은 WizardPage3의 코드 비하인드 파일이다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Control;
+
+
+public partial class WizardPage3 : Page
+{
+	Vitals vitals;
+
+	//생성자
+	public WizardPage3(Vitals vitals)
+	{
+		InitializeComponent();
+		this.vitals = vitals;
+	}
+	//Previous와 Finish 버튼 이벤트 핸들러
+	void PreviousButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		NavigationService.GoBack();
+	}
+	void FinishButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		//이 페이지의 정보를 저장
+		vitals.MomsMaidenName = txtboxMom.Text;
+		vitals.Pet = Vitals.GetCheckedRadioButton(grpboxPet).Content as string;
+		vitals.Income = Vitals.GetCheckedRadioButton(grpboxIncome).Content as string;
+
+		//항상 마지막 페이지는 다시 생성
+		WizardPage4 page = new WizardPage4(vitals);
+		NavigationService.Navigate(page);
+	}
+}
+
+알다시피 Next 버튼 핸들러(여기서는 Finish 버튼)는 사용자의 입력을 Vitals객체에 저장한다. 하지만 여기서는 마지막 페이지를 탐색하기 위해 GoForward를 호출하지 않고 항상 WizardPage4를 생성한다. 이유는 뒤에서 간단히 살펴보겠다. 
+
+마지막 페이지는 WizardPage4 클래스인데, 마법사에서 얻어진 모든 정보를 간단히 보여준다. 이 텍스트 정보를 보여주기 위해 하나의 TextBlock 엘리먼트에 여러 Run 객체를 정의해 손쉽게 표현했다. 
+
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.ComputerDatingWizard.WizardPage4" >
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefintions>
+
+		<TextBlock Grid.Row="0">
+			<LineBreak />
+			<Run Text="Name: " />
+			<Run Name="runName" />
+			<LineBreak />
+			<Run Text="Home: " />
+			<Run Name="runHome" />
+			<LineBreak />
+			<Run Text="Gender: " />
+			<Run Name="runGender" />
+			<LineBreak />
+			<Run Text="Favorite OS: " />
+			<Run Name="runOS" />
+			<LineBreak />
+			<Run Text="Favorite Directory: " />
+			<Run Name="runDirectory" />
+			<LineBreak />
+			<Run Text="Mother's Maiden Name: " />
+			<Run Name="runMomsMaidenName" />
+			<LineBreak />
+			<Run Text="Favorite Pet: " />
+			<Run Name="runPet" />
+			<LineBreak />
+			<Run Text="Income Level: " />
+			<Run Name="runIncome" />
+			<LineBreak />
+		</TextBlock>
+
+		<!-- 오른쪽 아래 구석에 위치한 탐색 버튼 -->
+		<Grid Grid.Row="2">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
+			<Button Grid.Column="1" Click="PreviousButtonOnClick" MinWidth="72" Margin="6" Content="&lt; Previous" />
+			<Button Grid.Column="2" Click="SubmitButtonOnClick" MinWidth="72" Margin="6" Content="Submit!" />
+		</Grid>
+	</Grid>
+</Page>
+
+이 클래스에는 Previous 와 Submit 버튼이 있으며 사용자가 정보를 확인 한 후 다시 뒤로 돌아가 정보를 수정할 수 있도록 했다. 다음 WizardPage4의 코드 비하인드 파일을 보자. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Control;
+
+public partial class WizardPage4  : Page
+{
+	//생성자
+	public WizardPage4(Vitals vitals)
+	{
+		InitializeComponent();
+
+		//페이지의 문자열을 설정
+		runName.Text = vitals.Name;
+		runHome.Text = vitals.Home;
+		runGender.Text = vitals.Gender;
+		runOS.Text = vitals.FavoriteOS;
+		runDirectory.Text = vitals.Directory;
+		runMomsMaidenName.Text = vitals.MomsMaidenName;
+		runPet.Text = vitals.Pet;
+		runIncome.Text = vitals.Income;
+	}
+	//Previous와 Submit 버튼 이벤트 핸들러
+	void PreviousButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		NavigationService.GoBack();
+	}
+	void SubmitButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		MessageBox.Show("Thank you!\n\nYou will be contacted by email " + in four to six months.",
+				Application.Current.MainWindow.Title, MessageBoxButton.OK, MessageBoxImage.Exclamation);
+		Application.Current.Shutdown();
+	}
+}
+
+보다시피 WizardPage4 클래스는 생성자에서 모든 Run 객체를 Vitals 클래스의 값으로 설정한다. 앞에서 보았던 WizardPage3가 WizardPage4객체를 탐색할 때마다 항상 다시 생성하는 이유가 바로 이것 때문이다. 사용자가 Previous 버튼을 눌러 이전 페이지에서 정보를 약간 수정하고 이 페이지로 돌아오면 WizardPage4 객체는 다시 새로운 정보를 보여줘야 하는데, 이것을 가장 편하게 수행할 만한 곳이 생성자이기 때문이다(물론 필요할 경우 Page 클래스를 한 번 생성하고 페이지가 보여질 때 호출되는 Loaded 이벤트 핸들러에서 정보를 보여주는 것도 가능하다.)
+
+Submit 버튼을 클릭하면 마법사는 종료된다(기대도 하지 않았겠지만 이 프로그램은 이름처럼 실제로 데이트를 주선해주지는 않는다. )
+
+마법사가 XAML 파일을 지원하는 코드를 필요로 하지만 특정 네비게이션 애플리케이션은 코드가 전혀 필요 없다. 탐색기를 사용해 이 책의 Chapter22 디렉토리에 있는 BookReader를 보자. 루이스 캐롤이 집필한 두 권의 책에서 발췌한 내용이 몇 장 수록된 XAML 집합을 볼 수 있을 것이다. BookReaderPage.xaml을 실행해 보자.
+
+
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" WindowTitle="Book Reader">
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="10*" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="90*" />
+		</Grid.RowDefintions>
+		<!-- 책 목록을 위한 Frame -->
+		<Frame Grid.Row="0" Source="BookList.xaml" />
+
+		<GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+
+		<Grid Grid.Row="2" >
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="25*" />
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="75*" />
+			</Grid.ColumnDefinitions>
+
+			<!-- 목록을 위한 Frame -->
+			<Frame Grid.Column="0" Name="frameContents" />
+
+			<GridSplitter Grid.Column="1" Width="6" HorizontalAlginement="Center" VerticalAlignment="Stretch" />
+			
+			<!-- 실제 내용을 위한 Frame -->
+			<Frame Grid.Column="2" Name="frameChapter" />
+		</Grid>
+	</Grid>
+</Page>
+
+이 파일을 실행하면 인터넷 익스플로러가 페이지를 보여주는데, 2개의 Grid 패널과 스플리터로 페이지를 세 영역으로 나누고 각 영역에 Frame 컨트롤을 배치시켰다. 왼쪽 Frame은 frameContents이고, 오른쪽은 frameChapter이며, 상단 Frame의 Source 프로퍼티는 다음 BookList.xaml로 설정했다. 
+
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<WrapPanel TextBlock.FontSize="10pt">
+		<TextBlock Margin="12">
+			<Hyperlink NavigateUri="AliceInWonderland.xaml" TargetName="frameContents">
+				<Italic>Alice's Adventures in Wonderland</Italic>
+				by Lewis Carroll
+			</Hyperlink>
+		</TextBlock>
+		<TextBlock Margin="12">
+			<Hyperlink NavigateUri="ThroughTheLookingGlass.xaml" TargetName="frameContents">
+				<Italic>Through the Looking-Glass</Italic> by Lewis Carroll 
+			</Hyperlink>
+		</TextBlock>
+		<TextBlock Margin="12">
+			...
+		</TextBlock>
+	</WrapPanel>
+</Page>
+
+두 Hyperlink 엘리먼트는 두 XAML 파일을 참조하는 NavigateUri 속성을 포함할 뿐만 아니라 BookReaderPage.xaml 페이지 왼쪽의 Frame을 가리키는 TargetName 속성을 포함한다. 이렇게 Hyperlink로 다른 Frame에 XAML 페이지를 넣을 수 있다. 
+
+AliceInWonderland.xaml 파일과 ThroughTheLookingGlass.xaml 파일은 매우 흡사하다. 다음의 AliceInWonderland.xaml을 살펴보자. 
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="Alice's Adventures in Wonderland" >
+	<StackPanel TextBlock.FontSize="10pt">
+		<TextBlock Margin="12 12 12 6">
+			<Hyperlink NavigateUri="AliceChapter01.xaml" TargetName="frameChapter">
+				Chapter 1
+			</Hyperlink>
+		</TextBlock>
+		<TextBlock Margin="12 6 12 6">
+			<Hyperlink NavigateUri="AliceChapter02.xaml"	TargetName="frameChapter">
+				Chapter 2
+			</Hyperlink>
+		</TextBlock>
+		<TextBlock Margin="12 6 12 6">
+			<Hyperlink NavigateUri="AliceChapter03.xaml" TargetName="frameChapter">
+				Chapter 3
+			</Hyperlink>
+		</TextBlock>
+		<TextBlock Margin="12 6 12 6">
+			...
+		</TextBlock>
+	</StackPanel>
+</Page>
+
+이것은 여러 Hyperlink 엘리먼트를 포함하는 새로운 Page이다. NavigateUri 속성은 독립적인 장을 참조하고 TargetName이 그 내용을 표시할 오른쪽 Frame을 명시한다. 다음에 AliceChapter01.xaml이 있다. 
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="I. Down the Rabbit-Hole">
+	<FlowDocumentReader>
+		<FlowDocument>
+			<Paragraph TextAlignment="Center" FontSize="16pt">
+				Chapter 1
+			</Paragraph>
+			<Paragraph TextAlignment="Center" FontSize="16pt">
+				Down the Rabbit-Hole
+			</Paragraph>
+			<Paragraph TextIndent="24">
+				Alice was beginning to get very tired of sitting by
+				her sister on the bank, and of having nothing to do:
+				once or twice she had peeped into the book her sister
+				was reading, but it had no pictures or conversations
+				in it, &#x203C;and what is the use of a book, &#x201D;
+				thought Alice, &#x201C;without pictures or
+				conversations?&#x201D;
+			</Paragraph>
+			<Paragraph TextIndent="24">
+				So she was considering, in her own mind (as well as
+				she could, for the hot day made her feel very sleepy
+				and stupid), whether the pleasure of making a
+				daisy-chain would be worth the trouble of getting up
+				and picking the daisies, when suddenly a White
+				Rabbit with pink eyes ran close by her.
+			</Paragraph>
+			<Paragraph TextIndent="24">
+				There was nothing so <Italic>very</Italic>
+				remarkable in that; nor did Alice think it so
+				<Italic>very</Italic> much out of the way to hear the
+				Rabbit say to itself &#x201C;Oh dear! oh dear! I
+				shall be too late!&#x201D; (when she thought it over
+				afterwards, it occurred to her that she ought to have
+				wondered at this, but at the time it all seemed quite
+				natural); but, when the Rabbit actually <Italic>took
+				a watch out of it's waistcoat-pocket</Italic>, and
+				looked at it, and then hurried on, Alice started to
+				her feet, for it flashed across her mind that she
+				had never seen a rabbit with either a waistcoat-pocket,
+				or a watch to take out of it, and, burning with
+				curiosity, she ran across the field after it, and was
+				just in time to see it pop down a large rabbit-hole
+				under the hedge.
+			</Paragraph>
+			<Paragraph TextIndent="24">
+				In another moment down went Alice after it, never once
+				considering how in the world she was to get out again.
+			</Paragraph>
+			<Paragraph TextIndent="24">
+				...
+			</Paragraph>
+		</FlowDocument>
+	</FlowDocumentReader>
+</Page>
+
+상단 프레임에서 책 제목 중 하나를 클릭하면 책의 목차가 왼쪽에 나타나며, 그 목차 중 하나를 클릭하면 오른쪽 프레임에 내용이 나타난다. 
+
+XAML 파일의 집합은 부분 탐색(Fragment Navigation)을 사용하는데, 이것은 HTML의 북마크와 유사하다. Through the Looking-Glass의 첫 번째 장은 'JabberWocky'라는 시를 포함하는데, 이 시의 제목이 다음과 같이 LookingGlassChapter01.xaml에서 볼 수 있는 절 하나를 소유한다. 
+
+<Paragraph ... Name="Jabberwocky">
+	Jabberwocky
+</Paragraph>
+
+Name 속성으로 페이지 내에서 그 엘리먼트의 탐색을 할 수 있기 때문에 ThroughTheLookingGlass.xaml 목록은 "Jabberwocky"를 위한 표제를 포함하며, 다음과 같이 파일 이름과 Name 속성 사이에 # 기호를 사용해 탐색을 수행한다. 
+
+<Hyperlink NavigateUri="LookingGlassChapter01.xaml#Jabberwocky" TargetName="frameChapter">
+	"Jabberwocky"
+</Hyperlink>
