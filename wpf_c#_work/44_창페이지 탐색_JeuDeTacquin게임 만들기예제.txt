@@ -1,0 +1,211 @@
+페이지에 데이터를 넣을 때 몇 가지 컨트롤은 상당히 유용하다. Selector를 상속받은 TabControl은 TabItem 컨트롤의 집합을 관리하는데, TabItem은 HeaderedContentControl을 상속받았으며, 각 TabItem의 컨텐트는 페이지에 동일한 영역을 사용한다. 또한 Header프로퍼티로 탭을 설정하고 사용자가 이탭을 클릭하면 TabItem을 볼 수 있다. 기본적으로 이 탭들은위쪽에 수평으로 정렬돼 있지만 TabStripPlacement 프로퍼티를 통해 변경이 가능하다.(이 TabControl은 28장의 TextGeometryDemo 프로그램에서 사용한다)
+
+이런 종류의 유용한 컨트롤은 역시 HeaderedContentControl 을 상속받은 Expender이다. Expender의 경우 헤더를 클릭하면 컨텐트를 보이지 않게 접을 수 있다. AliceInWonderland.xaml 파일의 목록과 흡사하게 컨텐트가 하이퍼링크를 포함하고 있는 경우 유용하게 쓰일 수 있다. 
+
+이전에 BookReaderPage.xaml 파일을 실행했을 때 프로젝트 내의 여러 책을 탐색하는 데 별 문제가 없었다. 그러나 이것은 파일이 모두 같은 디렉토리에 있을 때만 가능하다. 또한 그 디렉토리는 BookReaderPage.xaml 파일을 실행했을 때 인터넷 익스플로러의 현재 디렉토리(current dictory)여야 한다. 그렇기 때문에 모든 XAML 파일을 하나의 실행 파일로 합치는 것이 때로는 바람직하다고 볼 수 있다. 그동안 보아왔던 XAML 파일은 BookReader 프로젝트의 일부이다. 그리고 이 프로젝트는 당연히 다음과 같은 BookReaderApp.xaml 애플리케이션 정의 파일을 포함한다. 
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" StartupUri="BookReaderPage.xaml" />
+
+이 파일은 우리가 간단히 이전에 탐색기로 실행했던 것처럼 BookReaderPage.xaml 파일을 시작한다. 
+
+BookReader 프로젝트는 XAML 파일만을 포함하는 일반적인 WPF 애플리케이션 프로젝트이다. 프로젝트를 빌드하면 BookReader.exe를 얻을 수 있고, 이것을 실행하면 XAMl 파일을 호스팅하는 NavigationWindow가 나타나는 것을 알 수 있다. 그런데 이 NavigationWindow는 어떻게 나오는 것일까? 어떤 XAMl 파일도 NavigationWindow를 참조하지 않기 때문이다. 정답은 애플리케이션 정의 파일에 Page를 루트 엘리먼트로 가지는 XAML 파일의 StartupUri을 넣으면 NavigationWindow는 페이지를 호스팅하기 위해 자동으로 생성된다. 
+
+이제 탐색기에서 XAML 파일을 실행함으로써 어떻게 인터넷 익스플로러가 BookReaderPage.xaml 파일을 호스팅하는지 알았고, 어떻게 XAML 파일이 BookReader.exe로 컴파일돼 BookReaderPage.xaml를 호스팅하기 위해 자동으로NavigationWindow를 생성하는지도 알았다
+
+
+세번째 옵션은 XAML 브라우저 애플리케이션이다. XAML 브라우저 애플리케이션을 가장 쉽게 생성하는 방법은 비주얼 스튜디오를 이용하는 방법이다. 22장의 프로젝트 집합 중에 BookReader2가 비주얼 스튜디오를 사용해 XAML 브라우저 애플리케이션으로 생성됐다. 여기서 비주얼 스튜디오가 생성하는 App.xaml , App.cs, Page1.xaml, Page1.cs 파일을 삭제하고 대신에 BookReader의 모든 파일을 추가한 후 BookReaderApp.xaml파일을 애플리케이션 정의 파일로 설정했다. 
+
+BookReader와 BookReader2 프로젝트는 모두 같은 XAMl 소스 코드 파일을 포함한다. 다만 BookReader2를 빌드하면 비주얼 스튜디오는 BookReader2.xbap이라는 파일을 생성한다(xbap확장자는 XAML Browser Application을 뜻한다) 비주얼 스튜디오가 이 파일을 실행하면 PresentationHost.exe가 그것을 이어받는데, 이것은 인터넷 익스플로러가 스탠드 얼론 XAML 파일을 호스팅하는 것과 동일한 형태이다. 인터넷 익스플로러는 XAML 브라우저 애플리케이션도 역시 호스팅하며, 이것은 독립적인 XAML 파일을 호스팅할 때와 형태가 동일하다. 따라서 BookReader.exe에 의해 생성된 NavigationWindow는 이제 더 이상 존재하지 않게 된다. 
+
+애플리케이션을 실행하는 파일은 BookReader2.xbap이지만 BookReader2.exe와 BookReader2.exe.manifest 파일이 반드시 필요하다(여기서 .exe 확장자를 가진 파일은 스탠드얼론 실행 파일이 아님) XAML 브라우저 애플리케이션은 웹 브라우저 내에서 호스팅되기 때문에 이 애플리케이션에는 몇 가지 제약이 있는데, 이것은 Window와 NavigationWindow 타입의 객체를 생성하지 못하며 반드시 Page 객체로 이루어져야 한다. 필요할 경우에는 페이지와 페이지를 탐색해 이동할 수 있다. 또한 XAML 브라우저 애플리케이션은 메뉴를 가질 수 있지만 대화상자나 Popup 타입의 객체를 생성할 수는 없다. 그리고 인터넷 보안 설정에 따라 실행돼야 하기 때문에 파일 시스템의 사용도 역시 제한된다. 
+
+반면 이 애플리케이션은 웹사이트에서 매우 쉽게 실행이 가능하다. XAML 브라우저 애플리케이션을 웹사이트에서 실행시키려면 비주얼 스튜디오의 프로젝트 속성에서 왼쪽의 게시 탭을 클릭해 평소에 웹사이트 파일을 복사하는 FTP 주소를 Publishing Location 필드에 타이핑해 넣는다. 애플리케이션이 실행되는 HTML 페이지가존재하는 디렉토리와 그 뒤에 추가적으로 애플리케이션 이름이 붙은 디렉토리가 될 것이다. Publish Now 버튼을 클릭하면 비주얼 스튜디오는 여러 파일을 웹사이트에 복사하기 위해 FTP 사용자 이름과 암호를 묻는다. 암호를 입력하면 .xbap 파일의 링크를 웹페이지에 포함할 수 있다. .NET 프레임워크 3.0을 인스톨한 사용자가 이 링크를 클릭하면 애플리케이션은 보안 설정 확인 없이 바로 다운로드 되고 실행된다. 다만 애플리케이션이 자동으로 사용자의 컴퓨터에 인스톨되는 것은 아니다. 
+
+애플리케이션의 형태를 완전한 윈도우 애플리케이션으로 할지 XAML 브라우저 애플리케이션으로 할지를 미리 정해두는 것이 좋다. 왜냐하면 이 둘의 구조는 매우 다르기 때문이다.
+
+XAML 브라우저 애플리케이션은 팝업 창이나 대화상자를 사용할 수 없기 때문에 보통 네비게이션 애플리케이션 형태로 구성된다. XAML 브라우저 애플리케이션이 본질적으로 윈도우 애플리케이션과 비교해 제약이 많은 것은 사실이지만 탐색 구조는 프로그램 기능을 구현하는데 있어서 여러 형태를 제안할 것이다. 앞으로 제약으로 느꼇던것이 점점 장점으로 다가오는 것을 느낄 수 있을 것이다. 
+
+22장에서 마지막으로 볼 프로그램은 7장의 PlayJeuDeTacquin 프로그램을 XAML 브라우저 애플리케이션 버전으로 바꾼 예제이다(역자주: 제공된 소스 파일을 비주얼 스튜디오로 컴파일하면 "인증서 저장소에서 매니페스트 서명 인증서를 찾을 수 없습니다. 라는 오류를 볼 수 있다. 이것을 해결하려면 비주얼 스튜디오의 솔루션 탐색기에서 프로젝트 노드를 선택한 후 속성 메뉴를 선택해 나오는 창의 서명 섹션에서 테스트인증서 만들기로 임시 인증서를 작성하면 된다) 기존 프로그램을 XAML 브라우저 애플리케이션으로 바꾸는 과정에서 필자는 기존에 보지 못했던 기능을 발견했다. 
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.JeuDeTacquin.JeuDeTacquinApp" StartupUri="JeuDeTacquin.xaml">
+</Application>
+
+JeuDeTacquin.xaml 파일은 여느 XAML 브라우저 애플리케이션과 같이 Page를 루트 엘리먼트로 하며 페이지의 레이아웃을 구성한다. 이 프로그램에는 큰 제목과 unigrid라는 이름의 UniformGrid 객체, Scramble과 Next Large라고 이름붙은 2개의 버튼이 있다 
+
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.JeuDeTacquin.JeuDeTacquin" WindowTitle="Jeu de Tacquin" Background="LightGray" Focusable="True" KeepAlive="True">
+	<Grid HorizontalAlignment="Center" VerticalAlignment="Center" Background="LightGray">
+
+	<Grid HorizontalAlignment="Center" VerticalAlignment="Center" Background="LightGray">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+		<Grid.RowDefinitions>
+		<TextBlock Grid.Row="0" FontFamily="Garamond" FontSize="96" FontStyle="Italic" Margin="12" >
+			Jeu de Tacquin
+		</TextBlock>
+		<Border Grid.Row="1" BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center" >
+			<UniformGrid Name="unigrid" />
+		</Border>
+		<Button Grid.Row="2" HorizontalAlignment="Left" Margin="12" MinWidth="1in" Click="ScrambleOnClick">
+			Scramble
+		</Button>
+		<Button Grid.Row="2" HorizontalAlignment="Right" Margin="12" MinWidth="1in" Click="NextOnClick">
+			Next Larger >>
+		</Button>
+
+		<TextBlock Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12">
+			(c) 2006 by Charles Petzold
+		</TextBlock>
+	</Grid>
+</Page>
+
+JeuDeTacquin 클래스의 코드 비하인드 파일에는 더 이상 상수가 아닌 행과 열을 가리키는 2개의 필드와 추가적으로 isLoaded 라는 필드가 정의돼 있다. 생성자에는 Loaded 이벤트를 위한 이벤트 핸들러를 추가하고 InitializeComponent을 호출한다. 알다시피 Loaded 이벤트는 Page가 탐색될 때 발생한다. 
+
+WindowOnLoaded 이벤트 핸들러는 Tile과 Empty 객체로 구성된 UniformGrid를 초기화한다. (이 프로젝트는 기존 PlayJeuDeTacquin에서 Tile.cs와 Empty.cs의 링크를 가져온다.) 또한 Page의 Title 프로퍼티를 Jeu de Tacquin과 행과 열을 나타내는 문자열을 조합해 설정한다. PageOnLoaded 이벤트 핸들러는 isLoaded를 true로 설정하기 때문에 같은 Page 객체에서 초기화를 한 번만 수행한다. 
+
+using Petzold.PlayJeuDeTacquin;
+using System;
+using System.Windows;
+using System.Windows.Control;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
+
+public partial class JeuDeTacquin : Page
+{
+	public int NumberRows = 4;
+	public int NumberCols = 4;
+	bool isLoaded = false;
+
+	int xEmpty, yEmpty, iCounter;
+	Key[] keys = {Key.Left, Key.Right, Key.Up, Key.Down };
+	Random rand;
+	UIElement elEmptySpare = new Empty();
+
+	public JeuDeTacquin()
+	{
+		Loaded += PageOnLoaded;
+		InitializeComponent();
+	}
+	void PageOnLoaded(object sender, RoutedEventArgs args)
+	{
+		if(!isLoaded)
+		{
+			Title = String.Format("Jeu de Tacquin({0} \x00D7{1})", NumberCols, NumberRows);
+
+			unigrid.Rows = NumberRows;
+			unigrid.Columns = NumberCols;
+
+			//하나의 셀을 제외한 나머지 모든 셀에 Tile 객체를 생성
+			for(int i=0; i<NumberRows * NumberCols -1; i++)
+			{
+				Tile tile = new Tile();
+				tile.Text = (i +1).ToString();
+				tile.MouseLeftButtonDown += TileOnMouseLeftButtonDown;
+				unigrid.Children.Add(tile);
+			}
+			//마지막 셀을 위한 빈 객체를 생성
+			unigrid.Children.Add(new Empty());
+			xEmpty = NumberCols -1;
+			yEmpty = NumberRows - 1;
+
+			isLoaded = true;
+		}
+		Focus();
+	}
+	void TileOnMouseLeftButtonDown(object sender, MouseButtonEventArgs args)
+	{
+		Focus();
+
+		Tile tile = sender as Tile;
+
+		int iMove = unigrid.Children.IndexOf(tile);
+		int yMove = iMove % NumberCols;
+		int yMove = iMove / NumberCols;
+
+		if(xMove == xEmpty)
+			while(yMove != yEmpty)
+				MoveTile(xMove, yEmpty + (yMove - yEmpty) / Math.Abs(yMove - yEmpty));
+		if(yMove == yEmpty)
+			while(xMove != xEmpty)
+				MoveTile(xEmpty + (xMove - xEmpty) / Math.Abs(xMove - xEmpty), yMove);
+		args.Handled = true;
+	}
+	protected override void OnKeyDown(KeyEventArgs args)
+	{
+		base.OnKeyDown(args);
+
+		switch(args.Key)
+		{
+			case Key.Right: MoveTile(xEmpty - 1, yEmpty); break;
+			case Key.Left: MoveTile(xEmpty + 1, yEmpty); break;
+			case Key.Down: MoveTile(xEmpty, yEmpty - 1); break;
+			case Key.Up: MoveTile(xEmpty, yEmpty + 1); break;
+			default:
+				return;
+		}
+		args.Handled = true;
+	}
+	void ScrambleOnClick(object sender, RoutedEventArgs args)
+	{
+		rand = new Random();
+		iCounter = 16 * NumberCols * NumberRows;
+
+		DispatcherTimer tmr = new DispatcherTimer();
+		tmr.Interval = TimeSpan.FromMilliseconds(10);
+		tmr.Tick += TimerOnTick;
+		tmr.Start();
+	}
+	void TimerOnTick(object sender, EventArgs args)
+	{
+		for(int i=0; i<5; i++)
+		{
+			MoveTile(xEMpty, yEmpty + rand.Next(3) - 1);
+			MoveTile(xEmpty + rand.Next(3) - 1, yEmpty);
+		}
+		if(0 == iCounter--)
+			(sender as DispatcherTimer).Stop();
+	}
+	void MoveTile(int xTile, int yTile)
+	{
+		if((xTile == xEmpty && yTile == yEmpty) || xTile < 0 || xTile >= NumberCols || yTile < 0 || yTile >= NumberRows)
+			return;
+
+		int iTile = NumberCols * yTile + xTile;
+		int iEmpty = NumberCols * yEmpty + xEmpty;
+
+		UIElement elTile = unigrid.Children(iTile);
+		UIElement elEmpty = unigrid.Children[iEmpty];
+
+		unigrid.Children.RemoveAt(iTile);
+		unigrid.Children.Insert(iTile, elEmptySpare);
+		unigrid.Children.RemoveAt(iEmpty);
+		unigrid.Children.Insert(iEmpty, elTile);
+
+		xEmpty = xTile;
+		yEmpty = yTile;
+		elEmptySpare = elEmpty;
+	}
+	void NextOnClick(object sender, RoutedEventArgs args)
+	{
+		if(!NavigationService.CanGoForward)
+		{
+			JeuDeTacquin page = new JeuDeTacquin();
+			page.NumberRows = NumberRows + 1;
+			page.NumberCols = NumberCols + 1;
+			NavigationService.Navigate(page);
+		}
+		else
+			NavigationService.GoForward();
+	}
+}
+
+이 프로그램을 XAML 브라우저 애플리케이션으로 변환할 때 고안한 새로운 기능은 NextLarger 버튼인데 앞의 C# 파일 맨 아랫부분에 있는 이벤트 핸들러에서 구현된다. 처음 NextLarger 버튼을 클릭하면 프로그램은 JeuDeTacquin 타입의 객체를 새로 생성상 후 최초의 5행과 5열의 값을 하나씩 증가한 후 NavigationService.Navigate를 호출해 페이지를 새롭게 탐색한다. 그리고 Back 버튼을 눌러 이전 페이지로 돌아가면 5행과 5열의 게임이 새로 만들어지는 것이 아니라 이전에 생성됐던 게임이 다시 나타난다. 따라서 앞뒤를 왔다 갔다 하면서 동시에 다양한 크기의 행렬을 가진 여러 게임을 할 수 있다. 
+
+초기 버전 프로그램에서 필자는 이러한 기능을 생각하지 못하고 당연히 메뉴에서 행과 열을 설정해야 한다고 생각했다. 그러나 이것은 여러 번의 조작으로 새로운 게임을 할 수 밖에 없는 지극히 어리석은 방법이었다. WPF 의 탐색 기능을 활용하면 기능을 좀 더 혁신적이고 쉽게 구현할 수 있다. 

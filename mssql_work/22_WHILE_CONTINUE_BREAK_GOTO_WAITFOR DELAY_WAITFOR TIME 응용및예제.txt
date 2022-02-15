@@ -1,0 +1,102 @@
+※ WHILE/BREAK/CONTINUE/RETURN
+WHILE 문은 다른 프로그래밍 언어의 WHILE과 같은 개념이다. 해당 <부울 표현식> 이 참인 동안에는 계속 반복되는 반복문이다. 
+
+WHILE <부울 식>
+BEGIN
+	SQL 명령문들
+END
+
+1에서 100까지의 값을 모두 더하는 간단한 기능을 구현해 보자. 
+
+DECLARE @i INT = 1 --1에서 100까지 증가할 변수
+DECLARE @hap BIGINT = 0 --더한 값을 누적할 변수
+
+WHILE (@i <= 100)
+BEGIN
+	SET @hap += @i --@hap의 원래의 값에 @i를 더해서 다시 @hap에 넣음
+	SET @i += 1 --@i의 원래의 값에 1을 더해서 다시 @i에 넣음
+END
+
+PRINT @hap
+
+결과 값:
+5050
+
+
+
+※ 여기서 잠깐?
+SQL Server 2008부터는 +=, -=, *=, /=등의 복합 연산자를 지원해서 구문을 좀 더 간결하게 만들 수 있다. 
+즉 @hap = @hap + @i와 @hap += @i는 완전히 같은 구문이다. 
+
+
+
+그런데 1에서  100까지 중에서 7의 배수는 더하는 것에서 제외시키려면 어떻게 할까? 또 합계가 1,000이 넘으면 더하는 것을 그만두고 출력하고 싶다면? 그럴 경우에는 CONTINUE,문과 BREAK문을 사용할 수 있다. 다음을 보자. 
+
+DECLARE @i INT = 1
+DECLARE @hap BIGINT = 0
+
+WHILE (@i <= 100)
+BEGIN
+	if( @hap > 1000)
+		BREAK
+	ELSE
+	BEGIN
+		if(@i % 7 = 0)
+		BEGIN
+			PRINT N'7의배수: ' + CAST(@i AS NCHAR(3))
+			SET @i += 1
+			CONTINUE
+		END
+		ELSE
+		BEGIN
+			SET @hap += @i
+			SET @i += 1
+		END
+	END
+END
+
+PRINT N'합계=' + CAST(@hap AS NCHAR(10))
+
+결과 값:
+7의배수: 7
+7의배수: 14
+7의배수: 21
+7의배수: 28
+7의배수: 35
+7의배수:42
+합계=1029
+
+
+CONTINUE 문을 만나면 바로 WHILE 문으로 이동해서 비교(@i <= 100)를 다시 하고, BREAK를 만나면 WHILE 문을 빠져 나온다. 그런데 만약 BREAK 자리에 RETURN을 쓰게 되면 현재 처리되는 것을 무조건 종료하고 호출자에게 값을 반환한다. 즉, 마지막의 합계=1029를 출력하지 않고 마치게 된다. RETURN에 대한 내용은 11장 저장 프로시저에서 나오므로 그때 더 알아보자. 또한 WHILE 문의 주된 용도는 커서(Cursor)와 함께 사용된다. 커서에 대한 내용은 12장에서 살펴볼 것이므로, 그때 WHILE의 활용도를 더 파악해 보자. 
+
+
+
+※ GOTO
+GOTO 문을 만나면 지정한 위치로 무조건 이동하게 된다. GOTO 문은 프로그램 자체의 논리 흐름을 깨는 것이므로 꼮 필요할때 외에는 사용하지 않는 것이 바람직하다. 일부 프로그래밍 언어는 GOTO 문 자체가 아예 없는 것도 있다. 즉 GOTO문 없어도 프로그래밍에 아무런 문제가 없다는 뜻이다. 
+
+앞의 예에서 BREAK 대신에 GOTO를 써서 같은 결과를 얻을 수 있다. 
+...(중간 생략)
+SET @hap += @i
+if(@hap > 1000) GOTO endprint
+SET @i += 1
+END
+
+endprint:
+PRINT N'합계=' + CAST(@hap AS NCHAR(10))
+
+
+
+※ WAITFOR
+코드의 실행을 일시정지하려면 WAITFOR를 사용할 수 있다. WAITFOR는 WAITFOR DELAY와 WAITFOR TIME이 있는데, WAITFOR DELAY는 지정한 시간만큼 일시정지 시키는 효과를 갖고 WAITFOR TIME은 지정한 시각에 실행시키는 효과를 갖는다. 
+
+다음은 WAITFOR의 간단한 예다. 
+
+BEGIN
+	WAITFOR DELAY '00:00:05';
+	PRINT N'5초간 멈춘 후 진행되었음';
+END
+
+결과 값:
+5초간 멈춘 후 진행되었음
+
+만약 밤 11시 59분까지 정지하고 싶다면 WAITFOR TIME '23:59'을 사용하면 된다. 
