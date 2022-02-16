@@ -1,0 +1,139 @@
+※ TRY/CATCH, RAISEERROR, THROW
+TRY/CATCH는 SQL Server 2005부터 포함된 기능으로 오류를 처리하는데 아주 편리하고 강력한 기능을 발휘한다. 이는 Visual C++및 C#, Java 등에 있는 기능과 아주 유사하다. 기본적인 형식은 간단하다. 
+
+BEGIN TRY
+	원래 사용하던 SQL 문장들
+END TRY
+BEGIN CATCH
+	만약 BEGIN ... TRY에서 오류가 발생하면 처리할 일들
+END CATCH
+
+원래 사용하고자 하던 SQL 문을 BEGIN TRY/END TRY 구문으로 묶으면 된다. 그러면 원래대로 실행되는 것이다. 그렇지만, 만약 오류가 발생되면 BEGIN CATCH/END CATCH로 묶은 부분이 실행된다. 간단한 예를 보면 더 쉽게 이해될 것이다. 
+
+sqlDB의 userTbl에 이미 존재하는 'LSG'라는 아이디를 생성시켜 보도록 하자. userID 열은 기본 키로 지정되어 있으므로, 같은 ID를 입력할 수 없으므로 오류가 발생할 것이다. 
+
+BEGIN TRY
+	INSERT INTO userTbl VALUES('LSG', '이상구', 1988, '서울' NULL, NULL, 170, GETDATE())
+	PRINT N'정상적으로 입력되었다.'
+END TRY
+BEGIN CATCH
+	PRINT N'오류가 발생했다.'
+END CATCH
+
+결과값 :
+오류가 발생했다. 
+
+별로 설명할 것도 없이 구문과 결과만 봐도 이해되었을 것이다. 오류의 상태를 쉽게 파악할 수 있는 함수를 제공한다. 다음의 함수를 BEGIN CATCH... END CATCH 에 사용해서 오류의 원인을 쉽게 분석할 수 있다. 
+
+* ERROR_NUMBER(): 오류번호
+* ERROR_MESSAGE(): 오류 메시지
+* ERROR_SEVERITY(): 오류 심각도
+* ERROR_STATE(): 오류 상태 번호
+* ERROR_LINE(): 오류를 발생시킨 행 번호
+* ERROR_PROCEDURE(): 오류가 발생한 저장 프로시저나 트리거의 이름
+
+앞의 구문을 수정해서오류의 원인을 파악해 보자. 
+
+BEGIN TRY
+	INSERT INTO userTbl VALUES('LSG', '이상구', 1988, '서울' NULL, NULL, 170, GETDATE())
+	PRINT N'정상적으로 입력되었다.'
+END TRY
+BEGIN CATCH
+	PRINT N'오류가 발생했다.'
+END CATCH
+	PRINT N'***오류가 발생했다***'
+	PRINT N'오류 번호: '
+	PRINT ERROR_NUMBER()
+	PRINT N'오류 메시지: '
+	PRINT ERROR_MESSAGE()
+	PRINT N'오류 상태 코드: '
+	PRINT ERROR_STATE()
+	PRINT N'오류 심각도: '
+	PRINT ERROR_SEVERITY()
+	PRINT N'오류 발생 행 번호: '
+	PRINT ERROR_LINE()
+	PRINT N'오류 발생 프로시저/트리거: '
+	PRINT ERROR_PROCEDURE()
+END CATCH
+
+결과 값:
+***오류가 발생했다***
+오류 번호:
+2627
+오류 메시지:
+PRIMARY KEY 제약 조건 'PK_userTbl_CB9A1CDF78AC8978'을(를) 위반했습니다. 개체 'dbo.userTbl'에 중복 키를 삽입할 수 없습니다. 중복 키 값은 (LSG )입니다. 
+오류 상태 코드:
+1
+오류 심각도:
+14
+오류 발생 행번호:
+2
+오류 발생 프로시저/트리거:
+
+
+마지막에 프로시저/트리거 이름이 나오지 않는 것은 프로시저나 트리거에서 호출한 것이 아니기 때문이다. 
+
+이외에 오류를 강제로 발생시키는 방법으로는 RAISERROR와 SQL Server 2012부터 제공하는 THROW가 있다. 
+
+RAISERROR의 원형은 다음과 같다
+
+RAISERROR ( { msg_id | msg_str | @local_variable }
+	{, serverity, state }
+	[, argument [,.. n] ] )
+	[ WITH option [,..n] ]
+
+msg_id는 5만~21억을 사용자가 메시지 번호로 지정할 수 있는데, 그 전에 해당 번호를 sp_addmessage 저장 프로시저를 이용해서 sys.message 카탈로그 뷰에 정의시켜 놓아야 한다. 또는 msg_str을 사용하면 출력할 문자열을 써주면 된다. severity는 이 오류의 심각도를 설정할 수 있는데 0부터 18까지 지정할 수 있다. state는 0부터 255까지 지정할 수 있는데, 이는 추후에 오류가 어디서 발생하는지 찾을 때 유용하다. 
+
+THROW의 원형은 다음과 같다. 
+
+THROW [ { error_number | @local_variable },
+	{ message | @local_variable },
+	{ state | @local_variable }
+	] [ ; ]
+
+error_number는 예외 번호를 지정하는데 5만~21억 미만의 정수를 지정할 수 있다. RAISERROR와 달리 이 error_number를 미리 sys.message 카탈로그 뷰에 등록시킬 필요는 없다. message는 출력할 문자열을 써주면 된다. state는 RAISERROR와 용도가 같다. THROW에서는 심각도(severity)가 생략되는데 항상 16으로 지정된 것으로 보면 된다. 
+
+간단히 다음과 같이 오류를 강제로 발생시킬 수 있다. 
+
+RAISERROR(N'이건 RAISERROR 오류 발생', 16, 1);
+
+THROW 55555, N'이건 THROW 오류 발생', 1;
+
+결과 값:
+메시지 50000, 수준 16, 상태 1, 줄1
+이건 RAISEERROR 오류 발생
+메시지 55555, 수준 16, 상태 1, 줄2
+이건 THROW 오류 발생
+
+
+※ EXEC(동적 SQL)
+EXEC 문장(또는 EXECUTE)은 SQL 문장을 실행시키는 역할을 한다. 우선 다음의 간단한 문장을 실행해 보자. 
+
+USE sqlDB;
+DECLARE @sql VARCHAR(100) -- 아래는 모두 홀따옴표다. 
+SET @sql = 'SELECT * FROM userTbl WHERE userid= ''EJW'' '
+EXEC(@sql)
+
+즉 'SELECT * FROM userTbl WHERE userid = 'EJW' 문장을 바로 실행하지 않고 변수 @sql에 입력시켜놓고 EXEC() 함수로 실행할 수도 있다. 이렇게 EXEC()를 이용해서 쿼리문을 실행하는 것을 동적 SQL이라고 부른다. 이 동적 SQL은 종종 유용하게 사용될 수 있다. 
+
+만약 테이블을 생성해야 하는데, 테이블의 이름이 myTbl 현재연월일' 으로 항상 만들어져야 하는 경우를 가정해 보자. 즉 오늘이 2013년 12월 31일 이면 테이블 이름은 myTbl2013_12_31로 , 2015년 1월 18일이라면 myTbl2015_1_18 과 같이 실행시킬 때마다 다른 이름의 테이블이 생성되어야 한다면 동적 SQL을 활용할 수 있다. 
+
+DECLARE @curDate DATE
+DECLARE @curYear VARCHAR(4)
+DECLARE @curMonth VARCHAR(2)
+DECLARE @curDay VARCHAR(2)
+DECLARE @sql VARCHAR(100)
+
+SET @curDate = GETDATE()
+SET @curYear = YEAR(@curDate)
+SET @curMonth = MONTH(@curDate)
+SET @curDay = DAY(@curDate)
+
+SET @sql = 'CREATE TABLE myTbl' + @curYear + '_' + @curMonth +'_' + @curDay
+SET @sql += '(id INT, name NCHAR(10))'
+
+EXEC(@sql)
+
+앞의 구문은 결국 'CREATE TABLE myTbl2013_12_31(id INT, name NCHAR(10))'과 같은 형식의 구문을 실행한 것과 마찬가지다. 하지만 항상 실행시킬 때마다 동적으로 변하게 될 것이다(당연히 같은날에 두번 실행하면 이미 테이블이 생성된 상태이므로 오류가 발생한다)
+
+이상으로 SQL Server 프로그래밍 기능을 살펴보았다. 이후 저장 프로시저나 트리거에서 적극적으로 활용될 내용이므로 잘 기억해 두자.

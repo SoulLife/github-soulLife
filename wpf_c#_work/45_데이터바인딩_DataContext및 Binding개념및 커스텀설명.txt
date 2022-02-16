@@ -1,0 +1,269 @@
+CHAPTER 23장 : 데이터 바인딩
+데이터바인딩이란 컨트롤과 엘리먼트를 데이터에 연결시키는 기술이다. 이 정의가 약간 모호할 수 있는데, 이것은 데이터 바인딩이 굉장히 넓은 범위와 다양한 기술을 포함하기 때문이다. 데이터 바인딩은 CheckBox 컨트롤을 불리언 변수에 연결하는 것처럼 간단할 수 있고 데이터베이스와 데이터 엔트리 패널을 연결하는 것처럼 복잡해질 수도 있다. 
+
+컨트롤은 데이터를 사용자에게 보여주는 것과 사용자가 데이터를 변경할 수 있게 해주는 2가지 기능을 제공한다. 하지만 최근의 애플리케이션 프로그래밍 인터페이스에서는 컨트롤과 데이터 사이의 많은 반복 작업이 자동화됐다. 과거에 프로그래머는 CheckBox를 불리언 변수로 초기화하고 사용자가 작업이 끝난 후 불리언 변수를 다시 CheckBox로 초기화하는 코드를 작성해야 했다. 그러나 최근의 프로그래밍 환경에서는 프로그래머가 CheckBox와 변수 사이의 바인딩을 정의하면 자동으로 두 작업이 수행된다. 
+
+많은 경우에 데이터 바인딩은 이벤트 핸들러를 대체할 수 있는데, 이것은 코드를 단순화시키는 데 굉장히 효과가 있다. XAML에서 정의된 데이터 바인딩은 코드 비하인드 파일에서 이벤트 핸들러를 정의할 필요가 없으며, 코드 비하인드 파일 자체가 필요 없는 경우도 있다. 따라서 결과적으로 정말 필요한 코드만 남을 것이며, 대부분이 초기화이기 때문에 잘못될 확률도 적다(물론 이벤트 핸들러가 여전히 존재하기는하지만 겉으로 드러나지는 않는다. 또한 이것은 이미 충분히 디버깅되어 견고할 것이라고 예상된다). 
+
+데이터 바인딩은 소스(Souce)와 타깃(Target)이 필요하다. 일반적으로 소스는 데이터이며, 타깃은 컨트롤이다. 하지만 실제로 소스와 타깃의 구분은 약간 애매한 점이 있다. 왜냐하면 어떤 작업은 반대로 타깃이 소스에게 데이터를 전달하기도 하기 때문이다. 이것처럼 용어가 메커니즘을 정확히 말해주는 것이 아니기 때문에 실제로 용도를 구분하는 것은 상당히 중요하다. 
+
+가장 간단한 바인딩은 2개의 컨트롤 사이에서 존재하는 것이다. 예를 들어 ScrollBar의 Value 프로퍼티를 보여주기 위한 Label 컨트롤을 생각해보자. 이 경우 ScrollBar의 Value Changed 이벤트 핸들러를 연결하거나 다음의 스탠드얼론 XAML 파일과 같이 데이터 바인딩을 정의할 수 있다. 
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<!-- 바인딩 소스 -->
+	<ScrollBar Name="scroll" Orientation="Horizontal" Margin="24" Maximum="100" LargeChange="10" SmallChange="1" />
+
+	<!-- 바인딩 타깃 -->
+	<Label HorizontalAlignment="Center" Content="{Binding ElementName=scroll, Path=Value}" />
+</StackPanel>
+
+바인딩 자체는 언제나 타깃 내에서 설정된다. 이 XAML 에서 바인딩은 Label 컨트롤의 Content 프로퍼티 안에서 다음과 같은 문법으로 설정됐다. 
+
+Content="{Binding ElementName=scroll, Path=Value}"
+
+StaticResource와 DynamicResource 같이 Binding은 마크업 확장이다. 중괄호 내에 Binding 정의가 있으며 Binding 클래스의 프로퍼티 중 ElementName와 Path가 이 정의에 포함된다. 이 Binding 정의에서 ElementName은 ScrollBar의 Name 속성에 부여된 이름인 scroll로 설정되고 Binding의 Path 프로퍼티는 Value로 설정되는데, 이 컨텍스트에서는 ScrollBar의 Value 프로퍼티이다. 그 후 Label의 Content프로퍼티는 ScrollBar의 Value프로퍼티와 바인딩되어 ScrollBar의 조작에 따라 값이 Label에 출력된다. 
+
+XAML을 계속 사용해왔더라도 Binding 정의 내에 따옴표를 집어넣고 싶은 욕구가 생길 수 있다. ElementName과 Path는 평소에 사용하는 XML 속성과 매우 유사해 보이기 때문에 다음과 같이 사용할 가능성이 많다. 
+
+Content="{Binding ElementName="scroll" Path="Value"}"
+
+하지만 이것은 완전히 틀렸다. 중괄호 내에서는 다른 법칙이 적용되기 때문이다. ElementName과 Path는 사실 XML 속성이 아니며, 여기서 속성은 Content뿐이다. 당연히 따옴표가 없어야 할 뿐만 아니라 ElementName과 Path는 콤마로 구분되어야 한다. 
+
+그럼에도 불구하고 Binding 정의에 따옴표를 꼭 넣어야 한다면 프로퍼티 엘리먼트 문법을 대안으로 사용할 것을 추천한다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<!-- 바인딩 소스 -->
+	<ScrollBar Name="scroll" Orientation="Horizontal" Margin="24" Maximum="100" LargeChange="10" SmallChange="1" />
+
+	<!-- 바인딩 타깃 -->
+	<Label HorizontalAlignment="Center">
+		<Label.Content>
+			<Binding ElementName="scroll" Path="Value" />
+		</Label.Content>
+	</Label>
+</StackPanel>
+
+이제 Binding 엘리먼트는 Label.Content의 시작과 종료 태그 사이에 위치한다. 그리고 ElementName과 Path 프로퍼티는 일반적인 XML 속성으로 취급된다. 여기서 Label.Content태그는 필요 없다고 배웠기 때문에 이것을 삭제하고픈 욕심이 생길 것이다. 물론 대부분의 상황에서는 필요 없는 것이지만 여기서는 필요하다. 
+
+Binding 정의가 있는 컨트롤이나 엘리먼트는 항상 바인딩의 타깃이 된다. 바인딩 타깃은 DependencyObject로부터 상속되며 바인딩이 설정되는 프로퍼티는 반드시 의존 프로퍼티의 지원을 받아야 한다. 따라서 이 경우에 Label은 DependencyProperty 타입의 정적 public 필드인 ContentProperty가 필요하다(물론 이것은 존재한다. )
+
+바인딩의 조건을 C#으로 구현한 것에서 살펴보면 더 명확하게 알 수 있다. ScrollBar와 Label 컨트롤을 scroll과 lbl이라는 이름으로 생성했다고 가정하면 코드는 다음과 같다. 
+
+Binding bind = new Binding();
+bind.Source = scroll;
+bind.Path = new PropertyPath(ScrollBar.ValueProperty);
+lbl.SetBinding(Label.Content, bind);
+
+이 코드는 XAML 속의 Binding 정의 내용과 정확히 일치하지는 않는다. 왜냐하면 이것은 Binding의 ElementName 프로퍼티를 문자열 scroll로 설정하지 않고 Binding의 SOurce 프로퍼티를 ScrollBar 객체로 설정하기 때문이다. 하지만 바인딩 타깃의 SetBinding 메소드가 호출되는 것에 주목하자. 이 메소드는 FrameworkElement에서 정의되어 있고  첫 번째 인자는 DependencyProperty이다. 따라서 이 두 사실은 바인딩 타깃이 아무것이나 될 수 없음을 말해준다. 바인딩은 반드시 의존 프로퍼티의 지원을 받는 프로퍼티에서 수립되어야 한다. 
+왜냐하면 컨트롤과 엘리먼트는 그 의존 프로퍼티의 변화에 반응하게 설계되었기 때문이다. 
+
+이 코드로는 알 수 없지만 바인딩 소스의 요건이 되는 것은 사실 바인딩 타깃보다는 더 자유롭다. 바운딩된 소스 프로퍼티는 반드시 의존 프로퍼티일 필요가 없기 때문이다. 프로퍼티는 프로퍼티가 변경될 때 알려주는 이벤트와 연결되어 있는 것이 이상적이다. 하지만 몇 개의 바인딩은 이 통지 이벤트 없이도 동작한다. 
+
+BindLabelToScrollBar.xaml로 이것을 살짝 실험해보자. 소스와 타깃이라는 용어 자체는 소스 엘리먼트(여기서는 ScrollBar)에서의 변화를 타깃 엘리먼트에서 반영되게 하는 의미를 담고 있다. 하지만 이것은 바인딩으로 가능한 4가지 모드 중의 하나일 뿐이며, 원하는 모드는 Mode 프로퍼티에 BindingMode 열거형 멤버로 설정할 수 있다. 다음은 기본적인 형태이다. 
+
+Content="{Binding ElementName=scroll, Path=Value, Mode=OneWay}"
+
+여기서 Mode 프로퍼티를 설정하는 것은 Path 프로퍼티를 설정하는 것과 콤마로 구분되어 있으며, BindingMode 열거형의 멤버인 OneWay 역시 따옴표를 묶여있지 않다는 것을 알 수 있다. 프로퍼티 엘리먼트 문법이 익숙하다면 Binding 엘리먼트 내에 속성으로 이것을 다음과 같이 추가할 수 있다. 
+<Label.Content>
+	<Binding ElementName="scroll" Path="Value" Mode="OneWay" />
+</Label.Content>
+
+또한 모드를 TwoWay로 설정할 수도 있다. 
+Content={Binding ElementName=scroll, Path=Value, Mode=TwoWay}"
+
+이 프로그램에서 TwoWay는 기능상 OneWay와 동일하지만 실제로는 Label의 Content 프로퍼티의 변화도 ScrollBar의 Value 프로퍼티에 반영된다. 다음은 또 다른 옵션이다. 
+
+Content="{Binding ElementName=scroll, Path=Value, Mode=OneTime}"
+
+OneTime 모드의 경우는 타깃이 소스로부터 초기화되지만 소스의 변화가 계속적으로 반영되지 않고 초기에 한 번만 반영된다. 이 프로그램에서는 ScrollBar의 초기 Value가0이기 때문에 Label이 0을 표시하며, 표시된 값은 ScrollBar의 변화에 더 이상 반응하지 않는다. (ScrollBar 엘리먼트에서 Value를 50으로 설정하면, Label은 이 값으로 초기화되기 때문에 50을 표시한다)
+
+마지막 옵션은 다음과 같다.
+Content="{Binding ElementName=scroll, Path=Value, Mode=OneWayToSource}"
+
+이것은 일반적으로 생각하는 소스와 타깃의 의미에 반대되게 타깃이 소스를 갱신되는 형태이다. 마치 과녁이 거꾸로 화살 쪽으로 날아와 과녁의 중심을 스스로 찌르는 듯한 형태라고 볼 수 있다. 따라서 타깃(Label)은 소스(ScrollBar)를 갱신해야 한다. 하지만 여기서 Label은 ScrollBar에 건네줄 숫자 형태의 데이터가 없기 때문에 Label은 비어있을 것이고 ScrollBar를 움직여도 반응이 없을 것이다. 
+
+OneWayToSource 모드가 우주의 기본 원리에 역행하는 듯이 보이지만 이것이 매우 유용할 때가 있다. 두 프로퍼티를 바인딩할 때 타깃 프로퍼티가 의존 프로퍼티의 지원을 받지 못하지만 소스는 지원을 받는 경우라면 소스에 바인딩을 걸고 Mode를 OneWayToSource로 설정하는 것으로 해결 할 수 있다. 
+
+이 개념을 좀 더 알아보기 위해 ScrollBar와 Label 컨트롤의 역할이 바뀐 유사한 XAML파일을 살펴보자. 
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<!-- 바인딩 타깃 -->
+	<ScrollBar Orientation="Horizontal" Margin="24" Maximum="100" LargeChange="10" SmallChange="1" Value="{Binding ElementName=lbl, 		Path=Content}" />
+	<!-- 바인딩 소스 -->
+	<Label Name="lbl" Content="50" HorizontalAlignment="Center" />
+</StackPanel>
+
+Label은 이제 소스가 되었고 ScrollBar는 타깃이 됐다. 이전과 같이 Binding 정의는 타깃 엘리먼트 내에서 정의되어 있으며, ScrollBar의 Value 프로퍼티를 Label의 Content프로퍼티와 바인딩한다. 
+
+Value="{Binding ElementName=lbl, Path=Content}"
+
+Label 컨트롤의 Content를 50으로 주었기 때문에 프로그램이 시작될 때 Label은 50을 표시하며, ScrollBar의 막대 또한 가운데에 위치한다. ScrollBar를 움직이면 Label의 내용은 갱신되며, 당연히 TwoWay 바인딩이 기본적으로 설정되어 있다. 다음과 같이 이것을 명확히 설정할 수 있다. 
+
+Value="{Binding ElementName=lbl, Path=Content, Mode=TwoWay}"
+
+하지만 다음과 같이 이것을 OneWay 모드로 변경할 경우엔 동일하게 동작하지 않는다.
+Value="{Binding ElementName=lbl, Path=Content, Mode=OneWay}"
+
+ScrollBar는 초기에 Label 소스가 50을 가리키기 때문에 여전히 가운데를 가리키긴 하지만 그후 Label 로부터 어떤 숫자 데이터도 받지 않기 때문에 변화가 전혀 없다. 다음과 같이 설정한 경우에도 동일한 결과를 얻을 수 있다. 
+
+Value="{Binding ElementName=lbl, Path=Content, Mode=OneTime}"
+
+하지만 다음을 시도해 보자. 
+Value="{Binding ElementName=lbl, Path=Content, Mode=OneWayToSource}"
+
+ScrollBar 타깃은 이제 Label 소스를 제어한다. Label은 ScrollBar의 Value 초기값이 0이기 때문에 0을 표시하게 되며, 이후 Label은 ScrollBar의 변화에 따라 값이 충실히 변하게 된다. 
+
+기본 바인딩 Mode는 바인딩이 정의되어 있는 곳의 프로퍼티에 의해 제어된다. 따라서 BindScrollBarToLabel.xaml예제는 ScrollBar에서 Value 프로퍼티의 기본값이 TwoWay 바인딩 모드로 설정되어 있음을 말해준다. 이론적으로 ScrollBar의 의존 프로퍼티인 Value Property는 BindsTwoWayByDefault 프로퍼티가 true인 FrameworkPropertyMetadata가 필요하다. 하지만 16장의 ExploreDependencyProperties 프로그램은 스크롤바의 ValueProperty가 FrameworkPropertyMetadata가 아닌 PropertyMetadata 객체에 저장된 메타 데이터를 가지고 있다는 것을 밝혀 주었다. 
+
+이러한 이유 때문에 컨트롤의 기본 바인딩 모드를 단순히 추측하려고 하는 것은 그다지 바람직하지 않다. 이 Mode 프로퍼티는 바인딩의 가장 중요한 컴포넌트 중의 하나이기 때문에 각 바인딩에 어떤 Mode가 알맞은지를 고려하고 그것을 명확히 설정하는 것은 매우 중요하다. 
+
+이 책의 앞부분에서 몇 개의 C# 프로그램은 사실 데이터 바인딩을 사용했는데, 이것은 바인딩 소스 객체를 명시하는 다른 방법인 FrameworkElement에 정의된 DataContext를 사용했다. 다음의 작은 스탠드 얼론 파일은 어떻게 DataContext를 XAML에서 설정할 수 있는지를 보여주고 있다.
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<!-- 바인딩 소스 -->
+	
+	<ScrollBar Name="scroll" Orientation="Horizontal" Margin="24" Maximum="100" LargeChange="10" SmallChange="1" />
+
+	<!-- 바인딩 타깃 -->
+	<Label HorizontalAlignment="Center" DataContext="{Binding ElementName=scroll}" Content="{Binding Path=Value}" />
+</StackPanel>
+
+DataContext와 Label의 Content 속성 모두에 2개로 분리된 Binding 을 정의하는 것을 알수 있다. 첫 번째 Binding 정의는 ElementName을 명시하고, 두 번째는 Path를 명시한다. 
+
+이 예제에서 DataContext 프로퍼티를 사용함으로써 얻는 이점은 전혀 없다. 하지만 DataContext 프로퍼티가 상당히 유용할 때가 있는데, DataContext가 엘리먼트 트리를 통해 상속되기 때문에 하나의 엘리먼트에 DataContext를 사용해 바인딩을 설정하면 모든 자식 엘리먼트에도 동일하게 적용된다. 
+
+다음 TwoBindings.xaml 파일은 이러한 경우를 설명하고 있다. DataContext은 StackPanel엘리먼트에서 한 번 설정되었고, Label과 Button은 ScrollBar와 바운딩됐다. Label에 바운딩된 프로퍼티는 Content이지만 Button에 바운딩된 프로퍼티는 FontSize이기 때문에 ScrollBar의 막대를 움직이면 Button 내부의 텍스트가 점점 커지고 이에 따라 Button 자체도 커지게 된다. 
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	DataContext="{Binding ElementName=scroll}" >
+	<!-- 바인딩 소스 -->
+	
+	<ScrollBar Name="scroll" Orientation="Horizontal" Margin="24" Minimum="1" Maximum="100" LargeChange="10" SmallChange="1" />
+
+	<!-- 바인딩 타깃 -->
+	
+	<Label HorizontalAlignment="Center" Content="{Binding Path=Value, Mode=OneWay}" />
+
+	<Button HorizontalAlignment="Center" Margin="24" FontSize="{Binding Path=Value, Mode=OneWay}" >
+		Bound Button
+	</Button>
+</StackPanel>
+
+물론 DataContext 대신 ElementName 프로퍼티를 두 Binding정의에 사용한다고 해도 여기서는 큰 문제가 없다. 하지만 특정 타입 객체의 여러 프로퍼티와 바운딩된 컨트롤이 패널에 많다고 생각해보자. DataContext를 같은 타입의 다른 객체로 바꾸기만 하면 모든 컨트롤에 새로운 객체를 반영할 수 있다. 26장에서 이 기술에 대한 예제를 볼 수 있을 것이다. 
+
+다음에 프로그램의 클라이언트 영역의 너비와 높이를 표시하기 위해 데이터 바인딩을 사용한 작은 스탠드얼론 파일이 있다. 
+
+<Grind xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	Name="grid">
+	<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+		<TextBlock Text="{Bind ElementName=grid, Path=ActualWidth}" />
+		<TextBlock Text="&#x00D7; " />
+		<TextBlock Text="{Binding ElementName=grid, Path=ActualHeight}" />
+		<TextBlock Text=" device independent units" />
+	</StackPanel>
+</Grid>
+
+StackPanel 은 수평으로 배치되었으며, 한 줄의 텍스트를 보여주기 위해 4개의 TextBlock엘리먼트를 사용했다. 2개의 TextBlock 엘리먼트는 Grid의 ActualWidth와 ActualHeight프로퍼티와 바인딩되었으며, 이 프로퍼티는 읽기 전용이기 때문에 바인딩 모드는 OneWay외에는 될 수 없다. 
+
+초기에 WhatSize.xaml를 작성하는 것은 그다지 성공적이지 못했다. 다수의 TextBlock 엘리먼트를 정의하는 대신에 하나의 TextBlock에 다수의 Run 타입 자식을 사용하길 원했고, Run 엘리먼트 중 2개의 Text 프로퍼티를 Grid의 ActualWidth와 ActualHeight에 바인딩했다. 이때 마크업은 다음과 같았다. 
+
+<!-- 이 마크업은 동작하지 않음! -->
+<TextBlock>
+	<Run Text="{Binding ElementName=grid, Path=ActualWidth}" />
+	<Run Text="&#x00D7; " />
+	<Run Text="{Binding ElementName=grid, Path=ActualHeight}" />
+	<Run Text=" device independent units" />
+</TextBlock>
+
+이 XAML은 여전히 별 문제가 없어 보인다. 하지만 Text 프로퍼티 타입의 객체를 참조하는 것에 있어서 이것은 다음과 같은 예외 상황을 발생시켰다. "Object of type 'System.Windows.Data.Binding' cannot be converted to type 'System.String'(System.Windows.Data.Binding' 타입의 객체는 'System.String' 타입으로 변환될 수 없음)" 처음에는 이 메시지를 이해하기가 어려웠다. 왜냐하면 이것은 파서가 데이터 바인딩의 기본조차 무시한다고 생각되었기 때문이다. 
+
+하지만 이 문제의 의문은 매우 간단히 해결됐다. TextBlock에 의해 정의된 Text 프로퍼티는 TextProperty라는 의존 프로퍼티에 의해 지원된다. 하지만 Run에 의해 정의된 Text 프로퍼티는 의존 프로퍼티에 의해 지원되지 않는다. 알다시피 데이터 바인딩의 타깃은 반드시 의존 프로퍼티가 되어야 한다. 이 사실은 C#에서 데이터 바인딩을 정의할 때 더욱 명확해지는데, SetBinding의 첫 번째 인자는 DependencyProperty 타입이어야 한다. 
+
+바인딩 소스는 의존 프로퍼티가 될 필요가 없다. 지금까지 보아온 모든 데이터 바인딩 예제의 소스와 타깃은 의존 프로퍼티에 의해 지원됐다. 하지만 23장의 뒷부분에 가면 전형적인 기존 .NET 프로퍼티를 데이터 바인딩 소스로 가진 예제를 볼 수 있을 것이다. OneWay 바인딩은 바인딩 소스에서 타깃으로 지속적으로 정보를 전송하는 경우가 일반적이다. OneWay 바인딩이 성공적이려면 소스 프로퍼티가 변경되었을 때 타깃이 알만한 메커니즘 중 하나를 구현해야 한다. 
+
+메커니즘 중 하나라는 것은 이벤트를 의미하는 것일까? 물론 이것은 하나의 방법이 될 수 있을 것이다. 하지만 그것만은 아니다. 의존 프로퍼티를 고안한 가장 큰 이점 중 하나는 데이터 바인딩이며, 의존 프로퍼티 시스템은 내부에 통보 장치가 구현되어 있다. 바인딩 소스가 의존 프로퍼티가 될 필요가 없지만 의존 프로퍼티일 경우에는 상당히 유용하다. 
+
+FrameworkElement를 직접 상속받은 SimpleElement라는 다음의 간단한 예제를 보자. 
+
+
+
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Media;
+
+class SimpleElement : FrameworkElement
+{
+	//DependencyProperty 정의
+	public static DependencyProperty NumberProperty;
+
+	//정적 생성자에 DependencyProperty 생성
+	static SimpleElement()
+	{
+		NumberProperty = DependencyProperty.Register("Number", typeof(double), typeof(SimpleElement), new FrameworkPropertyMetadata(0.0,
+					FrameworkPropertyMetadataOptions.AffectsRender));
+	}
+	//DependencyProperty를 CLR  프로퍼티로 노출
+	public double Number
+	{
+		set { SetValue(NumberProperty, value);	}
+		get { return (double)GetValue(NumberProperty);	 	}
+	}
+
+	//MeasureOverride를 오버라이딩해 크기를 하드 코딩
+	protected override Size MeasureOverride(Size sizeAvailable)
+	{
+		return new Size(200, 50);
+	}
+
+	//Number 프로퍼티를 보여주는 OnRender
+	protected override void OnRender(DrawingContext dc)
+	{
+		dc.DrawText(new FormattedText(Number.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+			new Typeface("Times New Roman"), 12, SystemColors.WindowTextBrush), new Point(0, 0));
+	}
+}
+
+이 클래스는 Number라는 double 타입 프로퍼티를 정의하며, 이 프로퍼티는 NumberProperty 라는 DependencyProperty의 지원을 받는다. FrameworkPropertyMetadata는 초기값이 0이며, 프로퍼티에 변화가 생기면 OnRender 를 호출해 화면을 갱신하게 한다. 또한 MeasureOverride 메소드는 장치 독립적 단위를 사용해 가로200에 세로50으로 크기를 설정하며, 마지막 OnRender 메소드는 Number 프로퍼티를 보여준다.
+
+사실 SimpleElement와 ScrollBar 사이의 바인딩을 연구해보기 위해 마크업 작성을 시작했을 때 회의적인 생각이 들었다. 다음의 애플리케이션 정의 파일은 여느 때와 같이 간단하다. 
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" StartupUri="CustomElementBindingWindow.xaml">
+</Application>
+
+Window 엘리먼트는 2개의 ScrollBar 컨트롤과 SimpleElement를 생성하며, 이들 사이에 3개의 바인딩을 정의한다. 
+
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:src="clr-namespace:Petzold.CustomElementBinding" Title="Custom Element Binding Demo">
+	<StackPanel>
+		<ScrollBar Orientation="Horizontal" Margin="24" Maximum="100" LargeChange="10" SmallChange="1" 
+			Value="{Binding ElementName=simple, Path=Number, Mode=OneWayToSource}" />
+		<src:SimpleElement x:Name="simple" HorizontalAlignment="Center" />
+
+		<ScrollBar Name="scroll" Orientation="Horizontal" Margin="24" Maximum="100" LargeChange="10" SmallChange="1" 
+			Value="{Binding ElementName=simple, Path=Number, Mode=TwoWay}" />
+
+		<src:SimpleElement HorizontalAlignment="Center" Number="{Binding ElementName=scroll, Path=Value, Mode=OneWay}" />
+	</StackPanel>
+</Window>
+
+첫 번째 SimpleElement 엘리먼트 상의 x:Name 속성은 FrameworkElement 를 상속받지 않은 XAMl 엘리먼트를 위한 속성이다. 이 엘리먼트들은 Name 프로퍼티가 없기 때문에 Name 프로퍼티를 사용할 경우에는 다음과 같은 에러 메시지를 볼수 있다. "Because 'SimpleElement' is implemented in the same assembly, you must set the x:Name attribute rather than the Name attribute('SimpleElement가 동일한 어셈블리에서 구현되었기 때문에 Name 속성 대신에 x:Name 속성을 사용해야 함)
+
+첫 번째 ScrollBar는 첫 번째 SimpleElement의 Number 프로퍼티와 OneWayToSource 바인딩을 정의한다. ScrollBar를 클릭해 막대를 움직이면 첫 번째 SimpleElement는 바뀌게 되는데, 이것은 이미 예상된 일이기에 별로 신기할 것이 없다. 
+
+두 번째 ScrollBar는 첫 번째 SimpleElement의 Number 프로퍼티와 TwoWay 바인딩을 정의한다. 따라서 이것도 첫 번째와 동일하게 동작한다. SimpleElement에 명확한 통보 메커니즘이 없을지라도 첫 번째 ScrollBar의 조작으로 인한 Number 프로퍼티에대한 변화는 바인딩에서 감지되기 때문에 결과적으로 두 번째 ScrollBar는 첫 번째 ScrollBar의 변화에 반응한다. 또한 이것은 TwoWay 바인딩이기 때문에 두번 째 ScrollBar를 조작할 경우 첫 번째 SimpleElement도 역시 변한다(반면 첫 번째 ScrollBar는 변화가 없다)
+
+두번째 SimpleElement 엘리먼트는 두 번째 ScrollBar와 OneWay 데이터 바인딩을 정의한다. 따라서 두 번째 ScrollBar 가 바인딩을 통해서나 직접 조작에 의해 움직이면 두 번째 SimpleElement는 새로운 값으로 갱신된다. 
+
+여기서 확실히 알 수 있는 것은 DependencyProperty 를 정의하면 데이터 바인딩 통보 메커니즘은 그냥 확보된다는 것이다. 
+
+2개의 메타 데이터 플래그는 데이터 바인딩에 영향을 준다. FrameworkPropertyMetadata Options.NotDataBindable을 포함하면 다른 엘리먼트는 계속해서 이 의존프로퍼티를 바인딩 할 수 있지만 이 의존 프로퍼티 자체에 바인딩을 정의할 수 없다( 달리 말하면 이 플래그가 있는 의존 프로퍼티는 데이터 바인딩의 타깃이 될 수 없다). 또한 FrameworkPropertyMetadataOptions.BindsTwoWayByDefault 플래그는 오직 이 의존 프로퍼티가 타깃으로 정의되어 있는 바인딩에만 영향을 준다. 
+
+Binding의 Path 프로퍼티를 소스 객체의 프로퍼티로 설정한 것을 본적이 있을 것이다. 그런데 왜 이것을 Property라고 하지 않고 Path라고 할까?
+
+Path라고 불리는 이유는 이것이 프로퍼티 이상의 것이기 때문이다. 이것은 점으로 연결된 연속적인 프로퍼티(색인을 통해)로 설정될 수 있다. 이것이 C# 코드와 유사하지만 잡다한 코딩은 필요없다. 2개의 Path 프로퍼티를 포함한 스탠드 얼론 XAML 프로그램을 살펴보자.
