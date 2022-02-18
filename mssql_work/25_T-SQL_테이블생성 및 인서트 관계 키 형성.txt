@@ -1,0 +1,172 @@
+(2) T-SQL로 테이블 생성
+6장에서 sqlDB를 T-SQL로 생성했다. 물론 잊어버렸어도 상관없다. 처음부터 다시 T-SQL을 이용해서 테이블을 생성해 보자. 
+
+SQL Server 2012 도움말에 나오는 테이블을 생성하는 기본적인 형식은 다음과 같다.
+
+CREATE TABLE
+	[ database_name . [ schema_name] . [schema_name .] table_name
+	[ AS FileTable ]
+	( { <column_definition> | <computed_column_definition>
+		| <columnset_defnition> | [ <table_constraint> ] [ ,... n ] } )
+	[ ON { partition_scheme_name ( partition_column_name ) | filegroup
+		| "default" } ]
+	[	{ TEXTIMAGE_ON { filegroup | "default" } ]
+	[ FILESTREAM_ON { partition_scheme_name | filegroup
+		| "default" } ]
+	[ WITH ( <table_option> [ ,... n ] ) ]
+[ ; ]
+
+
+각각의 항목에 대한 설명까지 하면 형식만으로도 100여줄이 된다. 너무 복잡해 보이지만, 다양한 옵션이 모두 표현되어서 그렇지, 실제로 사용되는 것은 그렇게 복잡하지는 않다. 지금까지 실습에서 아주 간단한 테이블을 만들 경우에는 다음과 같이 사용했다. 
+
+CREATE TABLE test (num, INT);
+
+아주 간단하다. 이러한 간단한 것에 살(?)을 잘 붙이기만 하면 테이블을 생성하는 훌륭한 T-SQL 문이 되는 것이다. 실습을 통해서 테이블을 생성하는 T-SQL 문을 하나씩 익혀 보자. 
+
+
+
+실습2 : T-SQL을 이용해서 테이블을 생성해 보자. 
+
+0. 우선 열린 창을 모두 닫고 쿼리 창을 하나 연다 <실습1>에서 사용한 tableDB를 삭제하고 다시 생성해보자. 
+
+만약 사용중이라는 오류가 나오고 삭제되지 않으면, SSMS를 종료한 후 다시 열고 다음쿼리를 실행한다. 
+
+USE tempdb;
+DROP DATABASE tableDB;
+GO
+CREATE TABLE tableDB;
+
+1. [그림8-1]을 보면서 하나씩 생성해 보자. 우선은 기본 키, 외래 키, NULL 값 등을 고려하지 말고 테이블의 기본적인 틀만 구성하자. 열 이름은 [그림8-3]과 [그림8-5]를 참조하자. 
+
+
+USE tableDB;
+CREATE TABLE userTbl --회원테이블
+(	
+	userID char(8), --사용자 아이디
+	name nvarchar(10), --이름
+	birthYear int, --출생년도
+	addr nchar(2), --지역(경기, 서울, 경남 등으로 글자만 입력)
+	mobile1	char(3), --휴대폰의 국번(011, 016, 017, 018, 019, 010 등)
+	mobile2 char(8), --휴대폰의 나머지 전화번호(하이픈 제외)
+	height smallint, --키
+	mDate date -- 회원 가입일
+);
+GO
+CREATE TABLE buyTbl --구매 테이블
+(
+	num int, --순번 (PK)
+	userID char(8), --아이디(FK)
+	prodName nchar(6), --물품명
+	groupName nchar(4), --분류
+	price int, --단가
+	amount smallint -- 수량
+);
+GO
+
+간단하다. 1개의 열을 가진 테이블을 만들든지, 100개의 열을 가진 테이블을 만들든지 그냥 열 이름과 데이터 형식만 지정한 후 콤마(,)로 분리해서 계속 나열해주면 된다. 즉, 데이터베이스 설계서만 있으면 테이블을 만드는건 아주 쉬운 일이다. 
+
+
+2. 추가적인 옵션을 줘서 테이블을 다시 생성해 보자. 
+2-1 NULL및 NOT NULL을 지정해서 테이블을 다시 생성한다. 아무것도 지정하지 않으면 디폴트로 NULL 허용이 된다. 하지만 혼란스러울수도 있으니 직접 NULL이나 NOT NULL을 모두 써주도록 하자.
+
+*NULL은 빈 값을 허용한다는 의미이고, NOT NULL은 반드시 값을 넣어야 한다는 의미다. 
+
+
+DROP TABLE buyTbl, userTbl;
+GO
+CREATE TABLE userTbl --회원테이블
+(	
+	userID char(8) NOT NULL, --사용자 아이디
+	name nvarchar(10) NOT NULL , --이름
+	birthYear int NOT NULL , --출생년도
+	addr nchar(2) NOT NULL , --지역(경기, 서울, 경남 등으로 글자만 입력)
+	mobile1 char(3) NOT NULL, --휴대폰의 국번(011, 016, 017, 018, 019, 010 등)
+	mobile2 char(8) NOT NULL, --휴대폰의 나머지 전화번호(하이픈 제외)
+	height smallint NOT NULL, --키
+	mDate date NULL -- 회원 가입일
+);
+GO
+CREATE TABLE buyTbl --구매 테이블
+(
+	num int NOT NULL, --순번 (PK)
+	userID char(8) NOT NULL, --아이디(FK)
+	prodName nchar(6) NOT NULL, --물품명
+	groupName nchar(4) NULL, --분류
+	price int NULL, --단가
+	amount smallint NOT NULL -- 수량
+);
+GO
+
+2-2 이번에는 buyTbl의 순번(num)열에 IDENTITY값을설정한다. 6장에서 배웠지만 형식을 다시 확인해 보자. 
+
+IDENTITY [ (seed, increment) ]
+
+seed는 처음 시작값이며, increment는 증가값을 말한다. 둘 다 생략할 경우에는 IDENTITY(1,1)이라고 써준 것과 같은 효과다. identity를 설정하면 사용자는 해당 열의 값을 입력할 수 없다. 
+
+DROP TABLE buyTbl;
+GO
+CREATE TABLE buyTbl
+(
+	num int IDENTITY(1,1) NOT NULL,
+	..중간생략
+
+
+※여기서 잠깐?
+identity가 설정된 열에 강제로 값을 입력하고 싶다면 'SET IDENTITY_INSERT 테이블이름 ON' 으로 설정한 후에 입력하면된다. 하지만 이것이 실제로 사용되는 경우는 드물다. 또 이 SET 명령은 현재의 세션(쿼리 창)에만 해당되는 것이며 세션이 종료되면(=쿼리 창이 닫히면)설정된 내용은 무효가 된다. 
+
+
+
+2-3 이번에는 각 테이블에 기본키를 설정해 보자. 기본 키로 설정하려면 PRIMARY KEY 문을 붙여주면 된다. 
+
+DROP TABLE buyTbl, userTbl;
+GO
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL PRIMARY KEY,
+	...중간 생략
+);
+GO
+CREATE TABLE buyTbl
+(
+	num int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	...중간생략
+);
+
+그런데 기본키로 설정된 열은 당연히 NULL 값이 허용되지 않는다. 그러므로 NOT NULL을 빼도 관계없다. 
+
+2-4 [그림8-1]처럼 구매 테이블의 아이디 열을 회원 테이블의 아이디 열에 외래키로 설정 해보 자. 
+DROP TABLE buyTbl;
+CREATE TABLE buyTbl
+(
+	num int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	userID char(8) NOT NULL FOREIGN KEY REFERENCES userTbl(userID),
+	...중간생략
+);
+
+FOREIGN KEY REFERENCES userTbl(userID)의 의미는 'userTbl 테이블의 userID열과 외래키 관계를 맺어라' 그정도로 이해하면 된다(외래 키에 대해서는 잠시 후에 상세히 알아보겠다.)이렇게 해서 [그림8-1]의 테이블 구조가 완성되었다. 
+
+
+3. 이제는 데이터를 몇 건씩 입력해 보자. 
+
+3-1 먼저 회원 테이블에 3건만 입력해 보자. 
+ 
+INSERT INTO userTbl VALUES('KBS', N'운동화', NULL, 30, 2);
+INSERT INTO userTbl VALUES('KBS', N'노트북', N'전자', 1000, 1);
+INSERT INTO userTbl VALUES('JYP', N'모니터', N'전자', 200, 1);
+
+INSERT INTO buyTbl VALUES('KBS', N'운동화', NULL, 30, 2);
+INSERT INTO buyTbl VALUES('KBS', N'노트북', N'전자', 1000, 1);
+INSERT INTO buyTbl VALUES('JYP', N'모니터', N'전자', 200, 1);
+
+오류 메시지:
+(1개 행이 영향을 받음 )
+(1개행이 영향을 받음)
+메시지 547, 수준 16, 상태 0, 줄 3
+INSERT 문이 FOREIGN KEY 제약조건 "FK_buyTbl_userid_12731C1CD"과(와) 충돌했습니다. 데이터베이스 "tableDB", 테이블 "dbo.userTbl", column 'userID'에 서 충돌이 발생했습니다. 
+문이 종료되었습니다. 
+
+SSMS에서 했던 것과 같이, 두 개의 행은 잘 들어가고 세 번째 JYP(조용필)은 아직 회원 테이블에 포함되지 않아서 오류가 발생했다. 
+
+3-3 userTbl 에 나머지 데이터를 먼저 입력한 후 구매 테이블의 3번째 데이터부터 다시 입력해 보자. 여러분이 직접 해보자.
+
+지금까지 <실습1>에서는 개체 탐색기로 <실습2>에서는 T-SQL로 같은 작업을 수행했다. 둘 다 똑같은 설정을 할 수 있지만, 여러분은 되도록 T-SQL 방법을 우선 익힌 후에 부가적으로 SSMS에서 하는 방법을 익히는 것이 좋다.	

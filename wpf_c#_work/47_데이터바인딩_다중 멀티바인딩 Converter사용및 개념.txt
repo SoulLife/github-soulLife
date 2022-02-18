@@ -1,0 +1,319 @@
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:g="clr-namespace:System.Globalization;assembly=mscorlib">
+
+	<!-- ListBox의 ItemSource와 DateTimeFormatInfo의 DayNames 프로퍼티를 바인딩 -->
+
+	<ListBox Name="lstbox" HorizontalAlignment="Center" Margin="24" ItemSource="{Binding Source={x:Static g:DateTimeFormatInfo.CurrentInfo},		
+		Path=DayNames, Mode=OneTime}" />
+
+	<!-- TextBlock의 Text와 ListBox의 SelectedItem 프로퍼티를 바인딩 -->
+	<TextBlock HorizontalAlignment="Center" Text="{Binding ElementName=lstbox, Path=SelectedItem, Mode=OneWay}" />
+</StackPanel>
+
+사실 파일은 2개의 바인딩을 가지고 있는데, 첫 번째는 Daynames 배열을 얻고 이것을 ListBox의 ItemSource 프로퍼티에 설정해 ListBox를 요일로 채운다. 두 번째는 현재 ListBox에서 선택된 항목을 TextBlock에보여준다. 
+
+DaysOfWeek.xaml의 첫 번째 바인딩은 Mode 프로퍼티를 OneTime으로 설정하며 나머지 옵션은 설정이 불가능하다. 왜냐하면 DateTimeFormatInfo 클래스가 요일이 바뀌었을 때 공지할 방법이 없기 때문이다. 또한 이 파일은 특정 프로퍼티에 접근하기 위해 Binding 문법을 쓰지만 데이터를 한 번 가져오기 위한 것 외에는 특별한 용도가 없기 때문이기도 하다. 
+
+바인딩이 지속적으로 바인딩 소스에서 타깃으로 정보를 전송하기 위해서는 소스가 바뀌었을 때 타깃에게 통보할 특별한 메커니즘이 필요하다. 하지만 소스가 의존 프로퍼티일 경우에 이 메커니즘은 자동으로 구현된다. 23장의 앞 부분에서 FrameworkElement를 상속한 SimpleElement 클래스에서 Number라는 이름의 의존 프로퍼티를 정의하는 것을 보았다. 이 클래스는 추가적인 작업 없이 데이터 바인딩을 수행할 수 있었다. 
+
+의존 프로퍼티를 정의하기 위해서 반드시 FrameworkElement를 상속받을 필요는 없다. 대신 데이터의 소스가 시각적인 객체가 아니라면 DependencyObject를 상속받을 수 있으며, 이 클래스가 의존 프로퍼티를 구현하기 위해 필요한 SetValue와 GetValue메소드를 정의한다. 
+
+예를 들어 작은 전자시계 프로그램을 작성해보자. XAML로 외관을 작성하겠지만 시계를 위해서는 현재 날짜, 시간, 시간이 변했을 때 통지할 메커니즘 등이 필요 하다. 다음 클래스는 DependencyObject를 상속받고 의존 프로퍼티 DateTimeProperty에 지원을 받는 DateTime이라는 이름의 프로퍼티를 정의한다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Threading;
+
+public class ClockTicker1 : DependencyObject
+{
+	//DependencyProperty 정의
+	public static DependencyProperty DateTimeProperty = DependencyProperty.Register("DateTime", typeof(DateTime), typeof(ClockTicker1));
+
+	//DependencyProperty을 CLR 프로퍼티로 노출
+	public DateTime DateTime
+	{
+		set { SetValue(DateTimeProperty, value);	}
+		get { return (DateTime)GetValue(DateTimeProperty);	}
+	}
+
+	//생성자에서 timer를 설정
+	public ClockTicker1()
+	{
+		DispatcherTimer timer = new DispatcherTimer();
+		timer.Tick += TimerOnTick;
+		timer.Interval = TimeSpan.FromSeconds(1);
+		timer.Start();
+	}
+	//DateTime 프로퍼티를 설정하는 타이머 이벤트 핸들러
+	void TimerOnTick(object sender, EventArgs args)
+	{
+		DateTime = DateTime.Now;
+	}
+}
+
+
+ClockTicker1 클래스에서 가장 흥미로운 부분은 DispatcherTimer를 위한 이벤트 핸들러이다. 이것은 단지 자신의 DateTime 프로퍼티를 DateTime.Now로 설정하는데, SetValue(DateTime 프로퍼티를 자극하는)의 호출을 통해 외부에 영향을 미친다. 
+
+어떤 효과가 있는지 보기 위해서 DigitalClock 프로젝트의 XAML 부분을 살펴보자. 다음은 애플리케이션 정의 파일이다. 
+
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" StartupUri="DigitalClockWindow.xaml" />
+
+데이터 바인딩을 정의하려면 Window 파일은 ClockTicker1 클래스를 참조할 필요가 있다. ClockTicker1은 FrameworkElement를 상속받지 않았기 때문에 Binding은 ElementName 프로퍼티를 사용할 수가 없는데, 이 경우에는 대신 Source를 사용할 수 있다. 여기서는 ClockTicker1 타입의 객체를 참조하기 위해 Source를 사용한다. 또한 마크업에서 객체를 참조하기 위해 Resources 절에 객체를 정의하고 StaticResource로 그 객체에 접근하면 된다. 
+
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:src="clr-namespace:Petzold.DigitalClock" Title="Digital Clock" SizeToContent="WidthAndHeight" ResizeMode="CanMinimize"
+	FontFamily="Bookman Old Style" FontSize="36pt">
+	<Window.Resources>
+		<src:ClockTicker1 x:Key="clock" />
+	</Window.Resources>
+	<Window.Content>
+		<Binding Source="{StaticResource clock}" Path="DateTime" />
+	</Window.Content>
+</Window>
+
+
+Resources 절에서는 ClockTicker1를 정의하고 clock이라는 키를 지정했다. 따라서 Window의 Content 프로퍼티를 설정한 Binding은 Source프로퍼티를 clock이라는 이름의 StaticResource로 설정하고 그것의 Path 프로퍼티가 ClockTicker1의 DateTime 프로퍼티를 참조한다. 
+
+프로그램은 날짜와 시간을 각 지역의 다양한 형식 중에서 기본적인 형식으로 간단히 보여준다. 초는 보여주지 않기 때문에 데이터 바인딩이 올바르게 구현되어 프로그램이 제대로 작동하는지 확인하려면 1분을 기다려야 한다. 
+
+의존 프로퍼티를 정의하는 것이 클래스가 데이터바인딩 소스로서의 역할을 성공적으로 수행하기 위해 선호되는 방법이긴 하지만 이것만이 유일한 방법은 아니다. 전통적인 방법은 이벤트를 정의하는 것인데 , 이벤트를 특정한 방법으로 정의하면 WPF 내의 데이터 바인딩 로직이 성공적으로 그것을 찾을 수 있다. 
+
+데이터 바인딩의 소스로 사용하기 위해 Whtever라는 프로퍼티를 정의했다면 WhateverChanged라는 이름으로 이벤트를 정의한다. 그러면 WPF는 성공적으로 이벤트를 구분할 수 있다. 이벤트를 위해서는 먼저 ClockTicker2 클래스에서 의존 프로퍼티인 DateTimeProperty를 삭제하고 DateTimeChanged라는 public 이벤트를 정의한다. 
+
+public event EventHandler DateTimeChanged;
+
+DateTime 프로퍼티의 정의를 다음과 같이 변경한다. 
+
+public DateTime DateTime
+{
+	get { return DateTime.Now; }
+}
+
+생성자는 동일하다 하지만 TimerOnTick 이벤트 핸들러에는 DateTimeChanged 이벤트를 발생시키기 위한 내용이 약간 추가됐다. 
+
+void TimerOnTick(object sender, EventArgs args)
+{
+	if(DateTimeChanged != null)
+		DateTimeChanged(this, new EventArgs());
+}
+
+이제 끝났다. 
+
+WPF 데이터 바인딩 로직은 이벤트가 INotifyPropertyChanged 인터페이스를 구현한 클래스 내에 정의되어 있다면 성공적으로 찾을 것이다. 이 인터페이스는 클래스에게 PropertyChangedEventHandler위임자를 기본으로 하는 PropertyChanged 이벤트를 정의할 것을 요구한다. 
+
+public event PropertyChangedEventHandler PropertyChanged;
+
+클래스가 PropertyChanged 이벤트를 발생시킬 때 첫번째 인자는 this이며 두 번째 인자는 PropertyChangedEventArgs 타입의 객체다. PropertyChangedEventArgs는 EventArgs를 상속받고 추가적으로 string 타입의 PropertyName이라는 프로퍼티를 정의하는데, 이 PropertyName 프로퍼티는 변경될 프로퍼티를 구별하기 위해 사용된다. 또한 PropertyChangedEventArgs는 string 인자를 가진 생성자를 통해 PropertyName을 설정한다. 
+
+클래스가 DateTime 이라는 프로퍼티를 정의했다면 DateTime 이 변경될 때 PropertyChanged가 발생되어야 하는데, 그것은 다음의 코드를 통해 가능하다. 
+
+PropertyChanged(this, new PropertyChangedEventArgs("DateTime"));
+
+이것은 변경 가능한 다수의 프로퍼티를 가진 클래스에게 좋은 방법이다. 왜냐하면 하나의 PropertyChanged 이벤트가 다수의 프로퍼티 전부를 처리할 수 있기 때문이다. 당연히 하나의 프로퍼티만 처리하는 것도 가능하다. 다음 ClockTicker2 클래스는 DateTime 프로퍼티가 변경될 때 어떻게 PropertyChanged 이벤트를 사용하는지 보여주고 있다. 
+
+
+using System;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Threading;
+
+public class ClockTicker2 : INotifyPropertyChanged
+{
+	//INotifyPropertyChanged 인터페이스가 요구하는 이벤트
+	public event PropertyChangedEventHandler PropertyChanged;
+
+	//public 프로퍼티
+	public DateTime DateTime
+	{
+		get { return DateTime.Now; }
+	}
+
+	//생성자에서 timer를 설정
+	public ClockTicker2()
+	{
+		DispatcherTimer timer = new DispatcherTimer();
+		timer.Tick += TimerOnTick;
+		timer.Interval = TimeSpan.FromSeconds(1);
+		timer.Start();
+	}
+
+	//PropertyChanged 이벤트를 발생시키는 타이머, 이벤트 핸들러
+	void TimerOnTick(object sender, EventArgs args)
+	{
+		if(PropertyChanged != null)
+			PropertyChanged(this, new PropertyChangedEventArgs("DateTime"));
+	}
+}
+
+ClockTicker2 클래스는 FormatedDigitalClock이라는 이름의 새로운 프로젝트의 일부이다. 이 프로젝트는 DateTime 프로퍼티의 변경을 알리는 새로운 방법을 소개하며, 추가적으로 XAML 코드에서 DateTime 객체에 서식을 줄 수 있게 해 더 큰 융통성을 부여한다. 
+
+이전의 DigitalClock 프로그램에서 보여준 날짜와 시간의 서식은 단순히 DateTime 객체의 ToString 을 호출해 나오는 결과였다. 하지만 DateTime 클래스는 포맷 문자열(formatting string)인자를 받아 날짜와 시간을 다양한 방법으로 보여줄 수 있게 오버로딩한 ToString 메소드를 정의한다(이것은 MSDN의 DateTimeFormatInfo 클래스 도움말에 문서화되어 있다) 예를 들면 문자열 T는 초와 함꼐 시간을 보여주고, 반면에 문자열 t는 초 없이 시간을 보여준다. DateTime 객체를 Console.Write로 보여줄 때나 String.Format을 통해 문자열로 변환할 때 이 포맷 문자열을 사용할 수 있다. 예를 들어 DateTime 객체가 포맷팅될 세 번째 객체인 경우 (2:T)로 표현한다. 
+
+이 포맷 문자열을 XAML 파일에서 직접 사용할 수 있다는 것은 매우 즐거운 일이다. 그리고 이것이 FormattedTextConverter 클래스가 존재하는 이유이다. 이 클래스는 IValueConverter 인터페이스를 구현하기 때문에 데이터 바인딩의 Converter 프로퍼티에 사용될 수 있다. 바인딩의 ConverterParameter 프로퍼티에 String.Format에서 사용되는 것과 같은 포맷 문자열이 명시되는데, Convert 메소드가 String.Format을 사용해 객체를 string으로 변환하기 때문이다.
+
+
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data
+
+
+public class FormattedTextConverter : IValueConverter
+{
+	public object Convert(object value, Type typeTarget, object param, CultureInfo culture)
+	{
+		if(param is string)
+			return String.Format(param as string, value);
+
+		return value.ToString();
+	}
+	public object ConvertBack(object value, Type typeTarget, object param, CultureInfo culture)
+	{
+		return null;
+	}
+}
+
+FormattedTextConverter를 객체의 어떤 타입과도 사용할 수 있다. 물론 다수의 포맷 옵션을 가진 객체(정수형이나 부동소수점 수형)에게 가장 알맞지만 기타 텍스트를 가진 객체를 꾸미는데도 이것을 사용할 수 있다. 예를 들면 Convert의  param 인자는 "-->{0}<--"이 될 수도 있다. 
+
+FormattedDigitalClockWindow.xaml 파일은 ConverterParameter 프로퍼티를 "...{0:T}..." 으로 설정한다. 따라서 초를 포함한 시간의 양 옆에는 줄임표가 있다. 
+
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:src="clr-namespace:Petzold.FormattedDigitalClock" Title="Formatted Digital Clock" SizeToContent="WidthAndHeight" ResizeMode="CanMinimize"
+	FontFamily="Bookman Old Style" FontSize="36pt" >
+
+	<Window.Resources>
+		<src:ClockTicker2 x:key="clock" />
+		<src:FormattedTextConverter x:Key="conv" />
+	</Window.Resources>
+	<Window.Content>
+		<Binding Source="{StaticResource clock}" Path="DateTime" Converter="{StaticResource conv}" ConverterParameter="...{0:T}..." />
+	</Window.Content>
+</Window>
+
+포맷 명세에 사용된 중괄호는 XAML 마크업 확장을 나타내기 위한 것과 동일한 중괄호라는 것을 알아두자. 따라서 ConverterParameter를 다음과 같이 (이전 예제와 달리 점 또는 공백 없이) 사용할 수 없다. 
+
+ConverterParameter="{0:T}"
+
+이 형태 그대로 쓰고 싶다면 앞부분에 왼쪽, 오른쪽, 중괄호를 다음과 같이 삽입한다. 
+
+ConverterParameter="{}{0:T}"
+
+마지막은 FormattedDigitalClock 프로젝트의 애플리케이션 정의 파일이다. 
+
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" StartupUri="FormattedDigitalClockWindow.xaml" />
+
+
+XAML에서 .NET 포맷 문자열을 사용하는 것에 관심이 많다면 한 번에 한 객체씩 변환하는 것이 당연히 만족스럽지 못할 것이다. 왜냐하면 Console.Write나 String.Format은 객체의 개수에 제한을 두지 않기 때문이다. 따라서 XAML 에서도 다수의 객체를 하나의 문자열을 사용해 포맷팅할 수 있다면 좋을 것이다. 
+
+이것을 가능하게 하기 위해서 MultiBinding을 사용하는 것이 어쩌면 당연할 것이다. ColorScroll 프로그램에서 기억하듯이 IMultiValueConverter 인터페이스를 구현한 클래스를 이용하면 여러 개의 소스를 하나의 타깃으로 바인딩 할 수 있다. 다음의 클래스는 포맷 문자열이 value로 포맷팅될 객체의 배열이param 인자로 전달된다고 가정한다. 그리고 이 둘은 String.Format으로 전달된다. 
+
+
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+
+
+public class FormattedMultiTextConverter : IMultiValueConverter
+{
+	public object Convert(object[] value, Type typeTarget, object param, CultureInfo culture)
+	{
+		return String.Format((string)param, value);
+	}
+	public object[] ConvertBack(object value, Type[] typeTarget, object param, CultureInfo culture)
+	{
+		return null;
+	}
+}
+
+이것이 동작하는지 보기 위해 21장에서 Environment 클래스로부터 정적 프로퍼티를 포맷팅 했던 문제를 다시 되짚어볼 필요가 있다. 이때는 각 텍스트에 모두 TextBlock을 사용했다. 하지만 다음 EnvironmentInfo2 프로그램은 MultiBinding 객체와 바인딩된 Text 프로퍼티를 통해 하나의 TextBlock 만 사용한다. 여기서 Converter 프로퍼티는 당연히 FormattedMultiTextConverter가 된다. 
+
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:src="clr-namespace:Petzold.EnvironmentInfo2" Title="Environment Info">
+	<Window.Resources>
+		<src:FormattedMultiTextConverter x:Key="conv" />
+	</Window.Resources>
+
+	<TextBlock>
+		<TextBlock.Text>
+			<MultiBinding Converter="{StaticResource conv}" ConverterParameter=
+"Operating System Version: {0}
+&#x000A;.NET Version: {1}
+&#x000A;Machine Name: {2}
+&#x000A;User Name: {3}
+&#x000A;User Domain Name: {4}
+&#x000A;System Directory: {5}
+&#x000A;Current Directory: {6}
+&#x000A;Command Line: {7}">
+				<Binding Source="{x:Static s:Environment.OSVersion}" />
+				<Binding Source="{x:Static s:Environment.Version}" />
+				<Binding Source="{x:Static s:Environment.MachineName}" />
+				<Binding Source="{x:Static s:Environment.UserName}" />
+				<Binding Source="{x:Static s:Environment.UserDomainName}" />
+				<Binding Source="{x:Static s:Environment.SystemDirectory}" />
+				<Binding Source="{x:Static s:Environment.CurrentDirectory}" />
+				<Binding Source="{x:Static s:Environment.CommandLine}" />
+			</MultiBinding>
+		</TextBlock.Text>
+	</TextBlock>
+</Window>
+
+ConverterParameter는 몇 줄에 걸쳐 이어지는 긴 문자열이다. 쓸데 없이 과도한 여백을 없애기 위해 문자열을 왼쪽에 붙였다. 또한 라인피드는 C# 스타일이 아닌 XML 스타일(&#x000A;)이 사용됐음을 알아두자. 
+
+Binding 엘리먼트는 Path 속성이 필요없다는 것을 알아두자. 왜냐하면 이것은 Source 자체에만 관심이 있지 Source의 프로퍼티에 관심이 있는 것이 아니기 때문이다. 따라서 Path를 다음과 같이 그냥 공백으로 설정한다. 
+
+Path=""
+
+다음은 프로젝트의 애플리케이션 정의 파일이다. 
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" StartupUri="EnvironmentInfo2Window.xaml" />
+
+지금까지 ElementName과 Source를 사용한 Binding에 대해 살펴보았다. 이제 엘리먼트 트리내에 조상 엘리먼트나 엘리먼트 그 자체를 참조할 수 있는 RelativeSource만이 남았다. 다음의 RelativeSourceDemo.xaml 파일에서 RelativeSource를 사용한 3개의 바인딩을 볼 수 있다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	TextBlock.FontSize="12" >
+
+	<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" >
+		<TextBlock Text="This TextBlock has a FontFamily of " />
+		<TextBlock Text="{Binding RelativeSource={RelativeSource self}, Path=FontFamily}" />
+		<TextBlock Text=" and a FontSize of " />
+		<TextBlock Text="{Binding RelativeSource={RelativeSource self}, Path=FontSize}" />
+
+	</StackPanel>
+
+	<StackPanel Orientation="Horizontal" HorizontalAlignment="Center"> 
+		<TextBlock Text="This TextBlock is inside a StackPanel with "/>
+		<TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type StackPanel}}, Path=Orientation}" />
+
+		<TextBlock Text=" orientation" />
+	</StackPanel>
+
+	<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" >
+		<TextBlock Text="The parent StackPanel has " />
+		<TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type StackPanel}}, AncestorLevel=2}, Path=Orientation}" />
+
+		<TextBlock Text=" Orientation" />
+	</StackPanel>
+</StackPanel>
+
+
+이 파일에 Name 속성이 있는 것은없다. 첫 번째 바인딩은 RelativeSource 마크업 확장을 사용해 바인딩이 존재하는 현재 엘리먼트를 참조한다. 
+
+RelativeSource={RelativeSource self}
+
+이것으로 TextBlock 은 자신의 폰트 정보를 출력한다. 두 번째 바인딩으로는 다음과 같은 마크업 확장을 사용해 StackPanel의 Orientation 프로퍼티를 TextBlock에 보여준다. 
+
+RelativeSource={RelativeSource AncestorType={x:Type StackPanel}}
+
+하지만 이 StackPanel은 또 다른 StackPanel의 내에 내장되어 있기 때문에 상위의 Stack Panel을 얻기 위해서는 세 번째 바인딩에서 보여지는 것처럼 AncestorLevel 프로퍼티가 필요하다. 
+
+RelativeSource={RelativeSource AncestorType={x:Type StackPanel}, AncestorLevel=2}
+
+지금까지 23장에서 바인딩 엘리먼트를 사용한 여러 가지 표현과 방법을 살펴보았다. 데이터 바인딩은 또한 데이터베이스에서 추출된 다양한 데이터를 보여주는 데 중요한 역할을 하며, 사용자가 데이터를 수정하거나 새로운 데이터를 입력할 수 있게 해준다. 따라서 26장에서는 여러 애플리케이션에서 사용할 수 있는 기술을 살펴볼 것이다. 
