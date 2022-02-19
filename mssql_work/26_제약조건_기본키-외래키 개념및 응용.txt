@@ -1,0 +1,207 @@
+※ 제약조건
+제약 조건(Constraint)이란 데이터의 무결성을 지키려고 제한된 조건을 의미한다. 즉, 특정 데이터를 입력할 때 무조건적으로 입력되는 것이 아닌, 어떠한 조건을 만족했을 때에 만 입력되게제약 할 수 있다. 
+
+간단한 예를 들면, 인터넷 쇼핑몰에 회원가입을 해본 경험이 있을 것이다. 그런데 만약 여러분이 같은 주민등록번호로 다시 회원가입을 하면 회원가입이 안 된다. 그 이유는 주민등록번호 열은 같은 것이 들어갈수 없는 제약조건이 설정되어 있기 때문이다. 
+
+이 외에도 제약 조건은 많은것이 있으며, 지금까지 실습중에 하나 둘씩 나왔다. 이제는 그것들을 체계적으로 정리해 보자. 
+
+SQL Server는 데이터의 무결성을 위해서 다음의 6가지 제약 조건을 제공한다. 
+
+* PRIMARY KEY 제약 조건
+* FOREIGN KEY 제약 조건
+* UNIQUE 제약 조건
+* CHECK 제약 조건
+* DEFAULT 정의
+* Null 값 허용
+
+
+(1) 기본 키 제약 조건
+테이블에 있는 많은 행의 데이터를 구분할 수 있는 식별자를 기본 키(Primary Key)라고 부른다. 예를 들어, 회원 테이블의 회원 아이디, 학생 테이블의 학번 등이 이에 해당된다. 
+
+기본 키에 입력되는 값은 중복될 수 없으며, NULL 값이 입력될 수 없다. 인터넷 쇼핑몰에 회원가입한 것을 기억해 보자. 대부분의 인터넷 쇼핑몰에서는 회원 테이블의 기본 키를 회원 아이디로 설정해 놓았을 것이다. 
+
+* 설계 방법에 따라서 회원 아이디가 기본 키가 아닐 수도 있다. 그리고 지금 필자가 이야기하는 것은 보편적인 경우다. 회원 아이디가 아닌 주민등록번호나 Email 또는 휴대폰 번호로 회원을 구분하는 사이트도 많이 있다. 
+
+회원가입 시에 생성하는 회원 아이디가 중복된 것을 본적이 있는가? 또 회원 아이디 없이 회원가입이 되는가? 아마도 없을 것이다. 이는 회원 아이디가 기본 키로 설정되어 있기 때문이다. 
+
+기본 키는 테이블에서 중요한 의미를 갖는다. 우선 기본 키로 생성한 것은 자동으로 클러스터형 인덱스가 생성된다(인덱스에 대한 이야기는 9장에서 살펴보겠다.) 또한 테이블에서는 기본 키를 하나 이상에 열에 설정할 수 있다. 즉 회원 아이디와 같이 하나의 열에만 기본키를 설정할 수도 있고, 두 개의 열을 합쳐서 기본키로 설정할 수도 있다. 
+
+대부분의 테이블은 기본 키를 가져야 한다. 물론 기본 키 없이도 테이블의 구성이 가능하지만 실무적으로는 대부분의 테이블에는 기본키를 설정해줘야 한다. 
+
+기본 키를 생성하는 방법은 앞에서 실습했던 CREATE TABLE 문에 PRIMARY KEY라는 예약어를 넣어주면 된다. 
+
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL PRIMARY KEY,
+	name nvarchar(10) NOT NULL,
+	--- 중간 생략 ---
+
+이렇게 설정함으로써 회원 아이디(userID)는 회원 테이블(userTbl)의 기본 키가 되었으며, 앞으로 입력되는 회원 아이디는 당연히 중복될 수 없고, 비어(NULL) 있을 수도 없다. 
+
+그런데 모든 제약 조건은 이름을 가지게 되는데, 이렇게 CREATE TABLE 구문안에서 기본 키를 지정하게 되면 제약 조건의 이름은 SQL Server가 알아서 설정해주게 된다. 
+
+아마도 PK_userTbl_CB9A1CDFE820F8B5' 식으로 이름이 주어지게 된다. 여기서 우리는 이름만으로도 이것이 어떤 것인지 파악이 가능하다. 즉 userTbl테이블에 Primary Key로 지정된 것정도로 충분히 파악이 가능할 것이다. 그런데 이 이름만으로는 어느 열에 기본 키가 설정되었는지를 파악하기가 어렵다. 
+
+테이블의 정보를 보려면 sp_help 프로시저를 사용하면 된다. 
+
+EXEC sp_help userTbl;
+
+제일 마지막에서 제약 조건의 타입과 제약 조건 이름, 제약 조건이 설정된 열도 확인된다. 이름이 좀 어려우므로, 직접 PK_userTbl_userID와 같은 이름을 붙여주는게 더 낫다. 즉 이름만으로도 PK가 userTbl테이블의 userID열에 지정됨을 읽을 수 있다. 그러려면 다음과 같이 사용하면 된다.
+
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL CONSTRAINT PK_userTbl_userID PRIMARY KEY,
+	name nvarchar(10) NOT NULL,
+제약 조건을 설정하는 또 다른 방법은 ALTER TABLE 구문을 사용하는 것이다. ALTER TABLE은 잠시 후에 좀 더 파악해 보겠지만, 테이블을 수정하는 쿼리다. 다음과 같이 사용할 수 있다. 
+DROP TABLE userTbl;
+GO
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL ,
+	name nvarchar(10) NOT NULL,
+	--- 중간 생략 ---
+);
+GO
+ALTER TABLE userTbl
+ADD CONSTRAINT PK_userTbl_userID PRIMARY KEY(userID);
+GO
+
+CREATE TABLE안에 PRIMARY KEY 문으로 설정한 것과 같은 결과다. 
+
+쉽게 알 수 있겠지만 해석하면
+
+* ALTER TABLE userTbl : userTbl을 변경하자
+* ADD CONSTRAINT PK_userID : 제약 조건을 추가하자 추가할 제약 조건 이름은 PK_userTbl_userID이다. 
+* PRIMARY KEY(userID) : 추가할 제약 조건은 기본키 제약 조건이다. 그리고 제약 조건을 설정할 열은 userID열이다. 
+
+정도로 해석할 수 있겠다. 
+
+기본 키는 각 테이블별로 하나만 있어야 하지만 기본 키를 하나의 열로만 구성해야 하는것은 아니다. 필요에 따라서 두개 또는 그 이상의 열을 합쳐서 하나의 기본키로 설정하는 경우도 종종 있다. 
+
+예를 들어, 다음과 같은 간단한 제품 테이블을 생각해 보자. 
+
+제품 코드	제품 일련 번호	제조일자		현 상태
+AAA		0001			2013.10.10		판매완료
+AAA		0002			2013.10.11		매장진열
+BBB		0001			2013.10.12		재고창고
+CCC		0001			2013.10.13		판매완료
+CCC		0002			2013-10-14		매장진열
+
+만약 제품 코드 AAA가 냉장고 BBB 가 세탁기 CCC가 TV라고 가정한다면 현재 제품코드만으로는 중복될 수 밖에 없어 기본 키로 설정할 수가 없다. 또한 제품 일련 번호도 마찬가지로 각 제품별로 0001번 부터 부여하는 체계라서 기본키로 설정할 수 없다. 
+
+이러한 경우에는 제품코드 + 제품 일련번호를 합친다면 유일한 값이 될수 있으므로 기본 키로 사용할 수 있다. 
+
+CREATE TABLE prodTbl
+(
+	prodCode NCHAR(3) NOT NULL,
+	prodID NCHAR(4) NOT NULL,
+	prodDate SMALLDATETIME NOT NULL,
+	prodCur NCHAR(10) NULL
+);
+GO
+ALTER TABLE prodTbl
+ADD CONSTRAINT PK_prodTbl_prodCode_prodID PRIMARY KEY (prodCode, prodID);
+GO
+
+또는 CREATE TABLE 구문 안에 직접 사용할 수도 있다. 
+CREATE TABLE prodTbl
+(
+	prodCode NCHAR(3) NOT NULL,
+	prodID NCHAR(4) NOT NULL,
+	prodDate SMALLDATETIME NOT NULL,
+	prodCur NCHAR(10) NULL,
+	CONSTRAINT PK_prodTbl_prodCode_prodID PRIMARY KEY(prodCode, prodID)
+);
+
+마지막 열 이후에 콤마(,)로 분리하고 제약 조건을 직접 지정할 수 있다. EXEC sp_help prodTbl로 테이블의 정보를 확인하면 두 열이 합쳐져서 하나의 기본 키 제약 조건을 설정하고 있음이 확인된다. 
+
+또한 개체 탐색기에서 해당 테이블을 선택한 후 마우스 오른쪽 버튼을 클릭하고 [디자인]을 선택해서 확인하면 열쇠모양이 두 개의 열에 표시되어 있다. 
+
+실무에서도 종종 발생되는 형태이므로 잘 기억해 두자. 
+
+
+
+(2) 외래 키 제약 조건
+외래 키(Foreign Key) 제약 조건은 두 테이블 사이의 관계를 선언함으로써, 데이터의 무결성을 보장해주는 역할을 한다. 외래 키 관계를 설정하게 되면 하나의 테이블이 다른 테이블에 의존하게 된다. 초보자는 외래키를 정의하는 테이블과 외래키가 참조하는 테이블을 가끔 혼동하는 경우가 있다. 
+
+[그림 8-1]의 예를 가지고 이해하자. 외래 키를 정의하는 테이블인 buyTbl을 외래키 테이블이라고 부르고, 외래 키에 의해서 참조되는 테이블은 userTbl을 그냥 기준 테이블 이라고 부르면 좀 더 직관적으로 이해하기가 쉬워진다. 
+
+우선 외래 키 테이블에 데이터를 입력할 때는 꼮 기준 테이블을 참조해서 입력하므로, 기준 테이블에 이미 데이터가 있어야 한다. 앞의 실습에서 buyTbl에 JYP(조용필)가 입력되지 않던 것을 확인했다. 이것은 외래 키 제약 조건을 위반했기 때문이다. 
+
+또 외래 키 테이블이 참조하는 기준 테이블의 열은 반드시 Primary Key 이거나, Unique 제약 조건이 설정되어 있어야 한다. Unique 제약 조건은 잠시 후에 살펴보겠다. 
+
+외래 키를 생성하는 방법은 CREATE TABLE 내부에 FOREIGN KEY 키워드로 설정하는 방법이 있다. 
+
+DROP TABLE buyTbl, userTbl;
+GO
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL PRIMARY KEY, 
+	name nvarchar(10) NOT NULL,
+	--- 중간 생략---
+);
+GO
+CREATE TABLE buyTbl
+(
+	num int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	userID char(8) NOT NULL	FOREIGN KEY REFERENCES userTbl(userID),
+	prodName nchar(6) NOT NULL,
+	--- 중간 생략---
+
+
+앞의 예에서 보면 외래 키 테이블(buyTbl)의 열(userID)이 참조(references)하는 기준 테이블(userTbl)의 열(userID)은 기본 키로 설정되어 있는 것이 확인된다. 만약 기준 테이블이 Primary Key 또는 Unique 가 아니라면 외래키 관계는 설정되지 않는다. 
+
+마찬 가지로 직접 외래 키의 이름을 지정하려면 다음과 같이 사용하면 된다.
+CREATE TABLE buyTbl
+(
+	num int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	userID char(8) NOT NULL CONSTRAINT FK_userTbl_buyTbl 	FOREIGN KEY REFERENCES userTbl(userID),
+	prodName nchar(6) NOT NULL,
+	--- 중간 생략---
+참고로 이 예에서는 기준 테이블의 열이름(userID)과 외래 키 테이블의 열 이름(userID)이 같지만 반드시 그래야 하는 것은 아니며 달라도 관계는 없다. 
+
+*열 이름은 대소문자를 안 가린다 즉 userID와 USERid는 같은 이름이다. 
+
+또 다른 방법으로 ALTER TABLE 구문을 이용할 수 있다. 
+
+DROP TABLE buyTbl, userTbl;
+GO
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL PRIMARY KEY, 
+	name nvarchar(10) NOT NULL,
+	--- 중간 생략---
+);
+GO
+CREATE TABLE buyTbl
+(
+	num int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+	userID char(8) NOT NULL,
+	prodName nchar(6) NOT NULL,
+	--- 중간 생략---
+);
+GO
+ALTER TABLE buyTbl
+ADD CONSTRAINT FK_userTbl_buyTbl FOREIGN KEY (userID) REFERENCES userTbl(userID);
+
+설명을 덧 붙이자면,
+* ALTER TABLE buyTbl : buyTbl을 수정한다
+* ADD CONSTRAINT FK_userTbl_buyTbl : 제약 조건을 더한다. 제약 조건 이름은 FK_userTbl_buyTbl로 명명한다. 
+* FOREIGN KEY (userID) : 외래키 제약 조건을 buyTbl의 userID에 설정한다
+* REFERENCES userTbl(userID) : 참조할 기준 테이블은 userTbl 테이블의 userID열이다.
+
+정도로 해석하면 되겠다. 
+
+설정된 외래 키 제약 조건은 마찬가지로 EXEC sp_help buyTbl로 확인할 수 있다. 
+
+※ 여기서 잠깐?
+sp_help 저장 프로시저 외에도 sp_helpconstraint 저장 프로시저로 제약 조건을 확인할 수 있다. 또는 카달로그 뷰를 사용할 수도 있다. 기본 키와 관련된 카탈로그 뷰는 sys.key_constraints이며, 외래 키와 관련된 것은 sys.foreign_keys가 있다. 사용법은 간단히 select * from 카탈로그뷰_이름 으로 확인하면 된다. 
+
+외래키의 옵션 중에 ON DELETE CASCADE 또는 ON UPDATE CASCADE 옵션이 있는데, 이는 기준 테이블의 데이터가 변경되었을 때 외래키 테이블도 자동으로 적용되게 설정해 준다. 
+
+예를 들어 ON UPDATE CASCADE로 설정하면 [그림8-1]에서 회원 테이블의 김범수의 ID인 'KBS'가 'KIM'으로 변경될 경우에 구매 테이블의 KBS도 Kim으로 자동변경 된다. 
+
+ALTER TABLE buyTbl
+ADD CONSTRAINT FK_userTbl_buyTbl FOREIGN KEY (userID) REFERENCES userTbl(userID) ON UPDATE CASCADE;
+
+별도로 지정하지 않으면 'ON UPDATE NO ACTION'및 'ON DELETE NO ACTION'을 지정한 것과 같다. 즉 회원 테이블의 회원 아이디가 변경되어도 아무런 일이 일어나지 않는다는 의미이다. 더 자세한 사용법은 잠시 후에 실습에서 확인해 보자. 

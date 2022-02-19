@@ -1,0 +1,386 @@
+CHAPTER 24장 : 스타일
+
+XAML 파일의 Resource절은 마크업 내의 객체를 참조할 때 상당히 유용하지만 많은 Resources절이 기본적으로 Style 객체를 정의하는 데 사용된다. 스타일은 근본적으로 엘리먼트에 적용되는 프로퍼티의 집합이다. 또한 루프를 사용하지 못하는 XAML 에서 동일한 프로퍼티를 가진 엘리먼트를 여러 개 생생할 때 스타일을 대안으로 사용할 수 있다. 
+
+페이지에 버튼이 많이 있다고 생각해보자. 아마 이 버튼에 Margin 프로퍼티나 폰트 등의 몇 가지 공통된 프로퍼티를 적용했으면 할 것이다. 이런 공통 요소들을 스타일로 정의해 여러 엘리먼트에서 공유해 사용할 수 있다. 이 방법은 마이크로소프트 워드의 스타일시트(Style Sheets)나 HTML의 CSS(Cascading Style Sheets)와 목적이나 기능이 유사하다. 하지만 WPF 의 스타일은 다른 프로퍼티의 변화나 이벤트로부터 유발되는 프로퍼티의 변화를 제어할 수 있기 때문에 더욱 강력하다고 볼 수 있다. 
+
+Style 클래스는 System.Windows 에 정의돼 있다. 이것은 Object 를 상속받았으며 파생 클래스는 없다. Style에서 가장 중요한 프로퍼티는 Setters라는 프로퍼티이다. Setters는 SetterBase 객체의 컬렉션인 SetterBaseCollection 타입의 프로퍼티이며, SetterBase는 Setter와 EventSetter가 상속받는 추상 클래스이다. 이 객체를 세터(setters)라고 하는데 이 객체가 프로퍼티나 이벤트 핸들러를 설정하기 때문이다. 
+
+Setter는 Style의 컨텐트 프로퍼티이기 때문에 Setter와 EventSetter 엘리먼트는 Style 엘리먼트의 자식이다. 
+
+<Style ...>
+	<Setter ... />
+	<EventSetter ... />
+	<Setter ... />
+</Style>
+
+Style 정의의 내부에는 일반적으로 Setter 객체가 EventSetter객체보다 더 많이 쓰인다. 이 Setter는 기본적으로 특정 프로퍼티와 값을 연결시키며, Property(DependencyProperty 타입)와 Value(object 타입)라는 2개의 중요한 프로퍼티가 있다. 
+
+XAML 에서 Setter는 다음과 같은 형태이다. 
+<Setter Property="Control.FontSize" Value="24" />
+
+Property 속성은 항상 의존 프로퍼티를 참조하지만 이 프로퍼티는 FontSizeProperty 가 아닌 FontSize로 명시되었음을 기억하자. 또한 이 프로퍼티 이름 앞에 보통(하지만 항상 그런것은 아님)프로퍼티가 정의됐거나 상속된 클래스의 이름을 붙인다. 
+
+null 값을 Value 속성에 명시하고 싶을 때는 마크업 확장 x:Null을 사용한다
+
+Value="{x:Null}"
+
+FrameworkElement와 FrameworkContentElement 클래스는 Style 타입의 Style이란 이름의 프로퍼티를 정의한다. 따라서 로컬 엘리먼트를 위한 Style 엘리먼트를 정의하는 것도 그다지 유용하진 않지만 불가능한 것은 아니다. 다음의 스탠드 얼론 XAML 파일은 Button 엘리먼트에 로컬 Style을 정의한다. 
+
+<Button xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Red" >
+	<Button.Style>
+		<Style>
+			<Setter Property="Button.FontSize" Value="18pt" />
+			<Setter Property="Control.Foreground" Value="Blue" />
+		</Style>
+	</Button.Style>
+	Button with Local Style
+</Button>
+
+Style 엘리먼트는 버튼의 FontSize와 Foreground 프로퍼티를 정의하기 위한 2개의 Setter엘리먼트를 포함하며, 처음에 Button.FontSize를 명시하고 그후 Control.Foreground를 명시한 것을 확인할 수 있다.여기서 사용된 클래스 이름은 특별한 관계가 없는데, Button이 Control로부터 Foreground 프로퍼티를 상속받았기 때문이다. 심지어 TextBlock.FontSize와 TextBlock.Foreground로 명시해도 동일하게 동작한다. TextBlock과 Button사이에 특별한 상속관계가 없음에도 불구하고 TextBlock과 Control 둘 다 TextElement 내의 기본 정의를 바탕으로 이 두 프로퍼티를 정의하기 때문이다. (이것은 16장의 ExploreDependencyProperties프로그램 내에 이 프로퍼티의 Owner클래스를 살펴보면 자세히 확인할 수 있다)
+
+Style 정의가 Foreground 프로퍼티로 Blue를 명시했지만 이 파일 상단에는 Button의 Foreground 프로퍼티를 명확히 Red로 설정했다. 어떤 전경색이 버튼에 사용될까? 버튼의 전경색은 빨간색이 된다. 왜냐하면 엘리먼트상에서 프로퍼티에 직접 설정한 로컬 설정은 Style 설정보다 우선하기 때문이다. 하지만 스타일은 비주얼 트리를 통해 상속된 프로퍼티보다는 앞선다. 
+
+다수의 엘리먼트와 컨트롤 사이에서 스타일이 공유될 수 있게 스타일을 Resource절에서 정의하는 것이 훨씬 일반적이다. 게다가 여타 리소스와 같이 스타일은 텍스트 키로 참조하기 때문에 비주얼 트리상의 하위 엘리먼트에서도 사용될 수 있다. 따라서 Application 객체의 Resources 절에서 정의된 스타일은 애플리케이션 전체를 통해 사용될 수 있다. 
+
+다음 StackPanel은 Resources 절에서 normal이란 이름의 키로 Style을 정의한다. StackPanel의 자식인 3개의 버튼이 StaticResource 마크업 확장을 통해 이 스타일을 참조한다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<StackPanel.Resources>
+		<Style x:Key="normal">
+			<Setter Property="Control.FontSize" Value="24" />
+			<Setter Property="Control.Foreground" Value="Blue" />
+			<Setter Property="Control.HorizontalAlignment Value="Center" />
+			<Setter Property="Control.Margin" Value="24" />
+			<Setter Property="Control.Padding" Value="20, 10, 20, 10" />
+		</Style>
+	</StackPanel.Resource>
+	<Button Style="{StaticResource normal}">
+		Button Number1
+	</Button>
+	<Button Style="{StaticResource normal}" >
+		Button Number2
+	</Button>
+	<Button Style="{StaticResource normal}" >
+		Button Number3
+	</Button>
+</StackPanel>
+
+엘리먼트와 컨트롤은 동일한 프로퍼티를 공유하는 경우가 많기 때문에 여러 엘리먼트에서 스타일을 사용할 수 있게 정의할 수 있다. 다음에 Button 컨트롤과 TextBlock 엘리먼트에서 공유되는 스타일이 있다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<StackPanel.Resources>
+		<Style x:Key="normal" >
+			<Setter Property="Control.FontSize" Value="24" />
+			<Setter Property="Control.Foreground" Value="Blue" />
+			<Setter Property="Control.HorizontalAlignment" Value="Center" />
+			<Setter Property="Control.Margin" Value="24" />
+			<Setter Property="Control.Padding" Value="20, 10, 20, 10" />
+		</Style>
+	</StackPanel.Resources>
+		<Button Style="{StaticResource normal}">
+			Button on top of the stack
+		</Button>
+		<TextBlock Style="{StaticResource normal}" >
+			TextBlock in the middle of the stack
+		</TextBlock>
+		<Button Style="{StaticResource normal}" >
+			Button on the bottom of the stack
+		</Button>
+</StackPanel>
+
+사실 이 프로그램에서 Setter를 Button 프로퍼티에 고유하게 다음과 같이 정의할 수도 있다. 
+
+<Setter Property="Button.IsDefault" Value="true" />
+
+하지만 프로그램은 여전히 동작한다. TextBlock이 IsDefault를 가지고 있지 않으므로 TextBlock 엘리먼트는 이 Setter를 가볍게 무시하기 때문이다. 
+
+다른 리소스와 같이 여러 Resource절에서 동일한 키로 Style정의를 사용할 수 있다. 하지만 엘리먼트에 적용되는 Style은 비주얼 트리를 타고 올라가다 최초로 만나는 Style이 된다. 
+
+다음에 3개의 버튼을 가진 StackPanel이 있는 Grid가 있다. 이 Grid는 FontSize가 24이고 Foreground가 Blue인 스타일을 normal이란 이름으로 정의하며, StackPanel의 Resource절에도 normal이란 이름으로 Foreground가 Red인 스타일을 정의한다. 
+
+
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Grid.Resources>
+		<Style x:key="normal">
+			<Setter Property="Control.FontSize" Value="24" />
+			<Setter Property="Control.Foreground" Value="Blue" />
+		</Style>
+	</Grid.Resources>
+
+	<StackPanel>
+		<StackPanel.Resources>
+			<Style x:key="normal">
+				<Setter Property="Contorl.Foreground" Value="Red" />
+			</Style>
+		</StackPanel.Resources>
+		<Button Style="{StaticResource normal}">
+			Button Number1
+		</Button>
+		<Button Style="{StaticResource normal}">
+			Button Number2
+		</Button>
+		<Button Style="{StaticResource normal}">
+			Button Number3
+		</Button>
+	</StackPanel>
+</Grid>
+
+버튼은 StackPanel에 정의된 스타일을 사용한다. 따라서 전경색은 빨간색이고 FontSize는 상위 Style에서 정의된 크기가 아닌 기본 크기로 잡힌다. 이것은 동일한 키를 가진 여러 스타일이 사용돼도 이미 값이 결정된 프로퍼티는 설정이 바뀌지 않는다는 사실을 보여준다.  (어떻게 이 작은 기술을 사용하는지 뒤에서 살펴볼 것이다. )
+
+Setter에서 텍스트 문자열을 가진 프로퍼티의 값을 표현하지 못한다면 다음과 같이 Value 프로퍼티를 프로퍼티 엘리먼트로 분리해야 한다. 다음 XAML 파일은 Setter 프로퍼티로 그라디언트 브러시를 Background 프로퍼티에 설정한다. 
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<StackPanel.Resources>
+		<Style x:key="normal">
+			<Setter Property="Control.FontSize" Value="24" />
+			<Setter Property="Control.HorizontalAlignment" Value="Center" />
+			<Setter Property="Control.Margin" Value="24" />
+			<Setter Property="Control.Background">
+				<Setter.Value>
+					<LinearGradientBrush StartPoint="1,0" EndPoint="1,1">
+						<LinearGradientBrush.GradientStops>
+							<GradientStop Color="LightBlue" Offset="0" />
+							<GradientStop Color="Aquamarine" Offset="1" />
+						</LinearGradientBrush.GradientStops>
+					</LinearGradientBrush>
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</StackPanel.Resources>
+
+	<Button Style="{StaticResource normal}" >
+		Button Number 1
+	</Button>
+	<Button Style="{StaticResource normal}" >
+		Button Number 2
+	</Button>
+	<Button Style="{StaticResource normal}" >
+		Button Number 3
+	</Button>
+</StackPanel>
+
+다른 방법은 그라디언트 브러시를 리소스로 만들고 그 리소스를 Style 정의 내에서 StaticResource 마크업 확장을사용해 참조하는 것이다. 21장에서 배웠듯이 Application, FrameworkElement, FrameworkContentElement모두 ResourceDicitionary 타입의 Resources 프로퍼티를 정의한다. Style도 마찬가지로 같은 Resources 프로퍼티를 정의한다. 따라서 Style 정의 안에 직접 리소스를 정의할 수 있다. 이것은 리소스의 용도 구분을 명확히 하기 위해서도 기술적으로 바람직하다. 다음의 XAML에서 이에 관한 예를 볼 수 있다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<StackPanel.Resources>
+
+		<Style x:Key="normal">
+
+			<Style.Resources>
+				<LinearGradientBrush x:Key="gradbrush" StartPoint="1,0" EndPoint="1,1">
+					<LinearGradientBrush.GradientStops>
+						<GradientStops Color="LightBlue" Offset="0" />
+						<GradientStops Color="Aquamarine" Offset="1" />
+					</LinearGradientBrush.GradientStops>
+				</LinearGradientBrush>
+			</Style.Resources>
+
+			<Setter Property="Control.FontSize" Value="24" />
+			<Setter Property="Control.HorizontalAlignment" Value="Center" />
+			<Setter Property="Control.Margin" Value="24" />
+			<Setter Property="Control.Background" Value="{StaticResource gradbrush}" />
+		</Style>
+	</StackPanel.Resources>
+
+	<Button Style="{StaticResource normal}">
+		Button Number1
+	</Button>
+	<Button Style="{StaticResource normal}">
+		Button Number2
+	</Button>
+	<Button Style="{StaticResource normal}">
+		Button Number3
+	</Button>
+Style 클래스는 6개의 프로퍼티를 정의하는데, 이미 Setter와 Resources 2개를 다뤘다. Style은 스타일을 적용할 엘리먼트의 타입을 기술하는 TargetType이라는 프로퍼티를 정의한다. 이것은 중괄호 내에 x:Type이라는 마크업 확장과 적용을 원하는 클래스의 이름을 명시하는 문법으로 설정한다. 
+
+<Style TargetType="{x:Type Button}" ...>
+	...
+</Style>
+
+x:Type을 C#의 typeof와 유사한 XAML 형태라고 생각하면 쉽다. TargetType을 설정하면 x:Key 값을 명시할 필요가 없으며 키는 TargetType으로부터 생성된다. 따라서 x:key가 없어도 앞선 예제의 스타일은 Style이 정의된 엘리먼트 내의 모든 Button 컨트롤과 자식 Button 컨트롤에 적용된다. 이것을 원치 않는다면 x:Key 속성을 정의해 Button 엘리먼트 내에서 그 키를 참조한다. 
+
+Style에서 TargetType을 사용하면 스타일은 정확한 타입을 가진 엘리먼트에만 적용된다. 따라서 TargetType으로 Control을 설정해 Button 컨트롤과 Label 컨트롤 모두에 스타일을 적용시킬 수 없다. 
+
+TargetType 을 사용하면서 얻는 장점 중 하나는 Setter 엘리먼트 내에서 프로퍼티 이름을 완전히 나열할 필요가 없다는 것이다. 일반적으로는 다음과 같이 사용한다. 
+
+<Setter Property="Button.FontSize" Value="24" />
+
+하지만 TargetType 을 사용하면 이 마크업을 다음과 같이 간략화 시킬 수도 있다. 
+
+<Setter Property="FontSize" Value="24" />
+
+이 간략화 때문에 x:Key 속성을 스타일에서 사용하더라도 TargetType 속성을 설정할 가치가 있다. 또한 TargetType을 설정하면 코드를 보는 사람에게 자신의 의도를 명확하게 하게 할 수 있다는 장점도 있다. 
+
+다음에 2개의 Style 엘리먼트를 정의하는 XAML 파일이 있다. 첫 번째는 Button 객체에 적용되는 FontSize를 24로 하고 Foreground를 Blue로 설정하며, 두 번째는 TextBlock 객체에 적용되는 Foreground를 Red로 설정한다. StackPanel은 텍스트 컨텐트를 가진 Button과 TextBlock, 그리고 TextBlock 컨텐트를 가진 Button을 포함한다. 이 세 개의 엘리먼트에 적용될 폰트 크기와 전경색이 예상되는가?
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<StackPanel.Resources>
+
+		<Style TargetType="{x:Type Button}">
+			<Setter Property="FontSize" Value="24" />
+			<Setter Property="Foreground" Value="Blue" />
+		</Style>
+	
+		<Style TargetType="{x:Type TextBlock}">
+			<Setter Property="Foreground" Value="Red" />
+		</Style>
+	</StackPanel.Resources>
+
+	<Button>
+		Button with Text Content
+	</Button>
+
+	<TextBlock>
+		TextBlock Text
+	</TextBlock>
+
+	<Button>
+		<TextBlock>
+			Button with TextBlock Content
+		</TextBlock>
+	</Button>
+</StackPanel>
+
+첫 번째 버튼은 Button의 TargetType을 가진 스타일을 따른다. 따라서 이 버튼은 폰트 크기가 24인 파란색 텍스트를 보여준다. TextBlock 엘리먼트는 TextBlock의 TargetType을 가진 스타일을 따른다. 따라서 텍스트는 빨간색이고 폰트 크기는 기본 크기를 사용한다. 맨 아래 버튼은 Foreground 프로퍼티가 Blue이고 FontSize가 24인 스타일을 따르게 되지만 버튼 안에 있는 TextBlock은 Foreground 프로퍼티가 Red인 두번째 스타일을 따르게 된다. 또한 프로퍼티 상속을 통해 TextBlock은 부모인 Button의 FontSize를 상속받게 된다. 따라서 결과적으로 버튼은 폰트 크기가 24인 빨간색 텍스트를 보여주게 된다. 스타일은 일반적으로 프로퍼티의 상속보다 앞서지만 TextBlock 은 폰트 크기를 설정할 스타일이 없기 때문에 부모의 프로퍼티를 상속받는다. 
+
+애플리케이션에 대화상자가 많고 이 대화상자의 그룹 박스 속 스택 패널 위에는 여러 개의 라디오 버튼이 있다고 생각해보자. 깔끔하게 보이기 위해선 당연히 각 RadioButton에 Margin 프로퍼티를 적용할 필요가 있을 것이다. 이것은 Style의 TargetType을 RadioButton으로 설정해 간단히 구현할 수 있다. 
+
+TargetType 명세와 함께 키를 정의할 수도 있다. 이때 이 스타일은 TargetType과 일치하고 정의된 키를 사용한 엘리먼트에만 적용된다. 따라서 Resource절에 정의된 여러 스타일은 반드시 유일한 키를 가질 필요가 있다. 
+
+엘리먼트에는 오직 하나의 Style만 적용된다. 이 Style은 비주얼 트리에서 키로 검색된 최초의 Style이거나 엘리먼트의 클래스가 TargetType과 일치하는 Style혹은 둘 다 해당되는 Style이다. 당연히 기존의 Style을 기반으로 약간의 프로퍼티 정의를 추가한 Style을 정의하고 싶을 때가 있을 것이다. 이 경우 스타일에서 기존 스타일을 참조하기 위한 BasedOn속성을 사용할 수 있다. 다음에 3개의 버튼을 가진 예제를 다시 보자. hotbtn 이라는 키를 가진 Style은 Foreground를 Red로 설정하며 가운데 Button이 normal스타일 대신에 스타일을 사용한다. 
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<StackPanel.Resources>
+
+		<Style x:Key="normal">
+			<Setter Property="Control.FontSize" Value="24" />
+			<Setter Property="Control.Foreground" Value="Blue" />
+			<Setter Property="Control.HorizontalAlignment" Value="Center" />
+			<Setter Property="Control.Margin" Value="24" />
+			<Setter Property="Control.Padding" Value="20, 10, 20, 10" />
+		</Style>
+
+		<Style x:Key="hotbtn" Basedon="{StaticResource normal}">
+			<Setter Property="Control.Foreground" Value="Red" />
+		</Style>
+	</StackPanel.Resources>
+
+	<Button Style="{StaticResource normal}">
+		<Button Number 1
+	</Button>
+	<Button Style="{StaticResource hotbtn}">
+		<Button Number 2
+	</Button>
+	<Button Style="{StaticResource normal}">
+		<Button Number 3
+	</Button>
+</StackPanel>
+
+
+BasedOn 문법은 스타일을 엘리먼트마다 구분하기 위해 사용한 TargetType 문법과 같고 동일한 원칙이 적용된다. 따라서 새로 정의한 스타일은 비주얼 트리에서 키로 처음 검색한 스타일을 기반으로 한다. 
+
+두번째 버튼의 프로퍼티 중 hotbtn 스타일에 의해 오버라이딩된 프로퍼티 외에는 normal 스타일이 정의한 프로퍼티로 직접 설정될 것이라고 판단하는 것은 옳지 않다. 그것보다는 normal스타일이 정의한 프로퍼티가 hotbtn 스타일의 프로퍼티를 초기화하며, 두 번째 버튼은 그 초기화된 hotbtn의 프로퍼티로 설정된다고 생각하는 것이 옳다. 엘리먼트는 최대 하나의 Style 객체만 가질 수 있는데, 두 번째 버튼의 스타일은 hotbtn이기 때문이다. 그리고 XAML을 작성할 때 프로퍼티와 객체를 다루고 있다는 사실을 망각하기 쉽다. 하지만 Style은 FrameworkElement가 정의한 프로퍼티이며, 기본적으로 null로 초기화돼 있다. 이 프로퍼티에 설정하는 Style 객체는 Style 이 설정하는 프로퍼티에 해당하는 Setter 객체 모두를 포함하는 하나의 Setters 컬렉션을 가진다. 
+
+TargetType 속성을 가진 기존 스타일을 기본으로 스타일을 정의하는 것도 가능하다. 하지만 BasedOn 문법이 다음과 같이 약간 복잡해진다. 
+
+BasedOn="{StaticResource {x:Type Button}}"
+
+새로 정의된 Style은 당연히 스타일이 바탕으로 한 클래스나 그 클래스의 파생 클래스로 TargetType을 설정해야 한다. 다음의 예제는 두 스타일의 TargetType 프로퍼티가 같다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<StackPanel.Resources>
+
+		<Style TargetType="{x:Type Button}" >
+			<Setter Property="Control.FontSize" Value="24" />
+			<Setter Property="Control.Foreground" Value="Blue" />
+			<Setter Property="Control.HorizontalAlignment" Value="Center" />
+			<Setter Property="Control.Margin" Value="24" />
+		</Style>
+
+		<Style x:Key="hotbtn" TargetType="{x:Type Button}" BasedOn="{StaticResour {x:Type Button}}">
+			<Setter Property="Control.Foreground" Value="Red" />
+		</Style>
+	</StackPanel.Resources>
+
+	<Button>
+		Button Number 1
+	</Button>
+	<Button Style="{StaticResource hotbtn}">
+		Button Number 2
+	</Button>
+	<Button>
+		Button Number 3
+	</Button>
+</StackPanel>
+
+두 번째 스타일의 정의는 정의된 두 스타일의 충돌을 피하기 위해 명확한 x:key 속성이 필요하다. 
+
+하지만 첫 번째 TargetType을 Control로 바꾸고 두 번째 스타일의 TargetType은 Button으로 그대로 놔둔 다음 그것의 BasedOn만 Control로 바꿔보자. 이것은 유효하다. 따라서 BasedOn 프로퍼티와 TargetType 프로퍼티를 결헙하면 스타일은 동일한 클래스나 이 클래스가 상속받는 크랠스를 참조할 수 있다. 두 번째 스타일은 TargetType이 Button이고 x:Key가 hotbtn이다. 따라서 두 번째 버튼이 이 스타일을 사용한다. 첫 번째와 세 번째 버튼은 스타일이 없으며,  두 번째 스타일의 x:Key 정의와 두 번째 버튼의 Style 속성을 없애면 모든 버튼에 두 번째 스타일이 적용된다. 
+
+TargetType 을 사용하면 특정 타입 엘리먼트는 항상 특정 스타일을 가진다. 따라서 클래스의 계층과 일치하는 스타일의 계층을 다음과 같이 정의할 수 있다. 
+
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<StackPanel.Resources>
+		<Style TargetType="{x:Type Control">
+			<Setter Property="Control.FontSize" Value="24" />
+			<Setter Property="Control.Foreground" Value="Blue" />
+			<Setter Property="Control.HorizontalAlignment" Value="Center" />
+			<Setter Property="Control.Margin" Value="24" />
+		</Style>
+		<Style TargetType="{x:Type Button}"	BasedOn="{StaticResource {x:Type Control}}">
+			<Setter Property="Control.Foreground" Value="Red" />
+		</Style>
+		<Style TargetType="{x:Type Label}" BasedOn="{StaticResource {x:Type Control}}" >
+			<Setter Property="Control.Foreground" Value="Green" />
+		</Style>
+		<Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type Control}}">
+		</Style>
+	</StackPanel.Resources>
+	<Button>
+		Button Control
+	</Button>
+	<Label>
+		Label Control
+	</Label>
+	<TextBox>
+		TextBox Control
+	</TextBox>
+</StackPanel>
+
+마지막 TextBox를 위한 Style 엘리먼트는 새로운 프로퍼티를 정의하지 않는다. 따라서 TextBox는 Foreground로 Blue만을 가지게 된다. 물론 하위 Style 엘리먼트는 각 컨트롤 타입에 걸맞은 프로퍼티를 정의할 수 있다. 
+
+스타일은 태생적인 제약이 있다. 예를 들어 다음과 같이 StackPanel 을 위한 Style을 만들어 특정 프로퍼티에 항상 동일한 값이 설정되게 하고 싶을 수 있다. 
+
+<!-- 동작하지 않음! -->
+<Style TargetType="{x:Type StackPanel}">
+	<Setter Property="Children">
+		<Setter.Value>
+			...
+		</Setter.Value
+	</Setter>
+</Style>
+
+이것의 가장 큰 문제는 Panel이 정의한 Children 프로퍼티가 의존 프로퍼티에 의해 지원받지 못한다는 것이다. 따라서 이 프로퍼티를 설정하기 위한 Style은 사용할 수 없다. 이 작업을 수행하기 위해서는 StackPanel을 상속받은 클래스를 정의하거나 23장에서 다루는 템플릿을 고려해야 할 것이다. 
+
+다음의 XAML은 Button 을 위한 스타일을 정의하려고 하며, 항상 Image 객체를 포함한다. 
+<!-- 동작하지 않음 -->
+<Style TargetType="{x:Type Button}">
+	<Setter Property="Content">
+		<Setter.Value>
+			<Image ... />
+		</Setter.Value>
+	</Setter>
+</Style>
+
+여기서 문제점은 에러 메시지(Setter does not support values derived from Visual or ContentElement)가 의미하듯이 Setter는 Visual이나 ContentElement를 상속받은 값을 지원하지 않는다는 것이다. Style에서 참조되는 객체는 한 번 생성되면 Style의 일부가 되며, 그 Style을 사용하는 모든 엘리먼트 사이에서 공유된다. 특히 Visual이나 ContentElement를 상속받은 Image와 같은 엘리먼트는 하나의 부모만 가질 수 있는데, Style 객체가 공유되면 그렇게 하기 힘들어진다. 따라서 이 문제를 해결하기 위해서도 사용자 정의 클래스나 템플릿을 고려하는 것을 추천한다. 
