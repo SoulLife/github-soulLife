@@ -1,0 +1,185 @@
+(3) UNIQUE 제약 조건
+UNIQUE 제약 조건은 중복되지 않는 유일한 값을 입력해야 하는 조건이다. 이것은 PRIMARY KEY 와 거의 비슷하며 차이점은 UNIQUE는 NULL값을 허용한다는 점뿐이다. (단 NULL 도 한 개만 허용된다 NULL이 두개라면 이미 유일(unique)하지 않은 것이다)
+
+회원 테이블의 예를 든다면 주로 email주소를 Unique로 설정하는 경우가 많다. 다음은 기존의 회원 테이블에 email열을 추가한 경우이다. 세 문장은 모두 같은 결과를 낸다. 
+
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL PRIMARY KEY,
+	...
+	email char(30) NULL UNIQUE
+);
+
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL PRIMARY KEY,
+	...
+	email char(30) NULL CONSTRAINT AK_email UNIQUE
+);
+
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL PRIMARY KEY,
+	...
+	email char(30) NULL, CONSTRAINT AK_email UNIQUE(email)
+);
+
+두 번째 방법은 email열의 정의와 같이 UNIQUE를 포함한 경우이다. 그래서 콤마(,)로 분리되어 있지 않다. 세 번째 방법은 모든 열의 정의가 끝난 상태에서 별도로 UNIQUE 제약 조건을 추가했다. 그래서 email 정의가 끝난 후에 콤마(,)로 구분되어 있다. 
+
+
+(4) CHECK 제약조건
+CHECK 제약 조건은 입력되는 데이터를 점검하는 기능을 한다. 키에 마이너스 값이 들어 올수 없게 한다든지, 출생년도가 1900년 이후이고 현재 시점 이전이어야 한다든지 등의 조건을 지정한다. 간단한 사용 예를 몇 가지 보면 쉽게 이해될 것이다. 
+
+--출생년이 1900년 이후 그리고 현재의 연도 이전
+ALTER TABLE userTbl
+ADD CONSTRAINT CK_birthYear
+CHECK (birthYear >= 1900 AND birthYear <= YEAR(GETDATE())) ;
+
+--휴대폰 국번 체크
+ALTER TABLE userTbl
+ADD CONSTRAINT CK_mobile1
+CHECK (mobile1 IN('010', '011', '016', '017', '018', '019'));
+
+--키는 0이상이어야 함
+ALTER TABLE userTbl
+ADD CONSTRAINT CK_height
+CHECK (height >= 0);
+
+CHECK 제약 조건을 설정한 후에는 제약 조건이 위배되는 값은 입력되지 않는다. CHECK 에 들어오는 조건은 SELECT 문의 WHERE 구문에 들어오는 조건과 거의 비슷한 것들이다. 
+
+또한 ALTER TABLE 옵션 중에 WITH CHECK와 WITH NOCHECK 옵션이 있는데, 이는 기존에 입력된 데이터가 CHECK 제약 조건에 맞지 않을 경우에 어떻게 할 지를 결정해준다. 예를 들어 userTbl의 mobile1열에 이미 012(예전 삐삐 번호)가 입력된 사용자가 있다면, 이 값을 무시하고 전화번호 국번 체크 제약 조건을 만들 것인지를 결정할 수 있다. 만약 이미 입력된 012가 새로운 전화번호 국번체크 제약 조건에 위배되지만, 무시하고 넘어가려면 다음과 같이 제약 조건을 생성해야 한다. 
+
+-- 전화 번호 국번 체크
+ALTER TABLE userTbl
+WITH NOCHECK
+ADD CONSTRAINT CK_mobile1
+CHECK (mobile1 IN ('010', '011', '016', '017', '018', '019'));
+
+더 자세한 사용법은 실습을 통해서 이해해 보자. 
+
+※ 여기서 잠깐?
+CHECK 제약 조건과 거의 비슷한 용도로 규칙(RULE)이라 부르는 객체를 사용할 수 있었으나, SQL Server 2012이후 버전에서는 지원하지 않을 것이므로 되도록 사용하지 말자. 
+
+
+
+(5) DEFAULT 정의
+DEFAULT는 값을 입력하지 않았을 때, 자동으로 입력되는 기본 값을 정의하는 방법이다. 예를 들어 출생년도를 입력하지 않으면 그냥 현재의 연도를 입력하고, 주소를 특별히 입력하지 않았다면 서울이 입력되며, 키를 입력하지 않았을 때 170이라고 입력되게 하고 싶다면 다음과 같이 정의할 수 있다. 
+
+use tempdb;
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL PRIMARY KEY,
+	name nvarchar(10) NOT NULL,
+	birthYear int NOT NULL DEFAULT YEAR(GETDATE()),
+	addr nchar(2) NOT NULL DEFAULT N'서울',
+	mobile1 char(3) NULL,
+	mobile2 char(8) NULL,
+	height smallint NULL DEFAULT 170,
+	mDate date NULL unique
+);
+
+또는 ALTER TABLE 을 사용할 때 열을 지정하려면 FOR 문을 사용한다. 
+use tempdb;
+CREATE TABLE userTbl
+(
+	userID char(8) NOT NULL PRIMARY KEY,
+	name nvarchar(10) NOT NULL,
+	birthYear int NOT NULL,
+	addr nchar(2) NOT NULL,
+	mobile1 char(3) NULL,
+	mobile2 char(8) NULL,
+	height smallint NULL ,
+	mDate date NULL unique
+);
+GO
+ALTER TABLE userTbl
+ADD CONSTRAINT CD_birthYear
+DEFAULT YEAR(GETDATE()) FOR birthYear;
+GO
+ALTER TABLE userTbl
+ADD CONSTRAINT CD_addr
+DEFAULT N'서울' FOR addr;
+GO
+ALTER TABLE userTbl
+ADD CONSTRAINT CD_height
+DEFAULT 170 FOR height;
+GO
+
+디폴트가 설정된 열에는 다음과 같은 방법으로 데이터를 입력할 수 있다. 
+--default 문은 DEFAULT로 설정된 값을 자동입력한다. 
+INSERT INTO userTbl VALUES('SYJ', N'손연재', default, default, '011', '1234567', default, '2015.12.12');
+-- 열 이름이 명시되지 않으면 DEFAULT로 설정된 값을 자동입력한다. 
+INSERT INTO userTbl(userID, name) VALUES('JHJ', N'장혜진');
+--값이 직접 명기되면 DEFAULT로 설정된 값은 무시된다. 
+INSERT INTO userTbl VALUES('WB', N'원빈', 1982, N'대전', '019','9876543', 176, '2014.5.5');
+GO
+SELECT * FROM userTbl;
+
+
+※ 여기서 잠깐?
+DEFAULT 제약 조건과 거의 비슷한 용도로 기본값(DEFAULT)이라 부르는 개체를 사용할 수 있었으나 SQL Server 2012 이후의 버전에서는 지원하지 않을 예정이므로 되도록 사용하지 말자
+
+
+
+(6) Null 값 허용
+계속 실습해서 나왔으므로 ,이미 이해하고 있을 것이다. NULL 값을 허용하려면 NULL 문을, 허용하지 않으려면 NOT NULL을 사용하면 된다. 하지만 PRIMARY KEY가 설정된 열에는 NULL 값이 있을 수 없으므로, 생략하면 자동으로 NOT NULL로 인식된다. 
+
+NULL 값은 아무것도 없다 라는 의미이다. 즉 공백('')이나 0과 같은 값과는 다르다는 점에 주의해야 한다. 그 외에도 NULL 값에 대해서는 몇 가지 주목할 점이 있다. 
+
+* Null을 저장할 때 고정 길이 문자형(char, nchar)은 공간 모두 차지하지만 가변 길이 문자형(varchar, nvarchar)은 공간을 차지하지 않는다. 그러므로 Null 값을 많이 입력한다면 가변 길이의 데이터 형식을 사용하는 것이 좋다. 
+
+
+실습 3 : NULL 값의 설정에 관한 내용을 확인해 보자. 
+
+NULL 값을 허용하려면 각 열의 데이터 형식 다음에 'NULL'이라고 붙여주면 되고, 허용 하지 않으려면 'NOT NULL'이라고 붙여주면 된다. 그런데 아무것도 붙이지 않았을 때, NULL 허용 여부는 이야기가 조금 복잡해진다. 데이터베이스의 옵션 중에 'ANSI_NULL_DEFAULT(ANSI NULL 기본값) 옵션이 있는데 이것이 OFF(또는 FALSE)로 설정되어 있으면 NULL을 아무것도 붙이지 않으면 NULL을 허용하지 않는 NOT NULL을 붙인것과 같다. 
+
+1. 우선 데이터베이스의 ANSI_NULL_DEFAULT를 OFF로 해놓고 테이블을 생성해 보자. 
+USE tempdb;
+CREATE DATABASE nullDB;
+GO
+ALTER DATABASE nullDB
+SET ANSI_NULL_DEFAULT OFF; -- 따로 설정하지 않아도 기본은 OFF임
+GO
+USE nullDB;
+CREATE TABLE t1 ( id int);
+GO
+INSERT INTO t1 VALUES(NULL);
+
+계획대로라면 앞의 INSERT로 오류가 발생해야 한다. 데이터베이스에 아무것도 지정하지않으면 NOT NULL이기 때문이다 그런데도 NULL값이 입력되었다. 
+
+테이블의 정보를 확인해 보자. 
+EXEC sp_help t1;
+
+NULL 값이 허용으로 되어있다 왜일까? 답은 현재 세션(현재의 쿼리 창)의 옵션중에 ANSI_NULL_DEFT_ON 옵션이 있는데, 이 옵션이 ON으로 설정되어 있기 때문이다. 이 세션 옵션이 데이터베이스 옵션보다 더 먼저 적용되기 때문에 아무것도 붙이지 않으면 NULL 을 붙인 것과 같은 효과를 주는 것이다. 
+
+
+2. 세션의 옵션을 변경한 후에 실행해 보자. 
+USE tempdb;
+DROP DATABASE nullDB;
+GO
+CREATE DATABASE nullDB;
+GO
+ALTER DATABASE nullDB
+SET ANSI_NULL_DEFAULT OFF; -- 따로 설정하지 않아도 기본은 OFF임
+GO
+SET ANSI_NULL_DELT_ON_ OFF;
+GO
+USE nullDB;
+CREATE TABLE t1 ( id int);
+GO
+INSERT INTO t1 VALUES(NULL);
+
+오류 메시지:
+메시지 515, 수준 16, 상태 2, 줄 1
+테이블 'nullDB.dbo.t1', 열 'id'에 NULL 값을 삽입할 수 없습니다. 열에는 NULL을 사용할 수 없습니다. INSERT이(가) 실패했습니다. 
+문이 종료되었습니다. 
+
+다시 EXEC sp_help t1 로 테이블 정보를 확인하면 [그림8-21]의 Nullable이 no로 되어 있는 것이 확인된다. 
+
+3. 지금 설정한 쿼리 창의 옵션 ANSI_NULL_DELT_ON 옵션은 새 쿼리 창을 열면 다시 원래대로 돌아간다. 즉 SET 명령으로 변경한 ANSI_NULL_DELT_ON 옵션은 세션(쿼리 창)을 닫으면 다시 원대래도 돌아간다. 
+
+4. 결론적으로 NULL과 NOT NULL을 직접 붙여주는 것을 적극 권장한다. 그러면 실수할 일이 적어질 것이다.
+
+5. nullDB를 삭제하자
+USE tempdb;
+DROP DATABASE nullDB;
