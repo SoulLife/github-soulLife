@@ -1,0 +1,93 @@
+※ 스파스 열
+SQL Server 2008부터 제공되는 스파스 열(Sparse Column)에 대해 알아보자. 스파스 열은 간단히 Null값에 대해 최적화된 저장소가 있는 일반 열로 정의할 수 있다. 즉 NULL값이 많이 들어갈 것으로 예상되는 열이라면 스파스 열로 지정해 놓을 경우에 많은 공간절약 효과를 볼 수 있다. 그러나 NULL 값이 별로 없는 열이라면 그 크기가 더 필요해진다. 즉, 스파스 열로 지정된 열에 NULL 값을 입력하면 지정된 데이터 크기보다 적게 공간을 차지하지만 반대로 실제 값이 입력되면 오히려 공간을 더 차지하게 된다. 
+
+스파스 열로 지정하는 방법은 간단히 CREATE TABLE 또는 ALTER TABLE 로 열을 정의할 때 뒤에 'SPARSE' 예약어만 써주면 된다. 간단한 실습을 통해서 이해해 보자. 
+
+
+실습4 : 스파스열이 어떤 경우에 공간을 절약해주는 효과를 얻는지 확인해 보자.
+
+0. 테스트용 DB를 생성한다. 
+USE tempdb;
+CREATE DATABASE sparseDB;
+
+1. 같은 열을 지닌 간단한 두 테이블을 생성한다. 단 하나는 열 뒤에 SPARSE 예약어를 붙인다. 
+USE sparseDB;
+CREATE TABLE charTbl ( id int identity, data char(100) NULL);
+CREATE TABLE sparseCharTbl( id int identity, data char(100) SPARSE NULL );
+
+2. 두 테이블에 데이터를 4만건 정도 입력한다. 단 data 열에는 75%를 null값으로 입력한다(다음 구문은 한꺼번에 선택한 후 실행해야 한다. 
+
+DECLARE @i INT = 0
+WHILE @i < 10000
+BEGIN
+	INSERT INTO charTbl VALUES(null); -- null값 3회
+	INSERT INTO charTbl VALUES(null);
+	INSERT INTO charTbl VALUES(null);
+	INSERT INTO charTbl VALUES(REPLICATE('A', 1000)); -- 실제 데이터 1회
+	INSERT INTO sparseCharTbl VALUES(null); -- null 값 3회
+	INSERT INTO sparseCharTbl VALUES(null);
+	INSERT INTO sparseCharTbl VALUES(null);
+	INSERT INTO sparseCharTbl VALUES(REPLICATE('A', 100)); --실제 데이터 1회
+	SET @i += 1
+END
+
+앞의 구문은 각 테이블에 3회 null값, 1회 실제 데이터를 입력함으로써 null 3만건, 실제 데이터 1만건을 입력한 것이다. 
+
+
+3. 현재 두 테이블에 들어간 데이터는 똑같다. 두 테이블의 저장 공간 크기를 비교해 보자. 
+
+3-1 SSMS의 개체 탐색기에서 sparseDB의 테이블을 확장한 후에 각 테이블을 선택한 후 마우스 오른쪽 버튼을 클릭하고 [속성]을 선택한다(sparseDB가 보이지 않으면 데이터베이스에서 새로 고침을 한다. )
+
+3-2 [테이블 속성]창에서 [저장소]페이지를 클릭하면 해당 테이블이 차지하는 데이터 공간을 확인할 수 있다. 
+
+3-3 이 예에서는 일반 열의 테이블 크기(약 4.5MB)보다 훨씬 작은 테이블 크기(약 1.6MB)를 가지고 있다. 즉 null 값이 많이 있는 열의 경우 sparse 예약어로 지정하면 공간 절약의 효과가 있다. 
+
+
+4. null 값이 거의 없는 열에 SPARSE 예약어를 지정하면 그 크기가 어떤지 확인해 보자. 
+4-1 이번에는 null 값 없이 실제 데이터를 전부 4만건 입력해 보자. 
+TRUNCATE TABLE charTbl; --전체 행 데이터 삭제
+TRUNCATE TABLE sparseCharTbl; --전체 행 데이터 삭제
+GO
+DECLARE @i INT = 0
+WHILE @i < 40000
+BEGIN
+	INSERT INTO charTbl VALUES(REPLICATE('A', 100));
+	INSERT INTO sparseCharTbl VALUES(REPLICATE('A", 100));
+	SET @i += 1
+END
+
+4-2 각 테이블의 속성 정보의 [저장소]페이지를 다시 확인해 본다. 
+
+4-3 charTbl의 경우에는 null값이 들어가든, 실제 데이터가 들어가든 그 크기의 차이가 없이 같다(약 4.5MB)
+
+* char 데이터 형식은 고정 길이이므로 어떤 데이터가 들어가든지 그 크기만큼 확보하기 때문이다. 
+
+하지만 sparseCharTbl의 경우에는 null 값이 없자 오히려 크기가 charTbl보다 더 커진(약 5.0MB)것이 확인된다. 즉 null 값이 별로 없는 경우에 스파스 열로 지정하면 오히려 공간을 더 낭비하는 역효과가 난다. 
+
+5. 실습한 DB를 제거한다
+USE tempdb;
+DROP DATABASE sparseDB;
+
+이상 실습을 통해서 NULL 값이 많이 들어갈 예정인 열을 스파스 열로 지정해야 효과가 있었다. 또한 SELECT로 해당 열을 조회할 때 스파스 열로 지정되어 있을 경우 오히려 검색 속도가 느려진다. 그러므로 공간 절약이 약 40%는 되어야만 스파스 열로 지정하는데 의미가 있다. 
+
+다음은 스파스 열로 지정할 때 약 40%의 공간 절약 효과를 보려면 각 데이터 형식별로 몇%의 NULL 값이 있어야 하는지 나타낸 표다. 참고만 하자. 
+
+데이터 형식		NULL 비율		데이터형식		NULL 비율
+bit			98%			date			69%
+smallint		86%			datetime2		57%
+int			64%			varchar		60%
+bigint			52%			char			60%
+float			52%			nvarchar		60%
+datetime		52%			nchar			60%
+[표 8-1]스파스 열로 지정할 때, 약 40% 공간 절약이 되는 주요 데이터 형식의 NULL 비율
+
+
+또한 스파스 열은 다음과 같은 몇가지 제약 사항이 있다. 
+
+* geomerty, geography, image, text, ntext, timestamp, UDT(User Define data Type)에는 설정할 수 없다. 
+* 반드시 NULL을 허용해야 하며, IDENTITY 속성을 사용할 수없다. 
+* FILESTREAM 특성을 포함할 수 없다. 
+* DEFAULT 값을 지정할 수 없다. 
+* 스파스 열을 사용하면 행의 최대 크기가 8,060 바이트에서 8,018바이트로 줄어든다. 
+
+앞의 제약 사항을 참조해서 스파스 열을 적절하게 잘활용하면 공간 절약의 효과를 얻을 수 있다. 

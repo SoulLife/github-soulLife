@@ -1,0 +1,343 @@
+CHAPTER 25장 : 템플릿
+이 책 앞부분의 몇 개 프로그램에서 템플릿에 대해 약간 다룬 적이 있다. 11장 BuildButton Factory 프로젝트는 ControlTemplate 타입의 객체를 어떻게 생성하는지와 그것을 어떻게 Button의 Template 프로퍼티에 할당하는지에 대해 다뤘다. 이 ControlTemplate 객체는 특정 프로퍼티(IsMouseOver나 IsPressed 프로퍼티와 같은)의 값이 변경되었을 때 버튼의 ㅗ이형 변화에 대한 내용을 포함한 총체적인 버튼의 외형에 대한 내용을 기술한다. 물론 실제 버튼의 로직이나 이벤트 핸들링은 그대로 적용된다. 
+
+ControlTemplate은 WPF에서 지원되는 중요한 템플릿 타입 중 하나이다. 이름이 말해주듯이 컨트롤의 외형을 정의하기 위해 ControlTemplate을 사용하며, Control 클래스가 정의하는 Template 프로퍼티를 ControlTemplate 객체로 설정한다. 
+
+스타일과 템플릿이 기능적으로 약간 겹치는 면이 있어 보이지만 이 둘의 역할은 확실히 구분된다. 엘리먼트나 컨트롤은 기본 Style 프로퍼티를 가지지 않기 때문에 결과적으로 엘리먼트의 Style 프로퍼티는 null이며, Style 프로퍼티는 이 엘리먼트와 관련된 프로퍼티의 설정이나 트리거를 위해 사용된다. 
+
+WPF에서 정의된 외형을 가진 모든 컨트롤은 이미 ControlTemplate 타입의 객체로 설정된 Template 프로퍼티를 가지고 있다. 이 ControlTemplate 객체로 인해 Button은 버튼처럼 보일 수 있으며, ScrollBar는 스크롤바처럼 보일 수 있다. ControlTemplate 은 컨트롤의 전체 외형을 정의하며, 개발자는 이 객체를 변경할 수도 있다. 이것이 WPF 내의 컨트롤이 외형 없는 (looklcss)컨트롤로서 참조된다는 의미이다. 물론 이 컨트롤이 외형을 가지고는 있지만 이것은 본질적인 컨트롤의 기능으로 볼 수 없기 때문에 교체가 가능한 것이다. 
+
+13장의 ListColorsEventElegantlier 프로젝트는 DataTemplate 객체를 소개했다. ItemsControl클래스(ListBox의 조상 클래스)는 ItemTemplate 이라는 프로퍼티를 정의하며, 이 프로퍼티를 DataTemplate 객체로 설정해 컨트롤이 ListBox내의 각 항목을 어떻게 보여줄지 명시했다. 또한 ListColorsEventElegantlier 프로그램 내의 DataTemplate은 ListBox 내의 각 색상을 보여주기 위한 Rectangle 엘리먼트와 TextBlock 엘리먼트를 가진 비주얼 트리를 정의했다. 
+
+13장은 ListBox를 상속받은 2개의 사용자 정의 컨트롤인 ColorGridBox와 ColorWheel을 선보였다. 두 컨트롤은 기본적인 ListBox로부터 항목을 완전히 다른 형태로 보여주었다. 이 것은 ItemsControl이 정의한 ItemsPanel 프로퍼티를 ItemsPanelTemplate 타입의 객체로 설정했기 때문에 가능하다. 또한 ItemsPanel이란 이름이 말해주듯이 이 객체는 ListBox 내에서 항목을 보여주기 위해 사용하는 패널의 타입을 정의한다. 
+
+템플릿은 16장의 여러 프로젝트 사이에서도 모습을 보였다. ListSortedSystemParameters와 DependencyPropertyListView 컨트롤은 둘 다 ListView를 사용하며, ListView 컨트롤의 View 프로퍼티를 GridView객체로 설정한다. GridView 객체는 객체를 ListView 컨트롤에서 열로 표현될 수 있게 한다. 열 안에서 원하는 것이 제대로 표현되지 못하면 그 열속 객체의 외형을 정의하는 DataTemplate을 생성해 이 객체를 GridViewColumn 객체의 CellTemplate 프로퍼티에 설정한다. 또한 16장의 TemplateTheTree 프로젝트는 HierarchicalDataTemplate 타입의 객체를 생성한 후 TreeViewItem 객체의 ItemTemplate 프로퍼티에 생성된 객체를 설정함으로써 트리 항목이 어떻게 자식 객체를 얻을 수 있는지 보여줬다. 
+
+다양한 타입의 템플릿 객체는 모두 추상 클래스인 FrameworkTemplate 을 상속받았으며, 클래스 계층도는 다음과 같다. 
+
+Object
+	FrameworkTemplate (abstract)
+		ControlTemplate
+		DataTemplate
+			HierarchicalDataTemplate
+		ItemsPanelTemplate
+
+당연히 이 여러 가지 타입의 프로퍼티(또한 이것으로 설정되는 프로퍼티)특징을 완전히 숙지하려면 노력이 필요하다. 다음에 이것에 대한 간단한 설명을 보자. 
+
+Control 에서 정의된 Template 프로퍼티를 설정하기 위해서는 ControlTemplate 타입의 객체를 생성한다. 이 ControlTemplate 객체는 컨트롤의 외형 변화를 포함한 전체적인 외형을 정의한다. Template 을 정의하는 것이 이처럼 막강하기 때문에 그에 상응하는 책임도 따른다. 
+
+ItemsPanelTemplate 타입의 객체로는 ItemsControl에서 정의된 ItemsPanel 프로퍼티를 설정한다. 이 ItemsPanelTemplate은 ItemsControl(ListBox나 ComboBox)내의 여러 항목을 보여주기 위한 패널의 형태를 명시할 수 있다. 또한 이것은 가장 간단한 형태의 템플릿 타입이다. 
+
+그외 모든 템플릿들은 DataTemplate 타입인데, 사실 이것이 가장 흔한 형태의 템플릿이다. DataTemplate 객체는 ContentControl과 ItemsControl를 상속받은 모든 컨트롤에서 볼 수 있으며 이것으로 컨텐트나 열거된 항목을 보여줄 방법을 명시한다. 
+
+추상 클래스인 FrameworkTemplate는 3개의 프로퍼티만을 정의한다. 읽기 전용인 불리언 타입의 IsSealed 프로퍼티는 템플릿이 변경될 수 있는지를 명시하며, ResourceDictionary타입의 Resources 프로퍼티는 템플릿 내에서만 접근 가능한 리소스를 정의할 수 있게 해준다. 세 프로퍼티 중에서 가장 중요한 프로퍼티는 VisualTree인데, 이 프로퍼티는 컨트롤의 외형(또는 컨트롤 내의 컨텐트나 컨트롤 내의 열거된 항목)을 구성하는 엘리먼트의 레이아웃을 정의한다. 
+
+VisualTree는 FrameworkElementFactory 타입이며, 이 책의 앞부분에서 템플릿을 사용한 프로젝트를 되돌아보면 이 FrameworkElementFactory가 얼마나 다루기 힘든지 알 수 있다. 이 클래스는 실제 엘리먼트를 생성할 필요 없이 엘리먼트의 계층(프로퍼티와 트리거를 포함해)을 정의할수 있다. 그러나 결과로 생기는 코드는 그다지 아름답지 않다. 
+
+템플릿을 XAML에서 정의할 때 FrameworkElementFactory는 완전히 배후에서 동작한다. 템플릿을 정의하기 위해 사용하는 XAML 문법은 엘리먼트의 레이아웃과프로퍼티를 정의할 때 사용하는 문법과 동일하다. 다만 이 정의된 엘리먼트는 그것이 필요할 때까지 생성되지 않는다는 것이 다르다. 
+
+ControlTemplate 클래스는 FrameworkTemplate이 정의한 프로퍼티 외에 2개의 타입을 더 추가한다. TargetType 은 템플릿이 목적으로 하는 컨트롤의 타입을 명시하며, Triggers는 Trigger 객체의 컬렉션이다. 
+
+다음의 스탠드얼론 XAML 파일은 Button에 Click 이벤트가 없는 것을 제외하면 11장의 BuildButtonFactory 프로그램과 매우 흡사하다. 
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Button HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="48" Padding="20" >
+		Button with Custom Template
+		<Button.Template>
+			<ControlTemplate>
+
+				<!-- ControlTemplate의 VisualTree 프로퍼티 -->
+				<Border Name="border" BorderThickness="3" BorderBrush="Red"
+					Background="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}" >
+					<TextBlock Name="txtblk" FontStyle="Italic" Text="{TemplateBinding ContentControl.Content}"
+						Margin="{TemplateBinding Control.Padding}" />
+				</Border>
+
+				<!-- ControlTemplate의 Triggers 프로퍼티 -->
+				<ControlTemplate.Triggers>
+					<Trigger Property="UIElement.IsMouseOver" Value="True">
+						<Setter TargetName="border" Property="Border.CornerRadius" Value="24" />
+						<Setter TargetName="txtblk" Property="TextBlock.FontWeight" Value="Bold" />
+					</Trigger>
+					<Trigger Property="Button.IsPressed" Value="True">
+						<Setter TargetName="border" Property="Border.Background" 
+							Value="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" />
+					</Trigger>
+				</ControlTemplate.Triggers>
+			</ControlTemplate>
+		</Button.Template>
+	</Button>
+</Page>
+
+Button은 여러 프로퍼티 (HorizontalAlignment, VerticalAlignment, FontSize, Padding)를 정의하고 버튼 컨텐트를 Button with Custom Template로 설정한다. 
+
+Button.Template 프로퍼티 엘리먼트는 버튼의 Template 프로퍼티 정의를 감싼다. 이 프로퍼티는 ControlTemplate 타입의 프로퍼티이며, FrameworkTemplate과 그것의 파생 클래스의 컨텐트 프로퍼티는 모두 VisualTree이다. 따라서 컨트롤의 레이아웃은 ControlTemplate의 시작 태그 이후부터 바로 시작될 수 있다. 컨트롤은 하나의 상위 레벨 엘리먼트로 시작되며, 추가 엘리먼트를 그것의 자식으로 설정한다. 흔히 VisualTree는 Border 엘리먼트로 많이 시작하지만 실제로는 패널 종류나 심지어는 TextBlock과 같은 단독 엘리먼트로 도 설정할 수 있다. 
+
+ButtonWithTemplate.xaml 속의 VisualTree는 굵기가 3인 빨간색의 Border로부터 시작된다. 또한 Background 프로퍼티는 DynamicResource 마크업 확장을 사용해 가져온 시스템 색상이며, 이 Border 엘리먼트 안에는 FontStyle이 Italic인 TextBlock이 있다. 
+
+TextBlock을 사용해 이 버튼이 텍스트만 표시하게 제한했기 때문에 이 TextBlock의 Text 프로퍼티를 Button의 Content 프로퍼티로 설정했다. TemplateBinding 마크업 확장은 컨트롤이 정의한 프로퍼티와 템플릿의 비주얼 트리 속 프로퍼티를 연결하기 위해 정의됐다. 실제로 이 TextBlock의 Text 프로퍼티를 Button의 Content 프로퍼티와 바인딩하는 문법은 다음과 같다. 
+
+Text="{TemplateBinding ContentControl.Content}"
+
+TemplateBinding 인자는 반드시 의존 프로퍼티여야 한다. 따라서 보통 이 프로퍼티가 정의된 클래스나 그 프로퍼티를 상속받은 클래스의 이름을 인자에 포함한다. 여기서는 ContentControl.Content 대신 Button.Content를 사용해도 동일하게 동작한다. 게다가 운 좋게도 WPF 템플릿 로직은 string 타입의 프로퍼티가 object타입의 TemplateBinding을 가질 수 있을 정도로 충분히 유연하다. 
+
+TextBlock 엘리먼트 속의 다음 속성은 상당히 흥미롭다. 
+
+Margin="{TemplateBinding Control.Padding}"
+
+TextBlock 주위에 여백(Border와 TextBlock 사이의 공간)은 컨텐트를 둘러싼 버튼 내의 공간을 의미하는 Button의 Padding 프로퍼티와 바운딩돼 있다. 이 TemplateBinding은 ContentControl 을 위한 전형적 형태다. 물론 Button 자체는 여전히 버튼 주위의 공간을 정의하는 독립적인 Margin 프로퍼티를 가지고 있다. 
+
+템플릿에서 VisualTree를 정의한 후에는 ControlTemplate.Triggers 프로퍼티 엘리먼트로 추가적인 트리거를 정의한다. 이 템플릿은 2개의 트리거를 정의하는데, 하나는 IsMouseOver 프로퍼티를 위한 것이고 다른 하나는 IsPressed 프로퍼티를 위한 것이다. 둘 다 이 프로퍼티가 true일 때 Trigger가 수행되며, Trigger엘리먼트 내의 Setter 엘리먼트는 항상 VisualTree 엘리먼트의 프로퍼티 중 하나에 영향을 미친다. Setter 엘리먼트는 이 프로퍼티의 이름을 TargetName 속성으로 참조하며, Property와 Value속성은 스타일에서와 같이 동작한다. 
+
+다음과 같이 ControlTemplate 태그 내에 TargetType 속성을 포함하는 것이 가능하다. 
+
+<ControlTemplate TargetType="{x:Type Button}">
+
+이 경우 TemplateBinding 표현에서 의존 프로퍼티의 클래스 이름을 앞에 붙일 필요는 없다. 왜냐하면 바인딩에는 이 프로퍼티를 참조하라는 정보가 들어있기 때문이다. 
+
+ButtonWithTemplate.xaml에서 볼 수 있듯이 ControlTemplate을 단지 하나의 컨트롤만을 위해서 정의할 수도 있다. 당연히 하나의 고유한 컨트롤을 원한다면 이것이 전혀 문제가 되지 않는다. 하지만 템플릿은 여러 컨트롤에서 공유되는 것이 일반적이기 때문에 리소스로 정의해야 한다. 다음에 리소스로 btnCustom이라는 x:Key를 가진 ControlTemplate을 정의한 스탠드얼론 XAML 파일이 있다. 이 파일에서 ControlTemplate상에 TargetType 속성을 설정한 이유는 의존 프로퍼티나 이벤트 앞에 반복해서 클래스 이름을 붙이지 않기 위함이다. 
+
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Page.Resources>
+		<ControlTemplate x:Key="btnCustom" TargetType="{x:Type Button}">
+			<!-- ControlTemplate의 VisualTree 프로퍼티 -->
+
+			<Border Name="border" BorderThickness="3" BorderBrush="Red" Background="{TemplateBinding Foreground}">
+
+				<TextBlock Name="txtblk" FontStyle="Italic" Text="{TemplateBinding Content}" Margin="{TemplateBinding Padding}"
+					Foreground="{TemplateBinding Background}" />
+			</Border>
+
+			<!-- ControlTemplate의 Triggers 프로퍼티 -->
+			<ControlTemplate.Triggers>
+				<Trigger Property="IsMouseOver" Value="True">
+					<Setter TargetName="border" Property="CornerRadius" Value="12" />
+					<Setter TargetName="txtblk" Property="FontWeight" Value="Bold" />
+				</Trigger>
+				
+				<Trigger Property="IsPressed" Value="True" >
+					<Setter TargetName="border" Property="Background" Value="{Binding Path=Background}" />
+					<Setter TargetName="txtblk" Property="Foreground" Value="{Binding Path=Foreground}" />
+				</Trigger>
+			</ControlTemplate.Triggers>
+		</ControlTemplate>
+	</Page.Resources>
+
+	<StackPanel>
+		<Button Template="{StaticResource btnCustom}" HorizontalAlignment="Center" Margin="24" FontSize="24" Padding="10" >
+			Button with Custom Template
+		</Button>
+
+		<Button HorizontalAlignment="Center" Margin="24" FontSize="24" Padding="10" >
+			Normal Button
+		</Button>
+		<Button Template="{StaticResource btnCustom}" HorizontalAlignment="Center" Margin="24" FontSize="24" Padding="10" >
+			Another Button with Custom Template
+		</Button>
+	</StackPanel>
+</Page>
+
+파일의 마지막 부분을 보면 StackPanel 내의 버튼 3개 중에 첫 번째와 세 번째 버튼의 Template 프로퍼티가 리소스로 설정된 것을 제외하면 3개 모두 동일한 프로퍼티를 가진다는 것을 알 수 있다. 이 템플릿은 배경색과 전경색을 바꾸는데, 시스템의 전경색이 백색이고 배경색이 흑색이라면 템플릿이 적용된 버튼은 백색의 텍스트를 흑색의 배경색 위에 보여준 후 버튼이 눌려질 때 두 색을 서로 바꿔서 보여준다. 이것은 일반적인 개발에서 요구되는 기능은 아니지만 템플릿의 유연함을 보여주기는 좋은 사례이다. 
+
+Style과 ControlTemplate을 같은 리소스 내에 결합시키는 것도 가능한데, Style 이 일반적으로 먼저 시작되고 그 후 Template 프로퍼티를 ControlTemplate 타입의 객체로 설정한다. 
+
+<Style ...>
+	...
+	<Setter Property="Template">
+		<Setter.Value>
+			<ControlTemplate ..>
+				...
+			</ControlTemplate>
+		</Setter.Value>
+	</Setter>
+</Style>
+
+이 방법은 Style 프로퍼티를 설정하는 것으로 컨트롤에 스타일과 템플릿을 부여할수 있다. 
+
+25장에서 보여준 처음 두 템플릿은 Button의 Content 프로퍼티가 텍스트 문자열로만 설정된다는 무리한 설정을 했다. 하지만 이 경우 이것을 문자열로 설정하지 않으면 템플릿은 런타임에러를 발생시킨다 게다가 버튼을 디자인할 때는 텍스트 이상의 것으로 버튼의 기능을 표현하는 것이 최근의 대세이다. 
+
+ContentControl을 상속받은 모든 클래스는 그것의 컨텐트를 표시하기 위해 ContentPresenter 타입의 객체를 사용하는 경우가 많다. ContentPresenter는 FrameworkElement를 상속받았으며, ContentPresenter 객체를 템플릿의 비주얼 트리에 포함하는 것이 가능하다. 이것은 당연히 컨텐트를 텍스트로만 표현해야 하는 것보다 훨씬 좋은 방법이다. 
+
+CircleRadioButtons.xaml 파일은 RadioButton 타입 객체를 위한 ControlTemplate 리소스를 정의한다. Border 엘리먼트 내의 빈 ContentPresenter 엘리먼트를 주목해보자. 
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Page.Resources>
+		<ControlTemplate x:Key="newradio" TargetType"{x:Type RadioButton}">
+			<Border Name="border" BorderBrush="{DynamicResource {x:Static SystemColors.ControlTextBrushkey}}" Padding="10" CornerRadius="100">
+				<ContentPresenter />
+			</Border>
+
+			<ControlTemplate.Triggers>
+				<Trigger Property="IsChecked" Value="True">
+					<Setter TargetName="border" Property="BorderThickness" Value="1"/>
+				</Trigger>
+			</ControlTemplate.Triggers>
+		</ContrlTemplate>
+	</Page.Resources>
+
+	<GroupBox Header="Options" FontSize="12pt" HorizontalAlignment="Center" VerticalAlignment="Center" >
+		<StackPanel>
+			<RadioButton Template="{StaticResource newradio}" HorizontalAlignnment="Center" Content="RadioButton 1" />
+			<RadioButton Template="{StaticResource newradio}" HorizontalAlignnment="Center" Content="RadioButton 2" />
+			<RadioButton Template="{StaticResource newradio}" HorizontalAlignnment="Center" Content="RadioButton 3" />
+			<RadioButton Template="{StaticResource newradio}" HorizontalAlignnment="Center" Content="RadioButton 4" />
+		</StackPanel>
+	</GroupBox>
+</Page>
+
+다음과 같이 ContentPresenter의 Content 프로퍼티를 컨트롤의 Content 프로퍼티와 바인딩하는 것이 가능하다. 
+
+<ContentPresenter Content="{TemplateBinding ContentControl.Content}" />
+
+하지만 이 바인딩이 자동으로 된다는 것을 앞의 XAML 파일을 통해 알 수 있다. 템플릿 내의 Border 엘리먼트는 CornerRadius를 대부분의 경우에도 타원으로 보일 수 있게 100으로 정의했다. 또한 Border 엘리먼트의 BorderThickness는 기본적으로 0이지만 항목이 선택되었을 때 템플릿의 Triggers 절이 이것을 1로 변경시킨다. 따라서 결과적으로 RadioButton은 기존에 작은 점으로 선택된 항목을 표시하지 않고 대신에 전체 컨텐트를 타원으로 감싼 형태로 선택을 표시한다. 
+
+다음의 XAML 파일은 컨트롤의 외형을 더욱 파격적으로 정의한다. 이것은 CheckBox의 로직을 사용하지만 Off와 On이라는 단어 사이를 왔다 갔다 하는 막대로 작은 스위치를 표현한다. 
+
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Page.Resources>
+		<ControlTemplate x:Key="switch" TargetType="{x:Type CheckBox}">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />	
+					<RowDefintion Height="Auto" />
+				</Grid.RowDefinitions>
+				<Border Width="96" Height="48" BorderBrush="Black" BorderThickness="1">
+					<Canvas Background="LightGray">
+						<TextBlock Canvas.Left="0" Canvas.Top="0" Foreground="Black" Text="Off" Margin="2" />
+						<TextBlock Canvas.Right="0" Canvas.Top="0" Foreground="Black" Text="On" Margin="2" />				
+						<Line Name="lineOff" StrokeThickness="8" Stroke="Black" X1="48" Y1="40" X2="20" Y2="16" 
+							StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+						<Line Name="lineOn" StrokeThickness="8" Stroke="Black" X1="48" Y1="40" X2="76" Y2="16"
+							StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Hidden" />
+					</Canvas>
+				</Border>
+				<ContentPresenter Grid.Row="1" Content="{TemplateBinding Content}" HorizontalAlignment="Center" />
+			</Grid>
+			<ControlTemplate.Triggers>
+				<Trigger Property="IsChecked" Value="True">
+					<Setter TargetName="lineOff" Property="Visibility" Value="Hidden" />
+					<Setter TargetName="lineOn" Property="Visibility" Value="Visible" />
+				</Trigger>
+			</ContrlTemplate.Triggers>
+		</ContrlTemplate>
+	</Page.Resources>
+
+	<CheckBox Template="{StaticResource switch}" Content="Master Switch" HorizontalAlignment="Center" VerticalAlignment="Center" />
+</Page>
+
+비주얼 트리에는 두 행을 가진 그리드가 있다. 아래쪽 행은 ContentPresenter를 위한 것이며, 위쪽 행은 스위치를 그래픽적으로 보여주기 위한 시각 Border를 위한 것이다. 이 Border는 Canvas를 가지며, 이 Canvas는 Off와 On 텍스트를 표시하기 위한 2개의 TextBlock 엘리먼트와 lineOff와 lineOn이라는 Name 속성을 가진 2개의 굵은 선을 가진다. 
+
+또한 lineOn Line의 Visibility 프로퍼티는 초기에 Hidden으로 설정돼 있다. 
+
+Triggers점에는 IsChecked 프로퍼티를 위한 Trigger가 있으며, 이 프로퍼티가 true가 될 때 lineOff Line의 Visibility 프로퍼티는 Hidden으로 변경되고 lineOn Line의 Visibility프로퍼티는 Visible로 변경된다. 따라서 두 텍스트를 가리키는 선의 방향이 바뀌는 듯한 효과를 볼 수 있다. 
+
+이전에 언급했듯이 WPF가 정의한 컨트롤은 이미 컨트롤의 Template 프로퍼티가 기본적인 ControlTemplate 타입의 객체로 설정돼 기본적인 외형을 가진다. 따라서 Template 프로퍼티를 자신만의 ControlTemplate로 설정하면 본질적으로 기존의 템플릿을 교체하는 것이 가능하다. 하지만 기존의 템플릿을 기반으로 새로운 ControlTemplate 객체를 생성하려면 당연히 기존 템플릿을 분석할 필요가 있을 것이다. 다음 프로그램은 이것에 도움을 주기 위한 목적으로 설계됐다. 
+
+DumpControlTemplate 프로그램은 Control을 상속받은 모든 public 클래스의 계층도를 흉내낸 Control이란 최상위 메뉴 항목을 가지고 있다. 이 컨트롤 중에 하나를 선택하면 프로그램은 그 타입의 객체를 생성한 후 Grid의 윗부분에 그것을 표시한다. 그후 Dump 메뉴에서 Template Property 항목을 선택하면 프로그램은 Grid의 아래쪽에 ControlTemplate 객체를 XAML 포맷으로 보여준다. XAML 은 TextBox에 표시되기 때문에 이것을 복사해 메모장(또는 메모장 클론)내에 붙여넣기 해 인쇄하는 것도 가능하다. 
+
+DumpControlTemplate 프로젝트는 3개의 소스 코드 파일을 가지고 있다. MenuItem을 상속한 ControlMenuItem 클래스는 Control을 상속받은 클래스 모두를 포함하는 메뉴를 생성한다. 각 항목의 Header 클래스의 이름을 표시하며 Tag 프로퍼티가 그 클래스의 Type 객체를 저장하고 있다. 		
+
+
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+
+public class ControlMenuItem : MenuItem
+{
+	public ControlMenuItem()
+	{
+
+		//Control 클래스가 정의된 어셈블리를 얻음
+		Assembly asbly = Assembly.GetAssembly(typeof(Control));
+
+		//그 클래스 내에 타입 모두를 배열로 저장
+		Type[] atype = asbly.GetTypes();
+
+		//Control 의 파생 클래스를 정렬된 리스트에 저장
+		SortedList<string, MenuItem> sortlst = new SortedList<string, MenuItem>();
+
+		Header = "Control";
+		Tag = typeof(Control);
+		sortlst.Add("Control", this);
+
+		//배열 내의 모든 타입을 나열함
+		//Control 클래스와 그것의 파생 클래스를 위해 메뉴 항목을 생성해
+		//SortedList 객체에 추가함
+		//메뉴 항목의 Tag 프로퍼티는 Type 객체오 관련돼 있음을 알아둘 것
+		foreach(Type typ in atype)
+		{
+			if(typ.IsPublic && (typ.IsSubclassOf(typeof(Control))))
+			{
+				MenuItem item = new MenuItem();
+				item.Header = typ.Name;
+				item.Tag = typ;
+				sortlst.Add(typ.Name, item);
+			}
+		}
+		//정렬된 리스트를 순회하며 메뉴의 부모를 설정
+		foreach(KeyValuePair<string, MenuItem> kvp in sortlst)
+		{
+			if(kvp.Key != "Control")
+			{
+				string strParent = ((Type)kvp.Value.Tag).BaseType.Name;
+				MenuItem itemParent = sortlst[strParent];
+				itemParent.Items.Add(kvp.Value);
+			}
+		}
+		//다시 순회 
+		//추상 클래스이고 선택할 것이 있으면 비활성화
+		// 추상 클래스가 아니고 선택할 것이 없으면 항목 추가
+		foreach(KeyValuePair<string, MenuItem> kvp in sortlst)
+		{
+			Type typ = (Type)kvp.Value.Tag;
+
+			if(typ.IsAbstract && kvp.Value.Items.Count == 0)
+				kvp.Value.IsEnabled = false;
+	
+			if(!typ.IsAbstract && kvp.Value.Items.Count > 0)
+			{
+				MenuItem item = new MenuItem();
+				item.Header = kvp.Value.Header as string;
+				item.Tag = typ;
+				kvp.Value.Items.Insert(0, item);
+			}
+		}
+	}
+}
+
+
+DumpControlTemplate.xaml 파일은 프로그램 창의 레이아웃을 설계한다. 메뉴는 ControlMenuItem로부터 시작되며, 하위 메뉴의 항목 모두를 위한 Click 이벤트 핸들러가 설정돼있다. Dump 메뉴는 2개의 하위 메뉴를 가지는데, 하나는 Template 프로퍼티를 XAML로 내보내며 다른 하나는 ItemsPanel프로퍼티를 XAML로 내보낸다. (후자는 ItemsControl을 상속받은 컨트롤에만 해당된다)나머지 부분은 프로그램의 대부분을 차지하는 Grid 에 대해 명시하고 있다. 
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:src="clr-namespace:Petzold.DumpControlTemplate" x:Class="Petzold.DumpControlTemplate.DumpControlTemplate" 
+	Title="Dump Control Template - no control">
+
+	<DockPanel>
+		<Menu DockPanel.Dock="Top" >
+			<src:ControlMenuItem MenuItem.Click="ControlItemOnClick" />
+			<MenuItem Header="Dump" SubmenuOpened="DumpOnOpened">
+				<MenuItem Header="Template property (type ControlTemplate)" Name="itemTemplate" Click="DumpTemplateOnClick" />
+			
+				<MenuItem Header="ItemsPanel property (type ItemsPanelTemplate)" Name="itemItemsPanel" Click="DumpItemsPanelOnClick" />
+			</MenuItem>
+		</Menu>
+		<Grid Name="grid">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="2*" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="8*" />
+			</Grid.RowDefinitions>
+			<GridSplitter Grid.Row="1" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+			<TextBox Grid.Row="2" Name="txtbox" FontFamily="Lucida Console" AcceptsReturn="True" HorizontalScrollBarVisibility="Auto"
+				VerticalScrollBarVisibility="Auto" />
+		</Grid>
+	</DockPanel>
+</Window>
+
+다음 DumpControlTemplate.cs 파일은 대부분 메뉴의 Click 핸들러를 구현하기 위해 쓰인다. ControlItemOnClick 핸들러는 선택된 타입의 컨트롤을 생성해 이것을 Grid 의 상위 셀에넣는다. (경험으로 볼 때 Template 프로퍼티는 컨트롤이 부모가 있을 때만 값을 가질 수 있다)Dump 메뉴는 객체를 XAML로 변환해 보여주기 위한 메뉴이다. 
