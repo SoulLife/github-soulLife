@@ -1,0 +1,366 @@
+using System;
+using System.Reflection;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
+using System.Xml;
+
+
+public partial class DumpControlTemplate : Window
+{
+	Control ctrl;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new DumpControlTemplate());
+	}
+	public DumpControlTemplate()
+	{
+		InitializeComponent();
+	}
+	//Control 메뉴를 클릭했을 때 발생하는 이벤트 핸들러
+	void ControlItemOnClick(object sender, RoutedEventArgs args)
+	{
+		//Remove any existing child from the first row of the Grid
+		for(int i=0; i<grid.Children.Count; i++)
+			if(Grid.GetRow(grid.Children[i]) == 0)
+			{
+				grid.Children.Remove(grid.Children[i]);
+				break;
+			}
+		//TextBox를 비움
+		txtbox.Text = "";
+
+		//클릭된 메뉴의 Control 클래스를 가져옴
+		MenuItem item = args.Source as MenuItem;
+		Type typ = (Type)item.Tag;
+
+		//선택된 타입의 객체를 생성하기 위한 준비
+		ConstructorInfo info = typ.GetConstructor(System.Type.EmptyTypes);
+
+		//선택된 타입의 객체를 생성
+		tyr
+		{
+			ctrl = (Control)info.Invoke(null);
+		}catch(Exception exc)
+		{
+			MessageBox.Show(exc.Message, Title);
+			return;
+		}
+
+		//생성된 객체를 그리드에 삽입
+		//실패하면 생성된 객체는 Window
+		try
+		{
+			grid.Children.Add(ctrl);
+		}catch
+		{
+			if(ctrl is Window)
+				(ctrl as Window).Show();
+			else
+				return;
+		}
+		Title= Title.Remove(Title.IndexOf('-')) + "-" + typ.Name;
+	}
+	// Dump 메뉴가 열리면 항목을 활성화
+	void DumpOnOpened(object sender, RoutedEventArgs args)
+	{
+		itemTemplate.IsEnabled = ctrl != null;
+		itemItemsPanel.IsEnabled = ctrl != null && ctrl is ItemsControl;
+	}
+	//ControlTemplate 프로퍼티에 설정된 Template 객체를 XAML로 내보냄
+	void DumpTemplateOnClick(object sender, RoutedEventArgs args)
+	{
+		if(ctrl != null)
+			Dump(ctrl.Template);
+	}
+	// ItemsPanel 프로퍼티에 설정된 ItemsPanelTemplate 객체를 XAML로 내보냄
+	void DumpItemsPanelOnClick(object sender, RoutedEventArgs args)
+	{
+		if(ctrl != null && ctrl is ItemsControl)
+			Dump((ctrl as ItemsControl).ItemsPanel);
+	}
+	//템플릿을 XAML로 내보냄
+	void Dump(FrameworkTemplate template)
+	{
+		if(template != null)
+		{
+			//XAML을 TextBox로 내보냄
+			XmlWriterSettings settings = new XmlWriterSettings();
+			settings.Indent = true;
+			settings.IndentChars = new string(' ', 4);
+			settings.NewLineOnAttributes = true;
+
+			StringBuilder strbuild = new StringBuilder();
+			XmlWriter xmlwrite = XmlWriter.Create(strbuild, settings);
+
+			try
+			{
+				XamlWriter.Save(template, xmlwrite);
+				txtbox.Text = strbuild.ToString();
+			}catch(Exception exc)
+			{
+				txtbox.Text = exc.Message;
+			}
+		}else
+			txtbox.Text = "no template";
+	}
+	
+}
+
+이 템플릿은 WPF가 정의한 모든 컨트롤의 SystemParameters와 SystemColors 클래스 참조를 포함한 완전한 외형 명세를 제공한다. 따라서 자신만의 템플릿을 디자인하기 위해서 이 템플릿을 참조하면 많은 아이디어와 기술을 얻을 수 있다. 실제 WPF 소스 코드를 직접 들여다보는 것만큼 좋은 방법은 없기 때문이다. 
+
+이것은 템플릿이 RadioButton 원이나 CheckBox 사각형과 같은 작은 시작적인 객체를 그리는 일반적인 방법이다. 앞으로 28장에서는 이 방법에 대해 배우게 될 것이다. 
+
+몇 개의 컨트롤은 외형을 그리기 위해 다른 클래스를 사용하기도 한다. Button 클래스는 Microsoft.Windows.Themes 네임스페이스에 정의된 ButtonChrome을 많이 사용하며, ScrollBar 클래스는 같은 곳에서 정의된 ScrollChrome을 사용한다. TextBox와 RichTextBox는 비교적 간단한 템플릿을 가지는데, 코드 내에서 모두 구현된 실제 편집기를 ScrollViewer 컨트롤이 감싸고 그것을 다시 Border 엘리먼트가 감싼 형태이다. 
+
+지금까지 Button(또는 RadioButton, CheckBox)의 Template 프로퍼티를 ContrlTemplate 타입의 객체로 설정해 컨트롤의 외형을 완전히 다시 만드는 방법에 대해 보았다. 대부분 이것은 실제 생각했던 것보다 더 큰 작업일 것이다. 게다가 이것보다는 컨트롤 내의 컨텐트를 보여주는 것에 더 신경 쓰길 원할 수도 있다. 
+
+ContentPresenter 엘리먼트는 ContentContrl을 상속받은 모든 컨트롤의 컨텐트를 보여주는 역할을 한다. ContentPresenter는 객체를 UIElement를 상속받은 것과 그렇지 않은 것 두 가지 타입으로 분류한다. UIElement 를 상속받지 않은 객체를 위해 ContentPresenter는 객체의 ToString 을 상속받은 컨트롤은 거의 모든 형태의 컨텐트를 표시할 수 있다. 하지만 ContentControl의 컨텐트가 UIElement를 상속받지 않은 객체라 하더라도 이 객체를 ToString보다는 좀 더 세련된 방법으로 표시하길 바랄 것이다. 
+
+예를 들어 직원에 대한 몇 가지 간단한 프로퍼티를 정의한 다음의 클래스를 살펴보자. 
+
+
+using System;
+
+public class Employee
+{
+	//Private 필드
+	string name;
+	string face;
+	DateTime birthdate;
+	bool lefthanded;
+	//XAML 에서 사용되는 인자 없는 생성자
+	public Employee()
+	{
+	}
+	//C# 코드에서 사용되는 인자를 가진 생성자
+	public Employee(string name, string face, DateTime birthdate, bool lefthanded)
+	{
+		Name = name;
+		Face = face;
+		BirthDate = birthdate;
+		Lefthanded = lefthanded;
+	}
+	//Public 프로퍼티
+	public string Name
+	{
+		set { name = value; }
+		get { return name; }
+	}
+	public string Face
+	{
+		set { face = value;	}
+		get { return face;	}
+	}
+	public DateTime BirthDate
+	{
+		set { birthdate = value;	}
+		get { return birthdate;	}
+	}
+	public bool LeftHanded
+	{
+		set { lefthanded = value;	}
+		get { return lefthanded;	}
+	}
+}
+
+Face 프로퍼티는 string으로 정의되었지만 사실 이것은 직원의 얼굴을 찍은 비트맵 파일의 파일 이름을 참조한다. 그 외에는 간단하다(왜 직원이 왼손잡이인지 알아야할까? 아마 왼손잡이와 오른손잡이용으로 각기 설계된 기계를 운영하는 공장이기 때문에 기계 운용에 필요한 정확한 직원을 할당하기 위해서는 직원이 왼손잡이인지 오른손잡이인지 알 필요가 있을 것이다.)
+
+Employee 타입의 객체가 여러 개 있다고 생각해보자. 이 객체를 버튼으로 표현하고 싶다면 Button의 Content 프로퍼티를 Employee 객체로 간단히 설정할 수 있을 것이다. 하지만 Employee는  ToString 메소드조차 가지고 있기 때문에 결과적으로 표시되는 것은 문자열 Petzold.ContentTemplateDemo.Employee일 뿐이다. 보다시피 이것이 의미하는 바는 별로 없다(네임스페이스 선언이 의미하는 것처럼 Employee.cs는 ContentTemplateDemo 프로젝트의 첫 번째 파일 이다)
+
+하지만 이미 우리는 이 복잡한 객체를 버튼에서 어떻게 표현할 수 있는지 알고 있다. 첫째로 Button의 Content 프로퍼티를 패널 종류로 설정한다. 이 패널의 자식으로 Employee 클래스의 다양한 프로퍼티를 보여주기 위한 엘리먼트(TextBlock과 Image와 같은)를 추가한다. 프로그램을 C# 코드로 짜고 있다면 이 방법을 사용하는 것이 적당할 것이다. 왜냐하면 값의 입력을 for나 foreach 루프에서 모두 해결할 수 있기 때문이다. 
+
+하지만 XAML이라면 다른 방법을 사용해야 한다. Employee 객체를 표시하기 위한 템플릿을 정의하고 Button의 Content 프로퍼티를 Employee객체로 설정한다. 
+
+알다시피 ContentControl은 컨텐트를 표시하기 위해 ContentPresenter 객체를 사용한다. ContentPresenter는 DataTemplate 타입의 ContentTemplate이라는 프로퍼티로 컨텐트를 표시하기 위해 필요한 템플릿을 정의한다. 이 ContentTemplate 프로퍼티는 ContentControl에 의해 노출되며 기본값은 null이다. 
+
+Template 프로퍼티를 정의하는 것처럼 ContentTemplate 프로퍼티를 실제 Button 엘리먼트내에서 정의할 수 있다. 또는 DataTemplate 타입의 리소스를 생성하고 이것을 Button의 ContentTemplate 프로퍼티에 할당할 수 있다. 그 외에 EmployeeButton과 같은 새로운 클래스를 생성해 ContentTemplate을 이 클래스 내부에 정의하는 것도 가능하다. 
+
+
+<Button xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:src="clr-namespace:Petzold.ContentTemplateDemo" x:Class="Petzold.ContentTemplateDemo.EmployeeButton">
+	<Button.ContentTemplate>
+		<DataTemplate DataType="{x:Type src:Employee}">
+			<DockPanel>
+				<Image DockPanel.Dock="Left" Stretch="None" Source="{Binding Path=Face}" />
+				<UniformGrid Rows="2" VerticalAlignment="Center" Margin="12">
+					<TextBlock FontSize="16pt" TextAlignment="Center" Text="{Binding Path=Name}"/>
+					<StackPanel Orientation="Horizontal" TextBlock.FontSize="12pt">
+						<TextBlock Text="{Binding Path=BirthDate.Month}" />
+						<TextBlock Text="/" />
+						<TextBlock Text="{Binding Path=BirthDate.Day}" />
+						<TextBlock Text="/" />
+						<TextBlock Text="{Binding Path=BirthDate.Year}" />
+					</StackPanel>
+				</UniformGrid>
+			</DockPanel>
+		</DataTemplate>
+	</Button.ContentTemplate>
+</Button>
+
+이 파일은 루트 엘리먼트에서 x:Class 속성을 사용해 새로운 클래스를 정의한다. Button.ContentTemplate 프로퍼티 엘리먼트 내에서는 DataTemplate 정의가 있으며, 여기서 표시할 객체의 DataType은 Employee 이다. 또한 이 Employee를 참조하기 위해서는 XML 네임스페이스의 접두어인 src가 필요하다. 
+
+ControlTemplate 객체에서는 DataTemplate으로 비주얼 트리를 시작한다. 이 안의 DockPanel에는 왼쪽에 도킹된 Image 엘리먼트와 TextBlock 객체를 구성하기 위한 UniformGrid가 있다. UniformGrid에는 직원의 이름을 표시하는 TextBlock과 직원의 생일을 표시하기 위한 6개의 TextBlock을 포함한 StackPanel이 있다. 
+
+Image와 TextBlock 엘리먼트 내부에는 Employee 클래스의 다양한 프로퍼티가 바인딩돼 있다. 이 바인딩은 Employee 객체에서 정보를 가져와 버튼의 비주얼 트리 엘리먼트에 원하는 형태로 넣는 핵심적인 역할을 한다. Image 엘리먼트는 다음과 같이 속성을 설정한다. 
+
+Source="{Binding Path=Face}"
+
+여기서는 Face라는 프로퍼티 이름만이 필요한데, 이 프로퍼티가 Button의 Content 프로퍼티에 설정되는 객체인 Employee로부터 접근되기 때문이다. 하지만 생일은 BirthDate 프로퍼티의 내의 프로퍼티를 참조하기 때문에 이것보다는 약간 복잡하다. 
+
+<TextBlock Text="{Binding Path=BirthDate.Month}" />
+
+EmployeeButton 클래스는 다음과 같은 코드 비하인드 파일을 가지고 있다. 
+
+public partial class EmployeeButton
+{
+	public EmployeeButton()
+	{
+		InitializeComponent();
+	}
+}
+
+EmployeeButton.xaml이 어떠한 Name 속성이나 이벤트를 포함하지 않는데도 왜 이 파일이 필요한지는 정확히 모르겠다. 하지만 이 파일이 없으면 프로그램이 동작하지 않기 때문에 프로젝트에 포함시켰다. 
+
+이제 이 버튼으로 직원 정보를 표시할 수 있게 됐다. ContentTemplateDemo 프로젝트에서 보여줄 직원 사진은 stock.xchng 웹사이트(www.sxc.hu)에서 저작권료 없는 사진을 사용했음을 밝혀둔다. 
+
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:src="clr-namespace:Petzold.ContentTemplateDemo" x:Class="Petzold.ContentTemplateDemo.ContentTemplateDemo" 
+		Title="ContentProperty 	Demo">
+	<Window.Resources>
+		<Style TargetType="{x:Type src:EmployeeButton}" >
+			<Setter Property="HorizontalAlignment" Value="Center" />
+			<Setter Property="VerticalAlignment" Value="Center" />
+			<Setter Property="Margin" Value="12" />			
+		</Style>
+	</Window.Resources>
+
+	<StackPanel Name="stack" Button.Click="EmployeeButtonOnClick">
+		<src:EmployeeButton.Content>
+			<src:Employee Name="Betty" BirthDate="8/31/1970" Face="Betty.png"/>
+		</src.EmployeeButton.Content>
+		<src:EmployeeButton.Content>
+			<src:Employee Name="Edgar" BirthDate="2/2/1965" Face="Edgar.png"/>
+		</src.EmployeeButton.Content>
+		<src:EmployeeButton.Content>
+			<src:Employee Name="Sally" BirthDate="7/12/1980" Face="Sally.png"/>
+		</src.EmployeeButton.Content>
+	</StackPanel>
+</Window>
+
+여기서 EmployeeButton의 Content 프로퍼티를 설정하기 위해 EmployeeButton.Content 프로퍼티 엘리먼트를 사용하며, 이 Content 에 설정한 Employee 객체는 3개의 프로퍼티를 포함한다. 알다시피 EmployeeButton에 설정된 ContentTemplate 프로퍼티가 null이 아니기 때문에 설정된 템플릿은 Elployee 객체를 표시하기 위해 사용된다. 실제 이런 종류의 프로그램은 직원의 정보를 얻기 위해 데이터베이스를 사용할 가능성이 높다. 따라서 ContentTemplateDemo.cs 코드 비하인드 파일에서는 또 다른 EmployeeButton을 StackPanel에 추가하는 코드를 제공하며, 버튼의 Click 이벤트도 역시 처리한다. 
+	
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public partial class ContentTemplateDemo : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new ContentTemplateDemo());
+	}
+	public ContentTemplateDemo()
+	{
+		InitializeComponent();
+
+		//새로운 EmployeeButton을 추가하는 코드를 보여줌
+		EmployeeButton btn = new EmployeeButton();
+		btn.Content = new Employee("Jim", "Jim.png",new DateTime(1975, 6, 15), false); 
+		stack.Children.Add(btn);
+	}
+	//버튼의 Click 이벤트 핸들러
+	void EmployeeButtonOnClick(object sender, RoutedEventArgs args)
+	{
+		Button btn = args.Source as Button;
+		Employee emp = btn.Content as Employee;
+		MessageBox.Show(emp.Name + " button clicked!" , Title);
+	}
+}
+
+직원 정보를 더 많이 보여주기 위해서 XAML 파일에서 StackPanel을 ScrollViewer 속에 넣고 싶을 수도 있다. 26장에서는 데이터에 접근하는 기술과 컨트롤에서 그 데이터를 보여주는 기술에 대해 좀 더 깊게 다루기로 한다. 
+
+다시 EmployeeButton.xaml 파일로 가보자. DataTemplate의 DataType 프로퍼티는 Employee로 설정돼있다. 이것은 마치 여러 바인딩 프로퍼티를 알맞은 클래스와 연결하는 것과 비슷해 보인다. 하지만 이 경우는 다르다. 실제로 DataTemplate 엘리먼트에서 DataType 속성을 삭제해도 프로그램은 문제없이 돌아간다. 
+
+물론 DataType 속성은 이 XAML 파일을 분석해야 하는 사람에게 유용한 정보를 제공해준다. 다만 기대했던 것과는 반대로 이것은 Content 프로퍼티의 데이터 타입에 맞는 리소스를 찾기 위해 사용된다. 
+
+다음 스탠드얼론 XAML 파일은 4개의 DataTemplate 객체를 리소스로 정의한다. 각 템플릿은 서로 다른 DataType(Int32, Double, String, DateTime)을 가지며 데이터를 보여줄 때 데이터 타입에 알맞은 표시 방법을 명시한다. 따라서 데이터 타입에 따라 어떤 템플릿이 사용될지 쉽게 알 수 있다. 
+
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:s="clr-namespace:System;assembly=mscorlib">
+	<Page.Resources>
+		<DataTemplate DataType="{x:Type s:Int32}">
+			<StackPanel Orientation="Horizontal">
+				<TextBlock Text="Integer: " />
+				<TextBlock Text="{Binding}" />
+			</StackPanel>
+		</DataTemplate>
+
+		<DataTemplate DataType="{x:Type s:Double}">
+			<StackPanel Orientation="Horizontal">
+				<TextBlock Text="Double: " />
+				<TextBlock Text="{Binding}" />
+			</StackPanel>
+		</DataTemplate>
+		<DataTemplate DataType="{x:Type s:String}">
+			<StackPanel Orientation="Horizontal">
+				<TextBlock Text="String: " />
+				<TextBlock Text="{Binding}" />
+			</StackPanel>
+		</DataTemplate>
+	
+		<DataTemplate DataType="{x:Type s:DateTime}">
+			<StackPanel Orientation="Horizontal">
+				<TextBlock Text="DateTime: " />
+				<TextBlock Text="{Binding Path=Month}" />
+				<TextBlock Text="/" />
+				<TextBlock Text="{Binding Path=Day}" />
+				<TextBlock Text="/" />
+				<TextBlock Text="{Binding Path=Year}">
+			</StackPanel>
+		</DataTemplate>
+
+		<Style TargetType="{x:Type Button}" >
+			<Setter Property="HorizontalAlignment" Value="Center" />
+			<Setter Property="Margin" Value="12" />
+			<Setter Property="FontSize" Value="12pt" />
+			<Setter Property="Padding" Value="10" />
+		</Style>
+	</Page.Resources>
+
+	<StackPanel>
+		<Button>
+			<s:Int32>
+				27
+			</s:Int32>
+		</Button>
+		<Button>
+			<s:Double>
+				27.543
+			</s:Double>
+		</Button>
+		<Button>
+			27.543
+		</Button>
+		<Button>
+			<x:Static Member="s:DateTime.Now" />
+		</Button>
+	</StackPanel>
+</Page>
+
+파일의 아래 부분을 보면 4개의 버튼이 4개의 서로 다른 Content 타입을 가지고 있다. 이 데이터 타입은 버튼과 리소스 사이에 어떠한 연결 고리도 없이 리소스로 저장된 DataTemplate과 연결된다. 왜냐하면 ContentContrl 객체가 그것의 컨텐트 타입과 맞는 DataTemplate 리소스를 자동으로 찾아주기 때문이다. 마치 Button이 TargetType을 Button으로 설정한 Style을 찾는 것처럼 말이다. 
+
+이 방법은 컨텐트 타입에 따라 컨텐트를 다양한 형태로 보여주는 방법 중에 하나이다. 좀더 융통성 있는 방법은 ContentControl에서 정의된 ContentTemplateSelector를 사용하는 방법이다. 이 프로퍼티는 SelectTemplate이라는 가상 메소드를 가진 DataTemplateSelector 클래스 타입의 프로퍼티이며, 프로퍼티 설정을 위해서는 DataTemplateSelector 클래스를 상속받고 SelectTemplate을 오버라이딩 해야 한다. 이 SelectTemplate 메소드의 첫 번째 인자는 ContentContrl에 의해 보여질 객체이며, SelectTemplate 메소드는 컨텐트를 보여주기 위한 DataTemplate 타입의 객체를 반환한다. 
+
+SelectDataTemplate 프로젝트는 다음 클래스에서 DataTemplateSelector를 상속받고 SelectTemplate을 오버라이딩 한다. 
