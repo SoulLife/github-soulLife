@@ -1,0 +1,297 @@
+(4) 열의 제약 조건 추가 및 삭제
+열의 제약 조건을 추가하는 것은 앞에서 여러 번 확인했다. 제약 조건을 삭제하는 것도 간단하다. 예를 들어 키의 DEFAULT 제약 조건을 삭제하려면 다음과 같이 사용한다. 
+
+ALTER TABLE userTbl
+DROP CONSTRAINT CD_height; -- 제약 조건의 이름
+
+
+실습6 : 지금까지 익힌 테이블의 제약 조건 및 수정 방법을 실습을 통해서 익혀 보자. 
+
+0. 제약 조건을 제외하고 [그림8-1]의 테이블을 다시 만들자. 단 구매 테이블(buyTbl)의 num열만 IDENTITY 속성을 주도록 하자. 
+
+USE tableDB;
+DROP TABLE buyTbl, userTbl;
+GO
+CREATE TABLE userTbl
+(
+userID			char(8),
+name 			nvarchar(10),
+birthYear		int,
+addr			nchar(2),
+mobile1		char(3),
+mobile2		char(8),
+height			smallint,
+mDate		date
+);
+GO
+CREATE TABLE buyTbl
+(
+num			int IDENTITY,
+userid 		char(8),
+prodName		nchar(6),
+groupName		nchar(4),
+price			int,
+amount		smallint
+);
+GO
+
+2. 먼저 각각의 테이블에 데이터를테이블당 4건씩만 입력해 보자. 입력할 때 김범수의 출생년도는 모르는 것으로 하여 NULL 값을 넣고, 김경호의 출생년도는 1871년으로 잘못입력해 보자. 
+INSERT INTO userTbl VALUES('LSG', N'이승기', 1987, N'서울', '011', '11111111', 182, '2008-8-8');
+INSERT INTO userTbl VALUES('KBS', N'김범수', NULL, N'경남', '011', '22222222', 173, '2012-4-4');
+INSERT INTO userTbl VALUES('KKH', N'김경호', 1871, N'전남', '019', '33333333', 177, '2007-7-7');
+INSERT INTO userTbl VALUES('JYP', N'조용필', 1950, N'경기', '011', '44444444', 166, '2009-4-4');
+GO
+INSERT INTO buyTbl VALUES('KBS', N'운동화', NULL, 30, 2);
+INSERT INTO buyTbl VALUES('KBS', N'노트북', N'전자',1000, 1);
+INSERT INTO buyTbl VALUES('JYP', N'모니터', N'전자',200, 1);
+INSERT INTO buyTbl VALUES('BBK', N'모니터', N'전자',200, 5);
+GO
+
+아직 FOREIGN KEY 제약 조건이 설정된 것이 아니므로, userTbl에 BBK(바비킴)회원이 없지만 입력은 잘 되었다. 또 NULL이 기본적으로 모두 허용되어 있어서, NULL 값도 모두 들어갔다. 
+
+
+3. 제약 조건을 생성해 보자. 
+3-1 우선[그림8-1]의 기본 키 제약 조건을 생성해 보자. 
+
+ALTER TABLE userTbl
+ADD CONSTRAINT PK_userTbl_userID
+PRIMARY KEY (userID);
+
+오류 메시지:
+메시지 8111, 수준 16, 상태 1, 줄 1
+테이블 'userTbl'의 Null 허용 열에 PRIMARY KEY 제약 조건을 정의할 수 없습니다. 
+메시지 1750, 수준 16, 상태 0, 줄 1
+제약 조건을 만들수 없습니다. 이전 오류를 참조하십시오. 
+
+오류가 발생했다. 오류에 나온 것처럼 PRIMARY KEY로 지정하려면 NOT NULL로 열이 설정되어 있어야 한다. 
+
+3-2 기본 키로 지정할 userTbl의 userID와 buyTbl의 num을 NOT NULL로 지정하고, 기본키로 설정한다 
+
+ALTER TABLE userTbl
+ALTER COLUMN userID char(8) NOT NULL;
+GO
+ALTER TABLE userTbl
+ADD CONSTRAINT PK_userTbl_userID
+PRIMARY KEY (userID);
+GO
+ALTER TABLE buyTbl
+ADD CONSTRAINT PK_buyTbl_num
+PRIMARY KEY (num);
+
+그런데 buyTbl의 num에는 NOT NULL을 지정하지 않았는데도 오류가 나지 않고 PRIMARY KEY로 지정되었다. 이유는 IDENTITY속성을 지정하면 자동으로 NOT NULL 속성을 가지기 때문이다. 
+
+
+4. 외래 키를 설정해 보자. 
+4-1 이번에는 [그림8-1]의 외래키 테이블 buyTbl의 userID 열에 FOREIGN KEY를 설정하자. 기준 테이블 userTbl의 userID를 기준으로 한다. 
+ALTER TABLE buyTbl
+ADD CONSTRAINT FK_userTbl_buyTbl
+FOREIGN KEY (userID) REFERENCE userTbl(userID);
+오류 메시지:
+메시지 547: 수준 16, 상태 0, 줄 1
+ALTER TABLE 문이 'FOREIGN KEY'제약 조건 "FK_userTbl_buyTbl과(와) 충돌했습니다. 데이터베이스 "tableDB", 테이블 "dbo.userTbl", column 'userID'에서 충돌이 발생했습니다. 
+
+오류가 발생했다. 그 이유는 buyTbl에는 BBK(바비킴)의 구매기록이 있는데, 이 BBK 아이디가 userTbl에는 없기 때문이다. 여기서 회원 테이블에 BBK를 입력하면 간단히 해결기는 한다. 하지만 더 고려해볼 일이 있다. 
+
+실제 업무에서는 테이블을 완벽하게 설계해 놓은 상태에서 데이털르 하나씩 입력하는 경우도 있겠지만 그렇지 않은 경우도 많이 있다. 즉 기존에 많은 데이터가 있고 그 데이터를 모두 입력한 상태에서 두 테이블의 외래키 제약 조건을 설정해야 하는 경우도 종종 발생한다. 지금 같은 경우가 그러한 경우이다. 
+
+외래키 제약 조건이 맺어지려면 외래 키 테이블에 입력된 데이터는 모두 기준 테이블에 있는 것이 원칙이지만, 수십~수백만 건의 데이터가 이미 입력된 상태라면 지금과 같이 데이터의 불일치가 발생하는 경우가 많이 있을 것이다. 그렇다면 모든 데이터를 완전하게 해놓은 상태에서 외래 키 관계를 맺어줄 것인가? 현실적으로 어려운 일이다. 그래서 기존의 입력된 값이 서로 불일치하더라도 무시하고 외래키 제약 조건을 맺어줄 필요가 있다. 
+
+4-2 ALTER TABLE에서 WITH NOCHECK 문과 함께 사용하면 이미 입력되어 있는 데이터의 무결성을 무시하고 외래 키 관계가 설정된다. 아무것도 써주지 않으면 디폴트는 WITH CHECK이므로 데이터의 무결성을 검사한다. 
+ALTER TABLE buyTbl WITH NOCHECK
+ADD CONSTRAINT FK_userTbl_buyTbl
+FOREIGN KEY (userID) REFERENCE userTbl(userID);
+
+외래 키 관계가 잘 맺어졌을 것이다. 참고로 WITH NOCHECK옵션은 FOREIGN KEY제약 조건과 CHECK 제약 조건에만 설정되고, PRIMARY KEY, UNIQUE제약 조건에는 해당되지 않는다. 
+
+4-3 [그림8-1]buyTbl의 다섯 번째 데이터를 하나 입력해 보자. 
+INSERT INTO buyTbl VALUES('KBS', N'청바지', N'의류', 50, 3);
+잘 입력될 것이다. 
+
+4-4 [그림8-1] buyTbl의 여섯 번째 데이터를 하나 입력해 보자. 
+INSERT INTO buyTbl VALUES('BBK', N'메모리', N'전자', 80, 10);
+
+오류 메시지:
+메시지 547, 수준 16, 상태 0, 줄 1
+INSERT 문이 FOREIGN KEY 제약 조건 FK_userTbl_buyTbl과(와) 충돌했습니다. 데이터베이스 tableDB 테이블 dbo.userTbl, column userID에서 충돌이 발생했습니다. 
+
+외래 키가 연결되어 활성화된 상태이므로 새로 입력하는 데이터는 모두 외래키 제약 조건을 만족해야 한다. BBK가 아직 userTbl에 없어서 나오는 오류이다. 물론 여기서도 userTbl에 BBK를 입력한 후에 ,다시 buyTbl에 입력해도 되지만, 어떤 경우에는 대량의 buyTbl을 먼저 모두 입력해야 하는 경우도 있을 것이다. 그 건수는 수백만건 이상의 대용량일 수도 있다. 
+
+이럴 때는 buyTbl에 데이터를 입력하는 동안에 잠시 외래 키 제약조건을 비활성화시키고 데이터를 모두 입력한 후에 다시 외래키 제약 조건을 활성화시키면 된다. 
+
+
+4-5 외래 키 제약 조건을 잠깐 비활성화하고, 데이터를 모두 입력한 후에 다시 외래 키 관계를 활성화 하자. 제약 조건을 비활성화하려면 NOCHECK CONSTRAINT 제약 조건_이름을 사용하면 된다. 다시 활성화하려면 CHECK CONSTRAINT 제약_조건_이름 으로 사용한다. 만약 모둔 제약 조건을 체크하지 않으려면 NOCHECK CONTRAINT ALL 이라고 써주면 된다. 
+
+ALTER TABLE buyTbl
+NOCHECK CONSTRAINT FK_userTbl_buyTbl;
+GO
+INSERT INTO buyTbl VALUES('BBK', N'메모리', N'전자', 80, 10);
+INSERT INTO buyTbl VALUES('SSK', N'책', N'서적', 15, 5);
+INSERT INTO buyTbl VALUES('EJW', N'책', N'서적', 15, 2);
+INSERT INTO buyTbl VALUES('EJW', N'청바지', N'의류', 50, 1);
+INSERT INTO buyTbl VALUES('BBK', N'운동화', NULL, 30, 2);
+INSERT INTO buyTbl VALUES('EJW', N'책', N'서적', 15, 1);
+INSERT INTO buyTbl VALUES('BBK', N'운동화', NULL, 30, 2);
+GO
+ALTER TABLE buyTbl
+CHECK CONSTRAINT FK_userTbl_buyTbl;
+GO
+
+buyTbl의 구성은 완료하였다. 
+
+5. 이번에는 userTbl의 출생년도를 1900~현재까지만 설정하도록 하자. 
+
+ALTER TABLE userTbl
+ADD CONSTRAINT CK_birthYear
+CHECK	(birthYear >= 1900 AND birthYear <= YEAR(GETDATE()));
+
+앞의 구문은 오류가 발생한다. 이제는 오류의 원인을 알 수 있을 것이다. 입력할 때 김범수의 출생년도는 모르는 것으로 NULL 값을넣고 김경호의 출생년도는 1871년으로 잘못입력했기 때문이다. 당연히 몇십만 건의 데이터에서 이러한 오류를 잡아내는 것은 무리이므로 그냥 무시하고 CHECK 제약 조건을 설정하도록 하자. 
+
+ALTER TABLE userTbl WITH NOCHECK
+ALTER TABLE userTbl
+ADD CONSTRAINT CK_birthYear
+CHECK	(birthYear >= 1900 AND birthYear <= YEAR(GETDATE()));
+
+혹시 혼동할 수 있을것 같아 다시 정리하면, WITH NOCHECK 옵션은 제약 조건을 생성할 때 기존의 데이터를 검사하는 것을 무시하는 것일 뿐, 설정한 후에는 당연히 제약 조건이 작동된다. 즉 WITH CHECK 옵션은 ADD CONSTRAINT 순간에만 기존 데이터가 제약 조건에 맞는지 검사하고, 검사 후에는 바로 소멸된다. 
+
+이와 달리 4-5의 NOCHECK CONSTRAINT는 한 번 설정해주면, CHECK CONSTRAINT를 해줄 때까지 계속 입력되는 데이터의 검사를 생략한다. 
+
+6. 나머지 userTbl의 데이터도 입력해 보자. 
+INSERT INTO userTbl VALUES('SSK', '성시경', 1979, '서울', NULL, NULL, 186, '2013-12-12');
+INSERT INTO userTbl VALUES('LJB', '임재범', 1963, '서울', '016', '66666666', 186, '2009-9-9');
+INSERT INTO userTbl VALUES('YJS', '윤종신', 1969, '경남', NULL, NULL, 170, '2005-5-5');
+INSERT INTO userTbl VALUES('EJW', '은지원', 1972, '경북', '011', '88888888', 174, '2014-3-3');
+INSERT INTO userTbl VALUES('JKW', '조관우', 1965, '경기', '018', '99999999', 172, '2010-10-10');
+INSERT INTO userTbl VALUES('BBK', '바비킴', 1973, '서울', '010', '00000000', 176, '2013-5-5');
+
+7. 이제부터는 정상적으로 운영하면 된다. 
+
+8. 이번에는 바비킴 회원이 자신의 ID를 변경해달라고 한다. 즉 'BBK'이 아니라 'VVK'로 변경하는 경우다. 
+
+8-1 UPDATE 문으로 변경해보자. 
+
+UPDATE userTbl SET userID = 'VVK' WHERE userID= 'BBK';
+
+오류 메시지:
+메시지 547: 수준 16, 상태 0, 줄 1
+UPDATE 문이 REFERENCE 제약 조건 FK_userTbl_buyTbl과(와)충돌했습니다. 데이터베이스 'tableDB' 테이블 dbo.buyTbl, column 'userID'에서 충돌이 발생했습니다. 
+
+오류가 발생했다. 'BBK'는 이미 buyTbl에서 구매한 기록이 있으므로 바뀌지 않는 것이다. 어떻게 할까? 앞에서 나왔듯이 잠깐 제약 조건을 비활성화한 후에, 데이터를 변경하고 다시 활성화시켜 보자. 
+
+8-2 NOCHECK CONSTRAINT를 사용해 보자. 
+*이쯤에서 제약 조건의 이름이 잘 기억나지 않는다면 먼저 EXEC sp_help 테이블_이름으로 확인해 봐도 좋다. 
+
+ALTER TABLE buyTbl
+NOCHECK CONSTRAINT FK_userTbl_buyTbl;
+GO
+UPDATE userTbl SET userID = 'VVK' WHERE userID = 'BBK';
+GO
+ALTER TABLE buyTbl
+CHECK CONSTRAINT Fk_userTbl_buyTbl;
+
+
+정상적으로 수행이 잘 되었을 것이다. 
+
+8-3 이번에는 구매 테이블(buyTbl)의 사용자에게 물품 배송을 위해서 회원 테이블과 조인 시켜 보자. 
+
+즉 구매한 회원 아이디, 회원 이름, 구매한 제품, 주소, 연락처가 출력되게 하자(다음 구문이 잘 이해되지 않으면 7장의 INNER JOIN 부분을 다시 살펴보자)
+
+SELECT B.userID, U.name, B.prodName, U.addr, U.mobile1 + U.mobile2 AS [연락처] FROM buyTbl B INNER JOIN userTbl U ON B.userID = U.userID;
+
+잘 나온것 같지만 눈치 빠른 독자는 뭔가 이상한 점을 느꼇을 것이다. 구매한 개수가 [그림 8-1]에는 12건이고 앞에서 12건을 모두 입력했는데, 지금은 8건 밖에 나오지가 않았다. 4건은 어디갔을까? 
+
+8-4 혹시 구매 테이블에 8건만 입력된 것은 아닌지 확인해 보자. 
+
+SELECT COUNT(*) FROM buyTbl;
+
+데이터의 건수는 12건이 제대로 나온다. 
+
+8-5 그렇다면 외부 조인(OUTER JOIN)으로 구매 테이블의 내용은 모두 출력되게 해보자. 그리고 아이디로 정렬해 보자. 
+SELECT B.userID, U.name, B.prodName, U.addr, U.mobile1 + U.mobile2 AS [연락처] FROM buyTbl B LEFT OUTER JOIN userTbl ON B.userID = U.userID
+ORDER BY B.userID;
+
+결과 값을 확인해보니 'BBK'라는 아이디를 가진 회원은 이름, 주소, 연락처가 없다. 즉 userTbl에는 존재하지 않는다. 앗 기억이 난다. 우리가 앞에서 바비킴(BBK)의 아이디를 VVK로 변경해서 이러한 현상이 발생했다. 그러므로 함부로 외래 키 제약 조건을 끊고 데이털르 수정하는 것은 주의해야 한다. 
+
+8-6 우선 바비킴의 아이디를 원래 것으로 돌려놓자. 
+ALTER TABLE buyTbl
+NOCHECK CONSTRAINT FK_userTbl_buyTbl;
+GO
+UPDATE userTbl SET userID = 'BBK' WHERE userID = 'VVK';
+GO
+ALTER TABLE buyTbl
+CHECK CONSTRAINT Fk_userTbl_buyTbl;
+
+일단은 정상적으로 돌아왔다. 8-3또는 8-5의 쿼리를 다시 수행하면 정상적으로 바비킴의 이름과 주소가 나올 것이다. 
+
+8-7 앞에서와 같은 문제를 없애려면, 만약 회원 테이블의 userID가 바뀔때 이와 관련되는 구매 테이블의 userID도 자동 변경되게 하고싶다. 외래 키 제약 조건을 삭제한 후에 다시 ON UPDATE CASCADE 옵션과 함께 설정한다 
+
+ALTER TABLE buyTbl
+DROP CONSTRAINT FK_userTbl_buyTbl;
+GO
+ALTER TABLE buyTbl WITH NOCHECK
+ADD CONSTRAINT FK-userTbl_buyTbl
+FOREIGN KEY (userID)
+REFERENCES userTbl(userID)
+ON UPDATE CASCADE;
+GO
+
+8-8 userTbl의 바비킴의 ID를 다시 변경하고, buyTbl에도 바뀌었는지 확인해 본다. 
+
+UPDATE userTbl SET userID = 'VVK' WHERE userID = 'BBK';
+GO
+SELECT B.userID, U.name, B.prodName, U.addr, U.mobile1 + U.mobile2 AS [연락처] FROM buyTbl B INNER JOIN userTbl ON B.userID = U.userID
+ORDER BY B.userID;
+
+buyTbl에도 따라서 'VVK'로 변경되었다. 
+
+8-9 이번에는 바비킴(VVK)이 회원 탈퇴를 하면 (= 회원 테이블에서 삭제되면)구매한 기록도 삭제되는지 확인해 보자. 
+
+DELETE userTbl WHERE userID = 'VVK';
+오류 메시지 :
+메시지 547, 수준 16, 상태 0, 줄 1
+DELETE 문이 REFERENCE 제약 조건 FK_userTbl_buyTbl과(와)충돌했습니다. 데이터베이스 "tableDB", 테이블 "dbo.buyTbl", column 'userid'에서 충돌이 발생했습니다. 
+
+제약 조건 때문에 삭제되지 않았다. 이런 경우에는 기준 테이블의 행 데이터를 삭제할 때 외래키 테이블의 연관된 행 데이터도 함께 삭제되게 설정할 필요가 있다. 
+
+8-10 ON DELETE CASCADE 문을 추가 하면 된다. 
+ALTER TABLE buyTbl
+DROP CONSTRAINT FK_userTbl_buyTbl;
+GO
+ALTER TABLE buyTbl WITH NOCHECK
+ADD CONSTRAINT FK-userTbl_buyTbl
+FOREIGN KEY (userID)
+REFERENCES userTbl(userID)
+ON UPDATE CASCADE
+ON DELETE CASCADE;
+GO
+
+8-11 다시 삭제한 후에 buyTbl에도 따라서 삭제되었는지 확인해 보자. 
+DELETE userTbl WHERE userID = 'VVK';
+GO
+SELECT * FROM buyTbl;
+
+바비킴(VVK)이 구매한 기록 4건은 삭제되고, 전체 8건만 남아 있음을 확인할 수 있다. 
+
+9. 이번에는 userTbl에서 CHECK 제약 조건이 걸린 출생년도(birthYear)열을 삭제해 보자. 
+9-1 ALTER TABLE로 삭제하자. 
+ALTER TABLE userTbl
+DROP COLUMN birthYear;
+
+오류 메시지:
+메시지 5074, 수준 16, 상태 1, 줄 1
+개체 CK_birthYear은(는) 열 birthYear에 종속되어 있습니다. 
+메시지 4922, 수준 16, 상태 9, 줄 1
+하나 이상의 개체가 이 열에 액세스하므로 ALTER TABLE DROP COLUMN birthYear이 (가)실패 했습니다. 
+
+CHECK 제약조건 CK_birthYear 때문에 삭제되지 않는다는 메시지가 나온다. 
+
+9-2 먼저 제약 조건을 삭제한 후에 열을 삭제하면 된다. 
+ALTER TABLE userTbl
+DROP CK_birthYear;
+GO
+ALTER TABLE userTbl
+DROP COLUMN birthYear;
+GO
+
+제약 조건을 삭제할 때는 DROP 제약_조건_이름으로 하고, 열을 삭제할 때는 DROP COLUMN 열_이름으로 삭제하면 된다. 
+
+이상으로 테이블의 제약 조건에 대한 실습을 마치겠다. 이번 실습으로 충분히 제약 조건의 개념과 사용법에 대해서 익혔을 것이다. 
