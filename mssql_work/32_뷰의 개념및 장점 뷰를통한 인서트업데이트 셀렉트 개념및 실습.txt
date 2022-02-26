@@ -1,0 +1,240 @@
+Section 02 : 뷰
+뷰(View)는 일반 사용자 입장에서는 테이블과 같이 사용하는 개체이다. 뷰는 한 번 생성해 놓으면 테이블이라고 생각하고 사용해도 될 정도로 사용자들의 입장에서는 테이블과 거의 같은 개체로 여겨진다. 
+
+
+※ 뷰의 개념
+쿼리 창에서 SELECT 문을 수행해서 나온 결과를 생각해 보자. 
+
+SELECT에서 아이디, 이름, 주소를 가져와서 출력한 결과다 그런데 출력된 결과를 보니 SELECT의 결과가 결국 테이블의 모양을 가지고 있는 것이 확인된다. 즉 앞에서 나온 결과를 userID, name, addr의 3개의 열을 가진 테이블로 봐도 무방하지 않을까?
+
+뷰는 바로 이러한 개념이다. 그래서 뷰의 실체는 SELECT 문이 되는 것이다. 앞의 예를 보면 SELECT userID, name, addr FROM userTbl을 v_userTbl이라고 이름을 주고 앞으로는 v_userTbl을 그냥 테이블이라고 생각하고 접근하면 된다. 
+
+이렇게 뷰를 생성하는 구문은 다음고 같다. 
+
+USE tableDB;
+CREATE VIEW v_userTbl
+AS
+	SELECT userID, name, addr FROM userTbl
+GO
+
+이제는 뷰를 새로운 테이블로 생각하고 접근하면 된다. 
+
+SELECT * FROM v_userTbl; -- 뷰를 테이블이라고 생각해도 무방
+
+뷰를 생성한 후에는 생성한 뷰를 그냥 테이블처럼 생각하고 접근하면 원래의 테이블에 접근한 것과 같은 결과를 얻을 수 있다. 이를 그림으로 나타내면 다음과 같다. 
+
+
+앞의 그림에서 사용자가 뷰를 그냥 테이블이라고 생각하고 접근하면 SQL Server가 나머지는 알아서 처리해 준다. 그렇다면 뷰는 수정이 가능할까? 뷰는 기본적으로 읽기 전용으로 많이 사용되지만 뷰를 통해서 원 테이블의 데이터를 수정하는 것도 가능하다. 뷰를 통해서 테이블의 데이터를 수정하는 것이 그다지 바람직하지는 않지만 꼭 필요한 경우도 있을 수 있으니 어떠한 제한이 있는지 알아둘 필요는 있다. 이 내용은 잠시 후에 살펴보자. 
+
+
+
+※ 뷰의 장점
+그렇다면 뷰를 사용하는 이유는 무엇일까? 뷰를 사용해서 얻을수 있는 장점은 여러가지 가 있다. 
+
+
+(1) 보안 (Security)에 도움이 된다. 
+앞의 예에서 뷰 v_userTbl 에는 사용자의 이름과 주소만이 있을 뿐, 사용자의 중요한 개인 정보인 출생년도, 연락처, 키, 가입일 등의 정보는 들어 있지 않다. 예를 들어 아르바이트생을 고용해서 회원의 이름과 주소를 확인하는 작업을 시킨다고 가정하자. 그런데 이 아르바이트생에게 테이블 userTbl을 접근하게 한다면 사용자의 중요 개인 정보(키, 가입일 등)까지 모두 볼 수 있을 것이다. 
+
+이를 방지하려면 테이블의 데이터를 열로 분할할 수도 있겠지만, 데이터의 일관성 및 관리가 무척 복잡해져서 배보다 배꼽이 커지는 결과를 낳을 수도 있다. 이런 경우 앞의 예와 같이 아이디, 이름, 주소만 보이는 뷰를 생성해서, 아르바이트생은 userTbl에 접근하지 못하게 권한을 제한하고 뷰에만 접근 권한을 준다면 이러한 문제가 쉽게 해결될 수 있다. 
+
+
+(2) 복잡한 쿼리를 단순화시켜 줄 수 있다. 
+다음 물건을 구매한 회원들에 대한 쿼리이다. 
+SELECT U.userID, U.name, B.prodName, U.addr, U.mobile1 + U.mobile2 AS [연락처] FROM userTbl U INNER JOIN buyTbl B ON U.userID = B.userID;
+
+좀 복잡하다. 만약 이 쿼리를 자주 사용해야 한다면 사용자들은 매번 앞의 예와 같은 복잡한 쿼리를 입력해야 할 것이다. 이를 뷰로 생성해 놓고 사용자들은 해당 뷰만 접근하면 간단히 해결된다. 
+
+CREATE VIEW v_userbuyTbl
+AS
+	SELECT U.userID, U.name, B.prodName, U.addr, U.mobile1 + U.mobile2 AS [연락처] FROM userTbl U INNER JOIN buyTbl B ON U.userID = B.userID;
+
+접근할 경우에는 v_userbuyTbl을 그냥 테이블이라 생각하고 접근하면 된다. WHERE 절도 사용할 수 있다. '김범수'의 구매 기록을 알고 싶다면 다음과 같이 사용하면 된다. 
+
+SELECT * FROM v_userbuyTbl WHERE name=N'김범수';
+
+
+
+
+실습 8 : 뷰를 생성해서 활용해 보자. 
+
+0. 기존에 사용하던 sqlDB를 사용할 것이다. (C:\SQL\sqlDB2012.bak 파일이 없는 독자는 6장의 두 번째 실습을 다시 수행하거나 책의 사이트인 http://brain.hanbitbook.co.kr/sql2012/에서 sqlDB2012.bak을 내려받아서 C:\SQL\에 저장하자)
+
+0-1 우선 기존에 열린 쿼리 창을 모두 닫는다. 
+0-2 기본 인스턴스를 선택하고 <새 쿼리> 아이콘을 클릭해서 쿼리 창을 열고, 다음 쿼리를 실행한다. 
+USE tempdb;
+
+RESTORE DATABASE sqlDB FROM DISK = 'c:\SQL\sqldb2012.bak' WITH REPLACE;
+
+1. 기본적인 뷰를 생성한다. 뷰를 생성할 때 뷰에서 사용될 열의 이름을 변경할 수도 있다. 
+
+USE sqlDB;
+GO
+CREATE VIEW v_userbuyTbl
+AS
+	SELECT U.userID AS [USER ID], U.name AAS [USER NAME] , B.prodName AS [PRODUCT NAME], U.addr, U.mobile1 + U.mobile2 AS [MOBILE PHONE] 	FROM userTbl U INNER JOIN buyTbl B ON U.userID = B.userID;
+GO
+SELECT [USER ID], [USER NAME] FROM v_userbuyTbl;
+
+
+2. 뷰의 수정은 ALTER VIEW 구문을 사용하면 된다. 한글 열 이름도 가능하다(하지만 별로 권장하지는 않는다.)
+
+ALTER VIEW v_userbuyTbl
+AS
+	SELECT U.userID AS [사용자 아이디], U.name AAS [이름] , B.prodName AS [제품이름], U.addr, U.mobile1 + U.mobile2 AS [전화 번호 	FROM userTbl U INNER JOIN buyTbl B ON U.userID = B.userID;
+GO
+SELECT [이름], [전화 번호] FROM v_userbuyTbl;
+
+
+3. 뷰의 삭제는 DROP VIEW를 사용하면 된다. 
+DROP VIEW v_userbuyTbl;
+
+
+4. 뷰에 대한 정보는 카탈로그 뷰인 sys.sql_modules 에 들어 있다. 
+
+4-1 간단한 뷰를 다시 생성해 보자. 
+USE sqlDB;
+GO
+CREATE VIEW v_userTbl;
+AS
+	SELECT userID, name, addr FROM userTbl;
+
+4-2 뷰의 소스를 확인해 보자. 
+SELECT * FROM sys.sql.modules;
+
+* 표 형태 때문에 코드가 잘 안보이면 Ctrl + T를 눌러 텍스트로 결과를 표시한 후, 다시 실행하면 잘 보일것이다. 다시 표형태로 보려면 Ctrl + D를 누르면 된다. 
+
+4-3 그런데 지금은 뷰가 하나이지만 뷰가 여러 개라면 object_id로는 어떤 건지 구분하기가 어렵다. OBJECT_NAME()함수를 사용하면 쉽게 볼 수 있다. 
+SELECT OBJECT_NAME(object_id) AS [뷰 이름], definition FROM sys.sql.modules;
+
+
+4-4 뷰의 소스를 확인하지 못하게 할 수도 있다. WITH ENCRYPTION 옵션을 사용하면 된다. 
+ALTER VIEW v_userTbl
+WITH ENCRYPTION
+AS
+	SELECT userID, name, addr FROM userTbl;
+GO
+SELECT OBJECT_NAME(object_id) AS [뷰 이름], definition FROM sys.sql.modules;
+
+소스(definition)부분이 NULL로 나온다. 이것을 다시 풀 수는 없으므로 중요한 코드라면 미리 다른 곳에 저장시켜놔야 한다. 단 ALTER VIEW로 다시 정의를 수정할 수는 있다. 
+
+※ 여기서 잠깐?
+뷰의 정보를 확인하는 다른 방법으로는 EXEC sp_help 뷰_이름 또는 EXEC sp_helptext 뷰_이름을 통해서도 확인이 가능하다. 
+
+
+5. 뷰를 통해서 데이털르 변경해 보자. 
+5-1 v_userTbl 뷰를 통해 데이털르 수정해 보자. 
+
+UPDATE v_userTbl SET addr = N'부산' WHERE userID = 'BBK';
+
+수정이 성공적으로 수행된다. 
+
+5-2 데이터를 입력해 보자. 
+INSERT INTO v_userTbl(userID, name, addr) VALUES('KBM', '김병만', '충북');
+오류 메시지:
+메시지 55, 수준 16, 상태 2, 줄 1
+테이블 'sqlDB.dbo.userTbl', 열 'birthYear'에 NULL 값을 삽입할 수 없습니다. 열에는 NULL을 사용할수 없습니다. INSERT이(가) 실패했습니다. 
+
+v_userTbl이 참조하는 테이블 userTbl의 열 중에서 birthYear열은 NOT NULL로 설정되어 서 반드시 값을 입력해 줘야 한다. 하지만 현재의 v_userTbl에서는 birthYear를 참조하고 있지 않으므로 값을 입력할 수 없다. 
+
+값을 v_userTbl을 통해서 입력하고 싶다면 v_userTbl에 birthYear를 포함하게 재정의하거나, userTbl에서 birthYear를 NULL 또는 DEFAULT 값으로 지정해야 한다. 
+
+* 예외적으로 뷰를 통해 지정되지 않은 열의 값을 입력하는 방법으로 INSTEAD OF  트리거가 있다. 이에 대한 내용은 13장에서 다루겠지만 간단한 개념만 말하면 입력되기 전에 미리 어떠한 작동이 일어나게 정의해 놓음으로 써 정상적으로 입력될 수 있게 조치하는 것을 의미한다. 
+
+
+6. 이번에는 그룹 함수를 이용한 뷰를 정의해 보자. 
+CREATE VIEW v_sum
+AS
+	SELECT userID AS [userID], SUM(price* amount) AS [total] FROM buyTbl GROUP BY userID;
+GO
+SELECT * FROM v_sum;
+
+수정이 될까? 당연히 SUM() 함수를 사용한 뷰를 수정할수는 없다. 이 외에도 수정할수 없는 경우는 다음과 같다. 
+
+* 집계 함수를 사용한 뷰(집계 함수는 6장에서 설명했다)
+* UNION ALL, CROSS JOIN 등을 사용한 뷰
+* DISTINCE, GROUP BY등을 사용한 뷰
+
+
+7. 지정한 범위로 뷰를 생성하고 데이터를 입력해 보자. 
+7-1 키가 177이상인 뷰를 생성해 보자. 
+CREATE VIEW v_height177
+AS
+	SELECT * FROM userTbl WHERE height >= 177 ;
+GO
+SELECT * FROM v_height177;
+
+7-2 v_height177뷰에서 키가 177 이하인 데이터를 삭제하자. 
+DELETE v_height177 WHERE height < 177;
+결과 값:
+(0개 행이 영향을 받음)
+
+당연히 v_height177뷰에는 177미만인 데이터가 없으므로 삭제될 것이 없다. 
+
+7-3 v_height177 뷰에서 키가 158인 데이터를 입력해 보자. 
+INSERT INTO v_height177 VALUES('KBM', '김병만', 1977, '경기', '010', '55555555', 158, '2014-01-01');
+
+결과 값:
+(1개 행이 영향을 받음)
+
+일단 입력은 된다. v_height177 뷰를 확인해 보라 입력된 값이 보이지 않을 것이다. 입력되더라도 입력된 값은 키가 177미만이므로 v_height177뷰에는 보이지 않는다. 직접 userTbl을 확인해야 김병만이 보인다. 
+
+7-4 그런데 키가 177 이상인 뷰를 통해서 158의 키를 입력한 것은 별로 바람직해 보이지 않는다. 즉 예상치 못한 경로를 통해서 입력되지 말아야 할 데이터가 입력된 듯한 느낌이 든다. 키가 177 이상인 뷰이므로 177이상의 데이터만 입력되는 것이 바람직할 듯하다. 이럴때는 WITH CHECK OPTION을 사용하면 된다. 
+
+ALTER VIEW v_height177
+AS
+	SELECT * FROM userTbl WHERE height >= 177 WITH CHECK OPTION;
+GO
+INSERT INTO v_height177 VALUES('WDT'우당탕', 2006,'서울', '010', '33333333', 155, '2014-03-03');
+
+오류 메시지:
+메시지 550, 수준 16, 상태 1, 줄 2
+대상 뷰가 WITH CHECK OPTION을 지정하거나 WITH CHECK OPTION을 지정하는 뷰에 걸쳐 있고 해당 연산의 하나 이상의 결과 행이 CHECK OPTION 제약 조건을 충족하지 않았으므로 삽입 또는 업데이트 시도가 실패했습니다. 
+
+이제는 키 177만 입력되지 않고, 177이상의 데이터가 입력될 것이다. 
+
+8. 두 개 이상의 테이블이 관련되는 복합 뷰를 생성하고 데이터를 입력해 보자. 
+CREATE VIEW v_userbuyTbl
+AS
+	SELECT U.userID, U.name, B.prodName, U.addr, U.mobile1 + U.mobile2 AS mobile FROM userTbl U INNER JOIN buyTbl B ON U.userID = B.userID;
+GO
+INSERT INTO v_userbuyTbl VALUES('WWW', '우우우', '운동화', '경기', '00000000000', '2015-2-2');
+
+오류 메시지 :
+메시지 4405, 수준 16, 상태 1, 줄 1
+뷰 또는 함수 v_userbuyTbl은(는)수정 시 여러 기본 테이블에 영향을 주므로 업데이트할 수 없습니다. 
+
+두개 이상의 테이블이 관련된 뷰는 원칙적으로 업데이트할 수 없다. 이를 해결하려면 13장 <실습 3>에서 배울 INSTEAD OF 트리거를 사용해서 해결할 수 있다. 
+
+9. 뷰가 참조하는 테이블을 삭제해 보자. 
+
+9-1 두 테이블을 삭제한다. 
+DROP TABLE userTbl, buyTbl;
+
+9-2 뷰를 다시 조회해 본다. 
+SELECT * FROM v_userbuyTbl;
+
+오류 메시지:
+메시지 208, 수준 16, 상태 1, 프로시저 v_userbuyTbl, 줄 4
+개체 이름 userTbl이(가) 잘못되었습니다. 
+메시지 4413, 수준 16, 상태 1, 줄 1
+바인딩 오류로 인해 뷰 또는 함수 v_userbuyTbl을(를) 사용할 수 없습니다. 
+
+당연히 테이블이 없으므로 조회할수 없다는 메시지가 나온다. 
+
+
+9-3 DB를 다시 복원하고 간단한 뷰를 생성해 보자. 
+USE tempdb;
+RESTORE DATABASE sqlDB FROM DISK ='C:\SQL\sqldb2012.bak' WITH REPLACE;
+GO
+USE sqlDB;
+GO
+CREATE VIEW v_userTbl
+AS
+	SELECT userID, name, addr FROm userTbl;
+
+9-4 테이블을 삭제하기 전에 해당 테이블을 참조하는 뷰가 어떤 것이 있는지 확인한다. 
+EXEC sp_depends userTbl;
+
+v_userTbl뷰가 userTbl을 참조하고 있음이 확인된다. 이외에 프로시저, 트리거 등의 정보도 출력된다. 
+
+* 참고로 sp_depends 시스템 정보 저장 프로시저는 sys.sql_dependencies 카탈로그 뷰를 참조한다. 
