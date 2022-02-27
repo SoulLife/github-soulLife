@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfPerson xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+	<Person>
+		<FirstName>Franz</FirstName>
+		<MiddleName />
+		<LastName>Schubert</LsatName>
+		<BirthDate>1797-01-07</BirthDate>
+		<DeathDate>1828-11-19</DeathDate>
+	</Person>
+	<Person>
+		<FirstName>Johannes</FirstName>
+		<MiddleName />
+		<LastName>Brahms</LsatName>
+		<BirthDate>1833-05-07</BirthDate>
+		<DeathDate>1897-04-03</DeathDate>
+	</Person>
+	<Person>
+		<FirstName>John</FirstName>
+		<MiddleName />
+		<LastName>Adams</LsatName>
+		<BirthDate>1947-02-15</BirthDate>
+		<DeathDate xsi:nil="true" />
+	</Person>
+</ArrayOfPerson>
+
+소개된 예제 파일에 있는 마지막 Person 엘리먼트는 생존해 있는 작곡가이기 때문에 DeathDate가 null이다. 이것이 XML 문서에는 nil 속성으로 표시됐다. 이는 http://www.w3.org/XML/Schema에 문서화된 XML 스키마 스펙을 따른 것이다. 
+
+index 변수를 이용해서 현재 레코드를 표시하는 방식을 커런시 매니저(currency manager)방식 이라고 부른다. System.Windows.Data 네임스페이스는 커런시 매니저 방식을 구현한 클래스와 기타 유용한 기능들을 제공한다. 바로 CollectionView 클래스다. 26장의 나머지 부분에서는 CollectionView 클래스와 이 클래스의 중요한 파생 클래스인 ListCollectionView 클래스에 대해 집중적으로 살펴볼 것이다. 
+
+이름이 의미하는 것처럼 CollectionView 또는 ListCollectionView 객체는 컬렉션에 대한 뷰(view)이다. 즉 전체 컬렉션의 일부를 보여주기도 하고, 전체 컬렉션을 다른 방식으로 저장하거나 정렬해서 보여주기도 한다. 뷰를 수정하더라도 뷰가 보여주는 실제 컬렉션은 수정되지 않는다. 
+
+어떤 컬렉션에 대한 CollectionView 객체는 CollectionView 생성자를 통해 만들수 있다. 
+
+CollectionView collview = new CollectionView(coll);
+
+coll 인자는 반드시 IEnumerable 인터페이스를 제공해야 한다. ListCollectionView 클래스의 생성자도 이와 유사하다. 
+
+ListCollectionView lstcollview = new ListCollectionView(coll);
+
+차이점은 ListCollectionView 클래스의 생성자에 전달되는 coll 인자는 반드시 IList 인터페이스를 제공해야 한다는 점이다. IList 인터페이스는 IEnumerable 인터페이스와 ICollection 인터페이스를 모두 포함하면서 인덱스 생성기(indexer), Add 메소드, Remove 메소드를 추가로 정의한다.(ICollection 인터페이스는 Count 프로퍼티를 정의하고 있다.)
+
+CollectionViewSource.GetDefaultView 메소드는 CollectionView 또는 ListCollectionView 객체를 반환하는 정적 메소드다. 반환하는 객체의 타입은 인자로 전달하는 객체가 어떤 인터페이스를 제공하는 지에 따라 결정된다.(CollectionViewSource 역시 XAML로 CollectionView를 정의할 때 편리한 방법이다(CollectionView 객체는 자신이 보여주는 컬렉션을 정렬하거나 그룹지울 수 없지만 ListCollectionView 객체는 할 수 있다. )
+
+CollectionView 객체를 ObservableCollection에 적용하려 한다면 ListCollectionView객체를 이용하는 것이 가능하다. ObservableCollection 이 IList 인터페이스를 제공하기 때문이다. 
+
+CollectionView는 몇 가지 프로퍼티와 메소드를 통해 커런시 매니저 기능을 제공한다. Count, CurrentItem, CurrentPosition 프로퍼티는 모두 읽기만 가능한 프로퍼티다. 현재 위치는(CurrentPosition 프로퍼티는)MoveCurrentTo, MoveCurrentToPosition, MoveCurrentToFirst, MoveCurrentToLast, MoveCurrentToPrevious, MoveCurrentToNext 메소드를 사용해서 옮길수 있다. 이 클래스는 컬렉션의 맨 처음 위치보다 하나 작은 인덱스로 현재 위치를 옮기거나, 마지막 위치보다 하나 큰 인덱스로 현재 위치를 옮길 수 있다. 그런 위치로 옮겼을 경우 IsCurrentBeforeFirst 프로퍼티나 IsCurrentAfterLast 프로퍼티를 통해 이런 사실을 알 수 있다. 그리고 CollectionView는 CollectionChanged, PropertyChanged, CurrentChanging, CurrentChanged 이벤트를 제공한다. 
+
+CollectionView 클래스를 고려해서 탐색 인터페이스를 다시 생각해보자. 닷넷 프레임워크 2.0이 발표되었을 때 BindingNavigator라는 이름의 새로운 윈도우 폼 컨트롤이 제공됐다. 이 컨트롤은 데이터베이스에 저장된 레코드를 탐색하거나 레코드를 추가하거나 제거할 수 있는 버튼을 제공했다. 필자는 다음에 제시하는 NavigationBar 컨트롤의 모습을 바로 그 BindingNavigator 윈도우 폼 컨트롤과 유사하게 만들려고 했다. 
+
+
+<ToolBar xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.DataEntry.NavigationBar">
+	<Button Click="FirstOnClick" ToolTip="Move first">
+		<Image Source="DataContainer_MoveFirstHS.png" Stretch="None" />
+	</Button>
+	<Button Name="btnPrev" Click="PreviousOnClick" ToolTip="Move previous">
+		<Image Source="DataContainer_MovePreviousHS.png" Stretch="None" />
+	</Button>
+	<Separator />
+	<TextBox Name="txtboxCurrent" Width="48" ToolTip="Current position" GotKeyboardFocus="TextBoxOnGotFocus"
+		LostKeyboardFocus="TextBoxOnLostFocus" KeyDown="TextBoxOnKeyDown" />
+	<TextBlock Text="of " VerticalAlignment="Center" />
+	<TextBlock Name="txtblkTotal" Text="0" VerticalAlignment="Center" ToolTip="Total number of items" />
+	<Separator />
+	<Button Name="btnNext" Click="NextOnClick" ToolTip="Move next">
+		<Image Source="DataContainer_MoveNextHS.png" Stretch="None" />
+	</Button>
+	<Button Click="LastOnClick" ToolTip="Move last">
+		<Image Source="DataContainer_MoveLastHS.png" Stretch="None" />
+	</Button>
+	<Separator />
+	<Button Click="AddOnClick" ToolTip="Add new">
+		<Image Source="DataContainer_NewRecordHS.png" Stretch="None" />
+	</Button>
+	<Button Name="btnDel" Click="DeleteOnClick" ToolTip="Delete" >
+		<Image Source="DeleteHS.png" Stretch="None" />
+	</Button>
+</ToolBar>
+
+여기에서 사용한 PNG 파일은 비주얼 스튜디오와 함께 제공되는 이미지 파일이다. 
+
+NavigationBar 클래스의 코드 비하인드 파일은 2개의 프로퍼티를 정의한다. 첫 번째는 IList 타입의 Collection 이란 이름의 프로퍼티다(이 프로퍼티에 ObservableCollection 객체를 설정할 것이다.) 이 프로퍼티에 대한 set 구문은 CollectionViewSource.GetDefaultView 정적 메소드를 이용해서 CollectionView 객체를 만들고 있다. 실제 만들어지는 객체는 ListCollectionView 타입의 객체이다. set 구문은 그런 다음 NavigationBar 객체가 항상 최신 상태를 유지할 수 있게 이벤트 핸들러를 설정한다. 
+
+두 번째는 ItemType이란 이름의 프로퍼티이다. 이 프로퍼티의 타입은 컬렉션에 저장하는 항목의 타입이다. NavigationBar는 Add New 버튼의 동작을 위해 이 프로퍼티를 사용한다. 기타 대부분의 코드는 이전 예제에서 살펴본 탐색 버튼을 위한 코드와 유사하다. 추가로 NavigationBar는 사용자가 레코드 번호를 입력할 수 있게 허용한다. 소스 파일 마지막 부분에 있는 3개의 TextBox 이벤트 핸들러가 입력한 번호에 맞는 레코드를 선택한다. 
+
+
+using System;
+using System.Collections; //IList를 쓰기 위함
+using System.Collections.Specialized; //NotifyCollectionChangedEventArgs를 쓰기 위함
+using System.ComponentModel; //ICollectionView를 쓰기 위함
+using System.Reflection;	// ConstructorInfo를 쓰기 위함
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
+
+public partial class NavigationBar : ToolBar
+{
+	IList coll;
+	ICollectionView collview;
+	Type typeItem;
+
+	//public 생성자
+	public NavigationBar()
+	{
+		InitializeComponent();
+	}
+	//public 프로퍼티
+	public IList Collection
+	{
+		set
+		{
+			coll = value;
+
+			//CollectionView를 생성하고 이벤트 핸들러를 부여함
+			collview = CollectionViewSource.GetDefaultView(coll);
+			collview.CurrentChanged += CollectionViewOnCurrentChanged;
+			collview.CollectionChanged += CollectionViewOnCollectionChanged;
+			//TextBox와 Button을 초기화 시키기 위해 이벤트 핸들러를 호출함
+			CollectionViewOnCurrentChanged(null, null);
+
+			//TextBlock 초기화
+			txtblkTotal.Text = coll.Count.ToString();
+		}
+		get
+		{
+			return coll;
+		}
+	}
+
+	//다음은 컬렉션이 관리하는 항목의 타입임 Add 명령 처리를 위해 사용됨
+	public Type ItemType
+	{
+		set { typeItem = value;	}
+		get { return typeItem;	}
+	}
+
+	//CollectionView를 위한 이벤트 핸들러
+	void CollectionViewOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs args)
+	{
+		txtblkTotal.Text = coll.Count.ToString();
+	}
+	
+	void CollectionViewOnCurrentChanged(object sender, EventArgs args)
+	{
+		txtboxCurrent.Text = (1 + collview.CurrentPosition).ToString();
+		btnPrev.IsEnabled = collview.CurrentPosition >0;
+		btnNext.IsEnabled = collview.CurrentPosition < coll.Count-1;
+		btnDel.IsEnabled = coll.Current -1;
+	}
+
+	//버튼을 위한 이벤트 핸들러
+	void FirstOnClick(object sender, RoutedEventArgs args)
+	{
+		collview.MoveCurrentToFirst();
+	}
+	void PreviousOnClick(object sender, RoutedEventArgs args)
+	{
+		collview.MoveCurrentToPrevious();
+	}
+	void NextOnClick(object sender, RoutedEventArgs args)
+	{
+		collview.MoveCurrentToNext();
+	}
+	void LastOnClick(object sender, RoutedEventArgs args)
+	{
+		collview.MoveCurrentToLast();
+	}
+	void AddOnClick(object sender, RoutedEventArgs args)
+	{
+		ConstructorInfo info = typeItem.GetConstructor(System.Type.EmptyTypes);
+		coll.Add(info.Invoke(null));
+		collview.MoveCurrentToLast();
+	}
+	void DeleteOnCLick(object sender, RoutedEventArgs args)
+	{
+		coll.RemoveAt(collview.CurrentPosition);
+	}
+	
+	//txtboxCurrent Text를 위한 이벤트 핸들러
+	void TextBoxOnGotFocus(object sender, KeyboardFocusChangedEventArgs args)
+	{
+		strOriginal = txtboxCurrent.Text;
+	}
+	void TextBoxOnLostFocus(object sender, KeyboardFocusChangedEventArgs args)
+	{
+		int current;
+
+		if(Int32.TryParse(txtboxCurrent.Text, out current))
+			if(current > 0 && current <= coll.Count)
+				collview.MoveCurrentToPosition(current - 1);
+			else
+				txtboxCurrent.Text = strOriginal;
+	}
+	void TextBoxOnKeyDown(object sender, KeyEventArgs args)
+	{
+		if(args.Key == key.Escape)
+		{
+			txtboxCurrent.Text = strOriginal;
+			args.Handled = true;
+		}else if(args.Key == key.Enter)
+		{
+			args.Handled = true;
+		}else
+			return;
+		MoveFoucs(new TraversalRequest(FocusNavigationDirection.Right));
+	}
+}
+
+NavigationBar 클래스를 구성하는 2개의 소스 파일과 여러 개의 이미지 파일이 Petzold.DataEntry 라이브러리 프로젝트를 구성한다. 이 프로젝트는 Petzold.DataEntry.dll이란 이름의 DLL(dynamic-link library)을 만든다. 이 프로젝트와 DataEntry WithNavigation이란 이름의 프로젝트가 DataEntry WithNavigation 솔루션을 구성한다. 
+
+DataEntryWithNavigation 프로젝트는 Person.cs 파일, People.cs 파일, PersonPanel 클래스를 구성하는 2개의 파일, DatePicker 클레스를 구성하는 2개의 파일을 포함한다. 또 이 프로젝트는 프로그램 창을 구성하는 XAMl 파일과 C# 파일도 포함한다. 
+
+XAML 파일은 DockPanel 을 사용해서 프로그램 창을 정의한다. 이제 친숙해진 메뉴 항목들이 창의 상단에 자리한다. NavigationBar는 하단에 자리한다. 그리고 PersonPanel이 창의 내부를 채운다. 
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:pnl="clr-namespace:Petzold.SingleRecordDataEntry" xmlns:nav="clr-namespace:Petzold.DataEntry;assembly-Petzold.DataEntry"
+	x:Class="Petzold.DataEntryWithNavigation.DataEntryWithNavigation" Title="Data Entry with Navigation" SizeToContent="WidthAndHeight"
+	ResizeMode="CanMinimize">
+	<DockPanel Name="dock">
+		<Menu DockPanel.Dock="Top">
+			<MenuItem Header="_File">
+				<MenuItem Header="_New" Command="New" />
+				<MenuItem Header="_Open..." Command="Open" />
+				<MenuItem Header="_Save..." Command="Save" />
+			</MenuItem>
+		</Menu>
+
+		<!-- 탐색을 위한 navigationBar -->
+		<nav:NavigationBar Name="navbar" DockPanel.Dock="Bottom" />
+
+		<!-- 데이터를 표시하고 입력하기 위한 PersonPanel -->
+		<pnl:PersonPanel x:Name="pnlPerson" />
+	</DockPanel>
+
+	<Window.CommandBindings>
+		<CommandBinding Command="New" Executed="NewOnExecuted" />
+		<CommandBinding Command="Open" Executed="OpenOnExecuted" />
+		<CommandBinding Command="Save" Executed="SaveOnExecuted" />
+	</Window.CommandBindings>
+</Window>
+
+코드 비하인드 파일은 무척 간단하다. 원래의 SingleRecordDataEntry 프로젝트와 마찬가지로 3개의 메뉴 항목에 대한 이벤트 핸들러만 구현하고 있다. New와 Open 메뉴에 대한 이벤트 핸들러는 InitializeNewPeopleobject 메소드를 호출해서 People 객체를 PersonPanel과 NavigationBar에 연결한다. 
+
+using Petzold.DataEntry;
+using Petzold.MultiRecordDataEntry;
+using Petzold.SingleRecordDataEntry;
+using System;
+using System.Collections.Specialized;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public partial class DataEntryWithNavigation
+{
+
+	People people;
+	
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new DataEntryWithNavigation());
+	}
+	public DataEntryWithNavigation()
+	{
+		InitializeComponent();
+
+		//File New 명령을 시뮬레이션함
+		ApplicationCommands.New.Execute(null, this);
+
+		//panel의 첫 TextBox로 포커스를 이동
+		pnlPerson.Children[1].Focus();
+	}
+	//메뉴 항목을 위한 이벤트 핸들러
+	void NewOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		people = new People();
+		people.Add(new Person());
+		InitializeNewPeopleObject();
+	}
+	void OpenOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		people = People.Load(this);
+		InitializeNewPeopleObject();
+	}
+	void SaveOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		people.Save(this);
+	}
+	void InitializeNewPeopleObject()
+	{
+		navbar.Collection  = people;
+		navbar.ItemType = typeof(Person);
+		pnlPerson.DataContext = people;
+	}
+}
+
+
+InitializeNewPeopleObject 메소드는 NavigationBar의 Collection 프로퍼티를 새로 생성한 People 객체로 설정한다. 이때 호출되는 NavigationBar의 Collection 프로퍼티에 대한 set 코드는 ListCollectionView 타입의 새로운 객체를 생성하고, NavigationBar의 동작에 필요한 이벤트 핸들러를 설정한다. InitializeNewpeopleObject의 두 번째 구문은 Navigation Bar의 ItemType 프로퍼티를 설정한다. 이는 사용자가 Add New 버튼을 클릭했을 때 NavigationBar가 새로운 객체를 생성해서 컬렉션에 추가할 수 있게 한다. 
+
+InitializeNewPeopleObject 의 마지막 구문은 PersonPanel의 DataContext를 People 객체로 설정한다. 이것이 조금 이상해 보일 수 있다. 이전 프로그램에서는 PersonPanel의 DataContext 프로퍼티를 Person 객체로 설정했다. 그래서 패널이 Person 클래스의 모든 프로퍼티를 표시할 수 있었다. DataContext를 People 객체로 설정하는 것이 틀려 보일수 있지만 이 코드는 정확하게 동작한다. People 컬렉션이 ListCollectionView를 기반으로 만들어졌기 때문이다. ListCollectionView는 현재 레코드를 유지하는데, 바로 그 현재 레코드가 PersonPanel에 표시된다. 
+
+NavigationBar가 좋은 데이터 입력 프로그램이긴 하지만 데이터베이스에 저장된 모든 데이터를 전체적으로 파악하고자 할 때는 적합한 솔루션이 못 된다. 이를 위해서는 ListBox를 통해 데이터베이스에 저장된 항목을 스크롤하면서 보거나 항목을 선택해서 수정할 수 있어야 한다. 
+
+이 기능은 생각보다 쉽게 구현할 수 있다. 다음의 DataEntryWithListBox 프로젝트가 이를 구현한 것이다. 이 프로젝트는 Person, People, PersonPanel, DatePicker 클래스를 위한 파일들을 필요로 한다. 프로그램 창은 다음의 XAML 파일에 의해 정의되며 익숙한 메뉴와 ListBox, PersonPanel을 포함한다. 
+
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:pnl="clr-namespace:Petzold.SingleRecordDataEntry" x:Class="Petzold.DataEntryWithListBox.DataEntryWithListBox"
+	Title="Data Entry With ListBox" SizeToContent="WidthAndHeight" ResizeMode="Canminimize">
+	<DockPanel Name="dock">
+		<Menu DockPanel.Dock="Top">
+			<MenuItem Header="_File">
+				<MenuItem Header="_New" Command="New" />
+				<MenuItem Header="_Open..." Command="Open" />
+				<MenuItem Header="_Save..." Command="Save" />
+			</MenuItem>
+		</Menu>
+
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
+
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
+
+			<!-- 항목을 표시하고 선택하기 위한 ListBox -->
+			<ListBox Name="lstbox" Grid.Column="0" Width="300" Height="300" Margin="24" >
+				<ListBox.ItemTemplate>
+					<StackPanel Orientation="Horizontal">
+						<TextBlock Text="{Binding Path=FirstName}" />
+						<TextBlock Text=" " />
+						<TextBlock Text="{Binding Path=MiddleName}" />						
+						<TextBlock Text=" " Name="txtblkSpace" />
+						<TextBlock Text="{Binding Path=LastName}" />
+						<TextBlock Text=" " />
+						<TextBlock Text="{Binding Path=BirthDate.Year}" />
+						<TextBlock Text="-" />
+						<TextBlock Text="{Binding Path=DeathDate.Year}" Name="txtblkDeath" />
+						<TextBlock Text=")" />
+					</StackPanel>
+					<DataTemplate.Triggers>
+						<DataTrigger Binding="{Binding Path=DeathDate}" Value="{x:Null}">
+							<Setter TargetName="txtblkDeath" Property="Text" Value="present" />
+						</DataTrigger>
+						<DataTrigger Binding="{Binding Path=MiddleName}" Value="" >
+							<Setter TargetName="txtblkSpace" Property="Text" Value="" />
+						</DataTrigger>
+					</DataTemplate.Triggers>
+				</ListBox.ItemTemplate>
+			</ListBox>
+
+			<!-- 항목을 입력하고 수정하기 위한 PersonPanel-->
+			<pnl:PersonPanel x:Name="pnlPerson" Grid.Column="1" />
+	
+			<!-- 항목을 추가하고 삭제하기 위한 Button -->
+			<StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1">
+				<Button Margin="12" Click="AddOnClick">
+					Add new item
+				</Button>
+				<Button Margin="12" Click="DeleteOnClick">
+					Delete item
+				</Button>
+			</StackPanel>
+		</Grid>
+	</DockPanel>
+
+	<Window.CommandBindings>
+		<CommandBinding Command="New" Executed="NewOnExecuted" />
+		<CommandBinding Command="Open" Executed="OpenOnExecuted" />
+		<CommandBinding Command="Save" Executed="SaveOnExecuted" />
+	</Window.CommandBindings>
+</Window>
+
+소스 코드에 있는 ListBox 블록은 ItemTemplate에 대한정의를 담고 있다. 이 ItemTemplate 은 ListBox가 Person 데이터를 표시한다는 가정 하에 작성한 것이다. StackPanel은 데이터 가 다음과 같이 표시될 수 있게 10개의 TextBlock 엘리먼트를 가로로 정렬해 결합한다. 
+
+Franz Schubert (1797-1828)
+
+StackPanel은 DateTemplate.Triggers 섹션 다음에 위치하는데, DataTemplate.Triggers 섹션은 2가지 문제를 해결하기 위해 2개의 DataTrigger 엘리먼트를 포함하고 있다. 첫 번째 는 DeathDate가 null일 경우에 DeathDate의 Year 프로퍼티를 표시하는 대신 다음처럼  present라고 표시하게 하는 것이다. 
+
+John Adams (1947-present)
+
+이런 DataTrigger 정의가 없다면 대시 문자 이후에 아무것도 표시되지 않을 것이다.(사실 그것도 나쁘지 않다고 생각한다) 두 번째는 작곡가에게 미들 네임이 없을 때 생길수 있는 문제를 해결하는 것이다. 보통은 퍼스트 네임과 미들 네임 사이에 공백이 하나 들어가고, 미들 네임과 라스트 네임 사이에 또 공백이 하나 들어간다. 미들 네임이 없다면 퍼스트 네임과 라스트 네임 사이에 2개의 공백이 들어갈 것이다. 두 번째 DataTrigger가 그런 경우 한 개의 공백을 제거해준다. 
+
+PersonPanel과 2개의 버튼으로 프로그램 창의 레이아웃이 끝난다. 버튼에는 Add new item 과 Delete item이라는 레이블을 붙였다. 탐색 버튼은 필요하지 않은데, ListBox를 통해 스크롤하면서 항목을 선택할 수 있기 때문이다. 
+
+다음은 코드 비하인드 파일이다. 
+
+
+using Petzold.MultiRecordDataEntry;
+using Petzold.SingleRecordDataEntry;
+using System;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Media;
+
+
+public partial class DataEntryWithListBox
+{
+	ListCollectionView collview;
+	People people;
+
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new DataEntryWithListBox());
+	}
+	public DataEntryWithListBox()
+	{
+		InitializeComponent();
+
+		//File New 명령을 시뮬레이션함
+		ApplicationCommands.New.Execute(null, this);
+	
+		//panel의 첫 번째 TextBox로 포커스를 이동
+		pnlPerson.Children[1].Focus();
+	}
+	void NewOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		people = new People();
+		people.Add(new Person());
+		InitializeNewPeopleObject();
+	}
+	void OpenOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		people = People.Load(this);
+		if(people != null)
+			InitializeNewPeopleObject();
+	}
+	void SaveOnExecuted(object sender, ExecutedRoutedEventArgs args)
+	{
+		people.Save(this);
+	}
+	void InitializeNewPeopleObject()
+	{
+		//People 객체를 기반으로 ListCollectionView 객체를 생성
+		collview = new ListCollectionView(people);
+
+		//뷰(view)를 정렬하기 위해 프로퍼티를 설정
+		collview.SortDescriptions.Add(new SortDescription("LastName", ListSortDirection.Ascending));
+
+		//ListCollectionView를 통해 ListBox와 PersonPanel을 연결
+		lstbox.ItemsSource = collview;
+		pnlPerson.DataContext = collview;
+		//ListBox의 SelectedIndex 설정
+		if(lstbox.Items.Count > 0)
+			lstbox.SelectedIndex = 0;
+	}
+	void AddOnClick(object sender, RoutedEventArgs args)
+	{
+		Person person = new Person();
+		people.Add(person);
+		lstbox.SelectedItem = person;
+		pnlPerson.Children[1].Focus();
+		collview.Refresh();
+	}
+	void DeleteOnClick(object sender, RoutedEventArgs args)
+	{
+		if(lstbox.SelectedItem != null)
+		{
+			people.Remove(lstbox.SelectedItem as Person);
+	
+			if(lstbox.Items.Count > 0)
+				lstbox.SelectedIndex = 0;
+			else
+				AddOnClick(sender, args);
+		}
+	}
+}
+
+파일 메뉴의 New 명령과 Open 명령은 최종적으로 InitializeNewPeopleObject 메소드를 호출한다. 이 메소드는 People 객체를 기반으로 ListCollectionView 객체를 만든다. 
+
+이전에 강조한 바와 같이 CollectionView는 컬렉션에 대한 뷰이다. CollectionView는 컬렉션이 포함하고 있는 항목들을 보기 좋게 정렬하는 수단을 제공하지만 컬렉션 자체는 조금도 수정하지 않는다. CollectionView는 뷰를 변경할 수 있는 다음의 3가지 수단을 제공한다. 
+
+* 정렬 (Sorting)
+* 필터링(Filtering)
+* 그룹핑(Grouping)
+
+정렬은 한 개 또는 여러 개의 프로퍼티를 기준으로 항목을 순서대로 정렬하는 것이다. 필터링은 조건을 만족하는 항목들만 표시하는 것이다. 그룹핑은 어떤 조건에 따라 항목들을 그룹지어 표시하는 것이다. 
+
+CollectionView는 CanSort, CanFilter, CanGroup 프로퍼티를 제공한다. CanSort와 CanGroup 프로퍼티의 값은 CollectionView 객체의 경우 false이지만 ListCollectionView객체의 경우는 true이다. 
+
+ListCollectionView 객체를 정렬하려면 SortDescription 객체를 생성해서 생성한 객체를 SortDescriptions 프로퍼티에 추가해야 한다. 다음은 DataEntryWithListBox 프로그램이 어떻게 LastName 프로퍼티 값을 기준으로 정렬하는지 보여준다. 
+
+collview.SortDescriptions.Add(new SortDescription("LastName", ListSortDirection.Ascending));
+
+SortDescriptions 컬렉션 프로퍼티는 SortDescription 객체를 여러 개 가질 수 있다. 첫 번째 SortDescription의 조건을 기준으로 비교한 두 항목의 순서가 같다면 두 번째 SortDescription 조건을 사용해 다시 비교한다. CollectionView의 SortDescriptions 프로퍼티는 SortDescriptionCollection 타입이며, 컬렉션을 관리할 수 있는 SetItem, InsertItem, RemoveItem, ClearItems라는 이름의 메소드를 제공한다.
+
+InitializeNewPeopleObject 메소드는 SortDescription을 정의한 후 ListBox의 ItemsSource 프로퍼티를 이 ListCollectionView 객체로 설정한다. 
+
+lstbox.ItemsSource = collview;
+
+그러면 ListBox는 컬렉션에 포함된 모든 항목을 라스트 네임을 기준으로 정렬해 표시한다. 여기까지는 모든 것이 분명하다. 여기에 보너스가 하나 더 있다. ListBox를 CollectionView와 연결해서 CollectionView의 CurrentItem 프로퍼티가 ListBox의 SelectedItem 프로퍼티에 의해 결정되게 하면 사용자는 ListBox를 이용해서 컬렉션을 탐색할 수 있다. 이를 위해서는 PersonPanel의 DataContext 프로퍼티도 이 CollectionView 객체로 설정해야 한다. 
+
+pnlPerson.DataContext = collview;
+
+그러면 PersonPanel은 ListBox에서 선택한 항목을 표시한다. 그리고 PersonPanel을 통해 해당 항목을 수정할 수 있다. Person, ObservableCollection, CollectionView가 제공하는 PropertyChanged 이벤트는 ListView가 모든 종류의 변경에 반응해서 스스로를 갱신할수 있게 돕는다. 
+
+프로그램의 나머지 부분은 쉽게 이해할수 있다. Add 버튼에 대한 이벤트 핸들러는 Person객체를 새로 만들어서 people 클래스에 추가한다. 새로 만든 Person 객체는 ListBox의 마지막에 자동으로 추가된다. 이벤트 핸들러는 이어서 해당 객체가 ListBox안에서 선택되게 한다. 이로 인해 해당 항목의 프로퍼티가 PersonPanel에 표시된다. 
+
+PersonPanel에 정보를 입력할 때는(특히 작곡가의 라스트 네임을 입력할 때는)작업 중인 항목의 (ListBox 안에서의)위치가 정렬 조건에 따라 자동으로 갱신되지 않는다. 새로 추가하거나 수정한 항목을 포함해서 CollectionView의 내용을 새로 정렬하려면 반드시 Refresh 메소드를 호출해야 한다. Refresh 메소드를 호출하는 위치는 작성하는 프로그램의 아키텍처에 맞게 선택해야 한다. 어떤 프로그램은 항목 데이터를 입력한 다음 Add 버튼을 눌렀을 때 완성된 내용을 컬렉션에 추가하게 된다. 그런 Add 버튼이 있는 경우에는 새로운 항목을 컬렉션에 추가하면서 Refresh 메소드를 호출하는 것이 좋다. 
+
+DataEntryWithListBox 프로그램에는 데이터 입력이 완성됐다는 것을 알려주는 버튼이 없다. 그 대신 이 프로그램은 AddOnClick 메소드의 마지막에서(전에 추가한 항목이 있다면 이들까지 포함해서) 컬렉션을 다시 정렬하게 Refresh를 호출한다. 이때 컬렉션에 기본 라스트 네임 문자 열인 <last name>보다 앞서는 항목이 없다면 새로 생성하는 Person 항목은 항상 리스트의 맨 위로 옮겨질 것이다. 
+
+물론 사용자가 정렬 기준을 바꿀 수 있게 인터페이스를 추가할 수 있다. 그러면 특정 항목을 찾기가 쉬워질 것이다. 특정 항목을 찾는 다른 접근 방법은 필터링이다. 즉 Collection View가 특정 조건을 만족하는 항목들만 표시하게 제한할 수 있다. 
+
+CollectionView에 필터링을 적용하려면 Predicate 위임자 규정에 맞게 메소드를 정의해야 한다. 
+
+bool MyFilter(object obj)
+{
+	...
+}
+
+메소드에 전달되는 인자는 컬렉션에 포함된 객체다. 인자로 전달된 항목이 뷰에 표시돼야 하는 것이라면 true를 반환하고 그렇지 않다면 false를 반환한다. CollectionView에 필터를 적용하려면 다음과 같이 한다. 
+
+collview.Filter = MyFilter;
+
+Predicate 위임자의 정의를 보면 다음과 같이 선언된 제너릭 위임자임을 알 수 있다. 
+
+public delegate bool Predicate<T> (T obj)
+
+이런 사실로부터 모든 타입의 인자에 대해 필터 메소드를 만들수 있을 것이라 예상할 수도 있다. 하지만 CollectionView의 Filter 프로퍼티를 정의하면 항상 Predicate<Object> 타입의 메소드가 호출된다. 그래서 필터 메소드는 항상 Object 타입의 인자를 사용해야 한다. 
+
+CollectionViewWithFilter 프로그램은 Person.cs파일과 People.cs파일을 포함한다. 그리고 프로그램 창을 정의하는 XAML 파일과 C# 파일을 포함한다. 프로그램 창은 3개의 라디오 버튼을 포함한다. 이 라디오 버튼을 이용해서 살아 있는 작곡가만 표시하거나, 죽은 작곡가만 표시하거나, 모든 작곡가를 표시하게 선택할 수 있다.
+
+다음은 라디오 버튼과 ListBox를 포함한 XAML 레이아웃 파일이다. 
