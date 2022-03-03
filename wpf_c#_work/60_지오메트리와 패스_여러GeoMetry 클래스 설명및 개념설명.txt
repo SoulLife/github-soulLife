@@ -1,0 +1,301 @@
+CHAPTER 28 : 지오메트리와 패스
+
+Shape으로부터 파생된 클래스들에는(이제는 친숙해진)Rectangle, Ellipse, Line, Polyline, Polygon이 있다. 마지막으로 하나 남은 클래스가 Path다. 이 클래스는 다른 어떤 클래스들보다 강력하다. 이 클래스는 다른 Shape 클래스들이 제공하는 모든 기능을 제공할 뿐만 아니라 그 밖에도 많은 기능을 추가로 제공한다. Path는 아마도 오랫동안 기다려왔던 벡터 드로잉 클래스가 될 것 같다. Path의 유일한 단점은 다른 Shape 클래스들에 비해 다소 장황한 구문이 필요하다는 것이다. 하지만 이번 장의 마지막 부분에서(Path가 제공하는)Path를 간결하게 이용할 수 있는 지름길에 대해서도 설명하겠다. 
+
+Path의 프로퍼티는 Data 뿐이다. Data 프로퍼티에는 Geometry 타입의 객체를 설정한다. Geometry 클래스 자체는 추상 클래스이다. 다음 클래스 계층도에서 보듯이 7개의 파생 클래스가 제공된다. 
+
+Object
+	DispatcherObject(abstract)
+		DependencyObject
+			Freezable(abstract)
+				Animatable(abstract)
+					Geometry(abstract)
+						LineGeometry
+						RectangleGeometry
+						EllipseGeometry
+						CombinedGeometry
+						PathGeometry
+						StreamGeometry
+
+위의 클래스 계층도는 이번 장에서 다룰 순서대로 Geometry 파생 클래스들을 정렬해 보여준다. 이 클래스들은 WPF 그래픽이 순수 분석 기하학을 캡슐화하기 위해 기울인 노력을 가장 근접하게 설명해주는 결과물이다. Geometry 객체는 점(points)과 길이(lengths)로 표현된다. Geometry 객체는 자신을 그리지 않는다. 원하는 브러시(brush) 프로퍼티와 펜(pen) 프로퍼티로 Geometry 객체를 그리려면 별도의 클래스를(대부분의 경우 Path 클래스를)사용해야 한다. 이에 대한 마크업 구문은 다음과 같다. 
+
+<Path Stroke="Blue" StrokeThickness="3" Fill="Red">
+	<Path.Data>
+		<EllipseGeometry ... />
+	</Path.Data>
+</Path>
+
+LineGeometry 클래스는 2개의 프로퍼티를 갖는다. StartPoint와 EndPoint다. 다음 XAML 파일은 LineGeometry와 Path를 이용해서 서로를 가로 지르는 2개의 다른 색 라인을 그린다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Path Stroke="Blue" StrokeThickness="3" >
+		<Path.Data>
+			<LineGeometry StartPoint="96 96" EndPoint="192 192" />
+		</Path.Data>
+	</Path>
+
+	<Path Stroke="Red" StrokeThickness="3" >
+		<Path.Data>
+			<LineGeometry StartPoint="192 96" EndPoint="96 192" />
+		</Path.Data>
+	</Path>
+</Canvas>
+
+Canvas위에 여러 개의 Line 엘리먼트를 둘 수 있는 것처럼 Path 엘리먼트도 여러 개를 둘 수 있다. 그리고 각 Path 엘리먼트는 자신만의 Stroke와 StrokeThickness 를 가질수 있다. 
+
+RectangleGeometry 클래스에는 Rect 프로퍼티가 있다(물론 Rect 타입이다.) 이 프로퍼티는 사각형의 위치와 크기를 표시한다. 그리고 RadiusX와 RadiusY 프로퍼티가 있다. 이들 프로퍼티는 사각형 코너의 곡률을 표시한다. XAML 구문에서 Rect 프로퍼티는 4개의 멤버를 갖는 문자열로 설정한다. 즉 좌측 상단의 X좌표, 좌측 상단의 Y좌표, 사각형의 폭, 사각형의 높이를 나타내는 문자열로 설정한다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Path Fill="Blue" Stroke="Red" StrokeThickness="3" >
+		<Path.Data>
+			<RectangleGeometry Rect="96 48 288 192" RadiusX="24" RadiusY="24" />
+		</Path.Data>
+	</Path>
+</Canvas>
+
+
+LineGeometry가 정의하는 StartPoint와 EndPoint프로퍼티(그리고 RectangleGeometry가 정의하는 Rect, RadiusX, RadiusY 프로퍼티)는 모두 의존 프로퍼티에 의해 뒷받침된다. 이는 (30장에서 보게 되겠지만 )이들 프로퍼티를 이용해서 에니메이션을 구현할 수 있다는 의미이다 그리고 이들은 바인딩 타깃이 될 수 있다. 
+
+EllipseGeometry 클래스는 Rect 객체를 이용해서 타원형을 만들 수 있는 생성자를 제공한다. 하지만이 생성자를 XAML에서 EllipseGeometry 를 생성할 때는 사용할 수 없다. 대신 타원의 중심점을 설정하는(Point 타입의)Center 프로퍼티와 타원의 크기를 설정하는(double  타입의)RadiusX, RadiusY 프로퍼티를 사용할 수 있다. 이들 프로퍼티도 모두 의존 프로퍼티에 의해 뒷받침된다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Path Fill="Blue" Stroke="Red" StrokeThickness="3">
+		<Path.Data>
+			<EllipseGeometry Center="196 144" RadiusX="144" RadiusY="96" />
+		</Path.Data>
+	</Path>
+</Canvas>
+
+9장에서 나왔던 마우스로 Canvas위에 원을 그리는 DrawCircles 프로그램을 기억할 것이다. 첫 마우스 클릭으로 원의 중심을 표시하고 다음 클릭으로 원의 크기를 표시했다. 이 프로그램은 Ellipse를 사용했다. Ellipse는 크기를 표시할 때 폭과 높이를 필요로 한다. Canvas위에서 Ellipse 의 위치는 Left와 Top 프로퍼티로 표시한다. DrawCircles 프로그램은 마우스 움직임에 의해 원의 크기를 조절할 때 대상 원이 중심점을 유지하게 제어해야 한다. 이를 위해서는 크기를 조절하면서 동시에 원의 위치를 옮겨야 한다(중심점을 유지하기 위해서는 Left와 Top이 옮겨져야 한다)프로그램이 EllipseGeometry를 사용했다면 이를 좀 더 쉽게 구현할 수 있었을 것이다. 
+
+Path.Data 엘리먼트는 하나의 (Geometry 타입)자식만 가질 수 있다. 이런 한계를 극복하려면 Path 엘리먼트를 여러 개 사용하거나 Path 엘리먼트를 Rectangle과 같은 다른 엘리먼트와 함께 사용해야 한다. 
+
+이런 한계를 극복하는 다른 방법은 GeometryGroup 객체를 Path.Data의 자식으로 사용하는 것이다. GeometryGroup은 Geometry를 계승한다. GeometryGroup은 Children이란 프로퍼티를 갖는다. Children 프로퍼티는 GeometryCollection 타입이며, Geometry 객체들의 컬렉션이다. GeometryGroup은 여러 개의 Geometry 자식을 관리할 수 있다. 마크업 구문은 다음과 같다. 
+
+<Path Fill="Gold" Stroke="Pink" ...>
+	<Path.Data>
+		<GeometryGroup>
+			<EllipseGeometry ... />
+			<LineGeometry ... />
+			<RectangleGeometry ... />
+		</GeometryGroup>
+	</Path.Data>
+</Path>
+
+GeometryGroup안의 모든 Geometry 객체들은 같은 Path 엘리먼트의 일부이기 때문에 같은 Stroke 브러시와 Fill 브러시를 공유한다. 그것이 GeometryGroup을 사용하는 방법과 여러 개의 Path 엘리먼트를 사용하는 방법 사이의 큰 차이점이다.
+
+다음 XAML 파일이 또 다른 차이점을 보여준다. 왼편은 별개의 Path 엘리먼트로 그린 겹쳐진 2개의 사각형이다. 오른편은 같은 GeometryGroup에 속한 겹쳐진 2개의 사각형이다. 
+
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Path Fill="Gold" Stroke="Red" StrokeThickness="3">
+		<Path.Data>
+			<RectangleGeometry Rect="96 96 192 192" />
+		</Path.Data>
+	</Path>
+
+	<Path Fill="Gold" Stroke="Red" StrokeThickness="3">
+		<Path.Data>
+			<RectangleGeometry Rect="192 192 192 192" />
+		</Path.Data>
+	</Path>
+
+	<Path Fill="Gold" Stroke="Red" StrokeThickness="3">
+		<Path.Data>
+			<GeometryGroup>
+				<RectangleGeometry Rect="480 96 192 192" />
+				<RectangleGeometry Rect="576 192 192 192" />
+			</GeometryGroup>
+		</Path.Data>
+	</Path>
+
+</Canvas>
+
+
+처음의 사각형 한 쌍은 단순하다. 한 사각형이 다른 사각형을 덮은 모습이다. 반면 두 번째 사각형 한 쌍은 사각형 2개가 GeometryGroup에 의해 결합된 모습이다. 사각형 2개가 겹쳐진 영역이 투명하게 표시됐다. 이 표시 방식은 Polygon 엘리먼트가 겹치는 영역을 처리하는 방식과 완전히 동일하다. GeometryGroup은 FillRule 프로퍼티를 갖고 있으며 기본값은 EvenOdd이다. EvenOdd 규칙은 어떤 폐쇄된 영역과 무한(infinity)위치 사이에 짝수 개의 외곽선이 존재하면 그 영역을 색칠하지 않는다. 다음과 같이 FillRule을 NonZero로 바꿔 설정할수도 있다. 
+
+<GeometryGroup FillRule="NonZero" >
+
+이렇게 하면 겹쳐진 부분이 칠해지지만 그래도 두 번째쌍은 첫 번째 쌍과 다르게 보인다. 첫 번째 쌍에서는 두 번째 사각형이 첫 번째 사각형의 외곽선을 보이지 않게 가리지만 두 번째 쌍에서는 두 사각형의 외곽선이 모두 보인다.  여러 개의 Geometry를 한 개의 GeometryGroup으로 결합하면 여러 가지 재미있는 효과를 얻을 수 있다. 
+
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Path Fill="Blue" Stroke="Red" StrokeThickness="3">
+		<Path.Data>
+			<GeometryGroup>
+				<EllipseGeometry Center="150 150" RadiusX="100" RadiusY="100" />
+				<EllipseGeometry Center="250 150" RadiusX="100" RadiusY="100" />
+				<EllipseGeometry Center="150 250" RadiusX="100" RadiusY="100" />
+				<EllipseGeometry Center="250 250" RadiusX="100" RadiusY="100" />
+			</GeometryGroup>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+
+지금까지 GeometryGroup 클래스를 살펴봤다. 이 클래스는 다른 Geometry 파생 클래스인 CombinedGeometry와혼돈되기 쉽다. 하지만 CombinedGeometry는 완전히 다른 클래스다. 우선 이 클래스는 Children 프로퍼티가 없다. 대신 Geometry1과 Geometry2라는 이름의 프로퍼티가 있다. CombineGeometry는 각기 다른 Geometry 2개만을 결합한 것이다. 
+
+GeometryGroup과 CombinedGeometry사이의 두 번째 차이점은 CombinedGeometry에는 FillRule 프로퍼티가 없다는 것이다. 대신 GeometryCombineMode 프로퍼티를 갖는다. 이 프로퍼티에는 GeometryCombineMode 열거형의 멤버를 할당한다. 이 열거형의 멤버는 Union, Intersect, Xor, Exclude다. 처음 3개의 옵션은 (집합 이론의)벤 다이어그램(Venn diagram)처럼 동작한다. Exclude 옵션은 Geometry1의 요소를 모두 제거한 Geometry2 요소만으로 새로운 Geometry를 정의한다. 
+
+다음 XAML 프로그램은 2개의 겹치는 원을 이용해서 4개의 GeometryCombineMode 옵션을 보여준다. 
+
+
+<UniformGrid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	Rows="2" Columns="2" TextBlock.FontSize="12pt" >
+	<UniformGrid.Resources>
+		<Style TargetType="{x:Type Path}">
+			<Setter Property="HorizontalAlignment" Value="Center" />
+			<Setter Property="VerticalAlignment" Value="Center" />
+			<Setter Property="Fill" Value="Blue" />
+			<Setter Property="Stroke" Value="Red" />
+			<Setter Property="StrokeThickness" Value="5" />
+		</Style>
+	</UniformGrid.Resources>
+
+	<!-- GeometryCombineMode = "Union". -->
+	<Grid>
+		<TextBlock HorizontalAlignment="Center">
+			GeometryCombineMode="Union"
+		</TextBlock>
+		<Path>
+			<Path.Data>
+				<CombinedGeometry GeometryCombineMode="Union">
+					<CombinedGeometry.Geometry1>
+						<EllipseGeometry Center="96 96" RadiusX="96" RadiusY="96" />
+					</CombinedGeometry.Geometry1>
+					<CombinedGeometry.Geometry2>
+						<EllipseGeometry Center="48 48" RadiusX="96" RadiusY="96" />
+					</CombinedGeometry.Geometry2>
+				</CombinedGeometry>
+			</Path.Data>
+		</Path>
+	</Grid>
+
+	<!-- GeometryCombineMode = "Intersect". -->
+
+	<Grid>
+		<TextBlock HorizontalAlignment="Center">
+			GeometryCombineMode="Intersect"
+		</TextBlock>
+		<Path>
+			<Path.Data>
+				<CombinedGeometry GeometryCombineMode="Intersect">
+					<CombinedGeometry.Geometry1>
+						<EllipseGeometry Center="96 96" RadiusX="96" RadiusY="96" />
+					</CombinedGeometry.Geometry1>
+					<CombinedGeometry.Geometry2>
+						<EllipseGeometry Center="48 48" RadiusX="96" RadiusY="96" />
+					</CombinedGeometry.Geometry2>
+				</CombinedGeometry>
+			</Path.Data>
+		</Path>
+	</Grid>
+
+	<!-- GeometryCombineMode = "Xor". -->
+	<Grid>
+		<TextBlock HorizontalAlignment="Center">
+			GeometryCombineMode="Xor"
+		</TextBlock>
+		<Path>
+			<Path.Data>
+				<CombinedGeometry GeometryCombineMode="Xor">
+					<CombinedGeometry.Geometry1>
+						<EllipseGeometry Center="96 96" RadiusX="96" RadiusY="96" />
+					</CombinedGeometry.Geometry1>
+					<CombinedGeometry.Geometry2>
+						<EllipseGeometry Center="48 48" RadiusX="96" RadiusY="96" />
+					</CombinedGeometry.Geometry2>
+				</CombinedGeometry>
+			</Path.Data>
+		</Path>
+	</Grid>
+
+	<!-- GeometryCombineMode = "Exclude". -->
+	<Grid>
+		<TextBlock HorizontalAlignment="Center">
+			GeometryCombineMode="Exclude"
+		</TextBlock>
+		<Path>
+			<Path.Data>
+				<CombinedGeometry GeometryCombineMode="Exclude">
+					<CombinedGeometry.Geometry1>
+						<EllipseGeometry Center="96 96" RadiusX="96" RadiusY="96" />
+					</CombinedGeometry.Geometry1>
+					<CombinedGeometry.Geometry2>
+						<EllipseGeometry Center="48 48" RadiusX="96" RadiusY="96" />
+					</CombinedGeometry.Geometry2>
+				</CombinedGeometry>
+			</Path.Data>
+		</Path>
+	</Grid>
+</UniformGrid>
+
+
+
+이들 이미지가 지금까지 보아온 객체 조합과 어떻게 다른지 눈여겨 보자. Union 옵션마저도 나름대로 특별한 결과를 만든다.(조합된 결과물이 언뜻 보기에는 이전 방식과 같게 보일 수도 있다.)
+외곽선은 각 개체의 둘레에 그려지지 않고 두원을 조합해서 만든 객체 둘레에 그려진다. CombinedGeometry를 사용하면 다른 방법으로는 얻기 힘든 효과를 만들 수 있다. 다음의 덤벨 이미지가 그 예이다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Path Fill="DarkGray" Stroke="Black" StrokeThickness="5">
+		<Path.Data>
+			<CombinedGeometry GeometryCombineMode="Union">
+				<CombinedGeometry.Geometry1>
+					<CombinedGeometry GeometryCombineMode="Union">
+						<CombinedGeometry.Geometry1>
+							<EllipseGeometry Center="100 100" RadiusX="50" RadiusY="50" />
+						</CombinedGeometry.Geometry1>
+
+						<CombinedGeometry.Geometry2>
+							<RectangleGeometry Rect="100 75 200 50" />
+						</CombinedGeometry.Geometry2>
+					</CombinedGeometry>
+				</CombinedGeometry.Geometry1>
+
+				<CombinedGeometry.Geometry2>
+					<EllipseGeometry Center="300 100" RadiusX="50" RadiusY="50" />
+				</CombinedGeometry.Geometry2>
+			</CombinedGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>
+이 이미지는 2개의 중첩된 CombinedGeometry 객체를 이용하고 있다. 첫 번째 객체는 타원과 사각형을 조합한다. 두 번째 조합된 객체를 다른 타원과 조합한다. 3개의 객체가 모두 Union 모드로 조합됐다. 
+
+Geometry 파생 클래스인 PathGeometry가 바로 이번 장에서 소개하는 전체 지오메트리(geometry)시스템의 핵심이다. 그래픽 패스는 연결되거나 연결되지 않은 여러 직선과 여러 곡선의 묶음이다. 패스 안에 있는 연결된 직선과 곡선을 서브 패스(subpath)또는 (일관성을 위해 WPF 클래스와 같은 이름을 쓰자면) 피규어(figure)라고 한다. 따라서 패스는 0개 또는 여러 개의 피규어로 구성된다고 할 수 있다. 
+
+각 피규어는 열려있거나 닫혀있다. 피규어가 닫혀있다는 것은 피규어의 마지막 라인이 피규어의 시작 라인에 연결돼 있다는 것이다. 그렇지 않은 상태를 열려있다고 한다(전통적인 정의에 따르면 열려 있는 패스는 브러시로 색칠할 수 없다. 하지만 WPF에서는 색칠할 수 있다)
+
+간단히 정리하면 PathGeomerty 클래스는 FillRule 프로퍼티를 갖는다. FillRule 프로퍼티는 패스의 피규어를 어떻게 색칠해야 하는지 결정한다. 또 PathGeometry 클래스는 PathFigureCollection 타입의 Figures 프로퍼티를 갖는다. Figures 프로퍼티는 여러 개의 Path Figure 객체로 구성된 컬렉션이다. 
+
+PathFigure는 Animatable에서 파생됐으며 봉인된 클래스(sealed class)다. (즉 어떤 클래스도 PathFigure로부터 파생시킬수 없다)PathFigure는 2개의 불리언 타입 프로퍼티인 IsClosed와 IsFilled를 갖는다. IsClosed의 기본값은 false다. 이 프로퍼티를 true로 설정하면 해당 피규어는 자동으로 닫혀질 것이다. 피규어를 닫혀진 상태로 만들기 위해 필요 하다면 자동으로 마지막 점과 시작점을 연결하는 직선을 추가할 것이다. IsFilled의 기본값은 true다. 이 프로퍼티가 브러시로 내부를 색칠할지의 여부를 결정한다. 내부를 색칠할 때는 영역이 닫혀있지 않더라도 마치 닫힌 것처럼 취급한다(제 27장에서 폴리 라인의 내부를 색칠할 때 비슷한 경우를 보았다.)
+
+피규어가 연결된 여러 직선과 곡선의 연속이라는 사실을 기억하자. 피규어는 반드시 특정한 점에서 시작해야 한다. PathFigure의 StartPoint 프로퍼티가 바로 그 점이다. PathFigure는 Segments라는 이름의 프로퍼티도 갖는다. Segments는 PathSegmentCollection 타입이며, PathSegment 객체들로 이루어진 컬렉션이다. PathSegment는 추상 클래스이고, 7개의 클래스가 파생돼 있다. 다음의 클래스 계층도는 Path와 관련된 모든 클래스들을 보여준다. 
+
+
+Object
+	DispatcherObject(abstract)
+		DependencyObject
+			Freezable (abstract)
+				Animatable (abstract)
+					PathFigure
+					PathFigureCollection
+					PathSegment (abstract)
+						ArcSegment
+						BezierSegment
+						LineSegment
+						PolyBezierSegment
+						PolyLineSegment
+						PolyQuadraticBezierSegment
+						QuadraticBezierSegment
+					PathSegmentCollection
+
+요약하면 PathGeometry 클래스는 PathFigureCollection 타입의 Figures 프로퍼티를 갖는다. PathFigure클래스는 PathSegmentCollection 타입의 Segments 프로퍼티를 갖는다. 
+
+베지어 곡선(Bezier curvers)이 WPF 그래픽의 어디에 숨어 있는지 궁금했던 독자가 있을 것이다. 바로 여기 있다. 일반적인 삼차 방정식 형태와 이에 비해 빠른 이차 방정식 형태의 2가지 종류가 있다. 그리고(타원의 외곽선 모양인) 아크(arc)도 여기 있다. 이들이 WPF가 명시적으로 제공하는 베지어 곡선과 아크를 위한 유일한 클래스들이다. 심지어 DrawingContext 레벨에서만 그래픽을 그린다고 해도(OnRender 메소드에서 그리거나, DrawingVisual 객체를 만들어서 그린다고 해도)명시적으로 사용할 수 있는 베지어 드로잉또는 아크 드로잉 메소드가 없다. 베지어 곡선이나 아크를 그리려면 DrawGeometry 메소드나(좀 더 간접적인 방법이지만) DrawDrawing메소드를 사용해야 한다. 
+
+PathSegment에서 파생된 클래스를 이용하면 임의의 폴리곤을 표현하는 Geometry 객체를 만들 수 있다. CombineGeometry 객체로 여러 개의 폴리곤을 이어 붙이고 적절한 회전시켜도 가능은 하겠지만 그건 사람이 할 일이 아니다. 
+
+모든 피규어에서 PathFigure 객체는 StartPoint 프로퍼티에 피규어의 시작점을 표시한다. 그래서 LineSegment 클래스는 라인의 끝점을 표시하는 단 하나의 Point 프로퍼티만 갖는다. 다음은 한 개의 직선으로 구성된 단순한 패스의 소스이다. 
