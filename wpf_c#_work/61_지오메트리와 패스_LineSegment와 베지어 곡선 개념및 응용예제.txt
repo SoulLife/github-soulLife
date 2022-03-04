@@ -1,0 +1,241 @@
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Path Stroke="Blue" StrokeThickness="3">
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="96 96">
+					<LineSegment Point="384 192" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+여러 개의 연결된직선을 그리려면 LineSegment 객체를 여러 개 사용하면 된다. 
+
+각 LineSegment 객체는 이전 세그먼트의 마지막에서 시작하면서 피규어를 연결해간다. 다음은 Line Segment 객체를 이용해서 다섯 꼭지점을 갖는 별을 그리는 간단한 XAML 파일이다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Path Fill="Aqua" Stroke="Maroon" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 72">
+					<LineSegment Point="200 246" />
+					<LineSegment Point="53 138" />
+					<LineSegment Point="235 138" />
+					<LineSegment Point="88 246" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+이 마크업이 그리는 별 모양이 약간 이상해 보일 것이다. 별의 다섯 꼭지점 영역은 모두 칠해져 있지만 중앙은 칠해져 있지 않다. 이것은 FillRule의 기본값이 EvenOdd이기 때문에 예상할 수 있는 일이다. 하지만 좌측 하단 꼭지점에서 맨 위 꼭지점에 이르는 라인이 그려져 있지 않다. 마크업을 보면 분명히 알수 있을 것이다. 4개의 LineSegment 객체는 라인을 4개만 그린다. 정상적인 별모양이 출력되도록 이 문제를 해결하려면 PathFigure와 같은 점을 갖는 다섯 번째 LineSegment 객체를 추가해야 한다. 
+
+<LineSegment Point="144 72" />
+
+또는 PathFigure의 IsClosed 프로퍼티를 true로 설정한다. 
+
+<PathFigure StartPoint="144 72" IsClosed="True" >
+
+IsClosed 를 true로 설정하면 시작점을 연결하는 마지막 직선이 자동으로 생성된다. 이 마지막 라인의 존재가 내부 영역을 색칠해야 하는지 결정하지는 않는다. 내부를 색칠할지의 여부는 PathFigure의 IsFilled 프로퍼티(기본 값은 true이다) Path 엘리먼트의 FillRule 프로퍼티(기본값은 EvenOdd이다)에 의해 결정된다. 
+
+일련의 연결된 직선을 그리는 다른 방법은 PolyLineSegment이다. PolyLineSegment가 갖고 있는 points 프로퍼티는 PointCollection 타입이다. 그리고 Polyline 엘리먼트의 Points 프로퍼티처럼 XAMl 구문을 통해 여러 개의 점(point)을 문자열로 할당할 수 있다. 다음 파일에서는 PathFigure의 IsClosed 프로퍼티를 true로 명시했다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Path Fill="Aqua" Stroke="Maroon" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 72" IsClosed="True" >
+					<PolyLineSegment Points="200 246, 53 138, 235 138, 88 246" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+이 PathFigure가 PolyLineSegment 다음에 다른 세그먼트를 포함한다면 그 세그먼트는 PolyLineSegment의 마지막 점을 계속 이어갈 것이다. PathFigure 엘리먼트는 언제나피규어의 시작점을 정의한다. 각 세그먼트는 한 개 또는 그 이상의 점을 갖고 있으며, 바로 이전의 마지막 점을 계속 이어간다. 
+
+5개의 클래스가 FillRule 프로퍼티를 갖고 있다. Shapes 라이브러리의 Polyline과 Polygon 엘리먼트가 갖고 있고, GeometryGroup, PathGeometry, StreamGeometry가 갖고 있다(StreamGeometry는 PathGeometry와 개념적으로 비슷한 클래스다) PathGeometry의 경우 FillRule 프로퍼티는 지오메트리 내부에 있는 겹쳐진 여러 개의 피규어들을 어떻게 색칠해야 하는지도 결정한다. 다음은 하나의 PathGeometry 안에 2개의 별 모양이 겹쳐있는 예제이다. 
+
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Path Fill="Aqua" Stroke="Maroon" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 72" IsClosed="True" >
+					<PolyLineSegment Points="200 246, 53 138, 235 138, 88 246" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+
+두 번째 별은 첫 번째 별로부터 가로 방향으로 1/4인치, 세로 방향으로 1/4인치 만큼 떨어진 곳에 위치한다. 출력 결과에서 보듯이 FillRule과 EvenOdd의 기본값으로 내부 영역을 색칠 해야 하는지 결정할 때 2개의 별이 함께 고려되고 있다. PathGeometry를 GeometryGroup으로 감싸면 GeometryGroup의 FillRule설정이 우선시되며 PathGeometry의 설정은 무시된다. 이 경우에도 색칠하는 영역을 결정할 때 2개의 별이 함께 고려된다. 겹쳐지는 패스를 서로 무관하게 색칠하고 싶다면 별개의 Path 엘리먼트로 분리해야 한다. 
+
+ArcSegment 클래스는(타원의 외곽선 모양의)곡선을 정의한다. 이 개념은 생각보다 조금 더 복잡하다. LineSegment처럼 ArcSegment 엘리먼트도 단 하나의 점만 프로퍼티로 갖는다. 아크는 이전의 마지막 점에서부터 ArgSegment 엘리먼트가 지정한 점 사이에 그려진다. 하지만 ArcSegment 엘리먼트에는 반드시 추가적인 정보가 있어야 한다. 두 점을 잇는 곡선은 타원의 아크다. 그러므로 타원을 그리기 위한 2개의 지름이 명시돼야 한다. 원은 2개의 지름이 같은 가장 간단한 경우다. 원으로 두 점을 연결하는 방법도 4가지나 된다. 어떤 방법을 사용할지는 ArcSegment의 SweepDirection 프로퍼티와 IsLargeArc 프로퍼티에 의해 결정된다. SweepDirection 프로퍼티는 ClockWise나 CounterclockWise(기본값)로 설정할 수 있다. IsLargeArc 프로퍼티는 불리언 타입이며 false가 기본값이다. 4가지 방법이 다음 프로그램에 의해 각기 다른 색으로 그려진다. 
+
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<!-- 반 시계 방향(기본값), 작은 아크(기본값) -->
+	<Path Stroke="Red" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 144">
+					<ArcSegment Point="240 240" Size="96 96" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+
+	<!-- 반시계 방향(기본값), IsLargeArc -->
+	<Path Stroke="Blue" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 144">
+					<ArcSegment Point="240 240" Size="96 96" IsLargeArc="True" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+
+	<!-- 시계 방향, 작은 아크(기본값) -->
+	<Path Stroke="Green" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 144">
+					<ArcSegment Point="240 240" Size="96 96" SweepDirection="ClockWise" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+	<!-- 시계 방향, IsLargeArc -->
+	<Path Stroke="Purple" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 144">
+					<ArcSegment Point="240 240" Size="96 96" SweepDirection="ClockWise" IsLargeArc="True" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+4개의 Path 엘리먼트는 각기 같은 시작점(144, 144)과 같은 ArcSegment의 점(240, 240)을 공유한다. 두 점은 4개의 경우 모두 지름이 96인 원의 아크로 연결된다. 하지만 SweepDirection과 IsLargeArc의 서로 다른 4개 조합이 4개의 아크를 각기 다른 모양으로 만든다. 4개의 아크를 모두 다른 색으로 표시했다. 
+
+이런 설정 기능으로도 부족한 경우를 대비해서 ArcSegment는 RotationAngle이라는 이름의 또 다른 프로퍼티를 제공한다. 이 프로퍼티는 두 점을 연결하는 타원의 아크가 시계 방향으로 얼마나 회전돼야 하는지 표시한다. 다음 프로그램은 가로 지름이 144이고 세로 지름이 96인 타원을 사용한다는 것과 시계 방향으로 45도 회전시켰다는 것을 빼면 ArcPossibilities.xaml과 동일하다. 
+
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<!-- 반시계 방향(기본값), 작은 아크(기본값) -->
+	<Path Stroke="Purple" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 144">
+					<ArcSegment Point="240 240" Size="144 96" RotationAngle="45" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+	<!-- 반시계 방향(기본값), IsLargeArc -->
+	<Path Stroke="Blue" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 144">
+					<ArcSegment Point="240 240" Size="144 96" RotationAngle="45" IsLargeArc="True" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+	<!-- 시계 방향, 작은 아크(기본값) -->
+	<Path Stroke="Green" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 144">
+					<ArcSegment Point="240 240" Size="144 96" RotationAngle="45" SweepDirection="ClockWise" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+	<!-- 시계 방향, IsLargeArc -->
+	<Path Stroke="Purple" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="144 144">
+					<ArcSegment Point="240 240" Size="144 96" RotationAngle="45" SweepDirection="ClockWise" IsLargeArc="True" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+다음 프로그램은 실생활과 밀접하게 관련된 것이다. 이 프로그램은 가상의 기계 부품을 그린다. 외곽선은 직선과 아크로 구성돼 있고, 2개의 아크 세그먼트가 구멍을 만들고 있다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Path Fill="Aqua" Stroke="Maroon" StrokeThickness="3" >
+		<Path.Data>
+			<PathGeometry>
+				<PathFigure StartPoint="192 192">
+					<ArcSegment Point="192 288" Size="48 48" />
+					<LineSegment Point="480 288" />
+					<ArcSegment Point="480 192" Size="48 48" />
+					<lineSegment Point="384 192" />
+					<ArcSegment Point="288 192" Size="48 48" />
+					<LineSegment Point="192 192" />
+				</PathFigure>
+				<PathFigure StartPoint="336 200" IsClosed="True" >
+					<ArcSegment Point="336 176" Size="12 12" />
+					<ArcSegment Point="336 200" Size="12 12" />
+				</PathFigure>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>
+두번째 PathFigure는 2개의 반원을 연결해서 효과적으로원을 그려내고 있다. 
+
+컴퓨터 그래픽에 사용하는 대부분의 용어들은 기하학에서 유래하고 있다. 하지만 한 경우만 은 실제 사람 이름이 그래픽 그리기 함수에 고이 간직되고 있다. 
+
+베지어(Pierre Eticnne Bezier)는 1910년 파리의 엔지니어 가정에서 태어났다. 그는 1930년 기계공학에 관한 학위를 받았다. 그리고 다음 해에 전기공학에 관한 두 번째 학위를 받았다. 1933년에그는 프랑스의 자동차 회사인 르노(Renault)에서 일을 시작했다. 그리고 거기서 1975년까지 있었다. 1950년대에 베지어는 NC(numerical control, 수치 제어)에 의해 동작하는 초기의 드릴링 머신과 밀링 머신을 구현하는 책임을 맡았다(요즘엔 NC라는 용어를 매우 드물게 사용한다)
+
+1960년 초에 베지어가 맡은 대부분의 일은 UNISURF라는 프로그램에 관한 것이었다. UNISURF는 르노에서 사용된 초기의 CAD/CAM 시스템으로 자동차용 부품을 인터액티브한 방법으로 설계하는 도구였다. 그 시스템은 복잡한 곡선에 대한 수학적 정의가 필요했다. 더구나 사용자(부품 설계자)는 수학적 개념을 모르고서도 곡선을 다룰 수 있어야 했다. 그리고 작업에서 사용한 곡선은 제조 공정에서도 사용할 수있어야 했다. 이런 작업을 통해 베지어의 이름을 딴 곡선이 만들어졌다. 베지어는 1999년에 사망했다. 
+
+베지어 곡선은 스플라인(spline)이다. 즉 연속 함수(continuous function)를 이용해서 분산된 데이터를 비슷하게 연결하는 곡선이다. 하나의 3차 베지어 곡선(cubirc Bezier curve)은 4개의 점에 의해 고유하게 결정된다. 이들을 p0, p1, p2, p3라고 하자. 해당 곡선은 p0에서 시작해서 p3에서 끝난다. 종종 p0는 곡선의 시작점(start point 또는 begin point)이라 한다. p3은 종료점(end point)이라 불린다. 어떨 때는 2개의 점 모두가 종료점이라 통칭된다. p1과 p2는 제어점(control point)이라 불린다. 이들 2개의 제어점은 곡선을 자신 쪽으로 당기는 자석과 같은 역할을 한다. 
+
+다음은 2개의 종료점과 2개의 제어점을 갖는 간단한 베지어 곡선이다. 
+
+곡선이 p0에서 시작해서 p1을 향하는 것을 눈여겨 보자. 하지만 p1에 닿지 않고 다시 p2를 향한다. 역시 p2에 닿지 않은 채로 p3에서 끝난다. 다음은 다른 베지어 곡선이다. 
+
+베지어 곡선이 2개의 제어점을 지나는 경우는 매우 드물다. 2개의 제어점이 2개의 종료점 사이에 있는 경우 베지어 곡선은 직선이 되고 그 점들을 모두 지난다. 
+
+다른 극단적인 경우로 베지어 곡선이 작은 루프를 만드는 수도 있다. 
+
+1개의 베지어 곡선을 그리려면 4개의 점이 필요하다. PathFigure 구문 안에서 시작점(그림의 p0)은 PathFigure 객체의 StartPoint 프로퍼티나 이전 세그먼트의 마지막 점으로 주어진다. 2개의 제어점과 마지막 종료점은 BezierSegment 클래스의 Point1, Point2, Point3 프로퍼티로 주어진다. 이들 3개의 프로퍼티 이름에 사용된 번호 체계는 이전 그림에서 사용한 번호 체계와 같다. 
+
+다음은 이전 페이지의 첫 번째 베지어 곡선 그림과 비슷한 결과를 만드는 간단한 XAML 프로그램이다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"	>
+	<Path Fill="Red" Stroke="Blue" StrokeThickness="3">
+		<Path.Data>
+			<GeometryGroup>
+				<PathGeometry>
+					<PathFigure x:Name="flg" StartPoint="50 150" IsFilled="False" >
+						<BezierSegment Point1="25 25" Point2="400 300" Point3="450 150" />
+					</PathFigure>
+				</PathGeometry>
+				<EllipseGeometry Center="{Binding ElementName=flg, Path=StartPoint}" RadiusX="5" RadiusY="5" />
+				<EllipseGeometry Center="{Binding ElementName=flg, Path=Segments[0].Point1}" RadiusX="5" RadiusY="5" />
+				<EllipseGeometry Center="{Binding ElementName=flg, Path=Segments[0].Point2}" RadiusX="5" RadiusY="5" />
+				<EllipseGeometry Center="{Binding ElementName=flg, Path=Segments[0].Point3}" RadiusX="5" RadiusY="5" />
+			</GeometryGroup>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+실제 베지어 곡선뿐 아니라 4개의 바인딩한 EllipseGeometry 객체도 추가로 표시했다. 이들 객체는 종료점과 제어점을 나타낸다. 
+
+베지어 스플라인이 그래픽 프로그래밍에 중요하게 다뤄지는 데는 이유가 있다. 베지어 스플라인으로 여러 가지 실험을 해보면 그 이유가 분명해질 것이다. 바로 다음의 BezierExprimenter 프로젝트가 그 목적을 위한 것이다. 이 프로젝트는 XAML 파일과 C# 파일로 이루어졌다. 
+
+XAML 파일은 Canvas 위에 EllipseGeometry 객체들을 배치하는 것으로 시작한다. 이들은 베지어 곡선을 정의하는 4개의 점을 표시한다. 그리고 그들에게는 x:Name 속성이 부여됐다. 이 프로퍼티는 C# 파일이 실제 좌표를 할당할 때 사용할 변수 이름이 된다. 
