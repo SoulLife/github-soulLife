@@ -1,0 +1,281 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="Petzold.BezierExprimenter.BezierExperimenter" Title="Bezier Experimenter">
+	<Canvas Name="canvas">
+
+		<!-- 곡선을 정의하는 4개 점을 그림 -->
+		<Path Fill="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}" >
+			<Path.Data>
+				<GeometryGroup>
+					<EllipseGeometry x:Name="ptStart" RadiusX="2" RadiusY="2" />
+					<EllipseGeometry x:Name="ptCtrl1" RadiusX="2" RadiusY="2" />
+					<EllipseGeometry x:Name="ptCtrl2" RadiusX="2" RadiusY="2" />
+					<EllipseGeometry x:Name="ptEnd" RadiusX="2" RadiusY="2" />
+				</GeometryGroup>
+			</Path.Data>
+		</Path>
+
+		<!-- 곡선 자체를 그림 -->
+		<Path Stroke="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}" >
+			<Path.Data>
+				<PathGeometry>
+					<PathGeometry.Figures>
+						<PathFigure StartPoint="{Binding ElementName=ptStart, Path=Center}">
+							<BezierSegment Point1="{Binding ElementName=ptCtrl1, Path=Center}" Point2="{Binding ElementName=ptCtrl2,
+								Path=Center}" Point3="{Binding ElementName=ptEnd, Path=Center}" />
+						</PathFigure>
+					</PathGeometry.Figures>
+				</PathGeometry>
+			</Path.Data>
+		</Path>
+
+		<!-- 종료점과 제어점을 연결하는 회색 직선을 그림 -->
+		<Path Stroke="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}">
+			<Path.Data>
+				<GeometryGroup>
+					<LineGeometry StartPoint="{Binding ElementName=ptStart, Path=Center}" EndPoint="{Binding 											ElementName=ptCtrl1,Path=Center}" 	EndPoint="{Binding ElementName=ptCtrl2, Path=Center}" />
+				</GeometryGroup>
+			</Path.Data>
+		</Path>
+
+		<!-- 실제 좌표에 레이블을 그림 -->
+		<Label Canvas.Left="{Binding ElementName=ptStart, Path=Center.X}" Canvas.Top="{Binding ElementName=ptStart, Path=Center.Y}"
+				Content="{Binding ElementName=ptStart, Path=Center}" />
+		<Label Canvas.Left="{Binding ElementName=ptCtrl1, Path=Center.X}" Canvas.Top="{Binding ElementName=ptCtrl1, Path=Center.Y}"
+			Content="{Binding ElementName=ptCtrl1, Path=Center}" />	
+		<Label Canvas.Left="{Binding ElementName=ptCtrl2, Path=Center.X}" Canvas.Top="{Binding ElementName=ptCtrl2, Path=Center.Y}"
+			Content="{Binding ElementName=ptCtrl2, Path=Center}" />	
+		<Labe	l Canvas.Left="{Binding ElementName=ptEnd, Path=Center.X}" Canvas.Top="{Binding ElementName=ptEnd, Path=Center.Y}"
+			Content="{Binding ElementName=ptEnd, Path=Center}" />
+
+	</Canvas>
+</Window>
+
+Canvas 블록은 바인딩에 대한 정의로 계속된다. 모든 바인딩은 4개의 EllipseGeometry 객체의 Center 프로퍼티를 참조하고 있다. PathSegment가 실제 베지어 곡선을 그린다. 그리고 2개의 회색 라인이 2개의 종료점과 2개의 제어점을 연결하고 있다.(이 회색 라인의 의미는 곧 알게 될 것이다) 마지막으로 몇 개의 레이블들이 각 점의 실제 좌표를 표시하고 있다. 마음에 드는 베지어 곡선을 찾았을 경우 여기에 표시된 값들을 이용해서 별도의 XAML 마크업을 작성할 수도 있을 것이다. 
+
+프로그램의 C# 부분은 창의 크기가 바뀔 때마다 4개 점의 위치를 재설정한다. 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public partial class BezierExperimenter : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new BezierExperimenter());
+	}
+	public BezierExperimenter()
+	{
+		InitializeComponent();
+		canvas.SizeChanged += CanvasOnSizeChanged;
+	}
+	//Canvas의 크기가 변하면, 4개의 점을 리셋
+	protected virtual void CanvasOnSizeChanged(object sender, SizeChangedEventArgs args)
+	{
+		ptStart.Center = new Point(args.NewSize.Width / 4, args.NewSize.Height /2 );
+		ptCtrl1.Center = new Point(args.NewSize.Width /2, args.NewSize.Height /4 );
+		ptCtrl2.Center = new Point(args.NewSize.Width / 2, args.NewSizeHeight /4);
+		ptEnd.Center = new Point( 3 * args.NewSize.Width / 4, args.NewSizeHeight / 2);
+	}
+	//마우스 클릭과 이동에 따라 제어점을 변경
+	protected override void OnMouseDown(MouseButtonEventArgs args)
+	{
+		base.OnMouseDown(args);
+		Point pt = args.GetPosition(canvas);
+
+		if(args.Changed == MouseButton.Left)
+			ptCtrl1.Center = pt;
+		if(args.Changed == MouseButton.Right)
+			ptCtrl2.Center = pt;
+	}
+	protected override void OnMouseMove(MouseEventArgs args)
+	{
+		base.OnMouseMove(args);
+		Point pt = args.GetPosition(canvas);
+
+		if(args.LeftButton == MouseButtonState.Pressed)
+			ptCtrl1.Center = pt;
+		if(args.RightButton == MouseButtonState.Pressed)
+			ptCtrl2.Center = pt;
+	}
+}
+
+
+2개의 종료점은 항상 창의 상대적 위치에 고정돼 있다. 왼쪽 마우스 버튼은 첫 번째 제어점을 조정하고, 오른쪽 마우스 버튼은 두 번째 제어점을 조정한다. 이 프로그램으로 실험하다 보면 조금만 노력하면 자신이 원하는 모습에 가까운 곡선을 얻을 수 있다는 사실을 알게 될 것이다. 
+
+베지어 스플라인은 아주 쉽게 조정할 수 있다. 어떤 종류의 스플라인은 그것을 정의하는 점들을 전혀 지나지 않는다. 하지만 베지어 스플라인은 항상 2개의 엔드 포인트에 연결돼 있다(곧 알게 되겠지만 이것은 베지어 공식을 유도할 때 사용한 가정 중 하나다)어떤 종류의 스플라인에는 곡선이 무한대로 발산해버리는 특이점이 존재한다. 이런 현상은 컴퓨터 디자인 작업에 적합하지 않다. 베지어 스플라인은 이런 면에서 탁월하다. 실제로 베지어 곡선은 종료점과 컨트롤 포인트를 연결한 4각 폴리곤(convex hull이라고 부른다) 안에만 존재한다(이런 convex hull을 구성하기 위해 종료점과 제어점을 연결하는 방법은 곡선의 모양에 따라 결정된다). 
+
+시작점에서의 곡선은 시작점과 첫 번째 종료점을 연결하는 직선에 인접하며 같은 방향을 향한다(이런 관계는 BezierExpreimenter 프로그램을 통해 시각적으로 파악할 수 있다)마지막 점에서의 곡선은 두 번째 종료점과 마지막 점을 연결하는 직선에 인접하며, 같은 방향을 향한다. 이것이 베지어 공식을 유도하기 위해 사용한 2가지 가정이다. 
+
+수학적인 특징과는 별개로 베지어 곡선은 그 자체로도 아름답다. 이 역시 컴퓨터 디자인 작업에 그토록 자주 이용되는 중요한 이유 중 하나다. 
+
+PolyBezierSegment 엘리먼트의 Points 프로퍼티를 설정하면 연결된 여러 개의 베지어 스플라인을 정의할 수 있다. PolyBezierSegment에 사용할 수 있는 점의 수에는 제한이 없다. 하지만 점의 수는 3의 배수일 때만 의미가 있다. 첫 번째와 두 번째 점은 제어점이다. 그리고 세번째 점은 종료점이다. 세 번째 점은(존재한다면)다음 베지어 곡선의 시작점이기도 하다. 그리고 네 번째와 다섯 번째 점은 두 번째 베지어 곡선의 제어점이다. 
+
+연결된 베지어 곡선들이 종료점을 공유하지만 그렇다고 이전 곡선과 다음 곡선이 부드럽게 연결되는 것은 아니다. 수학적 정의에 따르면 연결된 두 곡선의 일차 도함수가 연속적일 때만 부드럽다고 말한다. 즉 갑작스런 변화 없이 연결됐을 때를 부드럽게 연결됐다고 말한다. 
+
+여러 개의 베지어 곡선을 연속적으로 그릴때 한 곡선과 다음 곡선을 부드럽게 연결하고 싶을 수 있을 것이다. 또 어떤 때는 그러지 않고 싶을 것이다. 그것은 그리려는 대상에 따라 다르다. 2개의 베지어 곡선을 부드럽게 연결하고 싶다면 첫 번째 베지어 곡선의 두 번째 제어점과 마지막 종료점(이 점은 두 번째 베지어 곡선의 시작점이기도 하다)그리고 두 번째 베지어 곡선의 첫 번째 제어점을 일직선상에 놓아야 한다. 즉 동일한 직선 위에 3개의 점이 위치해야 한다. 
+
+여기 소개하는 간단한 XAML 파일은 4개의 연속적인 베지어 스플라인으로 원을 흉내내는 표준적인 기법을 보여준다. 이 파일에서 사용된 종료점과 제어점은 부드러운 연결을 만들기 위해 일직선 위에 놓여 있다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Path Canvas.Left="150" Canvas.Top="150" Stroke="Black">
+		<Path.Data>
+			<PathGeometry>
+				<PathGeometry.Figures>
+					<PathFigure StartPoint="0 100">
+						<PolyBeizerSegment Points="55 100, 100 55, 100 0 100 -55, 55 -100, 0 -100 -55 -100, -100 -55,
+							-100 0 -100 55, -55 100, 0 100"/>
+					</PathFigure>
+				</PathGemoetry.Figures>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+흉내 낸 원은 Points 배열에 의해 정의됐다. 지름은 100이고 점(0, 0)을 중심으로 한다. Canvas에서의 위치 프로퍼티 Left와 Top이 Path를 좀 더 잘보이는 영역으로 이동시킨다. 다음 프로그램은 이전 프로그램을 약간 변형시킨 것이다. 무한대 기호를 그라디언트 브러시를 써서 그린다. 
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Path Canvas.Left="150" Canvas.Top="150" StrokeThickness="25" >
+		<Path.Stroke>
+			<LinearGradientBrush>
+				<LinearGradientBrush.GradientStops>
+					<GradientStop Offset="0.00" Color="Red" />
+					<GradientStop Offset="0.16" Color="Orange" />
+					<GradientStop Offset="0.33" Color="Yellow" />
+					<GradientStop Offset="0.50" Color="Green" />
+					<GradientStop Offset="0.67" Color="Blue" />
+					<GradientStop Offset="0.84" Color="Indigo" />
+					<GradientStop Offset="1.00" Color="Violet" />
+				</LinearGradientBrush.GradientStops>
+			</LinearGradientBrush>
+		</Path.Stroke>
+
+		<Path.Data>
+			<PathGeometry>
+				<PathGeometry.Figures>
+					<PathFigure StartPoint="0 -100" >
+						<PolyBezierSegment Points=" -55 100, -100 -55, -100 0, -100 55, -55 100, 0 100, 55 100, 100 50, 150 0,
+							200 -50, 245 -100, 300 -100, 355 -100, 400 -55, 400 0, 400 55, 355 100, 300 100, 245 100, 200 50, 150 0,
+							100 -50, 55 -100, 0 -100" />
+					</PathFigure>
+				</PathGeometry.Figures>
+			</PathGeometry>
+		</Path.Data>
+	</Path>
+</Canvas>		
+그래픽 시스템이 어떤 곡선을 그리기 위해 사용하는 수학적 공식을 알아두면 도움이 된다. 공식이 어느날 갑자기 하늘에서 떨어진 게 아니라고 생각할 정도까지만 유도하는 과정을 알아두면 충분하다. 
+
+3차 베지어 스플라인의 공식은 4개의 점에 의해 정의된다. 이를 p0(시작점), p1 과 p2(제어점), p3(종료점)이라고 하자. 그리고 이들 4점의 좌표를 (x0, y0), (x1, y1), (x2, y2), (x3, y3)라고 하자. 
+
+2차원 공간에서의 일반적인 매개 방정식 형태의 3차 다항식은 다음과 같다. 
+
+이때 ax, bx, cx, ay, by, cy, dy는 상수이고 t는 0에서 1까지 변화한다. 모든 베지어 스플라인은 이들 8개의 상수로 고유하게 정의된다. 이 상수들은 곡선을 정의하는 4개의 점과 관련있다. 이 계산의 목적은 4개의 점에 대한 좌표로부터 8개의 상수값을 유도하는 것이다. 
+
+첫 번째 가정은 t가 0일때 베지어 스플라인이 점 (x0, y0)에서 시작한다는 것이다. 
+
+간단한 가정이지만 상수들을 유도하는 데 필요한 확실한 첫걸음이 됐다. 이전 다항식에 t 대신 0을 넣으면 다음을 얻을 수 있다. 
+
+이것은 2개의 상수가 시작점의 좌표와 같다는 것을 의미한다. 
+
+베지어 스플라인에 관한 두 번째 가정은 t가 1일때 곡선이 점 (x3, y3)에서 끝난다는 것이다. 
+
+다항식에 t 대신 1을 넣으면 다음과 같다. 
+
+이는 상수들과 마지막 점의 관계가 다음과 같다는 것을 의미한다. 
+
+이제 남은 2개의 가정은 곡선의 기울기를 나타내는 다항식의 1차 도함수와 관련있다. t를 매개 변수로 하는 3차 다항식에 대한 1차 도함수의 일반형은 다음과 같다. 
+
+특히 관심 있는 기울기는 2개의 종료점에서의 기울기다. 시작점에서의 베지어 곡선은 시작점에서 첫 번째 제어점을 향하는 직선에 인접하며 같은 방향이다. 이 직선은 다음 다항식과 같이 정의된다. 
+
+이때 t는 0에서 1사이의 값이다. 하지만 이 직선은 다음 다항식처럼 표현할 수도 있다. 
+
+이때 t는 0에서 1/3사이의 값이다. 왜 1/3일까? 왜냐하면 p0에서 p1을 향하는 직선에 인접하고, 이와 같은 방향을 갖는 구간은 전체 베지어 곡선의 대략 1/3에 해당하기 때문이다. 이 수식에 대한 1차 도함수는 다음과 같다. 
+
+이 함수를 통해 t가 0일 때 베지어 스플라인의 기울기를 구하면 다음과 같다. 
+
+3차 다항식의 1차 도함수 일반형에 t대신 0을 대입하면 다음과 같다. 
+
+이로부터 다음과 같은 관계를 얻을 수 있다. 
+
+마지막 가정은 종료점에 적용된다. 종료점에서의 베지어 곡선은 두 번째 제어점에서 종료점을 향하는 직선에 인접하며 같은 방향이다. 
+
+이를 수식으로 표현하면 다음과 같다. 
+
+1차 도함수의 일반형에  t 대신 1을 대입하면 다음과 같다. 
+
+그러면 다음을 얻을 수 있다. 
+
+
+식 1a, 2a, 3a, 4a를 통해 4개의 방정식과 4개의 미지수가 주어졌기 때문에 미지수 ax, b, c, dx를 상수 x0, x1, x2, x3으로 풀 수 있다. 간단한 연산을 통해 다음과 같은 결과를 얻는다. 
+
+식 1b, 2b, 3b, 4b를 이용해서 y에 대한 결과를 얻을 수 있다. 이렇게 얻은 상수들을 3차 다항식의 일반형에 적용하면 다음과 같다. 
+
+이제 필요한 모든 과정은 끝났다. 수식을 좀 더 보기 좋고 사용하기 쉽게 정리하면 다음과 같은 결과를 얻는다. 
+
+이 공식이 베지어 스플라인을 표현하는 일반적인 형태이다. 곡선 위의 각 점은 곡선을 정의하는 4개의 점으로부터 계산된다. 지금까지 유도한 공식이 WPF가 사용하는 바로 그 공식이라는 사실은 쉽게 확인할 수 있다. 다음의 BezierReproduce 프로젝트는 BezierExperimenter.xaml 파일과 BezierExperimenter.cs 파일, 다음의 파일을 포함하고 있다. 이 파일은 BezierExpermenter를 계승한 클래스를 포함한다. 이 클래스는 베지어 스플라인을 직접 계산해서 이를 파란색 Polyline으로 화면에 표시한다. 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+public class BezierReproduce : Petzold.BezierExperimenter.BezierExperimenter 
+{
+	Polyline bezier;
+
+	[STAThread]
+	public new static void Main()
+	{
+		Application app = new Application();
+		app.Run(new BezierReproduce());
+	}
+	public BezierReproduce()
+	{
+		Title = "Bezier Reproduce";
+
+		bezier = new PolyLine();
+		bezier.Stroke = Brushes.Blue;
+		canvas.Children.Add(bezier);
+	}
+	protected override void CanvasOnSizeChanged(object sender, SizeChangedEventArgs args)
+	{
+		base.CanvasOnSizeChanged(sender, args);
+		DrawBezierManully();
+	}
+	
+	protected override void OnMouseDown(MouseButtonEventArgs args)
+	{
+		base.OnMouseDown(args);
+		DrawBezierManually();
+	}
+	
+	protected override void OnMouseMove(MouseEventArgs args)
+	{
+		base.OnMouseMove(args);
+		DrawBezierManually();
+	}
+	
+	void DrawBezierManually()
+	{
+		Point[] pts = new Point[10];
+
+		for(int i=0;i <pts.Length; i++)
+		{
+			double t = (double)i / (pts.Length - 1);
+
+			double x = (1- t) * (1-t) * (1-t) * ptStart.Center.X + 3*t*(1-t)*(1-t) * ptCtrl1.Center.X + 3 * t * t * (1-t) * ptCtrl2.Center.X +
+					t * t * t * ptEnd.Center.X;
+
+			double y = (1 - t) * (1 - t) * (1 - t) * ptStart.Center.Y + 3 * t * (1 - t) * (1 - t) * ptCtrl1.Center.Y + 3 * t * t * (1-t) * ptCtrl2.Center.Y +
+					t * t * t * ptEnd.Center.Y;
+			pts[i] = new Point(x, y);
+		}
+		bezier.Points = new PointCollection(pts);
+	}
+}
