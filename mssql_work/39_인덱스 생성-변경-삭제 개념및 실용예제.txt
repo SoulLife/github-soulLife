@@ -1,0 +1,161 @@
+Section 04 : 인덱스 생성/ 변경/ 삭제
+이제는 제약 조건에서 자동으로 생성되는 인덱스 외에 직접 인덱스를 생성하는 구문을 살펴보자. 
+
+
+※ 인덱스 생성
+SQL Server 2012도움말에 나오는 인덱스를 생성하는 문법은 다음과 같다. 
+
+CREATE [ UNIQUE ] [ CLUSTERED | NONCLUSTERED ] INDEX index_name
+	ON <object> (column [ ASC | DESC ] [ ,...n] )
+	[ INCLUDE ( column_name [ ,..n] ) ]
+	[ WHERE <filter_predicate> ]
+	[ WITH ( <relational_index_option> [ ,..n] ) ]
+	[ ON { partition_schme_name ( column_name )
+		| filegroup_name
+		| default
+		}
+	]
+	[ FILESTREAM_ON { filestream_filegroup_name | partition_scheme_name
+	 | "NULL" } ]
+
+UNIQUE 옵션은 고유한 인덱스를 만들 것인지를 결정한다. 따라서 UNIQUE로 지정된 인덱스는 같은 데이터 값이 입력될 수 없다. 디폴트는 UNIQUE가 생략된 즉, 중복이 허용되는 인덱스다. 
+
+CLUSTERED와 NONCLUSTERED는 클러스터형 및 비클러스터형 인덱스를 결정한다. 이미 클러스터형 인덱스가 있다면 또 클러스터형 인덱스를 생성할 수 없다. 디폴트는 비클러스터형 인덱스다. 그외에 ASC및 DESC는 정렬되는 방식이다. ASC가 기본값이며 오름차순으로 정렬되어서 인덱스가 생성된다. 
+
+INCLUDE 옵션은 포괄 열이 있는 인덱스를 생성하는 옵션이다. 
+
+ON 파일 그룹 옵션은 인덱스를 별도의 파일 그룹에 저장하게 된다. 이렇게 하면 디스크 입출력을 분산시켜서 성능에 도움이 될 수 있다. 이를 분할 인덱스라 부른다. 
+
+SQL Server 2008부터 새로 제공하는 옵션으로는 WHERE와 FILESTREAM_ON두옵션이 있다. 먼저 WHERE 옵션은 필터링된 인덱스 및 통계를 생성하는 것으로, 특정 조건에 맞는 데이터만 인덱스를 생성할 경우에 사용된다. 또 FILESTREAM_ON 옵션은 filestream 데이터와 관련된 옵션이다. 
+
+* 포괄 열이 있는 인덱스, 필터링된 인덱스, 분할 인덱스, FileStream에 대해서는 2권(관리 와 응용)에서 다룬다. 
+
+
+또 <relational_index_option> 부분에는 다음과 같은 옵션이 올 수 있다. 
+
+
+
+PAD_INDEX = { ON | OFF }
+	| FILLFACTOR = fillfactor
+	| SORT_IN_TEMPDB = { ON | OFF }
+	| IGNORE_DUP_KEY = { ON | OFF }
+	| STATISTICS_NORECOMPUTE = { ON | OFF }
+	| DROM_EXISTING = { ON | OFF }
+	| ONLINE = { ON | OFF }
+	| ALLOW_ROW_LOCKS = { ON | OFF }
+	| ALLOW_PAGE_LOCKS = { ON | OFF }
+	| MAXDOP = max_degree_of_parallelism
+	| DATA_COMPRESSION = { NONE | ROW | PAGE }
+		[ ON PARTITIONS ( { <partition_number_expression> | <range> }
+		[ , ..n ] ) ]
+
+실제로 사용되는 옵션 몇 가지를 살펴 보자. 
+
+※ PAD_INDEX와 FILLFACTOR
+PAD_INDEX의 기본값은 OFF이며, 만약 ON으로 설정되었다면 FILLFACTOR에 설정된 값이 의미를 갖게 된다. 이는 간단히 말하면 인덱스 페이지의 생성할 때 얼마나 여유를 두겠냐는 의미이다. 
+
+이 값을 지정하지 않으면 SQL Server는 인덱스를 생성할 때 인덱스 페이지는 두 개의 레코드를 입력할 공간만 남겨 놓고 꽉 채운다. 그런데 그럴 경우에 인덱스의 갱신이 많이 발생되는 테이블의 경우에는 인덱스 페이지 분할이 자주 발생될수 밖에 없다. 그럴 때 이 FILLFACTOR를 높여주면 인덱스를 생성할 때 빈공간의 비율을 높여서 페이지 분할이 일어날 확률은 낮춰주는 효과를 줄 수 있다. 
+
+FILLFACTOR를 50으로 설정하면 50%만 채우고 나머지 50%는 비워놓겠다는 의미가 된다. 이럴 경우에 여유 공간이 많이 생겨 나중에 인덱스에 데이터가 추가되더라도 페이지 분할이 거의 발생하지 않게 될 확률이높아진다. 이는 시스템 성능에 큰도움이 될 수 있다. 하지만 예상하듯이 50%는 처음에는 그냥 낭비하는 공간이 된다. 즉 인덱스를 생성하기 위한 공간은 2배가 필요해진다. 
+
+특별한 경우가 아니라면 이것을 설정할 필요는 없지만, 데이터가 자주 입력되는 경우라면 이 값을 지정해주는 것도 성능 향상에 도움을 줄 수 있다 
+
+
+
+※ 여기서 잠깐?
+PAD_INDEX 및 FILLFACTOR 옵션은 오라클의 PCTFREE 및 PCTUSED 등과 비슷한 역할을 하는 옵션이다. 하지만 최근 버전의 SQL Server나 오라클은 이러한 것을 자동으로 잘 설정해 주므로 일 부러 값을 지정하는 경우가 드물어졌다. 
+
+
+
+※ SORT_IN_TEMPDB
+SORT_IN_TEMPDB를 ON으로 설정하면 디스크의 분리 효과가 생겨 인덱스를 생성할 때 발생하는 시간을 줄일 수가 있다. 디폴트는 OFF이다. 인덱스를 생성할 때 필요로 하는 임시 파일의 읽기/쓰기 작업을 tempdb에서 수행하겠다는 의미이다. 그러려면 우선 tempdb가 물리적으로 독립된 디스크여야 의미가 있으며 tempdb의 공간도 충분히 확보되어 있어야 할 것이다. 
+
+
+※ ONLINE
+ONLINE의 디폴트는 OFF이다. ON 으로 설정하면 인덱스 생성 중에도 기본 테이블에 쿼리가 가능하다. 잠시라도 중단되면 안되는 시스템에서는 유용하게 사용될 수 있다. 
+
+
+※ MAXDOP
+MAXDOP은 인덱스를 생성할 때 사용할 CPU의 개수를 강제로 지정하는 것이다. 최대 64까지 지정할 수 있다. 인덱스 생성 작업은 디스크 및 CPU의 사용량이 많으므로, 적절히 지정한다면 인덱스의 생성 시간을 줄 일 수 있다. 디폴트는 0이며 이는 시스템이 알아서 설정해 준다는 의미다. 특별한 경우가 아니라면 이 옵션을 지정하지 않아도 시스템이 적절한 CPU의 개수를 사용한다. 
+
+
+※ DATA_COMPRESSION
+DATA_COMPRESSION은 테이블의 압축과 같은 개념으로 인덱스를 압축할 것인지를 지정할 수 있다. 
+
+* ONLINE, MAXDOP 옵션은 SQL Server 2005 Enterprise/Developer 버전 이상부터 DATA_COMPRESSION 옵션은 SQL Server 2008 Enterprise/Developer 버전 이상부터 설정이 가능하다. 
+
+
+옵션은 이 정도면 될 것 같다. 다른 옵션의 내용은 SQL Server 2012 도움말을 참조하도록 하자. 사실 다른 옵션을 지정할 일은 특별한 경우가 아니라면 거의 없을 것이다. 
+
+
+
+※ 여기서 잠깐?
+인덱스에 현재 설정된 값을 확인하려면 카탈로그 뷰 중에서 sys.indexes 를 확인하면 된다. 
+SELECT * FROM sys.indexes WHERE object_id('userTbl') = object_id;
+
+
+
+
+
+
+
+※ 인덱스 변경
+인덱스를 변경할 때 다른 개체를 수정하는 방식과 마찬가지로 ALTER INDEX 구문을 사용한다. 
+
+* ALTER INDEX 구문은 SQL Server 2005부터 지원되었고, SQL Server 2000에서는 인덱스를 삭제하고 다시 생성 해야만 했다. 
+
+
+
+SQL Server 2012 도움말에는 다음과 같이 형식이 나와있다. 
+
+ALTER INDEX { index_name | ALL }
+	ON <object>
+	{ REBUILD
+		[ [PARTITION = ALL ]
+		[ WITH ( <rebuild_index_option> [,..n] ) ]
+			| [ PARTITION = partition_number
+				[ WITH ( <single_partition_rebuild_index_option>
+					[,..n] )
+				]
+			]
+		]
+	| DISABLE
+	| REORGANIZE
+		[PARTITION = partition_number ]
+		[ WITH ( LOB_COMPACTION = { ON | OFF } ) ]
+	| SET ( <set_index_option> [ ,..n] )
+	}
+
+
+* REBUILD 옵션은 인덱스를 삭제하고 다시 생성하는 효과를 낸다. 만약 비클러스터형 인덱스에 어떠한 이유로 불일치가 생긴다면, 다시 생성해서 문제를 해결할 수도 있다. 다음의 예문은 sqlDB의 userTbl에 생성된 비클러스터형 인덱스의 문제를 해결해 줄 것이다. 
+단 예상했듯이 대용량 데이터베이스의 경우에는 오프라인 후에 전체 인덱스의 재생성이 오래 걸릴 수도 있다. 다음 구문처럼 ONLINE=ON 옵션을 추가해주면 인덱스 재생성 중에도 시스템이 계속 가동된다. 단 시스템이 느려질 수는 있다. 
+
+USE sqlDB;
+ALTER INDEX ALL ON userTbl
+REBUILD
+WITH(ONLINE=ON);
+
+
+
+※ 여기서 잠깐?
+SQL Server 2000 버전에서는 인덱스를 재구성하려고 DBCC DBREINDEX()를 사용했으나, SQL Server 2012 이후 버전에서는 없어질 예정이므로, ALTER INDEX의 REBUILD 옵션을 사용하도록 하자. 또 ONLINE=ON 옵션은 SQL Server 2008과 2012 Enterprise/Developer 버전에서만 가능하다. 
+
+
+
+* REORGANIZE 옵션은 인덱스를 다시 구성해 준다. REBUILD와 달리 인덱스를 삭제하고 다시 생성해주는 것은 아니다. 이 옵션을 사용하면 테이블을 오랫동안 사용하다 인덱스가 조각화(fragmentation)되어 있는 것을 모아주는 효과를 내서 시스템 성능에 약간의 도움을 줄 수 있다. 
+
+
+
+※ 여기서잠깐?
+현재 조각화된 상태를 보고 싶다면 다음 구문을 사용하면 된다. 결과의 자세한 내용은 SQL Server 2012도움말에서 sys.dm_db_index_physical_stats() 함수를 찾아보도록 하자. 
+
+USE sqlDB;
+GO
+SELECT a.index_id name, avg_fragmentation_in_percent FROM sys.dm_db_index_physical_stats (DB_ID(), OBECT_ID
+	('dbo.userTbl'), NULL, NULL, NULL) AS a INNER JOIN sys.indexes AS b ON a.object_id = b.object_id AND a.index_id = b.index_id;
+GO
+
+현재는 인덱스 조각화가 0%라는 뜻이다. 즉 하나도 조각난 것이 없다. 이 조각화의 수치가 올라 갈수록 성능에 나쁜 영향을 줄 수 있으므로 ALTER INDEX를 REORGANIZE 옵션으로 실행시켜 줄 필요성이 높아진다. 
+
+
+* 그외에 SET 옵션으로 지정할수 있는 것은 CREATE INDEX의 SET 옵션과 같다. 

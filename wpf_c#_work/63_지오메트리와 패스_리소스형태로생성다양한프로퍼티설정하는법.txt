@@ -1,0 +1,220 @@
+파란색 Polyline이 10개의 점밖에 갖고 있지 않지만(그래서 곡선이라기보다 직선이 연결된 것으로 보이지만) 베지어 곡선과 아주 정확하게 일치하는 것을 볼 수 있다. 
+
+WPF는 소위 말하는 2차 베지어 곡선(quadratic Bezier curve)도 지원한다. 이 곡선은 제어점이 2개가 아니라 1개다. 곡선을 많이 그릴 때는 2차 곡선이 3차 베지어 곡선보다 효율적이다. QuadraticBezierSegment 클래스는 Point1 프로퍼티와 Point2 프로퍼티를 갖고 있다. Point1 프로퍼티는 제어점이고, Point2 프로퍼티는 종료점이다. PolyQuadraticBezierSegment 클래스는 Points 프로퍼티를 갖고 있다. 이 프로퍼티에는 짝수 개의 점이 할당돼야 의미가 있다. 번갈아가며 제어점과 종료점이 된다. 
+
+2차 스플라인의 시작점이 (x0, y0)이고, 제어점이 (x1, y1)종료점이 (x2, y2)라면 2차 베지어 곡선에 대한 공식은 다음과 같다. 
+
+x(t) = (1-t)2제곱 x0 + 2t(1 - t)x1 + t2제곱x2
+y(t) = (1-t)2제곱y0 + 2t(1 -t)y1 + t2제곱y2
+
+3차 베지어 곡선에 있는 2개의 제어점이 같은 점이고 그 점이 2차 베지어 곡선에 있는 1개의 제어점과 같은 점이라면 3차 베지어 곡선과 2차 베지어 곡선은 어떻게 다를까? 개략적으로 말하면 2차 베지어 곡선은 2개의 종료점을 연결한 직선과 3차 베지어 곡선의 중간이다. 실제 곡선을 보지 않고도 이를 확인할 수 있다.!
+
+(x0, y0)와 (x2, y2)사이의 직선을 생각해보자. 이 직선의 중간점은 어디일까? 이는 다음과 같다. 
+
+같은 점에서 시작해서 같은 점에서 끝나고, 제어점이 (x1, y1)인 2차 베지어 곡선의 중간점은 어디일까? 2차 베지어 공식에 t대신 0.5를 대입하면 다음과 같은 결과를 얻는다. 
+
+y에 대한 결과도 비슷하다. 이 결과는 3개의 점에 대한 가중 평균(weighted average)이다. 3차 베지어 공식에 t 대신 0.5를 대입하고 두개의 제어점이 모두 같은 점(x1, y1)이며, 마지막 종료점이(x2, y2)라고 가정해서 수식을 정리하면 다음과 같은 결과를 얻는다. 
+
+3차 베지어 곡선은 2차 베지어 곡선보다 제어점에 큰 가중치를 두고 종료점에 작은 가중치를 둔다. 3차 베지어 곡선의 중간점과 직선의 중간점 사이의 평균은 다음과 같다. 
+
+이 결과는 2차 베지어 곡선의 중간점과 무척 가깝다. 
+
+지금까지 PathSegment 클래스의 모든 파생 클래스들에 대해 살펴보았다. 이제 패스 미니 언어(path mini-language)에 대해 알아보자(공식적으로는 PathGeometry 마크업 문법이라고 알려져 있다)패스 미니 언어는 패스 세그먼트(path segment)의 모든 타입을 포함하는 문자열이다. Path의 Data 속성에 이 문자열을 사용할 수 있다. 그리고 다른 엘리먼트에 포함된 Geometry 타입의 모든 프로퍼티에도 사용할 수 있다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Path Fill="Aqua" Stroke="Magenta" StrokeThickness="3" Data="M 50 75 L 250 75, 250 275, 50 275 Z" />
+</Canvas>
+
+미니 언어는 문자 명령과 숫자 매개 변수가 번갈아 나오는 형태로 구성돼 있다. M은 move를 뜻하며 PathFigure의 StartPoint 프로퍼티와 같다. 점의 위치는 (50, 75)이다. L은 line이다. L 이후의 3점에 의해 라인이 그려진다. 라인은 (50, 75)에서 시작해서(250, 75), (250, 275), (50, 275)로 이어 그려진다. 마지막의 Z는 단어에서 따온 것이 아니다. z는 알파벳의 마지막 글자며, 피규어(여기서는 200단위 사각형)에 대한 정의가 끝났음을 의미한다. 새로운 피규어를 정의하기 위해 또 다른 M이 이어 나올수 있다. 또는 암묵적으로(50, 75)를 시작점으로 사용할 수도 있다. 이 점은 이전 피규어가 종료된 마지막 점이다. 새로운 피규어는 항상 M으로 시작하거나 z 다음에서 암묵적으로 시작한다 
+
+H와 V 명령은 각기 지정된 좌표를 이용해서 가로 라인과 세로 라인을 그린다. 같은 사각형을 다음과 같이 그릴수 있다. 
+
+Data ="M 50 75 H 250 V 275 H 50 Z"
+
+소문자를 사용해도 대개 대문자와 같은 역할을 한다. 다만 절대적인 좌표가 아니라 상대적인 값을 사용한다는 것이 다르다. 다음 문자열은 같은 사각형을 정의한다. 하지만 h와 v다음의 숫자는 좌표가 아니라 길이를 나타낸다 
+
+Data="M 50 75 h 200 v 200 h -200 z"
+
+라인 그리기 명령 역시 상대적 버전(relative version)으로 서술할 수 있다. 
+
+Data ="M 50 75 l 200 0, 0 200, -200 0 Z"
+
+FillRule을 기본값인 EvenOdd 대신 NonZero로 설정하고 싶다면 문자열을 F1으로 시작하면 시작하면 된다(F0는 기본값을 의미한다.)
+
+미니 언어의 모든 규정이 다음 표에 정리돼 있다. 이 표에서 점(x0, y0)는 move 명령에 의해 설정된 현재 좌표를 나타낸다.(또는 이전 드로잉 명령에서 사용한 마지막 좌표를 나타낸다.)
+
+
+명령				이름					설명
+F i				Fill Rule				i=0: EvenOdd
+									i=1: NonZero
+M x y				Move					점 (x, y)로 이동
+m x y				Relative move			점 (x0+x, y0+y)로 이동
+L x y				Line					(x, y)까지 라인 그리기
+l x y				Relative line				(x0+X, y0+Y)까지 라인 그리기
+H x				Horizontal line			(x, y0)까지 라인 그리기
+h x				Relative horizontal line		(x0+X, y0)까지 라인 그리기		
+V y				Vertical line				(x0, y)까지 라인 그리기
+v y				Relative vertical line		(x0, y0+Y)까지 라인 그리기
+A xr yr a i j X y		Arc					(x, y)까지 아크 그리기, 이때 지름은(xr, yr)이고
+									a도 회전
+									i=1: IsLargeArc
+									j=1: ClockWise
+a xz yz a i j x y		Relative arc				(x0 + x, y0+y)까지 아크 그리기
+C x1 y1 x2 y2 x3 y3 	Cubic Bezier				(x3, y3)까지 3차 베지어 곡선 그리기, 이때 제어점은 (x1, y1)과 (x2, y2)
+c x1 y1 x2 y2 x3 y3		Relative cubic Bezier		(x0+x3, y0+y3)까지 3차 베지어 곡선 그리기 이때 제어점은 (x0+x1, y0+y1)과 (x0+x2, y0+y2)
+S x2 y2 x3 y3		Smooth cubic Bezier		(x3, y3)까지 베지어 곡선 그리기, 이때 제어점은 계산된 좌표와 (x2, y2)
+s x2 y2 x3 y3		Relative smooth cubic Bezier	(x3, y3)까지 베지어 곡선 그리기 이때 제어점은 계산된 좌표와 (x2, y2)
+Q x1 y1 x2 y2		Quadratic Bezier			(x2, y2)까지 2차 베지어 곡선 그리기 이때 제어점은 (x1, y1)
+q x1 y1 x2 y2		Relative quadratic Bezier		(x0+x2, y0+y2)까지 2차 베지어곡선 그리기 이때 제어점은 (x0+x1, y0+y1)
+Z				Close figure
+z				Close figure
+
+Smooth cubic Bezier는 현재 그리는 곡선이 이전 곡선과 부드럽게 연결되게 첫 번째 제어점을 계산해 그리는 것이다. 따라서 현재 베지어 곡선의 시작점은 이전 베지어 곡선의 두 번 째제어점과 계산에 의해 얻어질 제어점 사이의 중간점이 된다. 이 특성은 아래 프로그램처럼 무한대 기호를 그리기에 적합하다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Path Canvas.Left="150" Canvas.Top="150" Stroke="Black" Data=" M 0 -100 C -55 -100, -100 -55, -100 0 S -55 100, 0 100 S 100 50, 150 0
+											   S 245 -100, 300 -100 S 400 -55, 400 0 S 355 100, 300 100 S 200 50, 150 0
+											   S 55 -100, 0 -100" />
+</Canvas>
+
+그림 그리는 용도 이외에 클리핑(clipping)을 위해서도 지오메트리를 이용할 수 있다. UIElement는 Clip 이라는 이름의 Geometry 타입 프로퍼티를 갖고 있다. 이 프로퍼티에 모든 Geometry 객체를 설정할 수 있다. 또는 XAML 파일에서 Clip 프로퍼티에 패스 미니 언어 문자열을직접 서술할 수도 있다. 여기 설정한 지오메트리 영역은 아예 화면에 출력되지 않는다. 
+
+예를 들어 다음의 XAML 파일은 버튼의 Clip 프로퍼티에 2개의 아크를 정의하는 미니 언어 문자열을 설정한다. 처음 2개의 아크는 버튼의 폭과 높이가 같은 타원을 정의한다. 그리고 다음 2개의 아크는 타원 안에 작은 타원을 정의한다. 
+
+
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"	>
+	<Button HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Width="200" Height="100" 
+		Clip="M 0 50 A 100 50 0 0 0 200 50 A 100 50 0 0 0 0 50 M 90 50 A 10 10 0 0 0 100 50 A 10 10 0 0 0 90 50" >
+		Clipped Button
+	</Button>
+</Grid>
+
+다음 프로그램은 NASA 웹사이트에서 나온 유명한 이미지를 열쇠구멍 모양으로 잘라(클리핑해)표시한다. 
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Image Source="http://images.jsc.nasa.gov/lores/AS11-40-5903.jpg" Clip="M 300 130 L 250 350 L 450 350 L 400 130 A 70 70 0 1 0 300 130"
+		Stretch="None" />
+</Page>
+
+윈도우에서 사용하는 폰트의 외곽선은 3차 또는 2차 베지어 곡선에 의해 정의된다. 화면에 표시하는 폰트 문자는 이 곡선을 래스터 변환(rasterization)이라고 불리는 과정을 통해 가공해 만들어진다. 하지만 이 과정은 이 곡선들을 무턱대고 사용하지 않는다. 폰트 파일은 "힌트(hint)" 정보를 담고 있다. 힌트는 래스터 변환 과정에서 피할수 없이 생기는 반올림 오차(rounding error)가 작은 크기의 폰트 문자를 만들 때 나쁜 영향을 주지 않게 도와준다. 작은 크기의  폰트 문자는 비디오 출력에 자주 사용되며, 힌트가 없다면 래스터 변환 결과가 읽기 어려운 모습이 되기 쉽다. 
+																
+하지만 폰트 문자의 외곽선을 힌트 없이 지오메트리 형태로 얻을 수도 있다. 얻어진 외곽선을 이용하면 다른 방법으로는 불가능한 그래픽 효과를 만들수 있다. 
+
+FormattedText 클래스를 기억하기 바란다. 그 클래스를 이용해서 DrawingContext 클래스의 DrawText 메소드가 사용할 문자를 준비하게 하자. 그 클래스는 BuildGeometry 메소드를 갖는다. 이 메소드는 출력할 문자의 외곽선을 담고 있는 Geometry 타입 객체를 반환한다. 하지만 FormattedText 클래스를 XAML 파일에서 바로 사용하려면 약간의 문제가 있다. 분명히 FormattedText 객체를 리소스로 생성할 수 있을 것이다. 하지만 BuildGeometry는 프로퍼티가 아니라 메소드다. 그렇기 때문에 XAML 엘리먼트가 이를 이용할 방법이 없다. 
+
+생각해 볼 수 있는 다른 접근 방법은 Geometry를 계승하는 다른 클래스를 만드는 것이다. 이 클래스는 Geometry 파생 클래스가 사용되는 모든 자리에 사용할 수 있다. 하지만 이 방법도 불가능하다. Geometry 를 계승하기 위해 필요한 정보가 문서로 충분히 제공되고 있지 않다. 그리고 Geometry 에서 파생된 모든 클래스들은 봉인돼(sealed)있다. 
+
+이런 문제점을 고려해서 필자는 다음과 같은 간단한 클래스를 만들었다. 이 클래스는 FormattedText 생성자 호출을 위해 필요한 인자를 프로퍼티로 갖고 있다. 그리고 Geometry라는 이름의 프로퍼티도 갖고 있다. Geometry 프로퍼티는 FormattedText 객체의 BuildGeometry 메소드를 호출한다. 
+
+
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Media;
+
+public class TextGeometry
+{
+	//공개 프로퍼티를 뒷받침하는 Private 프로퍼티들
+	string txt = "";
+	FontFamily fntfam = new FontFamily();
+	FontStyle fntstyle = FontStyles.Normal;
+	FontWeight fntwt = FontWeights.Normal;
+	FontStretch fntstr = FontStretchs.Normal;
+	double emsize = 24;
+	Point ptOrigin = new Point(0, 0);
+
+	//공개 프로퍼티
+	public string Text
+	{
+		set { txt = value;	}
+		get { return txt;	}
+	}
+	public FontFamily FontFamily
+	{
+		set { fntfam = value;	}
+		get { return fntfam;	}
+	}
+	public FontStyle FontStyle
+	{
+		set { fntstyle = value;	}
+		get { return fntstyle;	}
+	}
+	public FontWeight FontWeight
+	{
+		set { fntwt = value;		}
+		get { return fntwt;		}
+	}
+	public FontStretch FontStretch
+	{
+		set { fntstr = value;		}
+		get { return fntstr;		}
+	}
+	public double FontSize
+	{
+		set { emsize = value;	}
+		get { return emsize;	}
+	}
+	public Point Origin
+	{
+		set { ptOrigin = value;	}
+		get { return ptorigin;	}
+	}
+
+	//Geometry 객체를 반환하는 public 읽기 전용 프로퍼티
+	public Geometry Geometry
+	{
+		get
+		{
+			FormattedText formtxt = new FormattedText(Text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(FontFamily, 								FontStyle,FontWeight, FontStretch), FontSize, Brushes.Black);
+			return formtxt.BuildGeometry(Origin);
+		}
+	}
+
+	//패스를 사용하는 애니메이션을 위해 필요함
+	public PathGeometry PathGeometry
+	{
+		get
+		{
+			return PathGeometry.CreateFromGeometry(Geometry);
+		}
+	}
+}
+
+이 클래스는 분명히 복잡하지 않다. 이 클래스는 어떤 의존 프로퍼티도 갖고 있지 않다. 필자가 진정 원했던 것은 리소스 형태로 생성해서 다양한 프로퍼티를 설정할 수 있는 것이었다. 그렇게 구현하면 Geometry 프로퍼티를 한번에 바인딩할 수 있는 소스로 이용할 수 있을 것이다. 
+
+이 클래스를 이용하는 XAMl 파일을 다음에 제시한다. 분명히 필자는 2개의 TextGeometry 객체를 리소스 형태로 생성했다. 한 객체는 Hollow라는 문자열을 담고 있고, 다른 객체는 Shadow라는 문자열을 담고 있다. 두 객체 모두 144포인트 크기의 Times New Roman Bold 폰트를 사용한다. 
+
+
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:src="clr-namespace:Petzold.TextGeometryDemo" Title="TextGeometry Demo">
+	<Window.Resources>
+		<src:TextGeometry x:key="txtHollow" Text="Hollow" FontFamily="Times New Roman" FontSize="192" FontWeight="Bold" />
+		<src:TextGeometry x:Key="txtShadow" Text="Shadow" FontFamily="Times New Roman" FontSize="192" FontWeight="Bold" />
+	</Window.Resources>
+
+	<TabControl>
+		<TabItem Header="Hollow">
+			<Path Stroke="Blue" StrokeThickness="5" Data="{Binding Source={StaticResource txtHollow}, Path=Geometry}" />
+		</TabItem>
+
+		<TabItem Header="Dotted">
+			<Path Stroke="Blue" StrokeThickness="5" StrokeDashArray="{Binding Source={x:Static DashStyles.Dot}, Path=Dashes}"
+				StrokeDashCap="Round" Data="{Binding Source={StaticResource txtHollow}, Path=Geometry}" />
+		</TabItem>
+
+		<TabItem Header="Shadow">
+			<Canvas>
+				<Path Fill="DarkGray" Data="{Binding Source={StaticResource txtShadow}, Path=Geometry}" Canvas.Left="12" Canvas.Top="12" />
+				<Path Stroke="Black" Fill="White" Data="{Binding Source={StaticResource txtShadow}, Path=Geometry}" />
+			</Canvas>
+		</TabItem>
+	</TabControl>
+</Window>
+
+프로그램 창은 3개의 탭을 가진 TabControl을 담고 있다. 이들 탭은 프로그램이 TextGeometry 객체의 Geometry 프로퍼티로 어떤 일을 하는지 보여준다. 첫 번째 TabItem 은 간단히 패스를 파란색 브러시로 그린다. 간단한 일처럼 보이지만 필자가 아는 한 WPF의 다른 방법으로는 얻을 수 없는 폰트 문자의 외곽선을 직접 만들어 이용한다. 
+
+두 번째 TabItem도 비슷한 작업을 하지만 외곽선을 점선으로 그린다. 세 번째 TabItem은 문자를 그림자와 함께 그린다. 문자는 내부를 회색으로 칠하고 ,외곽선은 검은색으로 그린다. 다음의 애플리케이션 정의 파일이 프로젝트를 완성한다. 
+
+<Application xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" StartupUri="TextGeometryWindow.xaml" />
+
+이러한 문자열 외곽선을 이용할 때 문자를 충분히 크게 유지하는 것이 중요하다. 우리가 사용하는 외곽선이 단지 꾸밈없는 힌트를 사용하지 않은 외곽선이라는 것을 기억하자. 작은 크기에서는 출력 품질이 심각하게 떨어진다. 
