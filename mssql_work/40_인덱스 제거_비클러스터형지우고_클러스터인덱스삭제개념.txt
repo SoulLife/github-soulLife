@@ -1,0 +1,126 @@
+※ 인덱스 제거
+인덱스를 삭제하는 것은 간단하지만 몇 가지 주의사항이 있다. 
+
+DROP INDEX 테이블이름.인덱스이름
+
+* Primary Key 제약 조건이나 Unique 제약 조건으로 자동 생성된 인덱스는 DROP INDEX로 제거할 수 없다. 이 경우에는 ALTER TABLE 구문으로 제약 조건을 제거하면 인덱스도 자동으로 제거된다. 
+
+* DROP INDEX로 시스템 테이블의 인덱스를 제거할 수 없다. 
+
+* 인덱스를 모두 제거할 때는 되도록 비클러스터형 인덱스부터 삭제하는 게 좋다. [그림9-24]의 혼합된 인덱스를 보면 아래쪽의 클러스터형 인덱스를 먼저 삭제하면 클러스터형 인덱스의 루트 페이지가 없어지게 된다. 비클러스터형 인덱스의 리프페이지는 모두 루트 페이지를 지정하고 있으므로, 어쩔 수 없이 원래의 비클러스터형 인덱스의 리프 페이지에는 페이지 번호 + #오프셋 으로 재구성되어야 한다. 그러나 이 재구성 후에 비클러스터형 인덱스도 삭제한다면 고생해서 재구성한 것을 또 삭제하는 결과가 된다. 
+
+[그림9-24]의 위쪽 비클러스터형 인덱스를 먼저 삭제하면 클러스터형 인덱스는 전혀 변화가 없다. 그러므로 모든 인덱스를 삭제할 때는 비클러스터형 인덱스를 먼저 제거하도록 한다. 
+
+* 인덱스를 많이 생성해 놓은 테이블은 인덱스의 용도를잘 확인한 후에 인덱스의 활용도가 떨어진다면 과감히 삭제해줄 필요가 있다. 그렇지 않으면 전반적인 SQL Server의 성능이 저하될수 있다. 한 달에 한번, 또는 일년에 한번 사용될 인덱스를 계속 유지할 필요는 없다. 
+
+
+
+실습3 : 인덱스를 생성하고 사용하는 실습을 해보자. 
+0. sqlDB를 복원해서 사용해 보자. C:\SQL\sqlDB2012.bak 파일이 없는 독자는 6장의 <실습2> 를 다시 수행하거나, 책의 사이트인 http://brain.hanb.co.kr/sql2012/에서 sqlDB2012.bak을 내려받아서 C:\SQL\에 저장하자. 
+
+USE tempdb;
+RESOTRE DATABASE sqlDB FROM DISK = 'C:\SQL\sqlDB2012.bak' WITH REPLACE;
+
+0-1 userTbl을 주로 사용해 보도록 하자. 데이터의 내용을 확인해 보자. 
+USE sqlDB;
+SELECT * FROM userTbl;
+
+
+1. 우선 userTbl에 어떤 인덱스가 설정되어 있는지 확인해 보자. 
+USE sqlDB;
+GO
+EXEC sp_helpindex userTbl;
+
+PK_userTbl_???? 같은 인덱스가 보일 것이다. 이 인딕세는 클러스터형 인덱스이며, 중복되지 않는 인덱스이다. 즉 UNIQQUE CLUSTERED INDEX이다. 
+
+2. 클러스터형 인덱스가 이미 있으므로 이 테이블에는 클러스터형 인덱스를 생성할 수 없다. 
+
+2-1 주소(addr)에 단순 비클러스터형 인덱스를 생성해 보자. 단순은 중복을 허용한다는 의미로 고유(UNIQUE)와 반대라고 생각하면 된다. 
+
+CREATE INDEX idx_userTbl_addr
+ON userTbl (addr);
+
+다시 EXEC sp_helpindex userTbl로 확인해 보자. 
+
+2-2 출생년도(birthYear)에 고유 비클러스터형 인덱스를 생성해 보자. 
+CREATE UNIQUE INDEX idx_userTbl_birthYear
+ON userTbl (birthYear);
+
+오류 메시지 :
+메시지 1505, 수준 16, 상태 1, 줄 1
+개체 이름 dbo.userTbl및 인덱스 이름 idx_userTbl_birthYear 에 키가 중복되므로 CREATE UNIQUE INDEX 문이 종료되었습니다. 중복 키 값은 (1979)입니다. 
+
+
+김범수와 성시경이 1979년이기에 중복된 값이 있어서 출생년도에는 고유 비클러스터형인덱스를 생성할 수 없다. 
+
+2-3 이름(name)에 고유 비클러스터형 인덱스를 생성해 보자. 
+CREATE UNIQUE INDEX idx_userTbl_name
+ON userTbl(name);
+
+다시 EXECP sp_helpindex userTbl;
+
+2-4 이름(name)열에 잘 생성되었다. 이번에는 김범수와 이름이 같은 사람을 입력해 보자. 아이디는 다르게 GPS로 하자. 
+INSERT INTO userTbl VALUES('GPS', '김범수', 1983, '미국', NULL, NULL, 162, NULL);
+
+오류 메시지 :
+메시지 2601 : 수준 14, 상태 1, 줄1
+고유 인덱스 idx_userTbl_name을(를) 포함하는 개체 dbo.userTbl에 중복 키 행을 삽입할 수 없습니다. 중복 키 값은 (김범수)입니다. 
+
+조금 전에 생성한 고유(Unique)인덱스로 인해서 중복된 값을 입력할 수 없다. 이렇게 이름이 중복된 사람을 허용하지 않는다면 실제 사용에는 문제가 발생될 수도 있다. 그러므로 고유 인덱스는 현재 중복된 값이 없다고 무조건 설정하면 안되며, 업무 절차상 절대로 중복되지 않을 경우(예로 주민등록번호, 학번, 이메일 주소 등)에만 인덱스를 생성할 때 UNIQUE옵션을 사용해야 한다. 
+
+2-5 이번에는 이름(name)열과 출생년도(birthYear)열을 조합해서 인덱스를 생성해 보자. 
+CREATE NONCLUSTERED INDEX idx_userTbl_name_birthYear
+ON userTbl(name, birthYear);
+
+다시 EXEC sp_helpindex userTbl;
+
+이 경우에는 다음과 같이 두 열이 조합된 조건문의 쿼리에서 해당 인덱스가 사용된다. 
+
+SELECT * FROM userTbl WHERE name= '윤종신' and birthYear = '1969';
+
+앞과 같이 name및 birthYear가 조합된 쿼리에서는 이 인덱스가 무척 유용하지만 이러한 쿼리가 거의 사용되지 않는다면 이 인덱스는 오히려 SQL Server의 성능에 나쁜 영향을 줄 수 있다. 
+
+* name열 인덱스와 name열과 birthYear가 조합된 인덱스가 모두 있을 경우에, 다음 문장은 name열 인덱스가 아닌 name열과 birthYear가 조합된 인덱스를 사용할 수도 있다. 이는 SQL Server가 알아서 더 효율적인 것을 선택하기 때문이다. 
+
+SELECT * FROM userTbl WHERE name = '윤종신';
+
+
+2-6 휴대폰의 국번(mobile1)열에 인덱스를 생성해 보자. 
+CREATE NONCLUSTERED INDEX idx_userTbl_mobile1
+ON userTbl (mobile1);
+
+당연히 잘 생성될 것이다. 그리고 다음의 쿼리를 생각해 보자. 
+
+SELECT * FROM userTbl WHERE mobile1 = '011';
+
+결과도 잘 나올 것이다. 그런데 이인덱스는 없는 편이 훨씬 낫다. 그 이유는 국번에는 데이터의 종류가 얼마 되지 않기 때문이다. 즉 데이터가 1,000만 건이라도 결국 010, 011, 016, 017, 018, 019 의 데이터만 있을 것이다. 이렇게 데이터의 종류가 적은 열에는 인덱스를 생성하지 않는 편이 훨씬 낫다. 이러한 경우에는 어차피 SQL Server가 알아서 인덱스를 사용하지 않는다. 이를 선택도(Selectivity)가 나쁜 데이터라고도 이야기하는데, 잠시 후 다시 살펴보겠다. 
+
+
+2-7 SSMS 메뉴의 [쿼리] > [실제 실행 계획 포함]을 선택한 후 앞의 구문을 다시 실행한다. 그리고 실행 계획을 살펴보자.
+
+결과를 보면 CLustered Index Scan으로 나왔다. 이는 인덱스를 사용하지 않고, 전체 테이블을 조회한 Table Scan(테이블 검색)과 마찬가지라고 이미 설명했다. 즉 SQL Server는 생각보다 똑똑해서(?) 인덱스가 있더라도 인덱스를 사용하는 수행 속도가 더 느리면 인덱스를 사용하지 않는다. 
+
+
+3. 인덱스를 삭제하자. 
+3-1 먼저 EXEC sp_helpindex userTbl로 인덱스의 이름을 확인하자. 
+3-2 앞에서 삭제할 때는 비클러스터형 인덱스를 먼저 삭제하는게 좋다고 말했다. 비클러스터형 인덱스를 삭제한다. 
+
+또 인덱스 이름앞에 테이블 이름을 붙여줘야 한다(삭제할 때는 IntelliSense 기능은 지원되지 않는다)
+
+DROP INDEX userTbl.idx_userTbl_addr;
+DROP INDEX userTbl.idx_userTbl_mobile1;
+DROP INDEX userTbl.idx_userTbl_name;
+DROP INDEX userTbl.idx_userTbl_name_birthYear;
+
+3-3 이번에는 Primary Key 지정으로 자동 생성된 클러스터형 인덱스를 삭제해 보자(필자와 여러분의 인덱스 이름이 다를 수 있다)
+DROP INDEX userTbl.PK_userTbl_CB9A1CDF78AC8978;
+
+오류 메시지 :
+메시지 3723 : 수준 16, 상태 4, 줄 1
+인덱스 userTbl.PK_userTbl_CB9A1CDF78AC8978에서는 명시적 DROP INDEX를 사용할 수 없습니다. 이 인덱스는 PRIMARY KEY 제약 조건 설정에 사용 중입니다. 
+
+제약 조건으로 생성된 인덱스는 DROP INDEX 구문으로 삭제할 수 없다. 이는 제약 조건을 제거하면 자동으로 인덱스도 제거된다. 제약 조건의 제거는 8장의 <실습6>에서 해보았으므로 생략하겠다. 
+
+참고로 CONSTRAINT의 이름을 알려면 EXEC sp_help 테이블 이름을 사용하면 된다. 또 인덱스의 이름이 조금 어려우므로 sp_help의 결과를 마우스로 드래그해서 쿼리창에 가져다 놓으면 편리하게 사용할 수 있다(이것도 5장에서 설명했다). 
+
+인덱스를 생성하고 삭제하는 방법에 대해서 익혔으니, 이번에는 클러스터형 인덱스, 비클러스터형 인덱스, 인덱스가 없을 때의 성능 차이를 직접 확인하는 실습을 해 보자. 이번 실습을 통해서 어떤 인덱스가 성능이 좋은지, 또 인덱스가 있어도 인덱스를 사용하지 않는 것은 어떤 경우인지를 파악해 보자. 

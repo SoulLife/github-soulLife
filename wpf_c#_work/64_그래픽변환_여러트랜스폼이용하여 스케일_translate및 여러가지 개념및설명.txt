@@ -1,0 +1,321 @@
+CHAPTER 29장 : 그래픽 변환
+27장에서 동일한 2개의 Polygon을 각기 다른 FileMode로 그리는 XAML 파일을 본 적이 있다. 그때는 2개의 Polygon 엘리먼트마다 각기 다른 좌표를 설정하지 않고 동일한 좌표를 Style 엘리먼트에 한 번만 정의했다. 하지만 2개의 그림에 Canvas.Left 프로퍼티를 다르게 부여했기 때문에 각 그림을 Canvas의 다른 위치에 그릴 수 있었다. Canvas.Left 프로퍼티가 효과적으로 Polygon의 X, Y 좌표에 오프셋을 부여한 것이다. 28장의 마지막 프로그램에서도 문자열의 그림자를 그리기 위해 비슷한 일을 했다. 
+
+Canvas.Left와 Canvas.Top을 이런 용도로 사용하는 것이 편리하기는 하지만 그래픽 객체의 모든 좌표를 일괄적으로 수정할 수 있는 좀 더 일반화되고 시스템적인 접근 방법이 있다면 좋을 것이다. 이런 접근 방법을 변환(transform)이라고 한다. 좌표를 오프셋 이동시키는 경우만 있는 것이 아니다. 때로는 그림을 크게 또는 작게 만들 필요가 있고 때로는 그림을 회전시킬 필요가 있다. 이럴 때 변환을 사용한다. 
+
+변환은 애니메이션에 관한 처리에 특히 유용하다. Polygon을 한 위치에서 다른 위치로 옮긴다고 생각해보자. 모든 좌표를 매번 같은 방식으로 바꾸는 것이 효과적이겠는가? 아니면 그림 전체에 적용될 변환 인자(translation factor)만 바꾸는 것이 효과적이겠는가? 이런 기법(특히 회전에 관한 기술)은 변환의 도움이 없다면 구현하기 무척 어렵다. 
+
+UIElement에서 파생된 모든 객체에는 변환을 적용할 수 있다. UIElement는 RenderTransform이란 이름의 프로퍼티를 갖고 있다. 이 프로퍼티에 Transform 타입 객체를 설정한다. 좀 더 찾아보면 FrameworkElement역시 Transform 타입 프로퍼티를 갖고 있다는 것을 알게 될 것이다. 이 프로퍼티의 이름은 LayoutTransform이다. 이번 장의 주요 목표는 RenderTransform과 LayoutTransform의 차이점을 이해하고 이들을 언제 사용하는지 파악 하는 것이다. 
+
+RenderTransform과 LayoutTransform 프로퍼티는 모두 Transform 타입이다. 다음의 클래스 계층도는 추상 클래스인 Transform과 그로부터 파생된 클래스들을 보여준다. 
+
+Object
+	DispatcherObject (abstract)
+		DependencyObject
+			Freezable (abstract)
+				Animatable (abstract)
+					GeneralTransform (abstract)
+						GeneralTransformGroup
+							Transform (abstract)
+								TranslateTransform
+								ScaleTransform
+								SkewTransform
+								RotateTransform
+								MatrixTransform
+								TransformGroup
+
+클래스 계층도는 Transform 파생 클래스들을 이번 장에서 다룰 순서대로 정렬했다. 다른 중요한 안건은 Matrix 구조체다. Matrix는 이번 장에서 많이 다루지 않을 것이다. 하지만 궁극적으로 무척 중요한 데이터 구조체라는 것이 드러날 것이다. 
+
+Transform 파생 클래스 중에서 TranslateTransform, ScaleTransform, SkewTransform, RotateTransform 등의 4가지는 사용하기가 무척 쉽다. 이들을 이용하면 엘리먼트의 위치나 모습을 쉽게 바꿀 수 있다. 다음의 XAML 파일이 이를 보여준다. 
+
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Button Canvas.Left="50" Canvas.Top="100" >
+		Untransformed
+	</Button>
+
+	<Button Canvas.Left="200" Canvas.Top="100">
+		Translated
+		<Button.RenderTransform>
+			<TranslateTransform X="-100" Y="150" />
+		</Button>
+	</Button>
+
+	<Button Canvas.Left="350" Canvas.Top="100">
+		Scaled
+		<Button.RenderTransform>
+			<ScaleTransform ScaleX="1.5" ScaleY="4" />
+		</Button.RenderTransform>
+	</Button>
+
+	<Button Canvas.Left="500" Canvas.Top="100">
+		Skewed
+		<Button.RenderTransform>
+			<SkewTransform AngleY="200" />
+		</Button.RenderTransform>
+	</Button>
+
+	<Button Canvas.Left="650" Canvas.Top="100" >
+		Rotated
+		<Button.RenderTransform>
+			<RotateTransform Angle="-30" />
+		</Button.RenderTransform>
+	</Button>
+</Canvas>
+
+변환이 없었다면 이들 5개의 버튼은 창안에 한줄로 정렬됐을 것이다. 두 번째 버튼은 자신의 RenderTransform 프로퍼티를 TranslateTransform 객체로 설정한다. 이 객체가 버튼을 아래쪽과 왼쪽으로 이동시킨다. 세 번째 버튼은 ScaleTransform 객체를 사용한다. 이 객체가 버튼의 크기를 가로로 1.5배 세로로 4배 확대시킨다. 네 번째 버튼은 세로축으로부터 20도 기울어진다. 이로 인해 버튼이 직사각형이 아닌 평생사변형 모습이 된다. 다섯 번째 버튼은 반시계 방향으로 30도 회전한다. 모습은 다르지만 각 버튼의 모든 기능은 정상적으로 동작한다. 
+
+C# 프로그램에서도 Transform 파생 클래스의 프로퍼티를 XAML 파일처럼 설정할 수 있다. 
+하지만 Transform 파생 클래스는 다음의 C# 프로그램에서 볼 수 있는 것처럼 (프로퍼티를 설정할 수 있는) 유용한 생성자를 제공한다. 다음의 TransfromButton.cs 프로그램은 기능적으로 TransformButtons.xaml 프로그램과 동일하다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class TransformedButtons : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new TransformedButtons());
+	}
+	public TransformedButtons()
+	{
+		Title = "Transformed Buttons";
+
+		// 프로그램 창의 컨텐트로 Canvas를 생성
+		Canvas canv = new Canvas();
+		Content = canv;
+
+		// 'Untransformed 버튼
+		Button btn = new Button();
+		btn.Content = "Untransformed";
+		canv.Children.Add(btn);
+		Canvas.SetLeft(btn, 50);
+		Canvas.SetTop(btn, 100);
+
+		//Translated 버튼
+		btn = new Button();
+		btn.Content = "Translated";
+		btn.RenderTransform = new TranslateTransform(-100, 150);
+		canv.Children.Add(btn);
+		Canvas.SetLeft(btn, 200);
+		Canvas.SetTop(btn, 100);
+
+		// Scaled 버튼
+		btn = new Button();
+		btn.RenderTransform = new ScaleTransform(1.5, 4);
+		canv.Children.Add(btn);
+		Canvas.SetLeft(btn, 350);
+		Canvas.SetTop(btn, 100);
+
+		//Skewed 버튼
+		btn = new Button();
+		btn.Content = "Skewed";
+		btn.RenderTransform = new SkewTransform(0, 20);
+		canv.Children.Add(btn);
+		Canvas.SetLeft(btn, 500);
+		Canvas.SetTop(btn, 100);
+
+		//Rotated 버튼
+		btn = new Button();
+		btn.RenderTransform = new RotateTransform(-30);
+		canv.Children.Add(btn);
+		Canvas.SetLeft(btn, 650);
+		Canvas.SetTop(btn, 100);
+	}
+}
+
+(Win32나 Windows Froms 같은) 다른 그래픽 프로그래밍 환경에서 변환을 사용해본 경험이 있다면 WPF 가 변환을 구현하는 방식이 약간 다르다는 것을 알게 될 것이다. 다른 그래픽 환경에서는 변환이 드로잉 표면(drawing surface)에 속한 프로퍼티이다. 따라서 표면에 그려지는 모든 것들이 현재 설정된 변환에 영향을 받는다. WPF에서는 변환이 엘리먼트에 속한 프로퍼티이다. 따라서 해당 엘리먼트만 변환된다. 어떤 때는 이런 관점의 차이가 중요하지 않을 수 있다. 하지만 어떤 때는 무척 중요하다. 
+
+이 차이는 버튼을 회전시킬 때 두드러지게 나타난다. 이 프로그램에서 회전을 위해 설정한 것은 각도(angle)가 전부다. 예전 그래픽 환경이었다면 회전이 드로잉 표면의 원점을 기준으로 일어났을 것이다(캔버스의 점(0, 0)을 기준으로 일어났을 것이다)하지만 WPF의 회전은 Button 자신의 원점을 기준으로 일어난다. 회전이 캔버스 좌측 상단의 점이 아닌 버튼 좌측 상단의 점을 기준으로 일어난다. 
+
+FrameworkElement에서 계승된 모든 클래스는 Transform 타입의 프로퍼티를 2개 갖는다. RenderTransform과 LayoutTransform이 그것이다. 지금까지 살펴본 2개의 프로그램은 RenderTransform에만 포커스를 두었다. XAML 파일이나 C# 파일에서 RenderTransform을 모두 LayoutTransform으로 바꾸고 무엇이 달라지는지 살펴보자 .TranslateTransform 이 적용된 버튼이 전혀 옮겨지지 않는 것을 보게 될 것이다. 대신 원래 위치인 점(200, 100)에 그대로 표시된다. 회전시킨 버튼은 여전히 회전돼 표시된다. 하지만 약간 아래로 이동한 곳이 첨부 프로퍼티(attached property)Canvas.Left와 Canvas.Top이 지정한 원래 위치다. 29장을 진행하면서 이런 차이의 이유를 밝힐 것이다. 
+
+간단한 XAML 프로그램들로 실험하면서 여러 종류의 변환에 대해 좀 더 자세히 알아 보자. Transform 파생 클래스 중 가장 간단한 TranslateTransform 부터 시작하자. TranslateTransform에는 X와 Y라는 이름의 프로퍼티가 있다. 이들은 의존 프로퍼티(dependency property)에 의해 뒷받침되기 때문에 애니메이션에 이용할 수 있고 바인딩에도 이용할 수 있다. 
+
+다음 XAML 파일은 StackPanel안에 "X", "Y"라고 레이블을 단 2개의 ScrollBar 컨트롤을 담고 있다. 이 ScrollBar 컨트롤은 Minimum 프로퍼티를 -300으로, Maximum프로퍼티를 1000으로 설정했다. 그리고 2개의 TextBlock 엘리먼트가 스크롤바의 Value 프로퍼티에 바인딩돼 스크롤바의 현재 값을 표시한다. StackPanel의 마지막 엘리먼트는 Canvas패널이다. Canvas패널에는 (Canvas의 좌측 상단을 기준으로 한)점(100, 100)에서 교차하는 2개의 라인과 점(100, 100)에 위치하는 Button이 존재한다. 파일의 마지막 부분에서 Button의 RenderTransform프로퍼티에 TranslateTransform을 할당했다. TranslateTransform의 X, Y 프로퍼티는 2개의 스크롤바에 바인딩했다. 
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Label Content="X" />
+	<ScrollBar Name="xscroll" Orientation="Horizontal" Minimum="-300" Maximum="1000" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=xscroll, Path=Value}" />
+	
+	<Label Content="Y" />
+	<ScrollBar Name="yscroll" Orientation="Horizontal" Minimum="-300" Maximum="1000" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=yscroll, Path=Value}" />
+
+	<Canvas>
+		<Line X1="100" Y1="0" X2="100" Y2="1000" Stroke="Black" />
+		<Line X2="0" Y1="100" X2="1000" Y2="100" Stroke="Black" />
+
+		<Button Content="Button" Canvas.Left="100" Canvas.Top="100">
+			<Button.RenderTransform>
+				<TranslateTransform X="{Binding ElementName=xscroll, Path=Value}" Y="{Binding ElementName=yscroll, Path=Value}" />
+			</Button.RenderTransform>
+		</Button>
+	</Canvas>
+</StackPanel>
+
+프로그램을 시작하면 Button의 좌측 상단 코너가 점 (100, 100)에 위치한다. 2개의 ScrollBar 컨트롤을 조작하면 Button이 Canvas 위를 움직인다. 버튼 좌측 상단 코너의 위치는 원래 위치에 TranslateTransform 객체의 X, Y 프로퍼티를 더한 것이다. 
+
+이를 간단한 수식으로 정리해보자. Button의 원래 위치를(x, y)라 하고 TranslateTransform의 X, Y 값을 dx, dy라 하자(d는 delta를 뜻하며 수학적으로 변위를 나타낸다)버튼이 그려질 위치는 (x1, y1)이라고 하면 다음과 같이 나타낼 수 있다. 
+x1 = x + dx
+y1 = y + dy
+
+dx와 dy는 음수가 될 수 있다. 프로그램의 두 번째 스크롤바를 왼쪽으로 옮기면 Button이 원래 있어야할 Canvas패널을 벗어나서 스크롤바가 있는 곳까지 옮겨간다. 
+
+이제 XAML 파일에 2번 나오는 Button.RenderTransform 프로퍼티를 Button.LayoutTransform 프로퍼티로 바꿔보자. 스크롤바를 아무리 세개 당겨도 Button이 꿈쩍 않는 것을 보게 될 것이다. 실망했을지도 모르지만, 이전에 배웠던 것을 다시 확인한 셈이다. LayoutTransform 프로퍼티에 적용된 TranslateTransform 객체는 엘리먼트의 위치에 아무런 영향을 주지 못한다. 
+
+ScaleTransform 클래스는 4개의 프로퍼티 (ScaleX, ScaleY, CenterX, CenterY)를 갖는다. ScaleX와 ScaleY 프로퍼티의 기본값은 1이고 CenterX와 CenterY의 기본값은 0이다. 이들 프로퍼티를 이용하면 엘리먼트의 크기를 늘리거나 줄일 수 있다. 다음 InteractiveScaleTransform.xaml 파일은 이들 4개의 프로퍼티를 위해 4개의 스크롤바를 생성한다. ScaleTransform 객체는 자신의 프로퍼티 값을 이들 스크롤바의 값에 바인딩한다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Label Content="ScaleX" />
+	<ScrollBar Name="xscroll" Orientation="Horizontal" Value="1" Minimum="-20" Maximum="20" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=xscroll, Path=Value}" />
+	
+	<Label Content="ScaleY" />
+	<ScrollBar Name="yscroll" Orientation="Horizontal" Value="1" Minimum="-20" Maximum="20" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=yscroll, Path=Value}" />
+
+	<Label Content="CenterX" />
+	<ScrollBar Name="xcenter" Orientation="Horizontal" Value="0" Minimum="-10" Maximum="100" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=xcenter, Path=Value}" />
+
+	<Label Content="CenterY" />
+	<ScrollBar Name="ycenter" Orientation="Horizontal" Value="0" Minimum="-10" Maximum="100" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=ycenter, Path=Value}" />
+
+
+	<Canvas>
+		<Line X1="100" Y1="0" X2="100" Y2="1000" Stroke="Black" />
+		<Line X2="0" Y1="100" X2="1000" Y2="100" Stroke="Black" />
+
+		<Button Content="Button" Canvas.Left="100" Canvas.Top="100">
+			<Button.RenderTransform>
+				<ScaleTransform ScaleX="{Binding ElementName=xscroll, Path=Value}" ScaleY="{Binding ElementName=yscroll, Path=Value}"
+					CenterX="{Binding ElementName=xcenter, Path=Value}" CenterY="{Binding ElementName=ycenter, Path=Value}"  />
+			</Button.RenderTransform>
+		</Button>
+
+		<StackPanel Orientation="Horizontal">
+			<TextBlock Text="{Binding ElementName=btn, Path=ActualWidth}" />
+			<TextBlock Text="&#x00d7;" />
+			<TextBlock Text="{Binding ElementName=btn, Path=ActualHeight}" />
+		</StackPanel>
+	</Canvas>
+</StackPanel>
+
+
+파일의 마지막 부분을 보면 Button의 ActualWidth 프로퍼티와 ActualHeight 프로퍼티가 Canvas의 좌측 상단 코너에 표시되는 것을 알 수 있을 것이다. 
+
+먼저 ScaleX와 ScalyY 스크롤바를 조정해보자. 이들 스크롤바는 배율을 조정해서 버튼의 크기를 늘리거나 줄인다. 예를 들어 ScaleX 값을 2로 하면 Button의 폭은 두 배가 된다. 반면에 ScaleY값을0.5로 하면 Button의 높이는 반이 된다. ScaleX를 음수로 만들 수도 있다. 그러면 Button이 왼쪽면을 기준으로 뒤집힌다. 그리고 버튼의 문자열이 거울에 비친 모습처럼 반전된다. ScaleY도 음수로 만들 수 있다 그러면 Button의 윗면을 기준으로 뒤집힌다. 배율을 음수로 정하는 것을 리플렉션(reflection)이라고 부른다.  Button의 ActualWidth와 ActualHeight 프로퍼티가 전혀 변하지 않는 것을 눈여겨 보자. 변하지 않는 또 다른 프로퍼티는 RenderSize다. 이 프로퍼티는 엘리먼트의 OnRender 메소드가 자신을 그릴 때 사용한다. 변환은 언제나 엘리먼트가 자신을 그리고 난 다음에 수행된다. 
+
+두개의 배율 ScaleX와 ScaleY를 Sx,와 Sy라고 하면 스케일링(scaling)을 표현하는 공식은 다음과 같다. 
+
+X1 = Sx * x
+Y1 = Sy * y
+
+여기서 두 점(x, y)와 (x1, y1)모두가 (변환하기 전)Button의 좌측 상단 코너를 기준으로 하고 있다는 것을 다시 한번 강조한다. 점(0, 0)은 변환해도 점(0, 0)이다. 그것이 ScaleX와 ScaleY의 값을 바꾸더라도 버튼의 좌측 상단 코너가 같은 위치에 있는 이유다. 
+
+어떤 때는 이런 특성을 원하지 않을 수 있다. 예를 들어 엘리먼트의 크기를 두 배로 만들되 엘리먼트의 중심점이 유지되기를 바랄수 있다. 다시 말해 엘리먼트가 오른쪽과 아랫쪽으로 만 확대되기를 바라지 않고 엘리먼트가 모든 방향으로 확대되기를 원할 수 있다. 
+
+이것이 ScaleTransform에 CenterX와 CenterY 프로퍼티가 존재하는 이유다. CenterX 스크롤바를 버튼 가로 폭의 반 정도로 설정하고 CenterY 스크롤바를 버튼 세로 높이의 반 정도로 설정하자(프로그램이 버튼의 ActualWidth와 ActualHeight 프로퍼티를 표시하는 두 번째 이유다)이제 ScaleX와 ScaleY 프로퍼티를 증가시키면 Button이 모든 방향으로 확대된다. 
+
+CenterX 를 Button의 ActualWidth로 설정하고 CenterY를 0으로 설정하면 Button의 오른쪽면이 항상 같은 가로 위치를 유지한다. 여기서 CenterY를 Button의 ActualHeight로 설정하면 Button의 우측 하단 코너가 항상 같은 위치를 유지한다. 
+
+ScaleTransform의 CenterX와 CenterY 프로퍼티를 CSx와 CSy라 하면 완전한 스케일링 공식은 다음과 같다. 
+
+X1 = Sx * (x - CSx) + CSx
+Y1 = Sy * (y - CSy) + CSy
+
+사례를 통해 이 공식을 검증할 수 있다. 어떤 엘리먼트의 폭이 80단위이고 CenterX(즉 CSx)를 40으로, ScaleX(즉 , Sx)를 3으로 설정한다고 하자(40, y)위에 있는 모든 점은(즉 버튼의 가로 방향으로 중앙에 있는 모든 점은)변환을 거치면(40, y)로 옮겨진다. 즉 버튼 중심의 위치는 변하지 않는다. (80, y)위에 있는 모든 점은(즉 버튼의 오른쪽 면에 있는 모든 점은)변환을 거치면 (160, y)가 된다(0, y)위의 모든 점은(즉 버튼의 왼쪽 면에 있는 모든 점은)변환을 거치면(-80, y)가 된다. 결과적으로 버튼의 폭은 240단위가 된다. 이는 원래 폭의 3배다. 하지만 여전히 같은 점을 중심으로 위치한다. 
+
+스케일링 공식을 다음과 같이 정리하면 조금 더 이해하기 쉽다. 
+
+X1 = Sx * x + (CSx - Sx * CSx)
+Y1 = Sy * y + (CSy - Sy * CSy)
+
+이 수식을 보면 전체 변환이 실제로는 원래 좌표계에 곱해지는 단 하나의 요소에 의해 결정되며, 위치 이동과 결합해 있다는 것이 분명해진다. 
+
+InteractiveScaleTransform.xaml 파일의 모든 Button.RenderTransform을 Button.LayoutTransform으로 수정하더라도 여전히 ScaleX와 ScaleY 스크롤바가 버튼을 늘리거나 줄이는 것을 볼 수 있을 것이다. 심지어 가로축이나 세로축을 기준으로 뒤집는 동작까지 그대로 유지한다. 하지만 버튼은 항상 같은 자리에 머무른다. 버튼이 항상 두 라인이 교차하는 점(100, 100)의 우측 하단에 위치한다. 이 차이는 음의 배율을 적용할 때 가장 분명하게 확인할 수 있다. 버튼이 뒤집힐 때도 여전히 같은 위치에 자리한다. CenterX와 CenterY 스크롤바는 LayoutTransform에서는 전혀 영향을 주지 못한다. 왜냐하면 이들 스크롤바는 위치 이동에 관한 요소를 변경하는데, 이미 알고 있는 바와 같이 LayoutTranslation은 위치 이동에 관한 요소를 무시하기 때문이다. 
+
+이제 SkewTransform 차례다. SkewTransform은 AngleX, AngleY, CenterX, CenterY란 이름의 4개 프로퍼티를 갖는다. 이들 프로퍼티의 기본값은0이다. 이름이 암시하듯 AngleX와 AngleY는 각도가. -90도에서 90도 사이의 각도가 고유한 결과를 만든다. 그 범위 밖의 각도는 범위 안의 각도가 만드는 결과를 반복한다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Label Content="AngleX" />
+	<ScrollBar Name="xscroll" Orientation="Horizontal" Value="0" Minimum="-90" Maximum="90" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=xscroll, Path=Value}" />
+	
+	<Label Content="AngleY" />
+	<ScrollBar Name="yscroll" Orientation="Horizontal" Value="0" Minimum="-90" Maximum="90" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=yscroll, Path=Value}" />
+
+	<Label Content="CenterX" />
+	<ScrollBar Name="xcenter" Orientation="Horizontal" Value="0" Minimum="-100" Maximum="100" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=xcenter, Path=Value}" />
+
+	<Label Content="CenterY" />
+	<ScrollBar Name="ycenter" Orientation="Horizontal" Value="0" Minimum="-100" Maximum="100" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=ycenter, Path=Value}" />
+
+
+	<Canvas>
+		<Line X1="100" Y1="0" X2="100" Y2="1000" Stroke="Black" />
+		<Line X2="0" Y1="100" X2="1000" Y2="100" Stroke="Black" />
+
+		<Button Name="btn" Content="Button" Canvas.Left="100" Canvas.Top="100">
+			<Button.RenderTransform>
+				<SkewTransform AngleX="{Binding ElementName=xscroll, Path=Value}" AngleY="{Binding ElementName=yscroll, Path=Value}"
+					CenterX="{Binding ElementName=xcenter, Path=Value}" CenterY="{Binding ElementName=ycenter, Path=Value}"  />
+			</Button.RenderTransform>
+		</Button>
+
+		<StackPanel Orientation="Horizontal">
+			<TextBlock Text="{Binding ElementName=btn, Path=ActualWidth}" />
+			<TextBlock Text="&#x00d7;" />
+			<TextBlock Text="{Binding ElementName=btn, Path=ActualHeight}" />
+		</StackPanel>
+	</Canvas>
+</StackPanel>
+
+AngleX 스크롤바를 움직이면 Button이 같은 높이를 유지하면서 버튼의 윗면은 같은 위치에 고정된 채로 Button의 아랫면이 양수 값에 대해서는 오른쪽으로, 음수 값에 대해서는 왼쪽으로 이동하는 것을 볼 수 있다. 이것을 가로 skew 또는 가로 shear라고 한다. 이버튼은 왜곡돼 보인다. 더 이상 사각형이 아니고 평행사변형이기 때문이다. AngleX를 다시 0으로 설정하자. 이제 AngleY스크롤바를 조정한다. Button이 같은 가로 폭을 유지하면서 버튼의 왼쪽 면은 같은 위치에 고정된 채로 Button의 오른쪽 면이 양수 값에 대해서는 아래로, 음수 값에 대해서는 위로 이동하는 것을 볼 수 있다. 이것이 세로 skew다. 양쪽 모두 버튼의 우측 상단의 코너는 점(100, 100)에 고정돼 있다. 
+
+AngleX와 AngleY를 ax, ay라고 하면 기울임(skewing)공식은 다음과 같다. 
+
+x1 = x + tan(ax) * y
+y1 = y + tan(ay) * x
+
+x1과 y1이 x, y 모두의 함수인 것을 눈여겨 보자. 이것이 기울임 공식이 이동(translation)공식이나 확대(Scaling)공식과 다른 점이다. 
+
+이 공식이 옳다는 것을 검증해보자. InteractiveSkewTransform.xaml 파일에서 AngleX와 AngleY 스크롤바를 0으로 설정한다. 이것이 기본 상태다. 탄젠트 0은 0이다. 그러므로 x1은 x와 같고 y1은 y와 같다. 그리고 버튼은 완전히 정상이다. 이제 AngleX를 조정하자(공식의 ax에 해당한다)스크롤바로 설정하는 값이 버튼의 왼쪽 면과 y축이 만드는 각도라는 사실을 알 수 있을 것이다. 각도를 45도로 설정하자. 45도에 대한 탄젠트 값은 1이다. 따라서 공식이 다음처럼 간단해진다. 
+
+x1 = x + y
+y1 = y
+
+버튼의 좌측 상단 코너는 점(0, 0)이다. 이 점은 변환 후에도 (0, 0)이다. 버튼의 폭을 W라고 하면 버튼의 우측 상단 코너는 (W, 0)다. 이 점도 변환 후에 (W, 0)그대로다. 버튼의 높이를 H라고 하면 좌측 하단 코너는 (0, H)다. Skew 변환은 이 점을 버튼의 높이만큼 오른쪽으로 이동시킨다. 그러면 이 점은(H, H)가 된다. 이것은 공식에 의해 예측된 결과와 같다. 버튼의 우측 하단 코너의 원래 좌표는(W, H)다. 변환을 거치면 이점은(W+H, H)가 된다. 이것 역시 공식에 의해 예측된 결과와 같다. 
+
+각도가 점점 커지면 버튼이 알아볼 수 없을 정도로 삐뚤어진다. 탄젠트 90도는 무한대다. 다행히 변환 처리가 그 지점에서 폭발하지는 않지만 이 각도는 버튼을 시각적으로 표시하는 데 있어 아무런 의미도 없다. 
+
+이제 다른 것을 시도해보자. AngleX 스크롤바를 50과 80 사이의 값으로 맞추고 ANgleY를 같은 값의 음수로 맞추자. 그러면 버튼이 원래의 정상적인 사각형 모습이 되는 것을 볼 수 있을 것이다. 그것은 버튼의 원래 크기보다 크고 반시계 방향으로 AngleX 각도만큼 회전한 모습이지만 왜곡된 모습은 아니다.회전(rotation)은 가로 skew와 세로 skew 의 조합이며, 동시에 원래 크기를 유지하는 방식으로 처리된다. 
+
+지금까지 보아온 것처럼 AngleX와 AngleY 프로퍼티를 바꾸더라도 버튼의 좌측 상단 코너는 원래 위치를 유지한다. CenterX와 CenterY 프로퍼티를 바꾸면 이것을 조정할 수 있다. ScaleTransform 클래스의 프로퍼티와 이름이 같은 이들 프로퍼티는 변하지 않고 유지될 버튼의 좌표를 나타낸다. 하지만 이들 프로퍼티가 skew 변환 과정에서 실제 동작하는 방식은 약간 다르다. 가로 skew(AngleX)를 기본값 이외의 값으로 설정했다면 (x, CenterY)로 표시되는 모든 점은 skew 변환에 영향 받지 않고 그 위치를 유지할 것이다. 마찬가지로 세로 skew역시 (CenterX, y)위의 모든 점은 AngleY 변화에 영향 받지 않고 그 위치를 유지할 것이다. AngleX와 ANgleY의 값이 기본값인 0이면 CenterX와 CenterY는 엘리먼트의 위치에 아무런 영향도 주지 않는다. 
+
+CenterX와 CenterY를 CKx와 CKy라 하면(k는 skew를 나타낸다. s는 scale을 위해 벌써 사용했다)완전한 skew 공식은 다음과 같다. 
+
+X1 = x + tan(ax) * (y - CKx)
+y1 = y + tan(ay) * (x - CKy)
+
+다시 한번 LayoutTransform 의 경우는 어떻게 다른지 확인해보자. InteractiveSkewTransform.xaml 파일의 Button.RenderTransform을 Button.LayoutTransform으로 수정하자. 예상했을 테지만 AngleX와 AngleY는 여전히 버튼을 기울이는 기능을한다. 하지만 버튼은 항상 점(100, 100)의 우측 하단에 위치한다. CenterX와 CenterY는 버튼에 영향을 주지 못한다. LayoutTransform의 위치 이동에 대해서는 반응하지 않기 때문이다. 
+
+RotateTransform 클래스는 익숙한 CenterX와 CenterY프로퍼티를 갖는다. 하지만 SkewTransform과는 다르게 RotateTransform은 Angle이란 이름의 프로퍼티를 하나만 갖는다. 
