@@ -1,0 +1,120 @@
+실습4 : 인덱스가 없을 떄, 클러스터형 인덱스와 비클러스터형 인덱스의 성능을 비교해 보자. 
+
+0. 실습의 사전 준비를 하자. 
+0-1 실습할 데이터베이스를 만든다. 
+USE tempdb;
+CREATE DATABASE indexDB;
+GO
+
+0-2 우선 실습을 원활히 진행하기 위해서 테이블에 생성된 인덱스의 정보를 파악해주는 저장 프로시저를 생성해 보자. 저장 프로시저에 대한 내용은 11장에서 배우고, 일단은 입력해서 사용해 보자. 
+
+지금은 EXEC usp_IndexInfo 테이블_이름을 실행하면 테이블의 인덱스 상태 정보를 보여준다고 생각하면 된다. 
+
+USE indexDB;
+CREATE PROCEDURE usp_IndexInfo
+@tablename sysname
+AS
+	SELECT @tablename AS '테이블이름', I.name AS '인덱스이름', I.type_desc AS '인덱스타입', A.data_pages AS '페이지개수', --사용된 데이터 페이지수
+A.data_pages * 8 AS '크기(KB)', --페이지를 KB(1page = 8KB)로계산
+P.rows AS '행개수' FROM sys.indexes I INNER JOIN sys.partitions P ON P.object_id = I.object_id AND OBJECT_ID(@tablename) = I.object_id
+AND I.index_id = P.index_id INNER JOIN sys.allocation_units A ON A.container_id = P.hobt_id;
+
+
+※ 여기서잠깐?
+인덱스의 정보를 보려면 sys.sysindexes 시스템 뷰를 사용할 수도 있다. 이는 SQL Server 2000버전의 sysindexes 시스템 테이블과 호환하려고 만든 호환성 뷰이다. 이것은 SQL Server 2012이후에는 제거될 예정이므로 되도록 카탈로그 뷰인 sys.indexes, sys.partitions, sys.allocation_units를 사용하도록 하자. SQL Server 2012 도움말에서 각 카탈로그 뷰의 이름을 확인하면 각 열에 대한 세부 정보를 확인할수 있다. 
+
+
+1. 테스트를 위해서 어느 정도 데이터가 있는 테이블을 복사하자. AdventureWorks 의 Sales.Customer 테이블을 Cust(인덱스 없는 테이블), Cust_C(클러스터형 인덱스를 생성할 테이블), Cust_NC(비클러스터형 인덱스를 생성할 테이블)세 개로 복사하도록 하자. 참고로 SELECT INTO 문은 제약 조건등은 복사되지 않는다. 
+
+1-1 AdventureWorks의 Sales.Customer의 개수를 파악하자. 
+USE indexDB;
+SELECT COUNT(*) FROM AdventureWorks.Sales.Customer;
+
+특별히 이 테이블을 수정한 적이 없다면, 19,820개가 나올 것이다. 테스트를 하기에 적절한 양이다. 
+
+1-2 테이블을 3개로 복사하자. 
+
+* AdventureWorks.Sales.Customer는 CustomerID로 정렬되어 있으므로, 순서를 무작위로 만들려고 NEWID()로 정렬했고 TOP(데이터 개수)를 사용했다. 단지 데이터를 무작위로 섞는 용도이므로 지금은 이 정도로 이해해도 된다. 
+
+SELECT TOP(19820) * INTO Cust FROM AdventureWorks.Sales.Customer ORDER BY NEWID();
+SELECT TOP(19820) * INTO Cust_C FROM AdventureWorks.Sales.Customer ORDER BY NEWID();
+SELECT TOP(19820) * INTO Cust_NC FROM AdventureWorks.Sales.Customer ORDER BY NEWID();
+
+
+1-3 SELECT * FROM 테이블명으로 확인해보면 세 테이블의 순서가 뒤섞여 있음을 확인할 수 있다. 
+SELECT TOP(5) * FROM Cust;
+SELECT TOP(5) * FROM Cust_C;
+SELECT TOP(5) * FROM Cust_NC;
+
+
+1-4 테이블에 인덱스가 있는지 확인해보자(혹 필자와 페이지 개수가 좀 달라도 무시하도록 하자)
+EXEC usp_IndexInfo Cust;
+EXEC usp_IndexInfo Cust_C;
+EXEC usp_IndexInfo Cust_NC;
+
+SELECT INTO 는 제약 조건과 인덱스 등을 모두 제외하고 단지 테이블의 데이터만 복사하는 기능을 한다. 그러므로 세 테이블 모두 아직 인덱스는 없다. 인덱스 타입에 힙(Heap)이 의미하는 것은 인덱스 없이 단지 데이터 페이지만 있음을 의미한다. 그래서 인덱스 이름도 NULL로 나온다. 세 테이블 모두 [그림9-13]과 같이 데이터 페이지만 있는 상태이다. 모두 페이지의 개수는 155페이지를 가지고 있다. 한 페이지당 8KB이므로 용량은 1240KB이다. 행 개수는 그냥 참조만 하자. 
+
+
+2. Cust_C에는 클러스터형 인덱스를 Cust_NC에는 비클러스터형 인덱스를 생성해 보자. 
+
+2-1 인덱스를 두 테이블에 생성한다. 
+CREATE CLUSTERED INDEX idx_cust_c on Cust_C (CustomerID);
+CREATE NONCLUSTERED INDEX idx_cust_nc on Cust_NC (CustomerID);
+
+2-2 다시 SELECT * FROM 테이블명으로 데이터를 확인해 보자. 
+SELECT TOP(5) * FROM Cust;
+SELECT TOP(5) * FROM Cust_C;
+SELECT TOP(5) * FROM Cust_NC;
+
+클러스터형 인덱스가 생성된 두 번째 테이블(Cust_C)만 정렬되어 있다. 그 이유는 클러스터형 인덱스만 데이터 페이지를 정렬하기 때문이라고 이야기했다 [그림9-16]을 보면서 이해하면 될 것이다. 
+
+2-3 다시 테이블의 인덱스를 확인해 보자. 
+EXEC usp_IndexInfo Cust;
+EXEC usp_IndexInfo Cust_C;
+EXEC usp_IndexInfo Cust_NC;
+
+의미를 잘 파악해 보자. Cust 테이블은 당연히 인덱스 없이 그대로다. 두 번째 Cust_C를 보자. 인덱스 타입이 클러스터형(CLUSTERED)으로 되어 있고, 페이지의 개수가 조금 늘었다. 이는 [그림9-16]의 구조로 된 것을 의미한다. 즉[그림9-13]의 데이터 페이지(=리프페이지)를 제외한 순수 인덱스 페이지는 5페이지(160-155)가 생성된 것이다. 여기서 페이지숫자는 큰 의미가 없다. 단지 클러스터형 인덱스 생성할 때 약간의 페이지 증가만 있다고 생각하면 된다. 클러스터형 인덱스는 추가되는 공간이 크지 않다는 것을 확인할 수 있다. 
+
+세 번째 Cust_NC를 보자. 인덱스 타입이 두 가지가 있다. 비클러스터형 인덱스는 인덱스를 생성해도 데이터 페이지를 건드리지 않는다는 것을 기억하는가? [그림9-18]을 보면 데이터 페이지인 힙(HEAP)영역은 [그림9-13]과 같다. 즉, 데이터는 아무런 변화가 없다. 그래서 힙의 페이지 개수는 인덱스를 만들기 이전과 같다. [그림9-18]의 위쪽의 인덱스 페이지만 추가로 생성된 것이다. 여기서는 45페이지가 추가로 생성되었다. 그러므로 클러스터형 인덱스의 순수 인덱스 크기인 5페이지보다는 비클러스터형의 인덱스 크기가 훨씬 큰 공간을 요구한다. 
+
+
+3. 결과를 잘 보려면 옵션을 설정하자. 
+3-1 우선 열린 쿼리 창을 모두 닫는다. 
+3-2 SSMS 메뉴의 [도구] > [옵션]을 선택한 후 쿼리 실행 > SQL Server > 고급을 선택하고 다음과 같이 SET STATISTICS IO를 체크해준다. 이는 쿼리를 실행할 때 결과창에서 읽은 페이지 수를 확인하기 위함이다. 
+3-3 새 쿼리 창을 열고 indexDB 데이터베이스를 선택해 놓는다. 
+USE indexDB;
+
+3-4 SSMS메뉴의 [쿼리] > [실제 실행 계획 포함]을 선택한다. 
+
+4. 이제는 테이블을 조회할 때 인덱스를 사용하는 성능의 차이를 확인해 보자. 
+4-1 인덱스가 없는 Cust 테이블을 조회해 보자. 
+
+SELECT * FROM Cust WHERE CustomerID = 100;
+
+먼저 실행 계획창을 확인해 보자. 
+
+테이블 검색(Table Scan)을 했다. 테이블 검색의 의미는 전체 데이터 페이지를 처음부터 끝까지 찾아본다는 의미라고 이야기했다. 즉 [그림9-13]과 같이 인덱스가 없으므로 전체 페이지를 읽는 수밖에 없다. 
+
+이번에는 메시지 창을 확인해 보자. 
+
+논리적 읽기 155페이지를 읽었다 [그림9-37]에서 Cust의 페이지 수가 155인 것과 같다. 실제 대용량 데이터베이스의 경우에는 아주 오래 걸릴 수도 있다. 
+
+4-2 클러스터형 인덱스가 있는 테이블을 조회해 보자. 
+SELECT * FROM Cust_C WHERE CustomerID = 100;
+먼저 실행 계획을 보면 클러스터링 인덱스를 검색(Seek)하는 것을 확인할 수 있다. 
+
+이번에는 메시지 창을 확인해 보자. 
+
+놀라운 결과다. 겨우 2페이지만을 읽고 데이터를 찾아냈다. 앞에서 인덱스 없이 테이블을 검색할 때는 155페이지 모두를 읽었던 것과 비교해보면 인덱스가 어느 정도로 유용한지 느낄수 있을 것이다 [그림9-16]에서 JKW를 찾기 위해 Non-Leaf Page(여기서는 데이터가 적어서 루트 페이지 하나밖에 없음)하나와 리프 페이지(=데이터 페이지)하나를 읽게 되어 두 페이지만을 읽게되는 것과 같은 방식이다. 
+
+4-3 비클러스터형 인덱스가 있는 테이블을 조회해 보자. 
+SELECT * FROM Cust_NC WHERE CustomerID = 100;
+앞의 것들보다는 실행 계획이 조금 복잡해 보이지만 별 거 아니다. 
+
+우선 Index Seek는 [그림9-18]의 위쪽의 비클러스터형 인덱스를 검색하는 과정이다. 또 RID Lookup은 인덱스에서 검색된 RID(Row ID, 각 행의 고유번호)를 가지고 실제 데이터 페이지의 데이터로 찾아가는 과정을 뜻한다. [그림9-18]의 예에서 BBK를 검색할 경우 인덱스 페이지에서 검색한 RID인 '1002+#2'의 데이터 페이지로 찾아가는 과정이라고 생각하면 쉽게 이해 될 것이다. 
+
+클러스터형에서 RID Lookup 과정이 생략된 것은 인덱스 페이지의 리프 페이지가 곧 데이터페이지이므로 인덱스 검색(Clustered Index Seek)의 결과가 곧 데이터의 검색과 같아지기 때문이다(영어 사전을 비교해서 생각하면 된다). 이와 달리 비클러스터형은 인덱스의 검색이 끝나도. 다시 실제 데이터로 찾아가야 하는 과정이 있는 것이다. 
+
+이번에는 메시지 창을 확인해 보자. 
+
+왜 3페이지인지 예상될 것이다. [그림 9-18]을 보면 루트 페이지, 리프페이지, 데이터 페이지 3개 페이지를 읽은 것으로 예상할 수 있다. 

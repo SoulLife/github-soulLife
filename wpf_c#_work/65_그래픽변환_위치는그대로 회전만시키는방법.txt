@@ -1,0 +1,257 @@
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Label Content="Angle" />
+	<ScrollBar Name="angle" Orientation="Horizontal" Value="0" Minimum="0" Maximum="360" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=angle, Path=Value}" />
+
+	<Label Content="CenterX" />
+	<ScrollBar Name="xcenter" Orientation="Horizontal" Value="0" Minimum="-100" Maximum="100" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=xcenter, Path=Value}" />
+
+	<Label Content="CenterY" />
+	<ScrollBar Name="ycenter" Orientation="Horizontal" Value="0" Minimum="-100" Maximum="100" />
+	<TextBlock HorizontalAlignment="Center" Margin="12" Text="{Binding ElementName=ycenter, Path=Value}" />
+
+	<Canvas>
+		<Line X1="100" Y1="0" X2="100" Y2="1000" Stroke="Black" />
+		<Line X1="0" Y1="100" X2="1000" Y2="100"  Stroke="Black" />
+
+		<Button Name="btn" Content="Button" Canvas.Left="100" Canvas.Top="100">
+			<Button.RenderTransform>
+				<RotateTransform Angle="{Binding ElementName=angle, Path=Value}" CenterX="{Binding ElementName=xcenter, Path=Value}"
+					CenterY="{Binding ElementName=ycenter, Path=Value}" />
+			</Button.RenderTransform>
+		</Button>
+
+		<StackPanel Orientation="Horizontal">
+			<TextBlock Text="{Binding ElementName=btn, Path=ActualWidth}" />
+			<TextBlock Text="&#x00D7;" />
+			<TextBlock Text="{Binding ElementName=btn, Path=ActualHeight}" />
+		</StackPanel>
+	</Canvas>
+</StackPanel>
+
+프로그램의 Angle 스크롤바는 최소값이 0도, 최대값이 360도로 설정돼 있다. 하지만 음수나 360도를 초과하는 값도 허용한다. Angle 값은 시계 방향 회전을 나타내며, 기본값으로 엘리먼트의 좌측 상단 코너를 기준점으로 한다. 
+
+CenterX와 CenterY 프로퍼티는 엘리먼트의 좌측 상단을 기준으로 한 회전의 중심이 되는 점의 좌표를 나타낸다. 이들 프로퍼티를 엘리먼트의 폭과 높이의 반으로 설정하면 엘리먼트의 중심점을 기준으로 회전이 일어난다. 엘리먼트는 항상 같은 크기를 유지한다. 
+
+다시 한 번 파일의 Button.RenderTransform을 Button.LayoutTransform으로 바꿔보자. 버튼은 여전히 회전하지만 버튼의 위치는 버튼이 원래 존재했던 점(100, 100)의 우측 하단으로 제한된다. 
+
+WPF 그래픽 시스템은 RenderTransform과 LayoutTransform을 아주 다르게 취급한다. RenderTransform의 경우 시스템은 엘리먼트의 OnRender 메소드가 그린 이미지를 확보한다음 거기에 변환을 적용하고 그 결과를 화면에 뿌린다. 이미지가 프로그램의 다른 컨트롤을 덮거나(다른 컨트롤에 의해)가려지더라도 아무 문제없다. 애플리케이션 창의 경계밖에 있는 부분은 잘려서 표시되지 않지만 그 외에는 어디든지 표시된다. 
+
+이에 비해 LayoutTransform 의 경우 엘리먼트의 LayoutTransform이 조금이라도 바뀌면 레이아웃을 새로 만들기 위한 절차가 시작된다. 이 과정에서 MeasureOverride와 ArrangeOverride가 호출된다. 이는 해당 엘리먼트가 레이아웃의 일부일 경우 엘리먼트에 적용된 변환이 레이아웃에 반영될수 있게 하기 위한 것이다. MeasureOverride, ArrangeOverride, OnRender 메소드는 LayoutTransform에 대한 내용을 알 필요가 없다. 대신 레이아웃을 만들기 위해 필요한 데이터가 간접적으로 전달된다. 예를 들어 어떤 엘리먼트의 자식을 생각해보자. 자식의 MeasureOverride 메소드는 변환에 대해 전혀 신경쓰지 않는다. 하지만 자식의 DesiredSize에 의해 LayoutTransform의 변환 결과가 간접적으로 전달된다. 
+
+RenderTransform과 LayoutTransform의 차이점은 StackPanel에서(또는 크기가 자동 조절된 Grid 셀이나 UniformGrid에서)가장 극명하게 드러난다. 다음의 XAML 프로그램이 그 차이점을 잘 보여주고 있다. 이 프로그램은 3x3 UniformGrid 패널 2개를 담고 있다. 각 패널에는 9개의 Button 컨트롤이 있다. 각 그리드의 중앙에 있는 버튼의 RenderTransform 프로퍼티에 RotateTransform을 적용했다. 아래쪽 그리드에서는 LayoutTransform 프로퍼티에 RotateTransform을 적용했다. 
+
+
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	TextBlock.FontSize ="18pt" >
+
+	<!-- RenderTransform 섹션 -->
+	<TextBlock Margin="24" >
+		RenderTransform
+	</TextBlock>
+	<UniformGrid Rows="3" Columns="3">
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" >
+			<Button.RenderTransform>
+				<RotateTransform Angle="45" />
+			</Button.RenderTransform>
+		</Button>
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" />
+	</UniformGrid>
+
+	<!-- LayoutTransform 섹션 -->
+	<TextBlock Margin="24">
+		LayoutTransform
+	</TextBlock>
+	<UniformGrid Rows="3" Columns="3">
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" >
+			<Button.LayoutTransform>
+				<RotateTransform Angle="45" />
+			</Button.LayoutTransform>
+		</Button>
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" />
+		<Button Content="Button" />
+	</UniformGrid>
+</StackPanel>
+
+위쪽 그리드를 보면  회전된 버튼이 프로그램의 레이아웃에 어떤 영향도 주지 않는다. UniformGrid는 버튼이 회전되지 않은 것처럼 취급한다. 이 버튼은 자신보다 먼저 생성된 엘리먼트보다는 위에, 자신보다 늦게 생성된 엘리먼트보다는 아래에 표시된다. 아래쪽 그리드는 회전된 버튼이 요구하는 셀(cell)의 크기를 수용하기 위해 전체 UniformGrid의 레이아웃이 조정됐다. 
+
+두 번째 UnifromGrid의 회전된 버튼이 같은 그리드의 다른 버튼들에 비해 작은 것을 눈여겨 보자. 변환된 엘리먼트의 크기는 부모 엘리먼트의 ArrangeOverride 메소드가 지정한 크기가 아니라. 자신의 MeasureOverride메소드가 반환하는 크기에 의해 결정된다. 
+
+잠시라도 RenderTransform과 LayoutTransform의 차이점을 잊을 때마다. 이 프로그램을 실행시켜 보는 것이 좋다(30장에서는 이 차이점을 더욱 드라마틱하게 보여주는 이 프로그램의 애니메이션버전이 제공된다)
+
+레이아웃 안에 포함된 엘리먼트를 변환하고 변환된 엘리먼트에 의해 레이아웃이 수정되기를 원한다면 LayoutTransform 사이에 성능 차이는 없다. 하지만 변환을 이용해서 애니메이션을 구현하거나 빈번하게 바뀌는 대상에 변환을 바인딩하면 처리 효율을 높이기 위해 RenderTransform을 사용하는 것이 좋다. 
+
+LayoutTransform은 모든 위치 이동(translation)을 무시한다. 따라서 LayoutTransform을 설정할 때는 위치 이동이나 CenterX, CenterY 프로퍼티에 대해 고민할 필요가 없다. 확대되거나 기울어지거나, 회전된 엘리먼트는 언제나 레이아웃이 할당한 위치 안에 존재한다. 
+
+이전 XAML 파일에서는 RenderTransform 프로퍼티를 설정하면 버튼이 좌측 상단 코너를 기준으로 회전했다. 버튼이 중앙을 기준으로 회전하기를 바란다고 가정해보자. 이를 위해서는 RotateTransform의 CenterX, CenterY 프로퍼티를 설정해야 한다. 이들 프로퍼티를 엘리먼트의 중앙으로 설정하려면 엘리먼트의 크기를 알아야 한다. 일반적으로 그 크기는 레이아웃에 의해 결정된다. 이는 런타임에 결정되기 때문에 XAML을 작성하는 입장에서는 예측할 수 없다. 
+
+UIElement에는 RenderTransformOrigin이란 이름의 프로퍼티가 있다. 바로 이 점이 WPF개발자의 선경지명과 친절함을 설명해준다. RenderTransform의 기준점을 설정할 때 이 프로퍼티를 대안으로 이용한다. 이 프로퍼티가 사용하는 좌표계는엘리먼트 크기에 대해 상대적이다(이는 그라디언트 브러시의 기본 좌표계와 유사하다. )
+
+예를 들어 바로 전의 XAML 프로그램에서 위쪽 버튼이 중심점을 기준으로 회전하게 하고 싶다면 해당 버튼에 RenderTransformOrigin 속성을 포함시킨다 위쪽의 회전 버튼은 현재 다음과 같이 표시된 엘리먼트다. 
+
+<Button Content="Button">
+	<Button.RenderTransform>
+		<RotateTransform Angle="45" />
+	</Button.RenderTransform>
+</Button>
+
+이 엘리먼트를 다음과 같이 수정한다. 
+
+<Button Content="Button" RenderTransformOrigin="0.5 0.5">
+	<Button.RenderTransform>
+		<RotateTransform Angle="45" />
+	</Button.RenderTransform>
+</Button>
+
+이제 버튼이 중심을 기준으로 회전한다. 다음은 RenderTransformOrigin을 이용해서 1개의 보통 버튼과 이 버튼의 4개 코너를 기준으로 회전시킨 4개의 버튼을 표시하는 프로그램이다. 
+
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Grid.Resources>
+		<Style TargetType="{x:Type Button}">
+			<Setter Property="FontSize" Value="48" />
+			<Setter Property="Content" Value="Button" />
+			<Setter Property="HorizontalAlignment" Value="Center" />
+			<Setter Property="VerticalAlignment" Value="Center" />
+		</Style>
+	</Grid.Resources>
+
+	<Button />
+
+	<Button RenderTransformOrigin="0 0">
+		<Button.RenderTransform>
+			<RotateTransform Angle="225" />
+		</Button.RenderTransform>
+	</Button>
+
+	<Button RenderTransformOrigin="1 0" >
+		<Button.RenderTransform>
+			<RotateTransform Angle="135" />
+		</Button.RenderTransform>
+	</Button>
+
+	<Button RenderTransformOrigin="1 1" >
+		<Button.RenderTransform>
+			<RotateTransform Angle="225" />
+		</Button.RenderTransform>
+	</Button>
+
+	<Button RenderTransformOrigin="0 1" >
+		<Button.RenderTransform>
+			<RotateTransform Angle="135" />
+		</Button.RenderTransform>
+	</Button>
+</Grid>
+
+코드가 빈번하게 중복되는 것을 피하기 위해 Style 엘리먼트를 이용해서 5개 버튼 모두에 대한 프로퍼티를 정의했다. 이 프로퍼티 중에는 버튼을 Grid 셀의 중앙에 위치시키는 HorizontalAlignment와 VerticalAlignment도 있다(Style 엘리먼트 덕분에)회전시키지 않은 보통 버튼은 다음과 같이 아주 간단하게 표현된다. 
+
+<Button />
+
+다른 버튼 엘리먼트들은 RenderTransfromOrigin과 RenderTransform 프로퍼티를 포함하며, 정상 버튼 주위를 기준으로 회전한다. 
+
+Canvas위에 놓인 Line, Path, Polygon, Polyline 같은 엘리먼트를 다룰 때는 이들 객체의 크기를 이미 알고 있기 때문에, RenderTransformOrigin 대신 Transform의 CenterX와 CenterY 프로퍼티를 이용할 수 있다. 하지만 명시적인 좌표로 엘리먼트를 조작할 때는 이들 기준점의 동작 양식에 대해 깊이 생각해야 한다. 
+
+예를 들어 다음과 같은 엘리먼트를 생각해 보자. 
+
+<Line Stroke="Black" X1="100" Y1="50" X2="500" Y2="100" />
+
+이 엘리먼트의 RenderTransform 프로퍼티에 RotateTransform 을 적용할 경우 기본 상태에서 CenterX, CenterY 프로퍼티는 0이다. 따라서 회전은 점(0, 0)을 기준으로 일어날 것이다. 
+
+이점은 라인 시작점에서 왼쪽으로 100단위, 위쪽으로 50단위인 지점이다. 라인의 시작점을 기준으로 회전하기를 바란다면 CenterX를 100으로, CenterY를 50으로 설정해야 한다. 라인의 중앙을 기준으로 회전하기를 바란다면 CenterX를 300으로 , CenterY를 75로 설정해야 한다. 
+
+회전의 기준점을 설정하기 위해 RenderTransformOrigin을 사용할 때는 이 엘리먼트가 놓여있는 사각형이 가로 방향으로는 0에서 500(x 좌표의 최대값)까지 차지하고, 세로 방향으로는 0에서 100(Y 좌표의 최대값)까지 차지한다는 사실을 알아야 한다. RenderTransformOrigin을 (0,0)으로 하면 이는 좌표상의 점(0, 0)에 해당한다. 여기는 라인의 시작점이 아니다. 라인의 시작점은 좌표상의 점(100, 50)이다. RenderTransformOrigin을 (1, 0)으로 하면 이는 좌표 상의 점(500, 0)에 해당한다. 
+
+다음의 C# 프로그램은 라인 묶음을 회전시켜서 자전거 바퀴살처럼 보이게 하는 2가지 방법을 보여준다. 
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+public class WheelAndSpokes : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new WheelAndSpokes());
+	}
+	public WheelAndSpokes()
+	{
+		Title= "Wheel and Spokes";
+		
+		//그래픽 객체를 그리기 위한 Canvas를 생성
+		Canvas canv = new Canvas();
+		Content = canv;
+
+		//Ellipse 객체 생성
+		Ellipse elips = new Ellipse();
+		elips.Stroke = SystemColors.WindowTextBrush;
+		elips.Width = 200;
+		elips.Height = 200;
+		canv.Children.Add(elips);
+		Canvas.SetLeft(elips, 50);
+		Canvas.SetTop(elips, 50);
+
+		//Line 객체를 만든다. 
+		for(int i=0; i< 72; i++)
+		{
+			//가로선을 그린다.
+			Line line = new Line();
+			line.Stroke = SystemColors.WindowTextBrush;
+			line.X1 = 150;
+			line.Y1 = 150;
+			line.X2 = 250;
+			line.Y2 = 150;
+
+			//가로선을 타원의 중심점(150, 150)을 기준으로 회전시킴
+			line.RenderTransform = new RotateTransform(5 * i, 150, 150);
+			canv.Children.Add(line);
+		}
+		//다른 Ellipse 생성
+		elips = new Ellipse();
+		elips.Stroke = SystemColors.WindowTextBrush;
+		elips.Width = 200;
+		elips.Height = 200;
+		canv.Children.Add(elips);
+		Canvas.SetLeft(elips, 300);
+		Canvas.SetTop(elips, 50);
+
+		//Line 객체 생성
+		for(int i=0; i< 72; i++)
+		{
+			//가로선을 그린다.
+			Line line = new Line();
+			line.Stroke = SystemColors.WindowTextBrush;
+			line.X1 = 0;
+			line.Y1 = 0;
+			line.X2 = 100;
+			line.Y2 = 0;
+
+			//가로선을 타원의 중심점(0, 0)을 기준으로 회전시킴
+			line.RenderTransform = new RotateTransform(5 * i);
+			
+			//직선을 타원의 중심에 위치시킴
+			canv.Children.Add(line);
+			Canvas.SetLeft(line, 400);
+			Canvas.SetTop(line, 150);
+		}
+	}
+}
