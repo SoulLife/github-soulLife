@@ -1,0 +1,421 @@
+왼쪽의 바퀴살을 보면 72개의 Line 엘리먼트가 점 (150, 150)을 시작점으로 생성됐다. 이 점이 바퀴의 중심점이다. 그리고 이 Line은 점(250, 150)에서 끝난다. 이 점이 Line의 우측 맨 끝이다. 이들 Line에는 RotateTransform이 적용됐다. RotateTransform 생성자에 전달되는 첫 인자는 Angle 프로퍼티를 나타낸다. 그 다음 2개의 인자는 CenterX와 CentryY다. CenterX와 CenterY는 (150, 150)으로 설정됐다. 각 라인은 점(150, 1500을 중심으로 각기 다른 각도만큼 회전된다. 
+
+두 번째 그림은 다른 접근 방법을 선택했다. 각 Line은 점 (0, 0)에서 시작해서 점 (100, 0)에서 끝난다. RotateTransform의 기본 CenterX, CenterY는 0이다. 이는 점(0, 0)을 기준으로 회전시킨다는 것을 의미하기 때문에 이들 Line을 회전시키기 위해 따로 CenterX, CenterY를 지정할 필요는 없다. 하지만 이들 라인을 원(circle)의 중심에 위치시키기 위해서는 Canvas.SetLeft와 Canvas.SetTop을 설정해야 한다. 
+
+물론 필자는 WheelAndSpoke을 C# 프로그램이 아니라 XAMl 프로그램으로 작성할 수도 있었다. 하지만 그럴 경우 XAML 파일에 144개의 Line 엘리먼트를 포함시켜야 했다. 그것은 필자의 프로그래밍 본능에 비추어 부조리하다고 여겨졌다. 프로그래머는 코드 반복을 최소화하는 것이 지혜롭다는 것을 알고 있다. 그래야 적은 노력으로 코드를 수정할 수 있다. 프로그래밍 언어가 for 같은 루프를 지원하는 데는 이유가 있는 것이다. 
+
+언젠가는 변환만 달리 적용시킨 유사한 엘리먼트 여러 개를 XAML 파일에 추가하고 싶을 때가 있을 것이다. 이럴 때 RotateButton.xaml 파일이 보여주듯이 Style 엘리먼트를 이용하면 반복을 최소화시킬 수 있다. 곧이어 여러 개의 엘리먼트에 변환을 설정하는 간단한 방법을 살펴볼 것이다. 하지만 이를 위해서는 변환의 본질에 대해 좀 더 알아볼 필요가 있다. 
+
+RotateTransform 의 Angle 프로퍼티를(아래 첨자 없이)a라고 하면 CenterX와 CenterY의 영향을 무시했을 떄 회전을 다음과 같이 간단히 나타낼 수 있다. 
+
+x1 = cos(a) * x - sin(a ) * y
+y1 = sin(a) * x * cos(a) * y
+
+CenterX와 CenterY 프로퍼티를 CRx와 CRy로 나타내면(r은 rotate를 나타낸다)회전에 관한 완전한 공식은 다음과 같다. 
+
+x1 = cos(a) * (x - CRx) - sin(a) * (y-CRy) + CRx
+y1 = sin(a) * (x-CRx) cos(a) * (y-CRy) + CRy
+
+이 공식에 의하면 점(CRx, CRy)는 변함없이 유지된다. 
+
+마지막 회전 공식이 복잡해 보이지만 모든 변환 공식은 다음과 같은 일반적인 형식을 갖는다 
+
+x1 = Sx * x + Rx * y + Dx
+y1 = Ry * x + Sy + y + Dy
+
+여기서 Sx, Sy, Rx, Ry, Dx, Dy는 변환을 고유하게 정의하는 상수다. S 상수는 배율을 의미한다. (Scaling Factor) D 상수는 이동을 의미한다(translation factor)필자는 회전(rotation)을 나타내기 위해 Rx와 Ry를 사용했다. 하지만 이들 상수는 기울이기(skew)에도 관여한다. 
+
+이들 2개의 공식은 2차원 아핀(affine)변환을 나타낸다. 이 변환은 유사성(colinearity)을 유지하는 변환이다. 비록 x1과 y1이 x와 y 모두의 함수이지만 이들 공식은 x나 y등의 제곱식은 포함하고 있지 않다. 이들 공식은 언제나 직선을 또 다른 직선으로 변환한다. 직선을 곡선으로 변환시키지 않는다. 평행인 직선은 절대 평행이 아닌 직선으로 변환되지 않는다. 같은 크기의 객체는 같은 변환을 적용시키면 역시 같은 크기의 객체가 된다. 평행사변형은 언제나 평행사변형으로 변환된다. 타원형은 언제나 타원형으로 변환된다. 그리고 베지어 곡선은 언제나 베지어 곡선으로 변환된다. 
+
+변환을 편리하게 다루기 위해 일반적으로 변환을 행렬(matrix)로 나타낸다. 행렬은 숫자를 사각 배열 형태로 나타낸 것이다. 행렬은 행(row)과 열(column)로 구성된다. 다음은 3개의 열과 2개의 행을 갖는 행렬이다. 
+| 13	-4	10 |
+| -6	2	27 |
+
+행렬은 보통 대문자로 표시한다. 다음은 2개 행렬 사이의 곱셈을 나타낸다. 
+A X B = C
+
+행렬 곱셈에서는 A의 열의 개수가 반드시 B의 행의 개수와 같아야 한다. 곱셈의 결과인 C행렬은 A와 같은 개수의 행을 갖고. B와 같은 개수의 열을 갖는다. C 행렬의 i번째 행과 j번째 열에 있는 숫자는 A 행렬의 i 번째 행에 있는 숫자들을 B행렬의 j 번째 열에 있는 숫자들과 곱해서 그 결과를 모두 더한 것과 같다. 행렬 곱셈은 교환법칙이 성립하지 않는다. AxB는 BxA와 다르다.
+
+위치 이동 (translation)을 고려하지 않는다면 변환을 2x2 의 행렬로 표현할 수 있다. 
+
+| 8x Ry |
+| Rx Sy |
+
+그러면 변환은 점(x, y)를 포함하는 1x2의 행렬과 변환 행렬을 곱해서 전(x1, y1)을 포함하는 1x2의 행렬을 얻는 것으로 생각할 수 있다. 
+		| 8x Ry|
+|x y | X	| Rx Sy| = | x1 y1 |
+
+행렬 계산에 관한 규칙을 적용하면 위의 식은 다음식과 같다. 
+
+x1 = Sx * x + Rx * y
+y1 = Ry * x + Sy * y
+
+위치 이동 요소를 제거했기 때문에 이 공식은 완전하지 않다. 위치 이동까지 적절히 수용할수 있는 행렬을 얻으려면 (x, y)와 (x1, y1)을 포함하는 행렬이 1x3행렬로 확장돼야 한다. 그리고 변환을 나타내는 행렬도 3x3행렬로 확장돼야 한다. 
+
+		| Sx Ry 0 |
+|x y 1 | X	| Rx Sy 0 | = | x1 y1 1 |
+		| Dx Dy 1 |
+
+이를 계산하면 다음과 같은 완전한 변환 공식이 유도된다. 이는 이전에 우리가 얻은 공식과 일치한다. 
+
+x1 = Sx * x + Rx * y + Dx
+y1 = Ry * x + Sy * y + Dy
+
+이것처럼 행렬을 이용해서 표현할 수 있는 변환을 행렬 변환(matrix transform)이라고 한다. 기본 행렬 변환은 아무 일도 하지 않는 변환이다. 이는 배율(scaling factor)이 1이고, 회전 요소(rotation factor)가 0, 이동 요소(translation factor)가 0인 것을 의미한다. 
+| 1 0 0 |
+| 0 1 0 |
+| 0 0 1 |
+
+이것을 단위 행렬(identity matrix)이라고 한다. 
+
+변환을 나타내는 행렬이 Matrix라는 이름의 구조체로 캡슐화 돼 있다. Matrix 구조체는 읽고 쓰기가 가능한 6개의 프로퍼티를 갖는다. 6개의 프로퍼티는 M11, M12, M21, M22, OffsetX, OffsetY이며, 각기 다음에 보여지는 변환 행렬의 셀(cell)에 대응한다. 
+| M11		M12	 	0 |
+| M21 	M22	 	0 |
+| OffsetX	OffsetY 	1 |
+
+3번째 행의 값들은 고정되어 있어, 바꿀수 없다. Transform 클래스는 (이 클래스로부터 TranslateTransform, ScaleTransform 등이 파생됐다)Matrix 타입의 Value란 이름의 프로퍼티를 갖는다. 이 프로퍼티는 읽기만 가능하며 변환 행렬을 나타낸다. 
+
+예를 들어 생성자 코드에서 다음과 같이 TranslateTransform 을 설정했다고 하자. 
+
+TranslateTransform x form = new TranslateTransform(27, 55);
+
+또는 XAML 에서 다음과 같이 설정했다고 하자. 
+<TranslateTransform X="227" Y="55" />
+
+두 경우 모두 해당 TranslateTransform 객체의 Value 프로퍼티는 다음과 같은 Matrix객체가 될 것이다. 
+
+| 1 	0 	0 |
+| 0 	1 	0 |
+|27 	55 	1 |
+
+비슷하게 다음과 같은 코드로 ScaleTransform 을 생성할 수 있다. 
+
+ScaleTransform xform = new ScaleTransform(5, 3);
+
+또는 이것을 XAML에서 다음과 같이 할 수도 있다 
+<ScaleTransform ScaleX="5" ScaleY="3" />
+
+역시 두 경우 모두 ScaleTransform 객체의 Value 프로퍼티는 다음과 같은 Matrix 객체가 될 것이다. 
+| 5 0 0 |
+| 0 3 0 |
+| 0 0 1 |
+
+지금까지는 쉬운 예였다. 지금까지 보아왔듯이 ScaleTransform에 오프셋을 함께 지정할수 있다. 이를 코드로 만들면 다음과 같다. 
+
+ScaleTransform xform = new ScaleTransform(5, 3, 35, 12);
+
+XAML 에서는 CenterX와 CenterY 프로퍼티를 설정한다. 
+
+<ScaleTransform ScaleX="5" ScaleY="3" CenterX="35" CenterY="12" />
+
+이런 설정의 결과로 얻어지는 행렬 변환은 사실 3개의 변환을 합성한 것이다. 우선 점(CenterX, CenterY)를 원점으로 옮기는 위치 이동을 수행한다. 그 후 확대를 수행한다. 다음에 원점을 다시 점(CenterX, CenterY)로 되돌리는 또 다른 위치 이동을 적용한다. 합성된 변환은 3개 행렬의 곱이다. 
+| 1 	0 	0 |    | 5 0 0 |    | 1 	0 	0 |
+| 0	1	0 | X | 0 3 0 | X  | 0 	1 	0 |
+|-35	-12	1 |    | 0 0 1 |    | 35	12	1 |
+
+일반 적인 행렬 곱셈 규칙에 의해 처음 2개의 행렬을 곱하면 다음과 같다. 
+| 5	0	0 |	| 1 	0	0 |
+| 0	3	0 | X  | 0	1	0 |
+|-175	-36	1 | 	| 35	12	1 |
+
+이제 남은 2개의 행렬을 곱하면 다음과 같다. 
+| 5	0	0 |
+| 0 	3	0 |
+|-140	-24	1 |
+
+이 행렬이 ScaleX, ScaleY를 5와 3으로 설정하고 CenterX와 CenterY를 35와 12로 설정한 ScaleTransform을 나타낸다. 의심스럽다면 InteractiveScaleTransform.xaml파일로 되돌아가서 Canvas엘리먼트의 마지막에 다음 엘리먼트를 추가해보라. 
+<Label Canvas.Right="0" Content="{Binding ElementName=btn, Path=RenderTransform.Value}" />
+
+이 Label은 Button에 적용된 RenderTransform의 Value 프로퍼티를 표시한다. 이것은 6개의 숫자를 M11, M12, M21, M22, OffsetX, OffsetY의 순서로 표시한다. 스크롤바를 이용해서 앞서 논의한 숫자들을 선택해 보자. 그러면 결과 행렬의 확인할 수 있을 것이다. 
+
+a의0도 만큼 회전시키는 변환은 다음과 같은 행렬로 나타낼 수 있다. 
+| cos(a)	sin(a)	0 |
+|-sin(a)	cos(a) 0 |
+| 0		0	1 |
+
+CenterX와 CenterY에 기본값이 아닌 값을 설정할 경우 이전 스케일링 변환과 유사한 행렬 곱셈을 고려해야 한다. 
+
+29장의 처음에 소개했던 TransformButtons.xaml 프로그램의 경우 회전 변환이 적용된 버튼을 다음과 같은 마크업으로 나타냈다. 
+<Button Canvas.Left="650" Canvas.Top="100">
+	Rotated
+	<Button.RenderTransform>
+		<RotateTransform Angle="-30" />
+	</Button.RenderTransform>
+</Button>
+
+-30도에 대한 코사인 값은 대략 0.866이고, 사인 값은 -0.5이다. 따라서 이 변환에 해당하는 행렬은 다음과 같다. 
+| 0.866	-0.5	0 |
+| 0.5		0.866	0 |
+| 0		0	1 |
+
+Transform으로 파생된 다른 클래스는 MatrixTransform이다. 이 클래스는 Matrix란 이름의 Matrix 타입 프로퍼티를 갖는다. 원하는 행렬 값을 알고 있다면 다음과 같은 마크업 구문으로 동일한 변환 결과를 얻을 수 있다. 
+<Button Canvas.Left="650" Canvas.Top="100">
+	Rotated
+	<Button.RenderTransform>
+		<MatrixTransform>
+			<MatrixTransform.Matrix>
+				<Matrix M11="0.866" M12="-0.5" M21="0.5" M22="0.866" />
+			</MatrixTransform.Matrix>
+		</MatrixTransform>	
+	</Button.RenderTransform>
+</Button>
+
+변환에 정통한 마법사가 아닌 이상 RotateTransform 을 이런 식으로 바꿔 쓰고 싶지는 않을 것이다. 하지만 좀 더 간단한 방법이 있다. MatrixTransform.Matrix프로퍼티 엘리먼트 안에서 Matrix엘리먼트를 정의하는 대신 MatrixTransform의 Matrix프로퍼티에 직접 문자열을 설정하면 된다. 이 문자열은 행렬의 6개의 값을 맨위의 행부터 차례로 담고 있어야 한다. 
+<Button Canvas.Left="650" Canvas.Top="100">
+	Rotated
+	<Button.RenderTransform>
+		<MatrixTransform Matrix="0.866 -0.5 0.5 0.866 0 0" />
+	</Button.RenderTransform>
+</Button>
+잠깐만 좀 더 간단한 방법이 있다. RenderTransform 프로퍼티나 LayoutTransform 프로퍼티를 다음 처럼 바로 설정할 수 있다. 
+<Button Canvas.Left="650" Canvas.Top="100" RenderTransform="0.866 -0.5 0.5 0.866 0 0" >
+	Rotated
+</Button>
+
+이 형태는 무척 간결해서 간단한 변환을 서술할 때 꼭 사용할만하다. 특히 변환만 다른 동일한 엘리먼트가 여러 개 있을 때 유용하다.(이에 관한 예제가 곧 소개된다.)
+
+마지막으로 소개할 Transform 파생 클래스는 TransformGroup이다. TransformGroup에 속한 중요한 프로퍼티는 Children이다. 이는 다른 Transform 객체들로 이루어진 컬렉션이다. 예를 들어 어떤 버튼의 크기를 2배로 확대하면서 동시에 45도 회전시키는 경우를 생각해 보자. 이에 대한 마크업 구문은 다음과 같다. 
+
+<Button.RenderTransform>
+	<TransformGroup>
+		<ScaleTransform ScaleX="2" ScaleY="2" />
+		<RotateTransform Angle="45" />
+	</TransformGroup>
+</Button.RenderTransform>
+
+지금처럼 특별한 경우에는 ScaleTransform과 RotateTransform의 순서가 바뀌어도 상관없다. 하지만 대부분의 경우는 순서에 따라 결과가 달라진다. TransformGroup은 자식 변환들을 효과적으로 곱한다(합성한다) 이것은 한 번만 일어나는 작업이 아니다. Angle 프로퍼티를 바인딩 처리 할 수도 있고 Angle 프로퍼티에 애니메이션을 적용할 수도 있다. 그런 때는 수정된 값들을 모두 반영해서 변환을 합성해야 한다. 
+
+Geometry 클래스는 Transform 이란 이름의 Transform 타입 프로퍼티를 갖고 있다. 그래서 지오메트리 객체에 직접 변환을 적용시킬 수 있다. 예를 들어 지오메트리 객체를 클리핑(clipping)용도로 이용할 경우 이런 기능이 유용하다. Geometry 객체가 path의 일부로 사용될 때도 변환을 적용시킬 수 있다. 지오메트리 변환은 Path의 RenderTransform이나 LayoutTransform보다. 먼저 일어난다. 지오메트리 변환은 Path 의 좌표계와 크기에 영향을 주기 때문에 변환으로 인해 레이아웃이 수정된다. 
+
+다음에 2개의 사각형을 나란히 보여주는 프로그램이 있다. 첫 번째는 가로와 세로가 10단위이고 크기를 10배 확대시키는 RenderTransform 이 적용된 Rectangle 엘리먼트다. 두 번째는 RectangleGeometry 객체를 그리는 Path 엘리먼트다. RectangleGeometry 객체는(첫 번째와 마찬가지로)가로와 세로가 10이고, 크기를 10배 확대시키는 Transform 프로퍼티가 부여됐다. 
+
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Rectangle Canvas.Left="100" Canvas.Top="100" Stroke="Red" Width="10" Height="10" RenderTransform="10 0 0 10 0 0" />
+	<Path Canvas.Left="300" Canvas.Top="100" Stroke="Red" >
+		<Path.Data>
+			<RectangleGeometry Rect="0 0 10 10" Transform="10 0 0 10 0 0"/>
+		</Path.Data>
+	</Path>
+</Canvas>
+
+
+화면 위에 표시된 2개의 엘리먼트가 기대와 달리 무척 다르게 보인다. Rectangle 엘리먼트를 둘러싸고 있는 붉은 라인은 RenderTransform 의 형얄을 받아 두께가 10단위이다. Path 엘리먼트를 둘러싸고 있는 붉은 라인은 두께가 1단위이다. 엘리먼트에 적용된 RenderTransform이나. LayoutTransform은 라인 굵기를 포함해서 엘리먼트의 모든 것에 영향을 준다. 지오메트리에 적용된 Transform 은 해당 지오메트리의 좌표계에만 영향을 준다. 변환이 적용되지 않은 라인이 변환이 적용된 좌표를 그린다. 
+
+28장을 통해 알게 됐듯이 드로잉 표면(drawing surface)으로 사용하기 위해 Canvas를 원하는 크기로 정의할 수 있다. 이때 Canvas의 원점 즉, 점(0, 0)을 좌측 상단 코너가 아닌 다른 위치에 두고 싶을 때가 있다. 일부 그래픽 프로그래머는 원점이 좌측 하단 코너에 위치하고 화면 위쪽으로 갈수록 Y값이 증가하는 좌표계를 선호한다. 이런 체계는 일반적인 데카르트 좌표계의 1사분면을 흉내 낸 것이다. 어떤 애플리케이션은(예를 들어 아날로그 시계 같은 경우는)원점이 중앙에 있는 좌표계를 간절히 바랄 것이다. 
+
+Canvas의 RenderTransform을 설정하면 이런 색다른 좌표계를 구현할 수 있다. 원한다면 Canvas를 Viewbox안에 두어서 Viewbox에 꼭 맞게 크기가 조절될 수 있게 할 수 있다. (27장의 ScalableFace.xaml 프로그램에서 소개했었다)
+
+다음의 CanvasMode.xaml 파일이 4개의 각기 다른 Canvas 좌표계를 보여준다. 
+
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Grid.ColumnDefinitions>
+		<ColumnDefinition />
+		<ColumnDefinition />
+		<ColumnDefinition />
+		<ColumnDefinition />
+	</Grid.ColumnDefinitions>
+
+	<Grid.Resources>
+		<Style TargetType="{x:Type Canvas}">
+			<Setter Property="Width" Value="100" />
+			<Setter Property="Height" Value="100" />
+			<Setter Property="HorizontalAlignment" Value="Center" />
+			<Setter Property="VerticalAlignment" Value="Center" />
+		</Style>
+
+		<Style TargetType="{x:Type Path}" >
+			<Setter Property="Fill" Value="Red" />			
+			<Setter Property="Data">
+				<Setter.Value>
+					<EllipseGeometry Center="0 0" RadiusX="5" RadiusY="5" />
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</Grid.Resources>
+
+	<!-- Normal : 좌측 상단을 기준점으로 함 -->
+	<Canvas Grid.Column="0">
+		<Line X1="0" Y1="0" X2="100" Y2="100" Stroke="Black" />
+		<Polyline Points="0 0 0 10 10 10 10 0 0 0" Stroke="Blue" />
+		<Path />
+	</Canvas>
+
+	<!-- 좌측 하단을 기준점으로 하고, 위로 향할수록 Y 좌표 증가 -->
+	<Canvas Grid.Column="1">
+		<Canvas.RenderTransform>
+			<TransformGroup>
+				<ScaleTransform ScaleY="-1" />
+				<TranslateTransform Y="100" />
+			</TransformGroup>
+		</Canvas.RenderTransform>
+
+		<Line X1="0" Y1="0" X2="100" Y2="100" Stroke="Black" />
+		<Polyline Points="0 0 0 100 100 100 100 0 0 0" Stroke="Blue" />
+		<Path />
+	</Canvas>
+
+	<!-- 중앙을 기준점으로 하고, 아래로 향할수록 Y 좌표증가 -->
+
+	<Canvas Grid.Column="2">
+		<Canvas.RenderTransform>
+			<TransformGroup>
+				<ScaleTransform ScaleY="1" />
+				<TranslateTransform X="50" Y="50" />
+			</TransformGroup>
+		</Canvas.RenderTransform>
+
+		<Line X1="0" Y1="0" X2="50" Y2="50" Stroke="Black" />
+		<Polyline Points="-50 -50 50 -50 50 50 -50 50 -50 -50" Stroke="Blue" />
+		<Path />
+	</Canvas>
+
+	<!-- 4사 분면 좌표 시스템 -->
+	<Canvas Grid.Column="3">
+		<Canvas.RenderTransform>
+			<TransformGroup>
+				<ScaleTransform ScaleY="-1" />
+				<TranslateTransform X="50" Y="50" />
+			</TransformGroup>
+		</Canvas.RenderTransform>
+
+		<Line X1="0" Y1="0" X2="50" Y2="50" Stroke="Black" />
+		<Polyline Points="-50 -50 50 -50 50 50 -50 50 -50 -50" Stroke="Blue" />
+		<Path />
+	</Canvas>
+</Grid>
+
+Canvas에 적용될 Style은 Width와 Height를 100단위로 설정하고 HorizontalAlignment와 VerticalAlignment를 Center로 설정한다. 4개의 Canvas 패널은 4개의 컬럼(column)으로 이루어진 Grid의 각 셀 중앙에 각기 위치한다. 
+
+Path에 적용될 Style은 EllipseGeometry를 포함한다. 이 EllipseGeometry는 점 (0, 0)을 중심으로 하며 붉은색이다. 이 붉은 점이 드로잉 표면의 원점을 표시한다. 그리고 polyline이 100단위 사각형 좌표계에 테두리를 그린다. 처음 2개의 좌표계는 원점이 코너에 위치하며, 외곽선은 (0, 0)에서부터 시작해 (100, 100)에서 끝난다. 원점에서부터 점 (100, 100)까지를 검은색 직선으로 그린다. 그 다음 2개의 좌표계는 원점이 중앙에 있다. 사각 외곽선은 (-50, -50)에서 시작해서 (50, 50)에서 끝난다. 원점에서부터 점(50, 50)까지를 검은색 직선으로 그린다. 
+
+주의할 점 : 화면 위로 갈수록 Y 값이 증가하는 좌표계를 만들면 Canvas에 출력하는 모든 문자열이 뒤집혀 보일것이다. 그것이 바라던 바가 아니라면 문자열을 출력하는 엘리먼트에 ScaleTransform을 적용해서 이를 보정해주어야 한다. 또한 양수값의 각도에 의한 회전이 시계 방향이 아니라 반시계 방향으로 일어난다. 
+
+Canvas에 다음과 같이 프로퍼티를 추가하자. 
+<Setter Property="Background" Value="Aqua" />
+
+결과를 보면 약간 놀랄것이다. 두 번째 2개의 변환을 보면 드로잉 표면이 Canvas의 실제 영역의 바깥에 존재하는 것처럼 보인다. Canvas의 코너는 항상 점(0, 0)이다. 그렇기 때문에 중앙을 (0, 0)으로 만들려면 Canvas를 다른 쪽의 코너로 옮기는 수밖에 없다. 
+
+이것은 아무 문제가 되지 않는다. 왜냐하면 변환이 Canvas의 RenderTransform 에 적용되기 때문에 Canvas가 그곳에 그림을 그리지는 않지만 레이아웃 시스템은 Canvas가 여전히 Grid셀의 중앙에 위치한다고 믿는다. 
+
+이런 색다른 좌표계를 사용하고 싶을 때 Canvas의 RenderTransform에 행렬 문자열을 직접 설정할 수도 있다. 프로그램의 두 번째 Canvas의 경우 원점이 좌측 하단에 있고 화면 위로 갈수록 Y 값이 증가한다. 이 경우의 행렬 문자열은 다음과 같다. 
+
+RenderTransform = "1 0 0 -1 0 100"
+
+원점이 중앙에 있고 화면 아래로 갈수록 Y값이 증가한다면 문자열은 다음과 같다. 
+
+RenderTransform="1 0 0 1 50 50"
+
+지금 100단위 크기의 사각형을 다루고 있다는 것을 명심하자. 다른 크기를 다룬다면 오프셋 값을 크기에 맞게 조절해야 한다. 아래의 꽃을 그리는 프로그램은 200단위 크기의 사각형 Canvas를 Viewbox안에 두고 있다. 
+
+<Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	Background="White">
+	<Viewbox>
+
+		<!-- Canvas는 Cartesian 좌표계를 갖춘 한 변이 200 units인 정사각형 -->
+		<Canvas Width="200" Height="200" RenderTransform="1 0 0 -1 100 100" >
+			<Canvas.Resources>
+				<!-- 너무많은 중복을 피하기 위한 Style 구문 -->
+				<Style TargetType="{x:Type Path}" x:Key="petal">
+					<Setter Property="Stroke" Value="Black" />
+					<Setter Property="Fill" Value="Red" />
+					<Setter Property="Data" Value="M 0 0 C 12.5 12.5 47.5 12.5, 60 0 C 47.5 -12.5, 12.5 -12.5, 0 0 Z" />
+				</Style>
+			</Canvas.Resources>
+			<!-- 녹색 줄기 -->
+			<Path Stroke="Green" StrokeThickness="5" Data="M -100 -100 C -100 -50, -50 50, 0 0" >
+			</Path>
+
+			<!-- 8개의 꽃잎, 대부분 회전시켰음 -->
+			<Path Style="{StaticResource petal}" />
+			<Path Style="{StaticResource petal}" RenderTransform=".7 -.7 .7 .7 0 0" />
+			<Path Style="{StaticResource petal}" RenderTransform="0 -1 1 0 0 0" />
+			<Path Style="{StaticResource petal}" RenderTransform="-.7 -.7 .7 -.7 0 0" />
+			<Path Style="{StaticResource petal}" RenderTransform="-1 0 0 -1 0 0" />
+			<Path Style="{StaticResource petal}" RenderTransform="-.7 .7 -.7 -.7 0 0" />
+			<Path Style="{StaticResource petal}" RenderTransform="0 1 -1 0 0 0" />
+			<Path Style="{StaticResource petal}" RenderTransform=".7 .7 -.7 .7 0 0" />
+
+			<!-- 꿀벌을 유인하기 위한 노란색 원을 중앙에 배치 -->
+			<Path Fill="Yellow" Stroke="Black">
+				<Path.Data>
+					<EllipseGeometry Center="0 0" RadiusX="15" RadiusY="15" />
+				</Path.Data>
+			</Path>
+		</Canvas>
+	</Viewbox>
+</Page>
+
+8개의 꽃잎이 있다. 이들 꽃잎은 2개의 베지어 곡선으로 구성했으며 각기 45도의 배수만큼 회전시켰다. 마크업 구문을 간결하게 하기 위해 각 회전을 행렬 문자열로 표기했다. 문자열에 사용한 0.7은 2의 제곱근을 2로 나눈 값의 근사치다. 근사치지만 출력 결과는 만족스럽다. 
+
+TranslateTransform의 일반적인 용도 중 하나는 드롭 새도우를 그리는 것이다. 28장에서 Canvas의 위치 프로퍼티로 그림자를 이동시켜 그림자를 입체적으로 표현한 바 있다. TranslateTransform은 RenderTransform 프로퍼티에 적용할 때 좀 더 융통성을 얻을 수 있다. 왜냐하면 모든 종류의 패널에 적용시킬수 있기 때문이다. 다음 프로그램은 문자열에 대한 드롭 새도우를 Grid 패널의 셀 안에 표시한다. 
+
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Grid.Resources>
+		<Style TargetType="{x:Type TextBlock}" >
+			<Setter Property="Text" Value="Drop-Shadow" />
+			<Setter Property="FontFamily" Value="Times new Roman Bold" />
+			<Setter Property="FontSize" Value="96" />
+			<Setter Property="HorizontalAlignment" Value="Center" />
+			<Setter Property="VerticalAlignment" Value="Center" />
+		</Style>
+	</Grid.Resources>
+
+	<!-- 그림자 -->
+	<TextBlock Opacity="0.5" RenderTransform="1 0 0 1 5 5" />
+
+	<!-- 전면글자 -->
+	<TextBlock />
+</Grid>
+
+Style 엘리먼트를 강력하게 사용한 것을 눈여겨 보자. 그래서 포어그라운드 TextBlock은 아예 비어있다. !백그라운드 그림자는 원래 위치에서 5단위 이동돼 있다. 그림자는 보통 회색으로 그리지만 이 프로그램은 투명도를 50%로 설정해서 그림자를 구현했다. 그림자를 구현할 때 가장 중요한 규칙은 그림자를 문자열 앞이 아니라 뒤에 그려야 한다는 것이다. 
+
+다음 프로그램은 드롭 새도우와 비슷한 기법을 사용해서 아주 다른 시각 효과를 보여준다. 이 프로그램은 배경에 회색(실제로는 SystemColors.GrayTextBrush)문자열을 표시하고 그 후 횐색(실제로는 SystemColors.WindowBrush)문자열을 2단위만 옮겨서 표시한다. 
+
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	<Grid.Resources>
+		<Style TargetType="{x:Type TextBlock}" >
+			<Setter Property="Text" Value="Drop-Shadow" />
+			<Setter Property="FontFamily" Value="Times new Roman Bold" />
+			<Setter Property="FontSize" Value="144" />
+			<Setter Property="HorizontalAlignment" Value="Center" />
+			<Setter Property="VerticalAlignment" Value="Center" />
+		</Style>
+	</Grid.Resources>
+	
+	<Grid.RowDefinitions>
+		<RowDefinition />
+		<RowDefinition />
+	</Grid.RowDefinitions>
+
+	<!-- 그림자 문자 -->
+	<TextBlock Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}} " >
+		Emboss
+		<TextBlock.RenderTransform>
+			<TranslateTransform X="2" Y="2" />
+		</TextBlcok.RenderTransform>
+	</TextBlock>
+
+	<!-- 전면 문자 -->
+	<TextBlock Foreground="{DynamicResource {x:Static SystemColors.WindowBrushKey}} ">
+		Emboss
+	</TextBlock>
+
+	<!-- 그림자 문자 -->
+	<TextBlock Grid.Row="1" Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" >
+		Engrave
+		<TextBlock.RenderTransform>
+			<TranslateTransform X="-2" Y="-2" />
+		</TextBlock.RenderTransform>
+	</TextBlock>
+
+	<!-- 전면 문자 -->
+	<TextBlock Grid.Row="1" Foreground="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" >
+		Engrave
+	</TextBlock>
+</Grid>
+
+두번째 이미지가 사용한 오프셋이 음수라는 것만 빼면 2개의 효과는 본질적으로 같다. 우리는 위에서 비춰지는 빛에 익숙하기 때문에 문자의 아래와 우측에 있는 그림자를 보면 문자가 솟아 있다고 느낀다. 그것이 Emboss 문자열이다. 위와 왼쪽에 있는 그림자는 문자가 가라 앉아 있는 것처럼 느끼게 한다. 그것이 Engrave 문자열이다. 
+
+그림자가 기울어 있으면 문자열이 마치 테이블 바닥 같은 표면 위에 서있는 것처럼 보인다. 다음 프로그램에서 얻고자 했던 효과가 바로 그것이다. 
