@@ -1,0 +1,289 @@
+이 XAML 프로그램은 그림자에 ScaleTransform 과 SkewTransform을 동시에 적용한다. ScaleTransform은 그림자의 크기를 3배 키운다. SkewTransform은 그림자를 오른쪽으로 45도 기울인다. 
+
+하지만 이 프로그램을 실행시키면 약간 어색해 보인다. 그림자가 분명 포어그라운드 문자열보다 아래에 있지만 올바른 위치가 아닌 것처럼 보인다. 출력 결과를 자세히 보면 포어그라운드 문자열의 베이스라인과 그림자 문자열의 베이스라인을 일치시켜야 겠다고 느낄 것이다. 
+
+ScaleTransform과 SkewTransform 변환의 CenterY속성 값을 조정하면 이 작은 문제를 해결 할 수 있다. 두 변환의 프로퍼티 값을 같게 설정해야 한다. 적합한 값을 찾으려면 어느 정도 시행착오를 거쳐야 한다(그래서 프로그램의 이름이 EmpiricalTitledTextShadow다!)그림자는 포어그라운드 h 문자의 아랫면에 정렬돼야 한다. 다른 문자들은 베이스라인보다 약간 아래로 쳐진 부분이 있기 때문에 어색한 그림자가 된다. 여러 번 시도하다 보면 131이 가장 좋은 결과를 내는 값이라는 것을 알 수 있을 것이다. 
+
+131이란 값이 무엇을 의미할까? 이 값은 문자열의 맨 위에서 베이스라인까지의 거리를 장치 독립적 단위로 나타낸 것이다. 이 값은 2개의 변환을 적용하더라도 그 값이 그대로 유지돼야 하는 그림자의 Y 좌표값이다. 그래서 2개 변환의 CenterY 프로퍼티에 이 값을 설정해야 한다. 
+
+비록 적합한 값을 찾기는 했지만 이 값이 다른 폰트 크기에도 적합한 것은 아니다. 심지어 다른 폰트 패밀리를 사용할 경우 전혀 쓸모 없는 값이 될 것이다. 왜냐하면 모든 폰트는 베이스라인 위쪽의 높이와 아래쪽의 높이를 저마다 다르게 할당하기 때문이다. 예를 들어 Arial 폰트로 테스트 해보면 분명히 알 수 있을 것이다. 
+
+C#으로 이를 코딩한다면 이 값을 계산해서 얻을 수 있다. 이 계산은 TextBlock의 FontSize프로퍼티와 FontFamily 클래스의 Baseline 프로퍼티를 사용한다. Baseline 프로퍼티는 폰트 문자의 상단에서부터 베이스라인까지의 거리를 폰트 크기에 대한 비율로 나타낸 값이다. 예를 들어 Time New Roman 폰트를 나타내는 FontFamily 객체가 있다고 하자. 이 객체의 Baseline 프로퍼티는 약 0.91이다. 이 값을 EmpiricalTitledTextShadow.xaml 프로그램에서 사용한 폰트 크기 144와 곱하면 131을 얻게 된다. 
+
+당연히 0.91이라는 Baseline 프로퍼티 값은 FontSize가 1이 아닌 이상 XAML 프로그래머에게는 쓸모가 없다. Baseline 값을 FontSize 값과 곱해야 한다. 하지만 XAML에서는 곱하기를 처리할 방법이 없다. 
+
+정말 없을까?
+
+29장을 진행하는 동안 XAML 파일에서 실질적인 곱하기와 더하기 연산을 처리했었다. 바로 변환이 그것이다. 변환을 이용하면 XAML에서 임의의 연산을 처리할 수 있다. 물론 이런 처리는 C# 코드만큼 깔끔하지 못하다. 사실 끔찍할 정도로 복잡하다. 하지만 XAML만으로 프로그램을 만들때 한 두 개의 연산을 위해 C# 코드를 쓰고 싶지 않다면 변환이 적절한 해결책이다. 
+
+베이스라인 오프셋을 계산하는 특정 경우를 생각해보자. 우선 FontFamily 객체를 리소스로 정의해야 한다. 
+
+<FontFamily x:Key="fntfam">
+	Times New Roman
+</FontFamily>
+
+여기에 폰트 크기를 나타내는 리소스도 추가해야 한다. 
+
+<s:Double x:Key="fntsize">
+	144
+</s:Double>
+
+물론 System 네임스페이스를 사용하기 위한 선언도 추가해야 한다. 폰트 패밀리와 폰트 크기에 대한 리소스 정의 다음에 2개의 ScaleTransform객체를 포함하는 TransformGroup을 리소스로 정의한다. 
+
+<TransformGroup x:Key="xform">
+	<ScaleTransform ScaleX="{Binding Source={StaticResource fntfam}, Path=Baseline}" />
+	<ScaleTransform ScaleX="{StaticResource fntsize}" />
+</TransformGroup>
+
+첫 번째 ScaleTransform의 ScaleX프로퍼티에는 fntfam 리소스의 Baseline 프로퍼티를 바인딩했다. 두 번째에는 간단히 fntsize 리소스를 바인딩했다. 두 값의 곱셈은 다소 은폐돼있지만 xform 리소스에 의해 수행된다. TransformGroup이 Transform으로부터 Value라는 이름의 프로퍼티를 계승하고 있다는 것을 기억하자. Value 프로퍼티는 Matrix 객체다. 그리고 Matrix 객체의 M11 프로퍼티에 폰트 크기와 Baseline 프로퍼티 값을 곱한 결과가 저장될 것이다. 이제 그림자에 적용할 ScaleTransform과 SkewTransform 의 CenterY 프로퍼티에 이값을 설정한다. 코드는 다음과 같다. 
+
+CenterY="{Binding Source={StaticResour xform}, Path=Value.M11}"
+
+모든 내용을 종합하면 다음 프로그램과 같다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:s="clr-namespace:System;assembly=mscorlib" >
+
+	<Canvas.Resources>
+		<FontFamily x:Key="fntfam">
+			Times New Roman
+		</FontFamily>
+
+		<s:Double x:Key="fntsize">
+			144
+		</s:Double>
+
+		<TransfromGroup x:Key="xform">
+			<ScaleTransform ScaleX="{Binding Source={StaticResource fntfam}, Path=Baseline}" />
+			<ScaleTransform ScaleX="{StaticResour fntsize}" />
+		</TransformGroup>
+
+		<Style TargetType="{x:Type TextBlock}">
+			<Setter Property="FontFamily" Value="{StaticResource fntfam}" />
+			<Setter Property="FontSize" Value="{StaticResource fntsize}" />
+			<Setter Property="Text" Value="Shadow" />
+			<Setter Property="Canvas.Left" Value="96" />
+			<Setter Property="Canvas.Top" Value="192" />
+		</Style>
+	</Canvas.Resources>
+
+	<!-- 그림자 문자 -->
+	<TextBlock Foreground="DarkGray">
+		<TextBlock.RenderTransform>
+			<TransformGroup>
+				<ScaleTransform ScaleY="3" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+				<SkewTransform AngleX="-45" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+			</TransformGroup>
+		</TextBlock.RenderTransform>
+	</TextBlock>
+
+	<!-- 전면 문자 -->
+	<TextBlock />
+</Canvas>
+
+TextBlock 을 위한 Style 구문이 지금은 폰트 패밀리 리소스와 폰트 크기 리소스를 참조하는 것에 주의하자. 이들 중 어느 한 값을 수정하고자 할 경우 파일 윗부분의 Resource 절만 바꾸면 수정된 내용이 나머지 코드에 반영된다(정말 프로그램 같지 않은가?)
+
+표시할 문자열에 하강 문자(desender)가 포함돼 있다면 Baseline 프로퍼티를 이용해 계산한 그림자의 위치는 어긋나 보일 것이다. FontFamily 클래스는 LineSpacing 이라는 이름의 프로퍼티도 포함된다. 이 프로퍼티는 여러 줄의 문자열을 표시할 때 줄 사이의 간격을 정하기 위해 제안된 값이다. 이 프로퍼티 값도 폰트 크기에 대한 비율로 나타낸다. LineSpacing은 보통 1보다 크다. 왜냐하면 폰트의 em 사이즈가 상승 문자(ascender)의 윗부분과 디센더 문자의 아랫부분 사이의 대략적인 거리이기 때문이다. LineSpacing은 대문자에 대해서도 책임져야 하고, 발음 구별 기호도 포함해야 한다. 
+
+다음 프로그램은 quirky 문자열에 대한 그림자의 위치를 계산하기 위해 Baseline 대신 LineSpacing 프로퍼티를 이용한다. 바라는 바를 매우 근접하게 표현하고 있지만 정확하지는 않다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:s="clr-namespace:System;assembly=mscorlib" >
+
+	<Canvas.Resources>
+		<FontFamily x:Key="fntfam">
+			Times New Roman
+		</FontFamily>
+
+		<s:Double x:Key="fntsize">
+			144
+		</s:Double>
+
+		<TransfromGroup x:Key="xform">
+			<ScaleTransform ScaleX="{Binding Source={StaticResource fntfam}, Path=Baseline}" />
+			<ScaleTransform ScaleX="{StaticResour fntsize}" />
+		</TransformGroup>
+
+		<Style TargetType="{x:Type TextBlock}">
+			<Setter Property="FontFamily" Value="{StaticResource fntfam}" />
+			<Setter Property="FontSize" Value="{StaticResource fntsize}" />
+			<Setter Property="Text" Value="quirky" />
+			<Setter Property="Canvas.Left" Value="96" />
+			<Setter Property="Canvas.Top" Value="192" />
+		</Style>
+	</Canvas.Resources>
+
+	<!-- 그림자 문자 -->
+	<TextBlock Foreground="DarkGray">
+		<TextBlock.RenderTransform>
+			<TransformGroup>
+				<ScaleTransform ScaleY="2.5" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+				<SkewTransform AngleX="-45" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+			</TransformGroup>
+		</TextBlock.RenderTransform>
+	</TextBlock>
+
+	<!-- 전면 문자 -->
+	<TextBlock />
+</Canvas>
+이미 버튼을 회전시켜봤기 때문에 문자열을 회전시키는 것이 처음 보는 것만큼 전율스럽지 않을 것이다. 다음 프로그램은 18개의 TextBlock 객체를 공통의 기준점 주위로 회전시킨다. 각 TextBlock 은 같은 문자열을 담고 있다. RenderTransformOrigin을 점(0, 0.5)로 설정해서 사용하고 있음을 눈여겨 보자. 이는 TextBlock의 왼쪽 끝과 중간 높이 지점을 의미한다. 문자열의 처음 부분이 뒤범벅되지 않게 문자열은 4개의 공백 문자로 시작한다. 
+
+
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+
+public class RotatedText : Window
+{
+	[STAThread]
+	public static void Main()
+	{
+		Application app = new Application();
+		app.Run(new RotatedText());
+	}
+	public RotatedText()
+	{
+		Title = "Rotated Text";
+
+		//Canvas를 만든다. 
+		Canvas canv = new Canvas();
+		Content = canv;
+
+		//18개의 회전된 TextBlock 엘리먼트를 표시
+		for(int angle=0; angle < 360; angle += 20)
+		{
+			TextBlock txtblk = new TextBlock();
+			txtblk.FontFamily = new FontFamily("Arial");
+			txtblk.FontSize = 24;
+			txtblk.Text = "	Rotated Text";
+			txtblk.RenderTransformOrigin = new Point(0, 0.5);
+			txtblk.RenderTransform = new RotateTransform(angle);
+
+			canv.Children.Add(txtblk);
+			Canvas.SetLeft(txtblk, 200);
+			Canvas.SetTop(txtblk, 200);
+		}
+	}
+}
+
+필자는 C#으로 이 프로그램을 작성했다. 왜냐하면 변환만 조금씩 달리하는 엘리먼트를 18번이나 반복하고 싶지 않았기 때문이다. 이제 XAML로 되돌아가서 다음 프로그램을 살펴보자. 이 프로그램은 동일한 문자열을 가로 방향과 세로 방향으로 1과 -1의 배율을 적용해서 표시한다. 이 배율은 거울에 비친 이미지를 만든다. 문자열은 가로 방향으로도 세로 방향으로도 뒤집힌다. TitledTextShadow.xaml 처럼 이 프로그램도 폰트 크기를 FontFamily의 Baseline프로퍼티와 곱해서 그 결과를 각 Transform 의 CenterY 프로퍼티에 설정한다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:s="clr-namespace:System;assembly=mscorlib" >
+
+	<Canvas.Resources>
+		<FontFamily x:Key="fntfam">
+			Times New Roman
+		</FontFamily>
+
+		<s:Double x:Key="fntsize">
+			144
+		</s:Double>
+
+		<TransfromGroup x:Key="xform">
+			<ScaleTransform ScaleX="{Binding Source={StaticResource fntfam}, Path=Baseline}" />
+			<ScaleTransform ScaleX="{StaticResour fntsize}" />
+		</TransformGroup>
+
+		<Style TargetType="{x:Type TextBlock}">
+			<Setter Property="FontFamily" Value="{StaticResource fntfam}" />
+			<Setter Property="FontSize" Value="{StaticResource fntsize}" />
+			<Setter Property="Text" Value="Reflect" />
+			<Setter Property="Canvas.Left" Value="384" />
+			<Setter Property="Canvas.Top" Value="48" />
+		</Style>
+	</Canvas.Resources>
+		
+
+	<TextBlock />
+
+	<TextBlock>
+		<TextBlock.RenderTransform>
+			<ScaleTransform ScaleX="-1" />
+		</TextBlock.RenderTransform>
+	</TextBlock>
+
+	<TextBlock>
+		<TextBlock.RenderTransform>
+			<ScaleTransform ScaleY="-1" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+		</TextBlock.RenderTransform>
+	</TextBlock>
+
+	<TextBlock>
+		<TextBlock.RenderTransform>
+			<ScaleTransform ScaleX="-1" ScaleY="-1" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+		</TextBlock.RenderTransform>
+	</TextBlock>
+
+</Canvas>
+
+다음 XAML은 이전 것과 유사하다. 단 하나 다른 점은 RotateTransform 을 써서 문자열을 45도 기울였다는 것이다. RotateTransform은 TransformGroup의 일부를 구성한다. 
+
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:s="clr-namespace:System;assembly=mscorlib" >
+
+	<Canvas.Resources>
+		<FontFamily x:Key="fntfam">
+			Times New Roman
+		</FontFamily>
+
+		<s:Double x:Key="fntsize">
+			144
+		</s:Double>
+
+		<TransfromGroup x:Key="xform">
+			<ScaleTransform ScaleX="{Binding Source={StaticResource fntfam}, Path=Baseline}" />
+			<ScaleTransform ScaleX="{StaticResour fntsize}" />
+		</TransformGroup>
+
+		<Style TargetType="{x:Type TextBlock}">
+			<Setter Property="FontFamily" Value="{StaticResource fntfam}" />
+			<Setter Property="FontSize" Value="{StaticResource fntsize}" />
+			<Setter Property="Text" Value="Reflect" />
+			<Setter Property="Canvas.Left" Value="288" />
+			<Setter Property="Canvas.Top" Value="192" />
+		</Style>
+	</Canvas.Resources>
+
+
+	<TextBlock>
+		<TextBlock.RenderTransform>
+			<RotateTransform Angle="45" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}"  />
+		</TextBlock.RenderTransform>
+	</TextBlock>
+
+	<TextBlock>
+		<TextBlock.RenderTransform>
+			<TransformGroup>
+				<ScaleTransform ScaleX="-1" />
+				<RotateTransform Angle="45" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+			</TransformGroup>
+		</TextBlock.RenderTransform>
+	</TextBlock>
+
+	<TextBlock>
+		<TextBlock.RenderTransform>
+			<TransformGroup>
+				<ScaleTransform ScaleY="-1" />
+				<RotateTransform Angle="45" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+				<RotateTransform Angle="45" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+			</TransformGroup>
+		</TextBlock.RenderTransform>
+	</TextBlock>
+	<TextBlock>
+		<TextBlock.RenderTransform>
+			<TransformGroup>
+				<ScaleTransform ScaleX="-1" ScaleY="-1" CenterY="{Binding Source={StaticResour xform}, Path=Value.M11}" />
+				<RotateTransform Angle="45" CenterY="{Binding Source={StaticResource xform}, Path=Value.M11}" />
+			</TransformGroup>
+		</TextBlock.RenderTransform>
+	</TextBlock>
+
+
+</Canvas>
+		
+29장에서 그래픽 객체를 다루기 위해 사용했던 모든 방법들을 다시 한번 떠올려보자. 다음 장을 계속 펼쳐보고 싶게 해줄 말이 하나 있다. 
+
+모든 것은 움직이게 할 수 있다(Everthing is animatable)
