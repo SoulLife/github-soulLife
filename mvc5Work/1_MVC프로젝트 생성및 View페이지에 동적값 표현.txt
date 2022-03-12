@@ -1,0 +1,274 @@
+2장 : 첫 번째 MVC 응용 프로그램
+소프트 웨어  개발 프레임워크를 이해하기 위한 가장 좋은 방법은 프레임워크를 직접 사용해보는 것이다. 이번 장에서는 ASP.NET MVC 프레임워크를 사용해서 간단한 데이터 입력 응용 프로그램을 작성해보려고 한다. 한 단계씩 작업을 진행해나가면서 ASP .NET MVC 응용프로그램의 구성을 차분히 살펴보도록 하자. 간결한 진행을 위해서 일부 기술적인 세부사항들은 잠시 설명 없이 지나가겠지만 걱정할 필요는 없다. 아직 MVC에 익숙하지 않더라도 흥미로운 부분들을 많이 발견할 수 있을 테니 말이다. 그리고 별다른 설명 없이 특정 기술을 사용하는 경우에는 그 기술에 관한 자세한 내용들을 살펴볼 수 있는 이 책의 관련 장에 대한 정보도 함께 제공할 것이다. 
+
+
+
+※Visual Studio 준비하기
+Visual Studio Express는 MVC 프레임워크 응용프로그램을 생성하고 테스트하고 배포하기 위해 필요한 모든 기능들을 제공해준다. 다만 기본적으로 일부 기능들은 직접 설정해서 활성화시키기 전까지는 나타나지 않는다. 이 기능들을 모두 활성화시키려면 Visual Studio 의 [도구(Tools)] --> [설정(Settings)] 메뉴에서 [전문가 설정(Expert Settings)]을 선택한다. 
+
+
+TIP : 
+무슨 이유 때문인지 Microsoft는 Visual Studio의 최상위 메뉴를 모두 대문자로 표기하기로 결정했는데 가령 방금 언급했던 [도구(Tools)] 메뉴도 실제로는 TOOLS로 표기된다. 필자는 이 방식이 다소 어색하게 느껴져서 이 책에서는 Tools 처럼 메뉴명의 첫 글자만 대문자로 표기하고 있다. 
+
+
+※새로운 ASP.NET MVC 프로젝트 생성하기
+먼저 Visual Studio에서 새로운 MVC 프레임워크 프로젝트를 생성해보자 [파일(File)] 메뉴에서 [새 프로젝트(New Project)]를 선택해서 [새 프로젝트(New Project)] 대화상자를 연다. 그런 다음 Visual C# 영역에서 [웹(Web)] 템플릿을 선택하면 [ASP.NET 웹 응용프로그램(ASP.NET Web Application)]프로젝트 템플릿을 볼 수 있을 것이다. 
+
+프로젝트의 이름을 PartyInvites로 지정하고 [확인(OK)] 버튼을 클릭해서 다음 단계로 넘어간다. 그러면 그림 2-2와 같이 ASP .NET 프로젝트의 초기 내용을 선택할 수 있는 또 다른 대화상자가 나타난다. 이 대화상자는 ASP.NET의 다양한 여러 영역들을 일관된 도구 및 템플릿들의 모음과 더욱 긴밀하게 통합하려는 Microsoft의 적극적인 노력의 결과물이다. 
+
+
+TIP:
+반드시 [새 프로젝트(New Project)]대화 상자의 상단에서 .NET 프레임워크 버전 4.5.1이 선택됐는지 확인하도록 하자. 이 책에서 살펴볼 몇 가지 고급 기능들을 사용하려면 .NET의 가장 최신버전인 4.5.1 버전이 필요하다. 
+
+
+이 대화상자의 템플릿들은 각각 인증, 탐색, 시각적 테마 등의 기능들에 대해 서로 다른 구성과 시작점에서 프로젝트를 생성해준다. 이번 예제는 가급적 간단한 프로젝트로 만드는 것이 바람직하므로 그림과 같이 Empty 템플릿을 선택한 다음 [다음의 폴더 및 코어 참조 추가(Add folders and core references section)]항목에서 MVC 박스만 체크한다. 그러면 최소한의 사전 정의된 내용으로 구성된 가장 기본적인 MVC 프로젝트가 생성되게 되는데, 이 책의 예제들은 모두 이 방식으로 만들어질 것이다. 마지막으로 [확인(OK)] 버튼을 클릭해서 새로운 프로젝트를 생성한다. 
+
+
+TIP:
+다른 프로젝트 템플릿 옵션들은 보다 완벽하게 준비된 ASP.NET 프로젝트를 생성해준다. 그러나 필자는 이 템플릿들을 그다지 선호하지 않은 편이므로 그 이유는 개발자들로 하여금 인증 같이 몇몇 중요한 기능들을 마치 블랙박스인양 다루도록 조장하기 때문이다. 이 책의 목표는 MVC 응용 프로그램을 이해하고 관리하기 위해서 필요한 모든 분야의 지식을 제공하는 것이기 때문에 대부분의 예제에서 Empty 템플릿을 사용한다. 다만 MVC 템플릿이 새로운 프로젝트에 추가해주는 내용들을 살펴보기 위한 14장은 예외로 한다. 
+
+
+잠시 후 Visual Studio가 프로젝트의 생성을 완료하고 나면 [솔루션 탐색기(Solution Explorer)]창에서 그림2-3과 같은 몇 가지 파일들과 폴더들을 볼 수 있을 것이다. 바로 이 구조가 새로운 MVC 프로젝트의 기본 프로젝트 구조인데 Visual Studio가 생성한 각각의 파일들과 폴더들의 용도에 관해서는 잠시 후에 하나씩 살펴볼 것이다. 
+
+이 상태에서도 [디버그(Debug)]메뉴에서 [디버깅 시작(Start Debugging)]을 선택해서 바로 응용프로그램을 실행시켜볼 수 있다(만약 디버깅을 활성화시킬지 묻는 프롬포트가 나타난다면 고민하지 말고 [확인(OK)]버튼을 클릭한다) 그러면 그림2-4와 같은 결과가 나타날 것이다. 즉 Empty 프로젝트 템플릿으로 프로젝트를 생성했기 때문에 응용프로그램에 실행할 만한 내용이 전혀 존재하지 않으므로 서버에서 404Not Found 오류를 반환하는 것이다. 
+
+
+결과를 확인했으면 오류가 발생한 브라우저 창을 닫거나, 다시 Visual Studio로 돌아간 다음 [디버그(Debug)]메뉴에서 [디버깅 중징(Stop Debugging)]를 선택해서 디버깅을 중지한다. 
+
+방금 살펴본 것처럼 Visual Studio는 프로젝트를 실행하기 위한 브라우저 창을 자동으로 열어준다. 물론 기본 브라우저는 Internet Explorer지만 그림2-5에서 볼수 있는 것처럼 도구 모음을 이용해서 설치되어 있는 브라우저들 중 어떤 브라우저라도 선택이 가능하다 이 그림에서 알 수 있듯이 필자는 다양한 브라우저들을 설치해서 사용하고 있는데, 이 기능을 활용하면 개발 작업 중에 편리하게 웹 응용프로그램을 테스트해볼 수 있다. 
+
+이 책에서는 대부분 Internet Explorer11을 사용하고 있는데, 그 이유는 단지 필자가 IE가 가장 널리 사용되고 있는 것으로 알고 있기 때문이다. 구 버전의 Internet Explorer는 웹표준을 그리 잘 준수하지 않았지만, 최신 버전들은 HTML5 표준을 잘 구현하고 있다. 개발을 위해서는 Google Chrome도 좋은 선택으로 필자도 실제 프로젝트에서는 Chrome을 선호하는 편이다. 
+
+
+※ 첫번째 컨트롤러 추가하기
+MVC 아키텍처에서 전달된 요청은 컨트롤러(Controller)에 의해 처리된다. 그리고 ASP .NET MVC에서 컨트롤러는 그저 단순한 C# 클래스일 뿐이다(대부분 프레임워크의 내장 컨트롤러 기본 클래스인 System.Web.Mvc.Controller 클래스로부터 파생된다)
+
+컨트롤러에 존재하는 각각의 public 메서드들을 액션 메서드(Action Method)라고 부르는데, 웹에서 특정 URL을 요청해서 이 메서드를 호출하는 방식으로 원하는 동작을 수행할 수 있다. 일반적으로 컨트롤러는 MVC의 규약에 따라 Visual Studio가 프로젝트를 구성할 때 함께 생성해주는 Controllers 폴더에 위치한다. 
+
+TIP : 
+이 규약을 비롯한 MVC의 다른 대부분의 규약들을 꼭 지켜야만 하는 것은 아니지만, 가급적 규약을 준수하기를 권한다. 최소한 이 책의 예제들을 이해하는데는 도움이 될 것이다. 
+
+
+프로젝트에 컨트롤러를 추가하려면 Visual Studio의 솔루션 탐색기 창에서 Controllers 폴더를 마우스 오른쪽 버튼으로 클릭한 다음 그림2-6과 같이 팝업 메뉴에서 [추가(Add)]를 선택하고, 다시 [컨트롤러(Controller)]를 선택한다. 
+
+
+그러면 [스캐폴드 추가(Add Scaffold)]대화 상자가 나타나는데, 그림 2-7과 같이 [MVC5 컨트롤러 - 비어있음(MVC 5 Controller - Empty)]옵션을 선택하고 [추가(Add)] 버튼을 클릭한다. 
+
+
+그러면 [컨트롤러 추가(Add Controller)] 대화상자가 나타날 것이다. 컨트롤러의 이름을 HomeController로 지정하고 [추가(Add)] 버튼을 클릭한다. 참고로 이 컨트롤러의 이름에는 몇 가지 규약이 내포되어 있는데, 가령 컨트롤러 이름은 그 용도를 나타내야하고 기본 컨트롤러 이름은 Home이며, 컨트롤러의 이름은 Controller라는 접미사로 끝나야 한다는 것을 알 수 있다. 
+
+TIP:
+이전 버전의 Visual Studio 에서 MVC 응용 프로그램을 생성해본 적이 있다면, 작업 과정이 약간 달라진 것을 눈치챘을 것이다. Microsoft는 Visual Studio에서 미리 준비된 클래스들과 기타 다른 항목들을 이용해서 프로젝트를 구성하는 방법을 변경했다. 
+
+
+잠시 기다리면 Visual Studio가 Controllers 폴더에 HomeController.cs라는 이름으로 새로운 C# 파일을 생성한 다음 바로 편집할 수 있도록 이 파일을 열어줄 것이다. 목록2-1에는 Visual Studio가 자동으로 클래스 파일에 생성해준 기본 내용이 나타나 있다. 이 코드를 살펴보면 클래스의 이름은 HomeController이고 System.Web.Mvc 네임스페이스에 위치한 Controller 클래스를 상속받는다는 것을 알 수 있다. 
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace PartyInvites.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public ViewResult Index()
+        {
+            return View();
+        }
+    }
+}
+
+이 컨트롤러 클래스에서 두 가지 부분을 간단하게 변경한 다음 MVC가 어떻게 동작하는지 직접 그 결과를 살펴보자 . HomeController.cs 파일의 코드를 목록2-2와 같이 변경한다. 변경된 구문을 굵게 강조처리했으므로 쉽게 확인할 수 있을 것이다. 
+
+namespace PartyInvites.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public string Index()
+        {
+            return "Hello World";
+        }
+    }
+}
+
+이렇게 변경한다고 해서 대단한 변화가 생기는 것은 아니지만 예제로서는 충분하다. 목록 2-2는 Index 액션 메서드가 "Hello World"라는 문자열을 반환하도록 변경됐다. 다시 Visual Studio의 [디버그(Debug)] 메뉴에서 [디버깅 시작(Start Debugging))] 을 선택해서 프로젝트를 실행시켜보면 브라우저에 그림 2-8과 같이 Index 메서드의 결과가 나타나게 된다. 
+
+
+TIP:
+이 그림에서 Visual Studio가 포트 번호 37782번으로 브라우저를 실행하고 있다는 점에 유의하기 바란다. 반면 여러분이 직접 예제를 실행시켜보면 거의 대부분 URL에 다른 포트 번호가 사용된 것을 보게 될 텐데, 그 이유는 Visual Studio가 프로젝트를 생성하면서 포트 번호를 무작위로 할당하기 때문이다. 또한 Windows 작업 표시줄의 알림 영역을 살펴보면 IIS Express의 아이콘을 볼 수 있을 텐데, IIS Express는 Visual Studio에 포함된 IIS 응용프로그램 서버의 간략한 버전으로 개발시에 ASP .NET의 콘텐트와 서비스를 실행하기 위해서 사용된다. MVC 프로젝트의 운영 환경 배포 방법에 관해서는 13장에서 살펴본다. 
+
+
+※ 라우트 이해하기
+MVC 응용프로그램은 모델, 뷰, 컨트롤러뿐만 아니라 URL이 컨트롤러 및 액션과 연결되는 방법을 결정해주는 ASP.NET 라우팅 시스템(Routing System)도 함께 이용해서 실행된다. Visual Studio 가 MVC 프로젝트를 생성하면서 몇 가지 기본 라우트를 추가해주기 때문에 추가적인 작업 없이도 다음과 같은 URL 들을 바로 요청할수 있으며, 이 URL들은 모두 HomeController의 Index 액션 메서드로 전달된다. 
+
+* /
+* /Home
+* /Home/Index
+
+따라서 브라우저에서 http://yoursite/나 http://yoursite/Home 같은 요청이 전달되면 HomeController의 Index 메서드에서 작성된 출력이 반환된다. 직접 브라우저의 URL을 변경해보면서 정말 그런지 확인해보기 바란다. 프로젝트를 실행해보면, 아마 포트 부분은 다르겠지만 브라우저에 http://localhost:37782/ 같은 URL이 나타날 것이다. 이 URL의 뒤 부분에 /Home이나 /Home/Index를 추가한 다음 결과를 살펴보면 동일하게 Hello World라는 응답이 반환되는 것을 확인할 수 있을 것이다. 
+
+이 결과 역시 MVC의 규약을 준수하는 경우에 얻을 수 있는 이점을 보여주는 좋은 사례다. 이 번 사례에 적용되는 규약은 MVC 응용 프로그램에는 그 시작점인 HomeController 라는 컨트롤러가 존재해야 한다는 것이다. Visual Studio가 새로운 프로젝트에 생성해주는 기본 라우트는 이 규약이 준수될 것을 가정하고 만들어진다. 그리고 이번 예제 프로젝트 역시 이 규약을 준수하고 있기 때문에 추가적인 작업 없이도 자연스럽게 앞에서 설명한 URL들의 지원을 받을 수 있는 것이다. 
+
+만약 이 규약을 준수하지 않았다면 임의로 생성한 컨트롤러를 가리키도록 라우트를 다시 수정해야만 했을 것이다. 이번 예제는 매우 간단하므로 이 기본 구성만으로 충분하다. 
+
+
+TIP :
+App_Start 폴더에 위치한 RouteConfig.cs 파일을 열어서 라우팅 구성을 살펴보거나 편집할 수 도 있다. 이 파일의 항목들에 관해서는 15장과 16장에서 자세하게 살펴본다. 
+
+
+
+
+
+※ 웹 페이지 렌더하기
+이전 예제의 출력은 HTML이 아닌 "Hello World"라는 문자열에 불과하다. 브라우저의 요청에 대해 HTML 응답을 생성하려면 뷰(View)가 필요하다. 
+
+
+※ 뷰 생성하기 및 렌더하기
+가장 먼저 해야할 일은 목록2-3과 같이 Index 액션 메서드를 수정하는 것이다. 
+
+목록2-3뷰를 렌더하도록 HomeController.cs 파일의 컨트롤러 수정하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace PartyInvites.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public ViewResult Index()
+        {
+            return View();
+        }
+    }
+}
+
+변경된 부분들이 목록 2-3에 굵은 글씨로 강조되어 있다. 액션 메서드에서 ViewResult 개체를 반환함으로써 MVC에게 뷰를 렌더하도록 지시하고 있다. 그리고 매개변수 없이 View메서드를 호출해서 ViewResult 개체를 생성함으로써 MVC에게 이 액션의 기본 뷰를 렌더하도록 지시하고 있다. 
+
+이 상태에서 응용프로그램을 실행해보면 그림2-9에 나타난 오류 메시지에서 알 수 있는 것처럼 MVC 프레임워크가 렌더할 기본 뷰를 찾기 위해서 노력한다는 것을 알 수 있다. 
+
+이 오류 메시지는 많은 정보들을 제공해준다. 단지 해당 액션 메서드에 대한 뷰를 찾지 못했다는 설명뿐만 아니라 MVC가 어떤 위치들을 찾아봤는지도 알려준다. 이 결과 역시 MVC의 규약을 보여주는 또 다른 좋은 사례로, 뷰가 명명규약에 의해 액션 메서드와 연결된다는 사실을 말 해주고 있다. 그림2-9를 살펴보면 액션 메서드의 이름이 Index이고 컨트롤러의 이름은 Home이므로, MVC가 Views 폴더에서 이 이름들로 구성된 몇 가지 다른 파일들을 찾으려고 시도한다는 사실을 알 수 있다. 
+
+뷰를 생성하는 가장 간단한 방법은 Visual Studio에 작업을 일임하는 것이다 HomeController.cs 파일의 코드 편집 창에서 Index 액션 메서드 정의의 아무곳이나 마우스 오른쪽 버튼으로 클릭한 다음 그림2-10과 같이 팝업 메뉴에서 [뷰 추가(Add View)]를 선택한다. 
+
+그러면 Visual Studio가 생성될 뷰 파일의 초기 내용을 구성할 수 있는 [뷰 추가(Add View)]대화 상자를 보여준다. 그림 2-11과 같이 [뷰 이름(View Name)]에 Index라고 입력하고 (뷰 의 이름은 뷰와 연결될 액션 메서드의 이름과 같아야 하는데 이 역시 규약이다) [템플릿(Template)]은 [Empty(모델 없음)(Empty (without model))]으로 설정한 다음 [부분 뷰로 만들기(Create as a partial view)나 [레이아웃 페이지 사용(Use a layout page)] 체크 박스는 체크하지 않는다. 일단 지금은 이 옵션들이 어떤 의미를 갖고 있는지는 고민하지 말도록 하자. 이 옵션들에 관해서는 나중에 다시 자세히 살펴볼 것이다. 마지막으로 [추가 (Add)]버튼을 클릭해서 새로운 뷰 파일을 생성한다. 
+
+그러면 Visual Studio가 Views/Home 폴더에 Index.cshtml이라는 이름의 파일을 생성해준다. 만약 생성된 파일이 의도한 바와 다르다면 생성된 파일을 지우고 다시 생성해도 무방하다. 여기에서도 또 다른 MVC 프레임워크의 규약을 확인할 수 있는데 뷰는 관련된 컨트롤러의 이름과 같은 이름을 가진 Views 폴더 하위의 폴더에 위치하게된다는 것이다. 
+
+TIP:
+.cshtml이라는 파일 확장자는 이 파일이 Razor에 의해 처리되는 C# 뷰 파일임을 뜻한다. ASPX 뷰 엔진을 사용하던 초기 버전의 MVC에서는 뷰 파일의 확장자로 .aspx가 사용됐었다. 
+
+
+방금 [뷰 추가(Add View)]대화상자에서 선택한 값들은 Visual Studio에게 가장 기본적인 뷰를 생성하도록 지시하는데, 이렇게 생성된 뷰의 내용이 목록 2-4에 나타나 있다. 
+
+
+목록2-4 Index.cshtml파일의 초기 내용
+
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+</body>
+</html>
+
+바로 편집할수 있도록 Visual Studio가 Index.cshtml 파일을 열어줬을 것이다. 파일 내용이 대부분 HTML로 구성되어 있다는 것을 알 수 있을 것이다. 그러나 다음과 같이 일부 예외적인 부분도 존재한다. 
+
+@{
+    Layout = null;
+}
+
+바로 이런 부분들이 브라우저로 전송될 뷰의 내용들을 처리하고 HTML을 생성해주는 Razor뷰 엔진에 의해서 해석되는 표현식이다. 참고로 이 표현식은 Razor에게 브라우저로 전송될 HTML을 위한 템플릿인 레이아웃을 사용하지 않을 것이라고 지시하는 간단한 Razor 표현식인데(레이아웃에 관해서는 5장에서 다시 살펴본다)일단 지금은 Razor에 관해서는 신경쓰지 말고 나중에 다시 살펴보도록 하자 Index.cshtml 파일에 목록 2-5에 굵게 강조된 부분을 추가해 보자. 
+
+목록2-5. Index.cshtml파일의 뷰 HTML에 내용 추가하기
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+	<div>
+		Hello World (from the view)
+	</div>
+</body>
+</html>
+이렇게 추가한 부분은 또 다른 간단한 메시지를 출력하게 된다 [디버그(Debug)] 메뉴에서 [디버깅 시작(Start Debugging)]을 선택해서 응용프로그램을 실행한 다음 뷰를 테스트해보자. 그러면 그림2-12와 비슷한 결과를 확인할 수 있을 것이다. 
+
+
+맨 처음에는 Index 액션 메서드를 편집해서 단순히 문자열 값만 반환했었다. 즉 MVC는 브라우저로 문자열 값을 전달하는 작업 외에 어떠한 작업도 수행하지 않았었다. 그러나 이번에 변경한 Index 메서드는 ViewResult를 반환하고 있으며 MVC 프레임워크가 뷰를 렌더하고 그 결과에 따라 작성된 HTML을 반환하고 있다. 이때 MVC에 명시적으로 어떤 뷰를 사용해야 할지를 지시하지 않았기 때문에 명명규약에 따라 자동으로 적절한 뷰가 선택된다. 여기에 적용되는 규약은 /Views/Home/Index.cshtml같이 뷰는 액션 메서드와 같은 이름을 갖고 있으며, 접미사를 제외한 컨트롤러의 이름과 같은 폴더에 위치한다는 것이다. 
+
+또한 액션 메서드에서 문자열이나 ViewResult 개체 말고도 다른 Result 개체를 반환할수도 있다. 가령 RedirectResult를 반환하면 브라우저가 다른 URL로 재전송된다. 또는 HttpUnauthorizedResult를 반환하면 사용자를 로그인하도록 강제할 수 있다. 이런 개체들을 일컬어 액션 결과(Action Result)라고 부르며, 이 개체들은 모두 ActionResult클래스로부터 파생된다. 액션 결과 시스템을 이용하면 일반적인 응답을 액션으로 캡슐화시켜서 재사용할 수 있다. 다양한 액션 결과들에 관한 보다 자세한 정보와 더 복잡한 사용방식에 관해서는 17장에서 살펴본다. 
+
+
+※ 동적 출력 추가하기
+웹 응용 프로그램 플랫폼의 가장 중요한 기능은 동적 출력을 구성하고 출력하는 것이다. MVC에서 특정 데이터를 구성해서 뷰로 전달하는 작업은 컨트롤러의 역할이며, 뷰는 전달받은 데이터를 HTML로 렌더하는 작업을 담당한다. 
+
+컨트롤러에서 뷰로 데이터를 전달할 수 있는 방법중 하나는 Controller 기본 클래스의 멤버인 ViewBag 개체를 활용하는 것이다. ViewBag은 동적 개체로 임의의 속성들을 할당할 수 있으며, 바로 뒤이어 렌더되는 모든 뷰에서 그 값들을 사용할 수 있다. 목록 2-6은 HomeController.cs 파일에서 이 방식으로 간단한 동적 데이터를 전달하고 있는 모습을 보여준다. 
+
+목록 2-6 간단한 ViewBag 속성을 설정하고 있는 HomeController.cs 파일
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace PartyInvites.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public ViewResult Index()
+        {
+            int hour = DateTime.Now.Hour;            
+            ViewBag.Greeting = hour < 12 ? "Good Morning" : "Good Afternoon";
+            return View();
+        }
+    }
+}
+
+목록 2-6에서는 ViewBag.Greeting 속성에 값을 할당해서 뷰에서 사용할 데이터를 제공하고 있다. 여기서 Greeting이라는 속성은 값이 할당되기 전까지는 존재하지 않던 속성이다. 이 방식을 사용하면 미리 클래스를 정의하지 않더라도 자유롭고 유연한 방식으로 컨트롤러에서 뷰로 데이터를 전달할 수 있다. 뷰에서는 다시 이 ViewBag.Greeting 속성을 참조해서 데이터값을 얻을 수 있는데 목록2-7은 이렇게 수정된 Index.cshtml 파일을 보여준다. 
+
+목록2-7 Index.cshtml 파일에서 ViewBag 개체의 속성값 조회하기 
+
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+    <div> 
+        @ViewBag.Greeting World (from the view)
+    </div>
+</body>
+</html>
+
+목록 2-7에 추가된 부분 역시 Razor표현식이다. 컨트롤러의 Index메서드에서 View 메서드를 호출하면 MVC 프레임워크는 Index.cshtml뷰 파일을 찾은 다음 Razor뷰 엔진에게 이 파일의 내용 파싱을 요청한다. 그러면 Razor는 파일 내용 중에서 이 목록에 추가한 것 같은 표현식들을 찾아서 이를 처리해준다.가령 이번 예제에서는 액션 메서드에서 ViewBag.Greeting 속성에 할당한 값을 뷰에 삽입하는 작업을 표현식으로 처리하고 있다. 
+
+참고로 여기에 사용된 Greeting이라는 속성 이름에 특별한 의미는 없다. 컨트롤러에서 지정한 이름과 뷰에서 사용한 이름이 같기만 하다면 속성 이름을 변경하더라도 여전히 정상적으로 동작할 것이다. 컨트롤러에서 여러 개의 속성들에 값을 할당해서 복수의 데이터 값들을 뷰에 전달할 수도 있다. 다시 프로젝트를 시작해보면 그림2-13과 같은 변경 작업의 결과를 직접 확인해 볼 수 있다. 
