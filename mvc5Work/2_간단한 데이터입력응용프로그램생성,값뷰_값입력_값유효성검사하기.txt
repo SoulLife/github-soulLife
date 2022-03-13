@@ -1,0 +1,472 @@
+※ 간단한 데이터 입력 응용프로그램 생성하기
+이번 장의 나머지 부분에서는 간단한 데이터 입력 응용프로그램을 작성해보면서 기본적인 MVC의 기능들을 조금 더 살펴보도록 하겠다. 그리고 지금부터는 설명을 다소 빠르게 진행할 것이다. 이번 장의 목표는 실제로 동작하는 MVC 전반을 살펴보는 것이므로, 내부 동작 방식에 대해서는 간략하게 생략하고 넘어가도록 할 것이다. 그러나 그런 부분들에 관해서는 나머지 장들에서 다시 자시하게 살펴볼 것이므로 걱정할 필요는 없다. 
+
+
+※상황 설정
+여러분의 한 친구가 신년 전야 파티를 열기로 계획하고, 초청 받은 사람들에게 컴퓨터로 RSVP(Repondez s'il vous plait : 프랑스어로 회신 요망이라는 뜻이다)를 요청할수 있는 웹 응용프로그램을 만들어 줄것을 부탁했다고 생각해보자. 그녀는 다음과 같은 네가지 핵심 기능들을 요청했다.
+
+* 파티에 관한 정보를 제공해주는 홈페이지
+* RSVP에 사용될 폼
+* RSVP 폼에 대한 유효성 검사 및 그 결과에 따른 답례인사 페이지 출력
+* RSVP 작성 완료시 파티 주최자에게 전자 메일로 답장하기 
+
+이어지는 절들에서는 이번 장의 전반부에서 작성했던 MVC 프로젝트를 보완해가면서 이 기능들을 추가해 볼 것이다. 이 목록의 첫 번째 항목은 앞에서 작성했던 기존 뷰에 HTML 로 파티에 관한 세부 내용을 추가하는 것만으로도 충분하다. 목록2-8에서 Views/Home/Index.cshtml 파일에 추가된 부분을 확인할 수 있다. 
+
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+    <div> 
+        @ViewBag.Greeting World (from the view)
+        <p>We're going to have an exciting party.<br />
+        (To do: sell it better. Add pictures or something.)
+        </p>
+        @Html.ActionLink("RSVP Now", "RsvpForm")
+    </div>
+</body>
+</html>
+
+자 작업이 모두 끝났다. 이제 응용프로그램 실행시켜보면 그림2-14와 같이 파티의 세부 내용을 확인할 수 있을 것이다. 물론 여기에서는 단지 정보를 제공할 자리만 준비해둔 정도지만 의도는 충분히 파악할 수 있을 것이다. 
+
+
+
+※ 데이터 모델 설계하기
+MVC에서 M은 모델(Model)을 뜻하며, 모델이야말로 응용프로그램에서 가장 중요한 부분이다. 모델은 보통 도메인(Domain)으로 알려져 있으며 응용프로그램의 주제를 정의하는 실제 세계의 개체들과 절차들, 그리고 규칙들을 나타낸다. 모델은 종종 도메인 모델(Domain Model)이라고 부르기도 하는데, 응용프로그램의 세계를 구성하는 C# 개체(도메인 개체(Domain Object)로 알려져 있다)들과 이 개체들을 조작할 수 있는 메서드들로 구성된다. 그리고 뷰와 컨트롤러는 이런 도메인들을 일관된 방식으로 사용자에게 노출해준다. 잘 설계된 MVC 응용프로그램은 잘 설계된 모델로부터 비롯되며, 잘 설계된 모델은 컨트롤러와 뷰를 추가하기 위한 중추다. 
+
+
+PartyInvites는 매우 간단한 응용프로그램이기 때문에 복잡한 모델은 필요가 없다. 그저 간단하게 사용할 도메인 클래스가 하나 필요한데, 이 모델 개체를 GuestResponse라고 부르기로 하자. 이 개체는 저장, 유효성 검사, RSVP를 승인하는 역할을 담당하게 될 것이다. 
+
+
+※모델 클래스 추가하기
+MVC의 규약에 따라 모델을 구성하는 클래스들은 Visual Studio가 프로젝트 초기 구성 시에 생성해주는 Models 폴더에 위치해야 한다. 솔루션 탐색기 창에서 Models폴더를 마우스 오른쪽 버튼으로 클릭하고 팝업 메뉴에서 [추가(Add)]와 [클래스(Class)]를 차례대로 선택한다. 파일명을 GuestResponse.cs라고 지정한 다음 [추가(Add)]버튼을 클릭해서 클래스를 생성한다. 그리고 클래스의 내용을 목록 2-9과 같이 편집한다. 
+
+
+TIP:
+[클래스(Class)] 메뉴 항목을 선택할 수 없다면 아마 Visual Studio 디버거가 실행 중일 것이다. Visual Studio는 응용프로그램이 실행 중인 경우, 프로젝트에 가할수 있는 수정을 제한한다. 
+
+
+목록2-9. GuestResponse.cs 파일에 정의된 GuestResponse 도메인 클래스
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace PartyInvites.Models
+{
+    public class GuestResponse
+    {
+        public string Name { get; set; }
+        public string Email { get; set; }
+        public string Phone { get; set; }
+        public bool? WillAttend { get; set; }
+
+    }
+}
+
+
+TIP:
+이 클래스의 WillAttend 속성 형식이 true, false, null 값을 가질 수 있는 Nullable bool이라는 점에 주목하기 바란다. 이번 장 후반부의 유효성 검사 추가하기 절에서 이 형식을 사용하는 논리적인 이유를 설명할 것이다. 
+
+
+※액션 메서드 링크 걸기
+이번 예제 응용프로그램의 목표 중 하나인 RSVP폼을 구현하려면 목록2-10과 같이 Index.cshtml뷰에 해당 폼에 대한 링크를 추가할 필요가 있다. 
+
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+    <div> 
+        @ViewBag.Greeting World (from the view)
+        <p>We're going to have an exciting party.<br />
+        (To do: sell it better. Add pictures or something.)
+        </p>
+        @Html.ActionLink("RSVP Now", "RsvpForm")
+    </div>
+</body>
+</html>
+
+이 뷰에 사용된 Html.ActionLink를 HTML 헬퍼 메서드(HTML Helper Method)라고 한다. MVC 프레임워크는 HTML 링크, 텍스트 입력, 체크 박스, 셀렉트 박스를 비롯한 다양한 유형의 콘텐츠를 편리하게 렌더링할 수 있는 유용한 내장 HTML 헬퍼 메서드들을 제공해준다. 이 코드에서 ActionLink 메서드는 두 가지 매개변수를 전달 받고 있는데, 첫 번째 매개변수는 링크에 출력될 문자열이고, 두 번째 매개변수는 사용자가 링크를 클릭했을 때 실행될 액션의 이름이다. 다른 HTML 헬퍼 메서드들에 관해서는 21장, 22장, 23장에서 더 자세히 살펴볼 것이다. 응용프로그램을 다시 실행해보면 그림2-15와 같이 링크가 추가된 것을 확인할 수 있을 것이다. 
+
+마우스를 브라우저의 링크 위에 올려보면 링크가 http://[서버주소]/Home/RsvpForm을 가리키는 것을 확인할 수 있다. 즉 Html.ActionLink 메서드가 응용프로그램의 URL 라우팅 구성을 분석해서 /Home/RsvpForm이 HomeController라는 컨트롤러의 RsvpForm이라는 액션 메서드를 가리키는 URL이라는 것을 알아내는 것이다. 
+
+
+TIP : 
+전통적인 ASP.NET 응용프로그램과는 달리 MVC의 URL은 물리적인 파일과 일대일로 대응되지 않는다는 점에 주의하기 바란다. 모든 액션 메서드는 각각 자신만의 URL을 갖고 있으며, MVC는 ASP.NET 라우팅 시스템을 이용해서 해당 URL들을 액션 메서드로 변환해준다. 
+
+
+
+
+※ 액션 메서드 생성하기
+그러나 막상 링크를 클릭해보면 404 Not Found 오류가 발생한다. 왜냐하면 아직 /Home/RsvpForm이라는 URL에 대응하는 액션메서드를 생성하지 않았기 때문이다. 따라서 목록 2-11과 같이 HomeController 클래스에 RsvpForm이라는 이름의 메서드를 추가해준다. 
+
+
+
+목록2-11. HomeController.cs 파일에 새로운 액션 메서드 추가하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace PartyInvites.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public ViewResult Index()
+        {
+            int hour = DateTime.Now.Hour;            
+            ViewBag.Greeting = hour < 12 ? "Good Morning" : "Good Afternoon";
+            return View();
+        }
+	//추가된 메서드
+        public ViewResult RsvpForm()
+        {
+            return View();
+        }
+    }
+}
+
+
+※ 강력한 형식의 뷰 추가하기
+이번에는 앞에서와는 약간 다른 방식으로 뷰를 추가해서 RsvpForm 액션 메서드를 위한 강력한 형식의 뷰(Strongly Typed View)를 생성해보자. 강력한 형식의 뷰는 특정 도메인 형식을 렌더하기 위해서 만들어지는 뷰로, 이렇게 작업에 사용할 형식을 명시적으로 지정해놓으면 (이 예제에서는 GuestResponse).MVC가 뷰를 손쉽게 작성할 수 있는 몇가지 유용한 기능들을 제공해 준다. 
+
+
+주의 : 
+먼저 MVC 프로젝트를 컴파일했는지 확인하도록 하자. GuestResponse클래스를 작성했더라도 아직 컴파일을 하지 않았다면 MVC가 이 형식에 대한 강력한 형식의 뷰를 생성할 수 없다. 응용프로그램을 컴파일 하려면 Visual Studio의 [빌드(Build)] 메뉴에서 [솔루션 빌드(Build Solution)]를 선택한다. 
+
+
+코드 편집기에서 RsvpForm 메서드를 마우스 오른쪽 버튼으로 클릭한 다음 팝업 메뉴에서 [뷰 추가(Add View)] 메뉴를 선택해서 [뷰 추가(Add View)]대화상자를 연다 [뷰 이름(View Name)]이 RsvpForm으로 설정되어 있는지 확인한 다음 [템플릿(Template)]을 [Empty]2([Empty (모델없음)(Empty(without model))]이 아닌 [Empty]를 선택해야만 [모델 클래스(Model Class)]필드의 드롭다운 리스트가 활성화된다.)로 설정하고 [모델 클래스(Model Class)]필드의 드롭다운 리스트에서 GuestResponse를 선택한다. 그리고 그림2-16과 같이 [뷰옵션(View Option)]영역의 체크 박스들은 모두 빈 상태로 남겨 놓는다. 
+
+
+마지막으로 [추가(Add)]버튼을 클릭하면 Visual Studio가 Views/Home 폴더에 RvspForm.cshtml 파일을 생성한 다음 편집할 수 있도록 열어줄 것이다. 목록 2-12는 이 파일의 최초 내용을 보여준다. 이 파일 역시 기본적인 구조만 갖고 있는 HTML 파일이지만 이번에는 @model Razor 표현식이 포함되어 있다. 잠시 후에 살펴보겠지만, 바로 이 Razor 표현식이 강력한 형식의 뷰와 이 뷰가 제공해주는 편리함의 핵심이다. 
+
+//하단아래가 추가된포함
+@model PartyInvites.Models.GuestResponse
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>RsvpForm</title>
+</head>
+<body>
+</body>
+</html>
+
+
+TIP:
+뷰를 생성할 때 제공되는 옵션들을 선택하거나 체크해서 뷰 파일의 초기 내용을 변경할 수도 있지만 그다지 큰 의미는 없다. 아주 간단하게 뷰의 성격을 바꿀수 있기 때문인대. 가령 코드 편집기에서 @model 지시문을 추가하거나 제거하는 것만으로도 일반적인 뷰와 강력한 형식의 뷰 사이를 오갈수 있다. 
+
+
+
+※ 폼 작성하기
+이제 강력한 형식의 뷰를 생성했으므로 RsvpResponse.cshtml 파일에 목록 2-13과 같은 내용을 작성해서 GuestRespone개체를 편집하기 위한 HTML 폼을 구현할 수 있다. 
+
+@model PartyInvites.Models.GuestResponse
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>RsvpForm</title>
+</head>
+<body>
+    @using (Html.BeginForm())
+            {
+                <p>Your name: @Html.TextBoxFor(x => x.Name)</p>
+                <p>Your email: @Html.TextBoxFor(x => x.Email)</p>
+                <p>Your Phone: @Html.TextBoxFor(x => x.Phone)</p>
+                <p>
+                    Will you attend?
+                    @Html.DropDownListFor(x => x.WillAttend, new[]
+               {
+                   new SelectListItem() { Text = "Yes, I'll be there", Value=bool.TrueString},
+                   new SelectListItem() { Text="No, I can't come", Value=bool.FalseString}
+               }, "Choose an option")
+                </p>
+                <input type="submit" value="Submit RSVP" />
+            }
+</body>
+</html>
+이 뷰에서는 HTML 헬퍼 메서드를 사용해서 GuestResponse 모델 클래스의 속성들에 대해 각각 적절한 HTML 입력 컨트롤들을 렌더하고 있다. 다음과 같이 이 메서드들에 람다식을 전달해서 입력 요소와 관련된 속성을 지정할 수 있다. 
+
+...
+@Html.TextBoxFor(x => x.Phone)
+..
+
+이 HTML TextBoxFor 헬퍼 메서드는 다음과 같이 type 어트리뷰트는 text로 id 어트리뷰트와 name 어트리뷰트는 Phone으로(즉 선택된 도메인 클래스 속성의 이름으로)설정된 input 요소의 HTML을 생성해 준다. 
+<input id="Phone" name="Phone" type="text" value="" />
+이런 편리한 기능을 사용할 수 있는 이유는 RsvpForm 뷰를 강력한 형식의 뷰로 만들어서, MVC에게 이 뷰에서 GuestResponse형식을 렌더하려고 한다는 것을 알려줬기 때문이다. 그결과 HTML 헬퍼 메서드는 어떤 데이터 형식의 속성을 읽어야 할지에 관한 정보를 @model 표현식을 통해서 얻을수 있는 것이다. 
+
+만약 C#의 람다 식에 익숙하지 않더라도 걱정할 필요는 없다. 람다 식에 관해서는 4장에서 다시 살펴보겠지만 람다 식 대신 다음과 같이 문자열로 모델 형식의 속성 이름을 전달해도 되기 때문이다. 
+
+
+...
+@Html.TextBox("Email")
+...
+
+그러나 람다 식 기법을 사용하면 그림2-17 에서 볼 수 있는 것처럼 Visual Studio의 인텔리센스 기능이 자동으로 속성을 선택할 수 있는 팝업을 보여주기 때문에 모델 형식의 속성 이름을 잘못 작성할 수 있는 여지가 줄어든다는 장점이 있다. 
+
+또 다른 유용한 헬퍼 메서드인 Html.BeginForm은 특정 액션 메서드로 포스트백 하도록 구성된 HTML form 요소를 생성해준다. 이 뷰에서는 헬퍼 메서드에 아무런 매개변수도 전달하지 않았으므로, 이 헬퍼 메서드는 현재 폼이 존재하는 HTML 문서와 동일한 URL로 포스트백하려는 의도로 간주한다. 한 가지 재미있는 점은 이 헬퍼 메서드가 다음과 같이 C# using문으로 둘러싸여 있다는 점이다. 
+
+...
+@using (Html.BeginForm())
+{
+	... 폼의 내용은 여기에 위치한다. ...
+}
+...
+
+일반적으로 using 구문은 특정 개체가 범위를 벗어날 때 해당 개체가 정리되는 것을 보장해 주는 역할을 한다. 이 기법은 주로 데이터베이스 연결을 관리하기 위해서 사용되고는 하는데, 가령 질의가 완료되자마자 확실하게 데이터베이스 연결을 닫기 위해서 사용된다( 이 사용법은 클래스에서 특정 네임스페이스에 존재하는 클래스들을 참조하기 위해 사용하는 경우와는 또 다른 것이다.)
+
+그러나 Html.BeginForm 헬퍼 메서드와 함께 사용된 using 구문은 영역을 벗어나는 시점에 개체를 정리해주는 대신 HTML form 요소를 닫아주는 역할을 한다. 즉 Html.BeginForm헬퍼 메서드가 다음과 같이 form요소를 열고 닫아준다는 뜻이다.
+
+<form action="/Home/RsvpForm" method="post">
+	..폼의 내용은 여기에 위치한다. ..
+</form>
+
+만약 C# 개체의 정리(Dispose)라는 개념에 익숙하지 않더라도 너무 걱정할 필요는 없다. 이 자리에서 얘기하고자 하는 요점은 HTML 헬퍼 메서드를 이용해서 form요소를 작성하는 방법을 보여주려는 것이다. 
+
+
+※시작 URL 설정하기
+나름대로 Visual Studio는 편의를 제공해주기 위해서 프로젝트를 실행시켰을 때 자동으로 현재 편집 중이던 뷰의 URL을 브라우저에 요청해준다. 그러나 이 기능은 다른 종류의 파일을 편집 중인 경우에는 제대로 동작하지 않고 상당수의 복잡한 웹 응용프로그램에서는 아무 페이지나 바로 접근한다고 해서 해결될 문제도 아니기 때문에 그다지 사려 깊게 만들어진 기능이라고는 볼 수 없다. 
+
+프로젝트를 실행할 때, 항상 특정 URL이 브라우저에 요청되도록 설정하려면 Visual Studio의 [프로젝트(Project)] 메뉴에서 [PartyInvites 속성(PartyInvites Properties)]을 선택한 다음, 그림 2-18과 같이 [웹(Web)]영역을 선택하고 [시작 작업(Start Action)]영역에서 [특정 페이지(Specific Page)] 옵션을 체크한다. 그러나 이 필드에 특정 URL을 입력할 필요는 없는데, 이 필드에 값이 지정되지 않으려면 Visual Studio가 프로젝트의 기본 URL, 즉 Home 컨트롤러의 Index 액션 메서드를 가리키는 URL을 요청해주기 때문이다(15장과 16장에서 URL 라우팅 시스템을 이용해서 기본 매핑을 변경하는 방법을 살펴볼 것이다. 
+
+이제 응용프로그램을 실행하고 RSVP Now 링크를 클릭해보면 RsvpForm뷰의 폼으로 이동하는 것을 확인할 수 있을 것이다. 그림2-19는 그 결과를 보여주고 있다. 
+
+
+
+※ 폼 제어하기
+아직까지는 폼이 서버로 전송됐을 때 어떤 작업을 수행하고 싶은지 MVC에게 알려주지 않은 상태다. 따라서 지금은 [Submit RSVP]버튼을 클릭해봐도 폼에 입력한 모든 값들이 그냥 사라져 버릴 뿐이다. 왜냐하면 폼이전송되면 다시 Home 컨트롤러의 RsvpForm 액션 메서드로 전달되는데 이 액션 메서드는 MVC에 단지 뷰를 다시 렌더하도록 지시할 뿐이기 때문이다. 
+
+Note:
+뷰가 다시 렌더될 때 입력한 데이터가 사라져서 놀랐을 수도 있을 것이다. 그렇다면 아마 여러분은 이런 상황에서 자동으로 데이터를 유지해주는 ASP.NET Web Forms를 사용해서 응용프로그램을 개발해본 경험이 있기 때문일 것이다. 잠시 뒤에 MVC에서 동일한 결과를 얻을수 있는 방법을 살펴본다. 
+
+
+제출된 폼의 데이터를 받아서 처리하려면 조금 재미있는 기능을 이용해야 한다. 다음과 같은 결과를 얻기 위해서 두 번째 RsvpForm 액션 메서드를 추가한다. 
+
+※ HTTP GET 요청에 대응하는 메서드 : 일반적으로 GET 요청은 누군가가 브라우저에서 링크를 클릭할 때마다 발생한다. 따라서 이 버전의 액션은 누군가 /Home/RsvpForm을 처음 방문했을 때 초기의 빈폼을 출력하는 역할을 담당한다. 
+
+※ HTTP POST 요청에 대응하는 메서드 : Html.BeginForm() 메서드를 통해서 렌더된 폼은 기본적으로 브라우저에 의해 POST 요청으로 제출된다. 이 버전의 액션은 제출된 데이터를 받아서 그 데이터로 수행할 작업을 결정하는 역할을 담당한다. 
+
+
+각각의 C# 메서드를 이용해서 GET과 POST 요청을 처리하면 두 메서드가 서로 다른 역할을 담당하게 되므로 컨트롤러의 코드를 깔끔하게 유지할 수 있다. 두 액션 메서드는 동일한 URL에 의해서 호출되지만 요청이 GET 요청인지 POST 요청인지에 따라 MVC가 적절한 메서드를 호출해준다. 목록 2-14는 HomeController 클래스를 어떻게 변경해야 하는지를 보여준다. 
+
+
+목록 2-14 POST 요청을 지원하기 위한 액션 메서드가 추가된 HomeController
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using PartyInvites.Models; //추가
+namespace PartyInvites.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public ViewResult Index()
+        {
+            int hour = DateTime.Now.Hour;            
+            ViewBag.Greeting = hour < 12 ? "Good Morning" : "Good Afternoon";
+            return View();
+        }
+
+        [HttpGet]
+        public ViewResult RsvpForm()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ViewResult RsvpForm(GuestResponse guestResponse)
+        {
+            //Todo : 파티 주최자에게 전자 메일로 응답한다. 
+
+            return View("Thanks", guestResponse);
+        }
+    }
+}
+
+기존 RsvpForm 액션 메서드에는 HttpGet 어트리뷰트가 지정됐다. 이 어트리뷰트는 해당 메서드가 오직 GET 요청이 전달된 경우에만 호출돼야 한다는 것을 MVC에게 말해준다. RsvpForm 메서드의 오버로드된 새로운 버전도 추가됐는데, 이 메서드는 매개변수로 GuestResponse 개체를 받고 있으며 HttpPost 어트리뷰트가 지정됐다. 이 어트리뷰트는 해당 메서드가 POST 요청이 전달된 경우에만 호출돼야 한다는 것을 MVC에게 말해준다. 그리고 PartyInvites.Models 네임스페이스를 임포트해서 클래스 이름을 한정하지 않고도 GuestResponse 모델 형식을 참조하고 있다. 그러면 계속해서 이 코드의 변경 내용들이 어떻게 동작하는지 살펴보도록 하자. 
+
+
+※ 모델 바인딩 사용하기
+RsvpForm 액션 메서드의 첫 번째 오버로드는 여전히 같은 뷰 즉 RsvpForm.cshtml 파일을 렌더해서 그림 2-19에서 볼 수 있는 것과 같은 폼을 생성한다. 
+
+반면 두 번째 오버로드는 보다 흥미로운데 바로 메서드에 전달되는 매개변수가 문제의 핵심이다. 이 액션 메서드는 HTTP POST 요청에 대한 응답으로 호출되며 매개변수로 전달되는 GuestResponse형식은 단지 평범한 C# 클래스일뿐이다. 그렇다면 HTTP POST 요청과 이 GuestResponse 형식은 어떻게 연결되는 것일까?
+
+정답은 바로 모델 바인딩(Model Binding)이다. 모델 바인딩은 전달된 데이터를 분석하고 HTTP 요청에 포함된 키/값의 쌍들을 이용해서 도메인 모델 형식의 속성들을 채워주는 MVC의 정말 유용한 기능이다. 그 처리 과정은 HTML 헬퍼 메서드를 사용할 때와 정반대로 진행된다. 예를 들어 앞에서 클라이언트에 전송할 폼 데이터를 생성할 때는 모델 클래스의 속성 이름으로 id 어트리뷰트와 name 어트리뷰트의 값을 설정해서 HTML input 요소를 생성했었다. 
+
+반면 모델 바인딩에서는 input 요소의 이름이 모델 클래스의 인스턴스 속성 값을 설정하는 데 사용되고, 그 뒤에 모델 클래스의 인스턴스가 POST 대응 액션 메서드에 매개변수로 전달된다. 
+
+모델 바인딩은 HTTP 요청을 다루는 단조롭고 고된 작업을 줄여주고, Request.Form[]이나 Request.QueryString[]의 값들 대신 C# 개체를 이용해서 작업을 수행할수 있도록 도와주는 강력하면서도 사용자 지정이 가능한 기능이다. 액션 메서드에 매개변수로 전달되는 GuestResponse 개체는 자동으로 폼 필드들의 데이터로 채워진다. 모델 바인딩을 사용자 지정하는 방법을 비롯한 모델 바인딩에 관한 보다 자세한 내용들은 24장에서 살펴본다. 
+
+
+※ 다른 뷰 렌더하기
+RsvpForm 액션 메서드의 두 번째 오버로드는 요청에 대한 응답으로 기본 뷰 대신 특정 뷰를 렌더하도록 MVC에 지시하는 방법도 보여주고 있다. 다음 코드 구문이 바로 그 부분이다. 
+
+...
+return View("Thanks", guestResponse);
+...
+
+이 View 메서드 호출 구문은 MVC로 하여금 Thanks라는 뷰를 찾아서 렌더하고 GuestResponse 개체를 해당 뷰에 전달하도록 지시한다. 이 메서드에 지정된 뷰를 생성하려면 마우스 오른쪽 버튼으로 HomeController의 메서드들 중 하나를 클릭하고 팝업 메뉴에서 [뷰 추가(Add View)]메뉴를 선택한 다음 [뷰 추가(Add View)]대화상자를 이용해서 Thanks라는 이름으로 GuestResponse 모델 클래스를 사용하는 [Empty] 템플릿 기반의 강력한 형식의 뷰를 생성하면 된다(자세한 과정은 강력한 형식의 뷰 추가하기 절을 참고하기 바란다)그러면 Visual Studio가 Views/Home/Thanks.cshtml 뷰를 생성해준다. 이 뷰를 편집해서 목록 2-15와 같이 작성한다. 직접 추가해야 할 부분은 굵게 표시해놓았다. 
+
+목록2-15 Thanks.cshtml 파일의 내용
+@model PartyInvites.Models.GuestResponse
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Thanks</title>
+</head>
+<body>
+    <div> 
+        <h1>Thank you, @Model.Name!</h1>
+        @if(Model.WillAttend == true)
+            {
+                @:It's great that you're coming. The drinks are already in the fridge!
+            }
+            else
+            {
+                @:Sorry to hear that you can't make it, but thanks for letting us know.
+            }
+    </div>
+</body>
+</html>
+
+
+이 Thanks 뷰는 Razor를 이용해서 RsvpForm 액션 메서드에서 View 메서드에 전달해준 GuestResponse개체의 속성 값에 기반한 내용들을 출력한다. Razor의 @model 표현식은 뷰에 강력하게 지정된 형식의 도메인 모델 형식을 지정한다. 도메인 개체에 존재하는 속성 값에 접근하려면 Model.[속성명] 구문을 사용하면 되는데, 예를 들어 이 뷰에서는 Model.Name을 호출해서 Name 속성 값을 얻고 있다. 일단 지금은 Razor 구문이 이해되지 않더라도 걱정할 필요는 없다. Razor에 관해서는 5장에서 다시 자세하게 살펴볼 것이다. 
+
+이제 Thanks 뷰를 생성했으므로 MVC를 이용해서 폼을 처리하는 실제로 동작하는 기본적인 예제의 구현을 마친셈이다. Visual Studio에서 응용 프로그램을 실행하고 RSVP Now 링크를 클릭한 다음 폼에 임의의 데이터를 입력하고 [Submit RSVP]버튼을 클릭해본다. 그러면 그림 2-20과 같은 결과를 확인할 수 있을 것이다(비록 여러분의 이름이 Joe가 아니거나 파티에 참석하지 못할수도 있겠지만 말이다. )
+
+
+※ 유효성 검사 추가하기
+이제 응용프로그램에 유효성 검사를 추가해볼 순서다. 만약 유효성 검사를 추가하지 않는 다면 사용자가 말도 안되는 데이터를 입력하거나 심지어 빈 폼을 제출할 수도 있다. MVC 응용프로그램의 유효성 검사는 대부분 사용자 인터페이스가 아닌 도메인 모델에 적용된다. 그렇기 때문에 유효성 검사의 기준을 한 장소에 정의하더라도 모델 클래스가 사용되는 모든 곳에서 그 효과를 얻을 수 있는 것이다. ASP.NET MVC는 System.ComponentModel.DataAnnotations 네임스페이스의 어트리뷰트들을 이용한 선언적 유효성 검사 규칙 선언을 지원해주기 때문에 C#의 표준 어트리뷰트 기능을 이용해서 유효성 검사 규칙들을 표현할 수 있다. 목록 2-16은 GuestResponse 모델 클래스에 이 어트비류트들을 적용한 결과를 보여준다. 
+
+목록2-16. GuestResponse.cs 파일에 유효성 검사 적용하기. 
+using System.ComponentModel.DataAnnotations;
+namespace PartyInvites.Models
+{
+    public class GuestResponse
+    {
+        [Required(ErrorMessage ="Please enter your name")]
+        public string Name { get; set; }
+        [Required(ErrorMessage ="Please enter your email address")]
+        public string Email { get; set; }
+        [Required(ErrorMessage ="Please enter your phone number")]
+        public string Phone { get; set; }
+        [Required(ErrorMessage ="Please specify whether you'll attend")]
+        public bool? WillAttend { get; set; }
+
+    }
+}
+
+이 코드에서 유효성 검사 규칙들은 굵은 글씨로 강조되어 있다. MVC는 자동으로 이 어트리뷰트들을 감지해서 모델 바인딩이 진행되는 동안 데이터유효성 검사에 이용한다. 그리고 유효성 검사 관련 어트리뷰트들을 포함하고 있는 네임스페이스를 임포트했기 때문에, 해당 어트리뷰트들의 이름을 한정하지 않고도 참조할수 있는 것이라는 점에 주의하기 바란다. 
+
+
+TIP:
+이미 언급했던 것처럼 WillAttend 속성은 Nullable bool 형식을 사용하고 있으며, 그렇기 때문에 Required 유효성 검사 어트리뷰트를 사용할 수 있는 것이다. 만약 일반적인 bool 형식을 사용했다면 모델 바인딩을 통해서 오직 true와 flase만 입력 바 받을 수 있으므로 정말로 사용자가 값을 선택한 것인지 확신할 수 없었을 것이다. Nullable bool 형식은 true, false, null 이렇게 세 가지 값을 가질 수 있다. 이 중 null값은 사용자가 값을 선택하지 않은 경우를 나타내는 데 사용되며, 이 값은 Required 어트리뷰트의 유효성 검사 오류 보고를 발생시킨다. 이는 MVC 프레임워크가 C#의 기능을 HTML과 HTTP에 얼마나 멋지게 녹여 넣었는지를 보여주는 좋은 예다. 
+
+
+
+컨트롤러 클래스에서는 ModelState.IsValid 속성을 사용해서 유효성 검사에 문제가 존재하는지 여부를 확인할 수 있다. 목록 2-17은 Home 컨트롤러 클래스의 POST 대응 RsvpForm액션 메서드에서 이 속성을 사용하고 있는 방법을 보여준다. 
+
+목록2-17 유효성 검사 오류를 확인하고 있는 HomeController.cs 파일의 내용
+[HttpPost]
+        public ViewResult RsvpForm(GuestResponse guestResponse)
+        {
+            ViewResult viewResult = null;
+            if(ModelState.IsValid)
+            {
+                //Todo : 파티 주최자에게 전자 메일로 응답한다. 
+                viewResult = View("Thanks", guestResponse);
+            }else
+            {
+                //유효성 검사 오류가 존재한다.
+                viewResult = View();
+            }
+            return viewResult;
+            
+        }
+이 코드는 유효성 검사 오류가 발생하지 않은 경우, 지금까지처럼 MVC에게 Thanks 뷰를 렌더하도록 지시한다. 그러나 유효성 검사 오류가 발생했다면 매개변수 없이 View 메서드를 호출해서 RsvpForm 뷰를 다시 렌더하게 만든다. 
+
+그러나 오류가 발생했을 때 단지 폼만 다시 출력한다면 그리 도움이 되지 않을 것이다. 따라서 무엇이 문제인지 그리고 제출한 폼이 왜 받아들여지지 않았는지를 알려주는 정보를 사용자에게 제공해줄 필요가 있다. 이 작업은 목록 2-18에서 볼 수 있는 것처럼 RsvpForm 뷰에서 Html.ValidationSummary 헬퍼 메서드를 사용해서 처리할 수 있다. 
+
+목록2-18 Html.ValidationSummary 헬퍼 메서드를 사용하고 있는 RsvpForm.cshtml 파일의 내용
+@model PartyInvites.Models.GuestResponse
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>RsvpForm</title>
+</head>
+<body>
+    @using (Html.BeginForm())
+            {
+                @Html.ValidationSummary()
+                <p>Your name: @Html.TextBoxFor(x => x.Name)</p>
+                <p>Your email: @Html.TextBoxFor(x => x.Email)</p>
+                <p>Your Phone: @Html.TextBoxFor(x => x.Phone)</p>
+                <p>
+                    Will you attend?
+                    @Html.DropDownListFor(x => x.WillAttend, new[]
+               {
+                   new SelectListItem() { Text = "Yes, I'll be there", Value=bool.TrueString},
+                   new SelectListItem() { Text="No, I can't come", Value=bool.FalseString}
+               }, "Choose an option")
+                </p>
+                <input type="submit" value="Submit RSVP" />
+            }
+</body>
+</html>
+
+만약 오류가 전혀 없다면 Html.ValidationSummary 메서드는 폼에 눈에 보이지 않는 자리 표시자 목록 항목만 생성한다. 그러나 오류가 존재하는 경우에는 MVC가 자리 표시자를 출력한 다음 거기에 유효성 검사 어트리뷰트에 의해서 정의된 오류 메시지들을 추가해준다. 그림 2-21에서 이렇게 출력된 오류 메시지를 볼 수 있다.
+
+결과적으로 사용자는 GuestResponse 클래스에 적용된 모든 유효성 검사 규칙들을 만족시키기 전까지는 Thanks 뷰를 볼 수가 없다. 그리고 뷰가 렌더될 때 유효성 검사 요약 메시지와 함께 폼에 입력된 데이터들이 유지되어 다시 출력된다는 점에 주목하기 바란다. 이 역시 모델 바인딩 기능을 사용함으로써 얻을 수 있는 또 하나의 이점으로 폼의 데이터 처리 작업을 간단하게 만들어준다. 
+
+
+Note:
+만약 ASP.NET Web Forms을 사용해서 작업을 해본 경험이 있다면 Web Forms에는 __VIEWSTATE라는 숨겨진 폼 필드에 값을 직렬화해서 상태를 유지하는 서버 컨트롤이라는 개념이 존재한다는 것을 알 고 있을 것이다. ASP .NET MVC의 모델 바인딩은 Web Forms의 서버 컨트롤, 포스트백, ViewState등과는 아무런 관련이 없다. ASP.NET MVC는 렌더되는 HTML 페이지에 __VIEWSTATE 숨김 필드를 삽입하지 않는다. 
