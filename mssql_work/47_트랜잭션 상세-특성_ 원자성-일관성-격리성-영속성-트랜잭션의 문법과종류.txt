@@ -1,0 +1,101 @@
+Section 02 : 트랜잭션 상세
+※ 트랜잭션의 특성
+트랜잭션의 개념을 다시 이야기하면 하나의 논리적 작업 단위로 수행되는 일련의 작업이다. 
+
+이 의미에서는 전부 되거나 전부 안되거나의 의미가 포함되어 있다. 트랜잭션의 개념을 설명할 때 은행의 예를 들었던 것을 기억한다면 내 통장에서 돈이 빠져나가고 상대편 통장에 돈이 입금되거나 아니면 내 통장에서도 돈이 빠져 나가지 않고 상대편 통장에도 돈이 입금되지 않은 상태를 말한다. 하나만 되고 다른 하나는 되지 않는 것은 허용할 수 가 없다고 이야기했다. 
+
+트랜잭션은 다음과 같이 ACID(다음 항목의 각 첫 글자)라고 불리는 특성을 가지고 있다. 
+
+1: 원자성(Automicity)
+트랜잭션은 분리할 수 없는 하나의 단위이다. 작업이 모두 수행되거나 하나도 수행되지 않아야 한다. 
+
+2: 일관성(Consistency)
+트랜잭션에서 사용되는 모든 데이터는 일관되어야 한다. 이 일관성은 잠금(Locking)과 관련이 깊다. 
+
+3: 격리성(Isolation)
+현재 트랜잭션이 접근하고 있는 데이터는 다른 트랜잭션에서 격리되어야 한다는 것을 의미한다. 트랜잭션이 발생되기 이전 상태나 완료된 이후 상태를 볼 수는 있지만 트랜잭션이 진행중인 중간 데이터를 볼 수 없다( 단예외도 있다. 이는 잠시 후에 알아보자. )
+
+4: 영속성(Durability)
+트랜잭션이 정상적으로 종료된다면 그 결과는 시스템 오류가 발생하더라도 시스템에 영구적으로 적용된다. 
+
+
+무슨 말인지 잘 이해되지 않아도 좋다. 우선은 눈으로만 보아 놓고, 계속 진행하게 되면 자연스럽게 이해될 것이다. 
+
+
+
+※ 트랜잭션의 문법과 종류
+이미 앞에서 확인했지만 트랜잭션은 다음과 같은 간단한 형태를 가진다. 
+
+BEGIN TRAN
+SQL 문...
+COMMIT TRAN (또는 COMMIT WORK 또는 ROLLBACK TRAN)
+
+COMMIT TRAN과 COMMIT WORK는 거의 같이 사용되며 ROLLBACK TRAN과 ROLLBACK WORK도 마찬가지다. 
+
+
+* COMMIT TRAN은 트랜잭션의 이름을 직접 지정해서 커밋시킬 수 있으나 COMMIT WORK는 현재의 가장 가까운 트랜잭션이 커밋된다. 
+
+
+그리고 트랜잭션이 길어질 경우에 중간 위치를 저장하려면 다음과 같은 구문을 수용할 수 있다. 
+
+SAVE TRAN 저장점_이름
+
+
+트랜잭션의 종류로는 3가지가 있다. 
+
+
+(1) 자동 커밋 트랜잭션
+각 쿼리마다 자동적으로 BEGIN TRAN과 COMMIT TRAN이 붙여지는 것을 말한다. SQL Server는 디폴트로 자동 커밋 트랜잭션(Autocommit Transaction)을 사용한다. 
+
+예를 들어 다음 구문과 같다. 
+
+UPDATE 문
+GO
+INSERT 문
+->
+BEGIN TRAN
+	UPDATE 문
+GO
+BEGIN TRAN
+	INSERT 문
+COMMIT TRAN
+
+
+우리가 지금까지 사용해온 대부분의 쿼리도 자동 커밋 트랜잭션이 작동해왔던 것이다. 
+
+
+(2)명시적 트랜잭션
+직접 BEGIN TRAN문과 COMMIT TRAN또는 ROLLBACK TRAN문을 써주는 것을 말한다. 
+
+명시적 트랜잭션(Explicit Transaction)을 사용하는 전체 형식은 다음과 같다. 복잡해 보이지만 대개는 BEGIN TRAN... COMMIT TRAN만 사용해주면 된다. 
+
+BEGIN { TRAN | TRANSACTION }
+	[ { transaction_name | @tran_name_variable }
+	[ WITH MARK [ 'description' ] ]
+	]
+
+	SQL 문...
+	또는
+	SAVE { TRAN | TRANSACTION } { savepoint_name | @savepoint_variable }
+	....
+COMMIT { TRAN | TRANSACTION }
+[ transaction_name | @tran_name_variable ] ]
+또는 
+ROLLBACK { TRAN | TRANSACTION }
+	[ transaction_name | @tran_name_variable
+	[ savepoint_name | @savepoint_variable ]
+
+
+(3) 암시적 트랜잭션
+암시적 트랜잭션(Implicit Transaction)은 오라클 등의 데이터베이스와 호환을 위해서 사용될 수 있다. 암시적 트랜잭션은 어떤 쿼리가 나오면 자동으로 내부적으로 BEGIN TRAN을 붙여주지만, COMMIT TRAN또는 ROLLBACK TRAN은 직접 써줘야 한다(오라클이 이러한 방식을 사용한다. )
+
+SQL Server 에서는 암시적 트랜잭션을 별로 권장하지 않지만, 암시적 트랜잭션을 사용하려면 다음과 같이 설정해줘야 한다. 
+
+SET IMPLICIT_TRANSACTION ON
+
+앞과 같이 설정하면 그 후부터는 쿼리가 실행되면 동시에 트랜잭션이 시작되게 되며, 직접 COMMIT 또는 ROLLBACK을 수행하기 전까지는 트랜잭션이 계속 진행중인 상태가 된다. 
+
+암시적 트랜잭션이 시작되는 쿼리는 ALTER TABLE, FETCH, REVOKE, CREATE, GRANT, SELECT, DELETE, INSERT, TRUNCATE TABLE, DROP, OPEN, UPDATE 등이 있다. 단 이미 암시적 트랜잭션이 시작되면(=앞의 구문이 그 이전에 하나라도 사용된 후에는)앞의 구문이 다시 나오더라도 다시 암시적 트랜잭션이 시작되지는 않는다. 즉 한 번 암시적 트랜잭션이 시작되면 COMMIT이나 ROLLBACK 을 하기 전에는 암시적 트랜잭션이 중복으로 시작되지는 않는다. 
+
+(4) 일괄 처리 범위의 트랜잭션
+MARS(Multiple Active Result Sets)에만 해당되며 MARS 세션에서 시작되는 Transact-SQL 명시적 또는 암시적 트랜잭션이 일괄 처리 범위 트랜잭션이 된다. 일괄 처리가 완료될 때 커밋되거나 롤백되지 않은 일괄 처리 범위의 트랜잭션은 SQL Server에서 자동으로 롤백한다. 
