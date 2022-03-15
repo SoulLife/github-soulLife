@@ -1,0 +1,259 @@
+실습2 : 트랜잭션을 사용해야 하는 이유를 확인해 보자. 
+
+0. 사전 준비를 한다. 
+0-1 SSMS 메뉴의 [도구] > [옵션] 을 선택한 후, 쿼리 실행 > SQL Server > 고급을 선택하고 SET STATISTICS IO를 체크가 켜 있다면 다음 그림과 같이 OFF시킨다. 
+0-2 모든 쿼리 창을 닫고, 새 쿼리 창을 연다. 
+0-3 간단한 통장 테이블을 생성하자. 예금주는 존밴이와 당탕이 두 명이 있다. 또 예금(money)은 마이너스가 되지 않게 제약 조건을 설정했다. 
+
+USE tempdb;
+CREATE TABLE bankBook
+(
+	uName	NVARCHAR(10),
+	uMoney	INT,
+	CONSTRAINT CK_money
+	CHECK (uMoney >= 0 )
+);
+GO
+INSERT INTO bankBook VALUES(N'존뱅이', 1000);
+INSERT INTO bankBook VALUES(N'당탕이', 0);
+
+1. 현재 '존밴이'가 '당탕이' 계좌로 500원을 송금하려면 우선 존밴이 계좌에서 500원을 빼고 '당탕이' 계좌에 500원을 더해주면 된다. 
+
+UPDATE bankBook SET uMoney = uMoney - 500 WHERE uName = N'존밴이';
+UPDATE bankBook SET uMoney = uMoney + 500 WHERE uName = N'당탕이';
+SELECT * FROM bankBook;
+
+잘 송금되었다. 먼저 SQL Server의 트랜잭션 모드의 디폴트는 자동 커밋 트랜잭션이라고 했다. 앞의 구문은 내부적으로 다음과 같이 자동으로 구성하여 실행되었을 것이다(다음 SQL은 수행하지 말자)
+
+BEGIN TRAN
+UPDATE bankBook SET uMoney = uMoney - 500 WHERE uName = N'존밴이';
+COMMIT TRAN
+BEGIN TRAN
+UPDATE bankBook SET uMoney = uMoney + 500 WHERE uName = N'당탕이';
+COMMIT TRAN
+
+2. 이번에는 '존밴이'가 '당탕이'에게 600원을 송금해 보도록 하자. 
+UPDATE bankBook SET uMoney = uMoney - 600 WHERE uName = N'존밴이';
+UPDATE bankBook SET uMoney = uMoney + 600 WHERE uName = N'당탕이';
+SELECT * FROM bankBook;
+
+오류 메시지:
+메시지 547, 수준 16, 상태 0, 줄 1
+UPDATE 문이 CHECK 제약 조건 "CK_money"과(와) 충돌했습니다. 데이터베이스 "tempdb", 테이블 "dbo.bankBook", column 'uMoney'에서 충돌이 발생했습니다. 
+
+
+오류가 발생했는데도 불구하고 결과를 확인해 보니 존밴이의 잔액은 그대로인데, 당탕이의 잔액은 600원이 더해졌다. 지금 이 상황이 실제라면 은행의 입장에서는 엄청나게 큰 대형 사고가 발생한 셈이다. 존밴이의 돈은 빠지지 않았으므로 당탕이 에게도 입금되지 않아야하는데 입금되어 버렸다. 
+
+이유는 다음과 같다(다음 SQL 문도 실행하지 말자. )
+BEGIN TRAN -- 1번 트랜잭션
+UPDATE bankBook SET uMoney = uMoney - 600 WHERE uName = N'존밴이';
+--오류가 발생되어 수행이 안됨(현재 트랜잭션인 1번 트랜잭션에 롤백이 일어날 것으로 예상됨)
+COMMIT TRAN
+
+BEGIN TRAN --2번 트랜잭션
+UPDATE bankBook SET uMoney = uMoney + 600 WHERE uName = N'당탕이';
+--정상적으로 수행됨 
+COMMIT TRAN
+
+기대하기로는 존밴이의 통장에서 빠지지 않았으므로, 당탕이의 통장에도 입금되지 않아야 되지만 1번 트랜잭션과 2번 트랜잭션은 서로 관계없이 독립적으로 수행되므로 이러한 논리적인 오류가 발생한 것이다. 
+
+
+3. 그러므로 이럴 때는 두 개의 UPDATE를 하나의 트랜잭션으로 묶어야만 한다. 
+3-1 먼저 '당탕이'의 계좌를 원래대로 만든다. 
+UPDATE bankBook SET uMoney = uMoney - 600 WHERE uName = N'당탕이';
+
+3-2 두 UPDATE를 묶는다. 
+BEGIN TRAN
+UPDATE bankBook SET uMoney = uMoney - 600 WHERE uName = N'존밴이';
+UPDATE bankBook SET uMoney = uMoney + 600 WHERE uName = N'당탕이';
+COMMIT TRAN
+SELECT * FROM bankBook;
+
+오류 메시지:
+메시지 547, 수준 16, 상태 0, 줄 1
+UPDATE 문이 CHECK 제약 조건 "CK_money"과(와) 충돌했습니다. 데이터베이스 "tempdb", 테이블 "dbo.bankBook", column 'uMoney'에서 충돌이 발생했습니다. 
+
+뭔가 이상하다 첫 번째 UPDATE에서 오류가 발생하였으므로 전체가 롤백되어서 당탕이의 통장에는 500원만 있어야 하는데 당탕이에게 600원이 입금되었다. 그 이유는 제약 조건(여기서는 CHECK)의 논리적 오류는 롤백되지 않기 때문이다. 그러므로 제약 조건에서 오류가 발생하면 강제로 롤백 시켜 줘야한다. 즉 첫 번째 UPDATE에서 존밴이 계좌에서 600원을 뺏을때 오류가 발생되어 그 행만 실행되지 않은 것일뿐 롤백이 수행된 것은 아니다. 
+
+우선 다시 당탕이의 잔액을 원위치로 돌리자. 
+UPDATE bankBook SET uMoney = uMoney - 600 WHERE uName = N'당탕이';
+
+
+3-3 TRY...CATCH 구문을 사용해 보자(7장 후반부에서 배웠다)
+BEGIN TRY
+UPDATE bankBook SET uMoney = uMoney - 600 WHERE uName = N'존밴이';
+UPDATE bankBook SET uMoney = uMoney + 600 WHERE uName = N'당탕이';
+END TRY
+BEGIN CATCH
+	ROLLBACK TRAN
+END CATCH
+SELECT * FROM bankBook;
+
+첫 번째 UPDATE에서 오류가 발생되었으므로 CATCH의 ROLLBACK TRAN이 실행되어서 전체 트랜잭션이 롤백된 결과다. 즉 우리가 원했던 결과다. 실무에서도 이러한 방식이 많이 활용되어야 하므로 잘 기억해 두자. 
+
+
+
+실습3 : 명시적 트랜잭션과 암시적 트랜잭션을 실습해 보자. 
+0. 실습을 설정한다. 
+0-1 모든 쿼리 창을 닫고, 새 쿼리 창을 연다. 
+0-2 tempdb를 사용하자. 
+
+USE tempdb;
+
+1. 자동 커밋 트랜잭션을 확인해 보자. 
+1-1 현재 트랜잭션의 개수를 저장할 테이블을 생성한다. 
+
+CREATE TABLE testTbl (id int IDENTITY); -- INSERT 테스트용
+CREATE TABLE tranTbl( save_id int, tranNum int); --트랜잭션의 개수를 저장
+testTbl에는 데이터를 insert할 용도이며, 그 insert를 할 때 발생되는 자동 커밋 트랜잭션의 개수를 tranTbl에 저장하게 될 것이다. 
+
+1-2 testTbl에 트리거를 생성해 보자. 아직 트리거를 배우지 않았지만 미리 예습이라고 생각하고 다음을 실행해서 트리거를 생성해 보자. 
+
+CREATE TRIGGER trgTranCount
+ON testTbl
+FOR INSERT
+AS
+	DECLARE @id int;
+	SELECT @id = id FROM inserted;
+	INSERT INTO tranTbl VALUES(@id, @@trancount);
+
+앞의 트리거의 의미를 간단히 설명하면 testTbl에 insert가 발생될 경우에 testTbl의 id와 현재 발생된 트랜잭션의 개수(시스템 함수 @@trancount)를 tranTbl에 자동으로 저장한다. 트리거에 대해서는 13장에서 배운다. 
+
+1-3 다음 구문을 3번쯤 실행해 보자. 
+INSERT INTO testTbl DEFAULT VALUES;
+
+1-4 입력된 데이터를 확인해 보자. 
+SELECT * FROM testTbl;
+SELECT * FROM tranTbl;
+
+결과를 확인해보면 tranNum이 0이 아니므로, 각 insert를 실행할 때마다 트랜잭션이 발생함을 확인할 수 있다. 즉 자동 커밋 트랜잭션이 사용되고 있다. 
+
+2. 명시적 트랜잭션을 확인해 보자. 
+2-1 다음 구문을 실행해 보자. 
+
+BEGIN TRAN
+	PRINT 'BEGIN 안의 트랜잭션 개수==> ' + CAST (@@trancount AS CHAR(3));
+COMMIT TRAN
+	PRINT 'COMMIT 후에 트랜잭션 개수==> ' + CAST (@@trancount AS CHAR(3));
+
+결과값 :
+BEGIN 안의 트랜잭션 개수==> 1
+COMMIT 후에 트랜잭션 개수==> 0
+
+명시적 트랜잭션에 의해서 트랜잭션이 발생되는 것을 확인할 수 있다. 
+
+2-2명시적으로 중첩된 트랜잭션을 확인해 보자. 결과를 쉽게 예측할 수 있을 것이다. 
+BEGIN TRAN
+	BEGIN TRAN
+		PRINT 'BEGIN 2개 안의 트랜잭션 개수==> ' + CAST(@@trancount AS CHAR(3));
+	COMMIT TRAN
+		PRINT 'BEGIN 1개 안의 트랜잭션 개수==> ' + CAST(@@trancount AS CHAR(3));
+	COMMIT TRAN
+		PRINT 'COMMIT 후에 안의 트랜잭션 개수==> ' + CAST(@@trancount AS CHAR(3));
+
+결과값 :
+BEGIN 2개 안의 트랜잭션 개수==> 2
+BEGIN 1개 안의 트랜잭션 개수==> 1
+COMMIT 후에 트랜잭션 개수==> 0
+
+2-3 이번에는 롤백시켜 보자. 결과를 보기 전에 세 번의 select로 어떤 값이 나올지 예상해 보자. 
+
+CREATE TABLE #tranTest (id int);
+INSERT INTO #tranTest VALUES(0);
+
+BEGIN TRAN -- 1번 트랜잭션
+	UPDATE #tranTest SET id = 111;
+ 	BEGIN TRAN --2번 트랜잭션
+	UPDATE #tranTest SET id= 222;
+	SELECT * FROM #tranTest;
+	ROLLBACK TRAN --첫번째 롤백
+	SELECT * FROM #tranTest;
+	ROLLBACK TRAN --두번째 롤백
+	SELECT * FROM #tranTest;
+
+오류 메시지:
+메시지 3903, 수준 16, 상태 1, 줄 11
+ROLLBACK TRANSACTION 요청에 해당하는 BEGIN TRANSACTION이 없습니다. 
+
+결과 값이 예상한 대로 나오지 않았을 것이다. 예상하기로는 두 번째 SELECT에서 111이 나올것 같았지만 그렇게 되지 않았다. 또 오류 메시지를 보면 두 번째 ROLLBACK TRAN에서 오류가 발생했다. 
+
+예상하기로는 첫 번째 롤백에서는 2번 트랜잭션까지만 롤백될 것이고, 두 번째 롤백에서 1번 트랜잭션까지 롤백될 것 같았지만, 첫 번째 롤백에서 바로 1번 트랜잭션까지 롤백되었기 때문에 두 번째 롤백에서는 롤백할 트랜잭션이 없으므로 발생하는 오류이다. 즉 롤백은 바로 앞의 트랜잭션까지만 롤백하는 것이 아니라. 모든 트랜잭션을 롤백하기 때문에 나오는 현상이므로 주의할 필요가 있다. 
+
+
+2-4 롤백이 원하는 지점까지만 되게 하려면 SAVE TRAN을 사용하면 된다. 
+BEGIN TRAN -- 1번 트랜잭션
+	UPDATE #tranTest SET id = 111;
+	SAVE TRAN [tranpoint1]
+ 	BEGIN TRAN --2번 트랜잭션
+		UPDATE #tranTest SET id= 222;
+		SELECT * FROM #tranTest;
+	ROLLBACK TRAN [tranPoint1] --첫번째 롤백
+	SELECT * FROM #tranTest;
+	ROLLBACK TRAN --두번째 롤백
+	SELECT * FROM #tranTest;
+이번에는 원하는 대로 수행되었다. SAVE TRAN을 활용하면 특점 지점까지만 롤백시킬수 있다. 
+
+3. 암시적 트랜잭션을 확인해 보자. 
+3-1 암시적 트랜잭션을 사용하는 설정을 한다. 
+SET IMPLICIT_TRANSACTIONS ON;
+
+3-2 몇개의 문장을 수행해 본다. 
+USE tempdb;
+CREATE DATABASE tranDB;
+GO
+
+USE tranDB;
+CREATE TABLE tranTbl (id int); --이 순간에 트랜잭션이 시작됨
+GO
+
+INSERT INTO tranTbl VALUES(1);
+INSERT INTO tranTbl VALUES(2);
+
+SELECT * FROM tranTbl;
+
+3-3 <새 쿼리>를 클릭해서 새 쿼리 창을 열고 다음을 수행한다. 
+
+USE tranDB;
+SELECT * FROM tranTbl;
+
+아직 tranTbl에 작동중인 트랜잭션이 커밋되지 않아서 계속 쿼리를 실행하는 중으로 나올 것이다. 
+
+3-4 원래의 쿼리창에서 롤백시킨다. 
+ROLLBACK TRAN;
+
+3-5 새로 연 쿼리창을 다시 보면 테이블없음이 확인된다. 
+
+오류 메시지 :
+메시지 208, 수준 16, 상태 1, 줄 2
+개체 이름 'tranTbl'이(가) 잘못되었습니다. 
+
+새로 열었던 쿼리 창을 닫는다. 
+
+3-6 다음을 수행해서 그 결과를 확인해 보자. 
+CREATE TABLE tranTbl (id int); -- 이 순간에 트랜잭션이 시작됨
+GO
+
+INSERT INTO tranTbl VALUES(1);
+SELECT @@trancount;
+
+BEGIN TRAN -- 트랜잭션 1개 추가
+INSERT INTO tranTbl VALUES(2);
+SELECT @@trancount;
+COMMIT TRAN -- 트랜잭션 1개 감소
+
+SELECT @@trancount;
+
+BEGIN TRAN -- 트랜잭션 1개 추가
+INSERT INTO tranTbl VALUES(3);
+SELECT @@trancount;
+ROLLBACK TRAN -- 최초의 트랜잭션인 CREATE TABLE까지 모든 트랜잭션이 취소됨
+
+SELECT @@trancount;
+SELECT * FROM tranTbl; -- 이미 롤백되서 없음(오류 발생)
+
+트랜잭션의 개수는 1,2,1,2,0 의 순서로 출력될 것이다. 그리고 마지막에 tranTbl이 잘못되었다는 오류가 발생될 것이다. 그 이유는 앞에서도 나왔지만 ROLLBACK TRAN은 모든 트랜잭션을 롤백하기 때문이다. 이 경우에는 트랜잭션이 시작된 CREATE TABLE 문까지 취소되는 것이다. 
+
+3-7 다시 자동 커밋 트랜잭션 모드로 변경한다. 
+SET IMPLICIT_TRANSACTIONS OFF;
+
+이상으로 트랜잭션과 관련된 내용을 마무리하겠다. 사실 트랜잭션과 관련된 내용은 필자가 이야기한 내용 외에도 많은 내용이 더 남아있다. 특히, 잠금(Locking), 블로킹(Blocking) , 교착상태(Deadlock)등과 관련된 조금 어려운 내용도 공부할 필요가 있는데 이는 2권(관리와 응용)에서 다뤄보겠다. 
