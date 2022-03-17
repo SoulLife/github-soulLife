@@ -1,0 +1,373 @@
+실습1 : 저장 프로시저 내용을 실습해 보자. 
+
+0. 백업 받았던 sqlDB를 사용하자(C:\SQL\sqlDB2012.bak 파일이 없는 독자는 6장의 <실습2>를 다시 수행하거나 책의 사이트인 http://brain.hanb.co.kr/sql2012/에서 sqlDB2012.bak을 내려받아서 C:\SQL\폴더에 저장하자)
+
+USE tempdb;
+RESTORE DATABASE sqlDB FROM DISK = 'C:\SQL\sqlDB2012.bak' WITH REPLACE;
+
+1. 입력 매개변수가 있는 저장 프로시저를 생성하고 실행해 보자. 
+1-1 1개의 입력 매개 변수가 있는 저장 프로시저를 생성해 보자. 
+USE sqlDB;
+GO
+CREATE PROCEDURE usp_users1
+	@userName NVARCHAR(10)
+AS
+	SELECT * FROM userTbl WHERE name = @userName;
+GO
+
+
+EXEC usp_users1 '조관우';
+
+1-2 2개의 입력 매개변수가 있는 저장 프로시저를 생성해 보자. 
+CREATE PROCEDURE usp_users2
+	@userBirth INT,
+	@userHeight INT
+AS
+	SELECT * FROM userTbl WHERE birthYear > @userBirth AND height > @userHeight;
+GO
+
+EXEC usp_users2 1970, 178;
+
+1-3 만약 출생년도와 키의 순서를 바꿔서 호출하고 싶다면 직접 매개변수 이름을 지정하면 된다. 
+
+EXEC usp_users2 @userHeight=178, @userBirth = 1970;
+
+1-4 디폴트 매개 변수를 지정해 보자. 
+CREATE PROCEDURE ups_users3
+	@userBirth INT = 1970,
+	@userHeight INT = 178
+AS
+	SELECT * FROM userTbl WHERE birthYear > @userBirth AND height > @userHeight;
+GO
+EXEC usp_users3;
+
+별도로 입력 매개 변수에 값을 지정하지 않으면 디폴트로 지정된 값을 사용한다. 결과는 앞쿼리와 같다. 
+
+1-5 출력 매개변수를 설정해서 사용해 보자. 먼저 저장 프로시저를 생성한 후에 테스트로 사용할 테이블을 생성하자. 
+CREATE PROCEDURE usp_users4
+	@txtValue NCHAR(10),
+	@outValue INT OUTPUT
+AS
+	INSERT INTO testTbl VALUES(@txtValue); 
+	SELECT @outValue = IDENT_CURRENT('testTbl'); --테이블의 현재 identity 값
+GO
+
+CREATE TABLE testTbl (id INT IDENTITY, txt NCHAR(10));
+GO
+
+usp_users4 프로시저를 생성할 때 testTbl이라는 테이블은 없었다. 그런데도 저장 프로시저가 오류없이 생성되었다. 이를 지연된 이름 확인 이라고 부른다. 즉 실제 테이블이 없어도 저장 프로시저는 만들어진다는 의미다. 잠시 후에 저장 프로시저의 작동 부분에서 상세히 확인해 보겠다. 
+
+우선 저장 프로시저를 사용해 보자. 
+
+DECLARE @myValue INT;
+
+EXEC usp_user4 '테스트 값1' , @myValue OUTPUT;
+PRINT '현재 입력된 ID 값' ==> ' + CAST(@myValue AS CHAR(5));
+
+메시지 :
+(1개 행이 영향을 받음)
+현재 입력된 ID 값 ==> 1
+
+계속 반복해서 수행하면 결과 값이 2, 3, 4 .... 로 증가하게 될 것이다. 
+
+
+2. 저장 프로시저 안에 SQL 프로그래밍을 활용해 보자. 
+
+* 혹 이부분이 잘 이해되지 않으면 7장 후반부의 SQL 프로그래밍 부분을 참조하도록 하자. 
+
+2-1 IF... ELSE 문을 사용해 보자. 
+CREATE PROC usp_ifElse
+	@userName nvarchar(10)
+AS
+	DECLARE @bYear INT -- 출생년도를 저장할 변수
+	SELECT @Year = birthYear FORM userTbl
+	WHERE name= @userName;
+	if(@Year >= 1980)
+		BEGIN
+			PRINT N'아직 젊군요';
+		END
+	ELSE
+		BEGIN
+			PRINT N'나이가 지긋하네요..';
+		END
+	GO
+
+EXEC usp_ifElse '조용필';
+
+간단해서 별로 설명할 것은 없다. 여기서는 코드를 간단히 하려고 PRINT를 사용했지만 실제로는 이 부분에 주로 T-SQL이 들어온다. 
+
+
+2-2 CASE 문을 사용해 보자. 
+CREATE PROC ups_case
+	@userName nvarchar(10)
+AS
+	DECLARE @bYear INT
+	DECLARE @tti NCHAR(3) -- 띠
+	SELECT @bYear = birthYear FROM userTbl
+	WHERE name = @userName;
+
+	SET @tti = 
+		WHEN( @bYear%12 = 0) THEN '원숭이'
+		WHEN( @bYear%12 = 1) THEN '닭'
+		WHEN( @bYear%12 = 2) THEN '개'
+		WHEN( @bYear%12 = 3) THEN '돼지'
+		WHEN( @bYear%12 = 4) THEN '쥐'
+		WHEN( @bYear%12 = 5) THEN '소'
+		WHEN( @bYear%12 = 6) THEN '호랑이'
+		WHEN( @bYear%12 = 7) THEN '토끼'
+		WHEN( @bYear%12 = 8) THEN '용'
+		WHEN( @bYear%12 = 9) THEN '뱀'
+		WHEN( @bYear%12 = 10) THEN '말'
+		ELSE '양'
+	END;
+	PRINT @userName + '의 띠==> ' + @tti;
+GO
+
+EXEC usp_case '성시경';
+
+호출한 사람의 띠를 알려주는 저장 프로시저 이다. 
+
+2-3 실제 사용될만한 WHILE 문을 살펴보자. 이번 예제는 아직 배우지 않은 커서(Cursor)가 나오기 때문에 조금 어렵다. 커서에 대한 내용은 12장에서 살펴보기로 하고 지금은 그냥 전체 행을 가져와서 처리하기 위한 것이라고 생각하자. 다음의 예제는 고객 테이블(userTbl)에 고객 등급(grade)열을 하나 추가한 후에 각 구매 테이블(buyTbl)에서 고객이 구매한 총액에 따라서 고객 등급(grade)열에 최우수고객 /우수고객/일반고객/유령고객의 값을 입력하는 저장 프로시저다. 
+
+USE sqlDB;
+GO
+ALTER TABLE userTbl
+	ADD grade NVARCHAR(5); -- 고객 등급 열 추가
+GO
+CREATE PROCEDURE usp_while
+AS
+	DECLARE userCur CURSOR FOR -- 커서 선언
+	SELECT U.userid, sum(price * amount) FROM buyTbl B RIGHT OUTER JOIN userTbl U ON B.userid = U.userid GROUP BY U.userid, U.name
+
+OPEN usrCur -- 커서 열기
+
+DECLARE @id NVARCHAR(10) -- 사용자 아이디를 저장할 변수
+DECLARE @sum BIGINT -- 총 구매액을 저장할 변수
+DECLARE @userGrade NCHAR(5) -- 고객 등급 변수
+FETCH NEXT FROM userCur INTO @id, @sum -- 첫 행 값을 대입
+
+WHILE (@@FETCH_STATUS=0) -- 행이 없을 때까지 반복(즉, 모든 행 처리)
+BEGIN
+	SET @userGrade = 
+			CASE
+				WHEN (@sum >= 1500) THEN N'최우수고객'
+				WHEN (@sum >= 1000) THEN N'우수고객'
+				WHEN (@sum >= 1) THEN	N'일반고객'
+				ELSE N'유령고객'
+			END
+		UPDATE userTbl SET grade = @userGrade WHERE userID = @id
+		FETCH NEXT FROM userCur INTO @id, @sum -- 다음 행 값을 대입
+	END
+
+	CLOSE userCur -- 커서 닫기
+	DEALLOCATE userCur -- 커서 해제
+GO
+
+데이터를 확인하면 아직은 저장 프로시저를 정의했을 뿐 실행하지는 않았으므로 고객 등급을 위한 grade 열에는 NULL 값이 들어 있을 것이다. 
+
+SELECT * FROM userTbl;
+
+저장 프로시저를 실행하고 다시 userTbl을 확인해 보자. buyTbl에서 고객이 구매한 총 액수에 따라 고객 등급이 들어가 있을 것이다. 
+
+EXEC usp_while;
+SELECT * FROM userTbl;
+
+
+2-4 이번에는 RETURN 문을 이용해서 저장 프로시저의 성공 여부를 확인해 보자. 
+
+CREATE PROC usp_return
+	@userName nvarchar(10)
+AS
+	DECLARE @userID char(8);
+	SELECT @userID = userID FROM userTbl
+		WHERE name = @userName;
+	IF (@userID <> ' ')
+		RETURN 0; --성공일 경우, 그냥 RETURN 만 써도 0을 돌려줌
+	ELSE
+		RETURN -1; -- 실패일 경우 (즉 해당 이름의 ID가 없을 경우)
+GO
+
+이 프로시저는 입력된 사용자의 이름이 사용자 테이블(userTbl)에 있는지 확인하고 있다면 0을 돌려주고 그렇지 않으면 -1을 돌려주는 기능을 한다. 
+
+DECLARE @retVal INT;
+	EXEC @retVal=usp_return '은지원';
+	SELECT @retVal;
+
+	DECLARE @retVal INT;
+	EXEC @retVal=usp_return '나몰라';
+	SELECT @retVal;
+
+'은지원'은 사용자가 있을 것이므로 0을 '나몰라'는 사용자가 없을 것이므로 -1을 돌려줬을 것이다. 
+
+2-5 오류 처리를 위해서 @@ERROR 함수를 사용해 보자. 
+
+CREATE PROC usp_error
+	@userid char(8),
+	@name nvarchar(10),
+	@birthYear INT = 1900,
+	@addr nchar(2) = N'서울',
+	@mobile1 char(3) = NULL,
+	@mobile2 char(8) = NULL,
+	@height smallInt = 170,
+	@mdate date = '2013-11-11'
+AS
+	DECLARE @err INT;
+	INSERT INTO userTbl(userID, name, birthYear, addr, mobile1, mobile2, height, mDate)
+		VALUES (@userid, @name, @birthYear, @addr, @mobile1, @mobile2, @height, @mDate);
+
+	SELECT @err = @@ERROR;
+	IF @err != 0
+	BEGIN
+		PRINT '###' + @name +'을(를) INSERT에 실패했습니다. ###'
+	END
+
+	RETURN @err; --오류번호를 돌려줌
+	GO
+실행해 보자. 
+DECLARE @errNum INT
+EXEC @errNum = usp_error 'WDT', N'우당탕';
+IF (@errNum != 0)
+	SELECT @errNum;
+
+정상적으로 실행되면 아무런 오류 메시지도 나오지 않을 것이다. 앞의 구문을 한 번 더 실행 해보자. 이번에는 오류 메시지가 나올 것이다. 오류 메시지 2627은 Primary Key 제약 조건의 위반으로 발생되는 오류다. 
+
+오류 메시지:
+메시지 2627, 수준 14, 상태 1, 프로시저 usp_error, 줄 12
+PRIMARY KEY 제약 조건 'PK_userTbl_CB9A1CDF78AC8978'을(를) 위반했습니다. 
+개체 dbo.userTbl에 중복 키를 삽입할 수 없습니다. 중복 키 값은 (WDT	) 입니다. 문이 종료되었습니다. 
+###우당탕을(를) INSERT에 실패했습니다. ###
+
+
+2-6 앞의 프로시저를 try...catch로 변경해 보자. 
+CREATE PROC usp_tryCatch
+	@userid char(8),
+	@name nvarchar(10),
+	@birthYear INT = 1900,
+	@addr nchar(2) = N'서울',
+	@mobile1 char(3) = NULL,
+	@mobile2 char(8) = NULL,
+	@height smallInt = 170,
+	@mdate date = '2013-11-11'
+AS
+	DECLARE @err INT;
+	BEGIN TRY
+	INSERT INTO userTbl(userID, name, birthYear, addr, mobile1, mobile2, height, mDate)
+		VALUES (@userid, @name, @birthYear, @addr, @mobile1, @mobile2, @height, @mDate);
+	END TRY
+
+	BEGIN CATCH
+		SELECT ERROR_NUMBER()
+		SELECT ERROR_MESSAGE()
+	END CATCH
+	GO
+
+실행해 보자. 
+EXEC usp_tryCatch 'SYJ', N'손연재';
+
+정상적으로 입력될 것이다. 다시 실행해 보자. 다음과 같이 오류 번호 및 오류 메시지가 별도로 출력될 것이다. 
+
+
+3. 현재 저장된 프로시저의 이름 및 내용을 확인해 보자.
+
+3-1 sys.objects 및 sys.sql_modules 카탈로그 뷰를 조회하면 된다. sys.objects 카탈로그 뷰에 타입(type)이 P로 설정된 것이 프로시저다. 
+
+USE sqlDB;
+SELECT o.name, m.definition FROM sys.sql_modules m JOIN sys.objects o ON m.object_id=o.object_id AND o.TYPE = 'P';
+
+3-2 다른 방법으로 sp_helptext 시스템 저장 프로시저를 이용하면 저장 프로시저의 소스 코드를 볼 수 있다. 
+
+EXECUTE sp_helptext usp_error;
+
+그런데 표 형태로 결과표시로 설정되어 있으면 소스 코드의 각 줄마다 행으로 구분되어서 보기가 어렵다. Ctrl + T키를 눌러 텍스트로 결과 표시로 변경하고 다시 실행해 보자. 
+
+
+결과값 :
+Text
+------------------------------------------------------------------------------------------------------------
+CREATE PROC usp_error
+	@userid char(8),
+	@name nvarchar(10),
+	...... 중간 생략.................
+	BEGIN
+		PRINT '###' + @name + '을(를) INSERT에 실패했습니다. ###'
+	END;
+	RETURN @err; --오류 번호를 돌려줌
+
+다시 Ctrl + D를 눌러서 결과를 표 형태로 바꾼다. 
+
+4. 다른 사용자가 소스 코드를 볼 수 없게 저장 프로시저를 생성할 때 암호화 하자. 
+
+4-1 WITH ENCRYPTION 옵션을 사용하면 암호화된다. 
+
+CREATE PROC usp_Encrypt WITH ENCRYPTION
+AS
+	SELECT SUBSTRING(name, 1, 1) + '00' as [이름], birthYear as N'출생년도', height as N'키' FROM userTbl;
+GO
+
+EXECUTE usp_Encrypt;
+
+
+4-2 소스 코드를 확인해 보자. 확인할 수 없을 것이다 
+
+EXECUTE sp_helptext usp_Encrypt;
+
+메시지:
+개체 usp_Encrypt의 텍스트가 암호화되었습니다. 
+
+
+주의할 점은 한 번 암호화하면 다시는 소스 코드를 알아낼 수 있는 방법이 없다는 것이다. 그러므로 암호화된 저장 프로시저를 생성할 때는 원래의 소스 코드를 별도로 잘 보관해야 한다. 
+
+
+5. 임시 저장 프로시저를 생성하려면 프로시저 이름 앞에 #이나 ##을 붙여주면 된다. 
+
+5-1 임시 저장 프로시저를 생성하고 사용해 보자. 
+
+CREATE PROC #usp_temp
+AS
+	SELECT * FROM userTbl;
+GO
+EXEC usp_temp;
+
+5-2 한번만 사용될 저장 프로시저를 생성할 목적이라면 임시 저장 프로시저보다는 다음과 같이 sp_executesql 시스템 저장 프로시저를 활용하는 것이 시스템의 성능을 위해 더 낫다. 
+
+EXEC sp_executesql N'SELECT * FROM userTbl;
+
+
+6. 테이블 형식의 사용자 정의 데이터 형식을 매개변수로 사용해 보자. 
+
+* 테이블 형식의 사용자 정의 데이터 형식은 SQL Server2008 부터 제공된다. 
+
+6-1 먼저 테이블 형식의 '사용자 정의 데이터 형식'을 만들어 보자. 
+
+USE sqlDB;
+CREATE TYPE userTblType AS TABLE
+( userID char(8),
+name	nvarchar(10),
+birthYear	int,
+addr	nchar(2)
+)
+GO
+
+단순히 아이디/이름/출생년도/주소 만으로 구성된 사용자 정의 데이터 형식이다. 
+
+6-2 저장 프로시저를 만들어 보자. 매개변수는 방금 만든 테이블 형식인 userTblType으로 하고 간단히 그 매개 변수에 들어 있는 값 중에서 1970년 이전 출생자만 출력해 보자. 
+
+
+CREATE PROCEDURE usp_tableTypeParameter
+	@tblPara userTblType READONLY -- 테이블 형식의 매개 변수는 READONLY를 붙여야 함
+
+AS
+BEGIN
+	SELECT * FROM @tblPara WHERE birthYear < 1970;
+END
+GO
+
+
+6-3 테이블 형식의 변수를 선언하고 그 변수에 원래 회원 테이블(userTbl)의 데이터를 입력 시킨 후에, 저장 프로시저를 호출하도록 하자 
+
+DECLARE @tblVar userTblType; -- 테이블 형식의 변수 선언
+INSERT INTO @tblVar 
+SELECT userID, name, birthYear, addr FROM userTbl; -- 테이블 변수에 데이터 입력
+EXEC usp_tableTypeParameter @tblVar; -- 저장 프로시저 호출
+
+테이블 변수 @tblVar를 저장 프로시저에 넘기고, 저장 프로시저는 매개변수를 테이블 변수로 받아서 출력되었다. 이러한 방식은 앞으로 편리하게 활용할 수 있으므로 잘 기억해 두자. 
