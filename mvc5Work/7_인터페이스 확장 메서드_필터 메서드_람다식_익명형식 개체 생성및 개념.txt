@@ -1,0 +1,325 @@
+※ 인터페이스에 확장 메서드 적용하기
+인터페이스를 대상으로 동작하는 확장 메서드를 작성할 수도 있는데, 그러면 해당 인터페이스를 구현한 모든 클래스에서 이 확장 메서드를 호출할 수 있다. 목록 4-14는 IEnumerable<Product> 인터페이스를 구현하도록 변경한 ShoppingCart 클래스를 보여준다. 
+
+목록4-14 인터페이스를 구현하고 있는 ShoppingCart.cs 파일
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Web;
+
+namespace LanguageFeatures.Models
+{
+    public class ShoppingCart : IEnumerable<Product>
+    {
+        public List<Product> Products { get; set; }
+
+        public IEnumerator<Product> GetEnumerator()
+        {
+            return Products.GetEnumerator();
+        }
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
+}
+
+이제 목록 4-15처럼 기존의 확장 메서드를 변경해서 IEnumerable<Product> 인터페이스를 확장하도록 수정한다. 
+
+목록4-15 인터페이스를 대상으로 동작하는 MyExtensionMethods.cs 파일의 확장 메서드
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace LanguageFeatures.Models
+{
+    public static class MyExtensionMethods
+    {
+        public static decimal TotalPrices(this IEnumerable<Product> productEnum)
+        {
+            decimal total = 0;
+            foreach(Product prod in productEnum)
+            {
+                total += prod.Price;
+            }
+            return total;
+        }
+    }
+}
+
+이제는 확장 메서드의 첫 번째 매개변수 형식이 IEnumerable<Product> 로 변경됐기 때문에 메서드 본문의 foreach 반복문에서 Product 개체들을 직접 처리할 수 있다. 그리고 확장 메서드의 대상을 인터페이스로 변경함으로써 IEnumerable<Product> 인터페이스를 구현한 모든 형식들의 Products 개체들의 합계를 계산할수 있게 됐는데, 목록4-16에서 볼 수 있는 것처럼 그 대상에는 ShoppingCart의 인스턴스뿐만 아니라 Product 의 배열까지 포함된다. 
+
+
+목록4-16 인터페이스의 특정 구현에 확장 메서드를 적용하고 있는 HomeController.cs 파일
+public ViewResult UseExtensionEnumerable()
+        {
+            IEnumerable<Product> products = new ShoppingCart
+            {
+                Products = new List<Product>
+                {
+                    new Product{Name="Kayak", Price=275M},new Product{Name="Lifejacket", Price=48.95M},
+                    new Product{Name="Soccer ball", Price=19.50M}, new Product{Name="Corner flag", Price=34.95M}
+                }
+            };
+
+            //Product 개체들의 배열을 생성하고 데이터를 채워 넣는다. 
+            Product[] productArray =
+            {
+                new Product{Name="Kayak", Price=275M},new Product{Name="Lifejacket", Price=48.95M},
+                    new Product{Name="Soccer ball", Price=19.50M}, new Product{Name="Corner flag", Price=34.95M}
+            };
+
+            //카트에 존재하는 제품들의 합계를 구한다. 
+            decimal cartTotal = products.TotalPrices();
+            decimal arrayTotal = productArray.TotalPrices();
+
+            return View("Result", (object)String.Format("Cart Total: {0}, Array Total: {1}", cartTotal, arrayTotal));
+        }
+
+
+Note:
+C#의 배열이 IEnumerable<T> 인터페이스를 구현하고 있는 방식은 조금 특이하다. MSDN 문서 어디를 살펴봐도 배열이 이 인터페이스를 구현하고 있다는 정보는 찾아볼수 없을 것이다. 이 는 구 버전의 C# 코드를 정상적으로 컴파일하기 위해서 컴파일러에 의해 처리되고 지원되는 기능이다. 조금 이상하긴 하지만 사실이다. 이번 예제에서 배열 대신 다른 제네릭 컬렉션 클래스를 살펴볼 수도 있었지만 필자는 C# 명세의 숨겨진 일면에 관한 지식을 자랑하고 싶었다. 이또한 조금이상하긴 하지만 사실이다. 
+
+
+
+
+프로젝트를 실행하고 이 액션 메서드를 실행해보면 다음과 같은 결과를 얻을수 있는데, Product 개체들의 컬렉션을 생성하는 방식과는 무관하게 확장 메서드로부터 동일한 결과를 얻을 수 있다는 사실을 보여준다. 
+
+Cart Total: 378.40, Array Total: 378.40
+
+
+
+
+※ 필터링 확장 메서드 작성하기.
+확장 메서드에 관해서 마지막으로 살펴볼 내용은 확장 메서드를 개체들의 컬렉션을 필터링하는데 사용할수 있다는 점이다. 즉 IEnumerable<T> 형식에 대한 확장 메서드에서 yield 키워드를 이용해서 원본 데이터의 항목들에 특정 선택 기준을 적용한 다음, 선별된 결과물들의 모음을 다시 IEnumerable<T> 형식으로 반환할수 있다. 목록 4-17은 MyExtensionMethods 클래스에 추가된 이런 메서드의 한 가지 사례를 보여준다. 
+
+목록4-17 필터링 확장 메서드가 구현된 MyExtensionMethods.cs 파일
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace LanguageFeatures.Models
+{
+    public static class MyExtensionMethods
+    {
+        public static IEnumerable<Product> FilterByCategory(this IEnumerable<Product> productEnum, string categoryParam)
+        {
+            foreach(Product prod in productEnum)
+            {
+                if(prod.Category == categoryParam)
+                {
+                    yield return prod;
+                }
+            }
+        }
+    }
+}
+이 FilterByCategory 라는 이름의 확장 메서드는 메서드를 호출할 때 필터 조건을 주입할 수 있도록 추가적인 매개변수를 전달받고 있다. 그리고 Category 속성의 값이 이 매개변수와 일치하는 Product 개체들만 결과 IEnumerable<Product>를 통해서 반환하고 일치하지 않는 개체들은 무시한다. 목록 4-18은 이 확장 메서드를 사용한 사례를 보여준다. 
+
+목록4-18 필터링 확장 메서드를 사용하고 있는 HomeController.cs 파일
+ public ViewResult UseFilterExtensionMethod()
+        {
+            IEnumerable<Product> products = new ShoppingCart
+            {
+                Products = new List<Product>
+                {new Product { Name = "Kayak", Category = "Watersports", Price = 275M }, new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },
+                new Product() { Name = "Soccer ball", Category = "Soccer", Price = 19.50M }, new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+                }
+            };
+            decimal total = 0;
+            foreach(Product prod in products.FilterByCategory("Soccer"))
+            {
+                total += prod.Price;
+            }
+            return View("Result", (object)String.Format("Total: {0}", total));
+
+        }
+
+
+목록 4-18에서는 ShoppingCart를 대상으로 FilterByCategory 메서드를 호출해서 카테고리가 Soccer인 Product 개체들만 반환하고 있다. 프로젝트를 실행하고 UseFilterExtensionMethod 액션 메서드로 이동해보면 다음과 같은 결과를 확인할 수 있는데 이 값은 Soccer 제품들의 가격 합계다. 
+
+Total : 54.45
+
+
+
+
+※ 람다 식 사용하기
+방금 작성한 FilterByCategory 메서드는 델리게이트(Delegate)를 이용해서 보다 범용적으로 개선할 수 있다. 이 방법을 사용하면 각각의 Product 개체를 대상으로 델리게이트를 수행해서 자유롭게 원하는 방식으로 필터링을 적용할 수 있다. 목록 4-19는 이 방식으로 MyExtensionMethods 클래스에 작성한 확장 메서드를 보여준다. 
+
+목록4-19 델리게이트를 사용하는 MyExtensionMethods.cs 파일의 확장 메서드 
+public static IEnumerable<Product> Filter(this IEnumerable<Product> productEnum, Func<Product, bool> selectorParam)
+        {
+            foreach(Product prod in productEnum)
+            {
+                if (selectorParam(prod))
+                    yield return prod;
+            }
+        }
+
+
+목록 4-19 에서는 필터링 매개변수 형식으로 Func를 사용하고 있기 때문에 일일이 델리게이트 형식을 정의할 필요가 없다. 이 델리게이트는 Product 개체를 매개변수로 받아서 해당 Product 개체가 결과에 포함되어야 하는 경우 bool 형식 값인 true를 반환해준다. 그러나 정작 이 확장 메서드를 사용하는 코드는 목록4-20에 나타나 있는 Home 컨트롤러에 추가된 UseFilterExtensionMethod 액션 메서드에서 볼 수 있는 것처럼 다소 장황하다. 
+
+목록4-20 Func를 이용한 필터링 확장 메서드를 사용하고 있는 HomeController.cs 파일
+public ViewResult UseFilterExtensionMethod()
+        {
+            IEnumerable<Product> products = new ShoppingCart
+            {
+                Products = new List<Product>
+                {new Product { Name = "Kayak", Category = "Watersports", Price = 275M }, new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },
+                new Product() { Name = "Soccer ball", Category = "Soccer", Price = 19.50M }, new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+                }
+            };
+            Func<Product, bool> categoryFilter = delegate (Product prod) { return prod.Category == "Soccer"; };
+            decimal total = 0;
+            foreach(Product prod in products.Filter(categoryFilter))
+            {
+                total += prod.Price;
+            }
+            return View("Result", (object)String.Format("Total: {0}", total));
+
+        }
+
+이런 방식으로 코드를 작성하면 델리게이트로 지정한 임의의 기준을 적용해서 Product 개체를 필터링 할 수는 있지만 필요한 모든 기준마다 각각 Func 를 정의해야 하므로 별로 만족스러운 결과는 아니다. 조금 더 깔끔하게 개선된 코드를 작성하고 싶다면 델리게이트의 메서드 본문을 간결한 형태로 표현해주는 람다식(Lambda Expression)을 사용하면 된다. 목록4-21에서 볼 수 있는 것처럼 람다 식을 사용해서 액션 메서드의 델리게이트 정의를 개선할수 있다. 
+
+목록4-21 람다식을 이용해서 델리게이트 정의를 개선한 HomeController.cs 파일
+public ViewResult UseFilterExtensionMethod()
+        {
+            IEnumerable<Product> products = new ShoppingCart
+            {
+                Products = new List<Product>
+                {new Product { Name = "Kayak", Category = "Watersports", Price = 275M }, new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },
+                new Product() { Name = "Soccer ball", Category = "Soccer", Price = 19.50M }, new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+                }
+            };
+            Func<Product, bool> categoryFilter = prod => prod.Category == "Soccer"; <<람다식 변경
+            decimal total = 0;
+            foreach(Product prod in products.Filter(categoryFilter))
+            {
+                total += prod.Price;
+            }
+            return View("Result", (object)String.Format("Total: {0}", total));
+
+        }
+이 코드에서 람다식 변경이란 글씨로 표시된 부분이 바로 람다 식이다. 람다 식 매개변수는 형식 지정 없이 작성되고 자동으로 추론된다. 이때 => 문자는 이동(goes to)이라고 읽으며 매개변수를 람다식 의 결과와 연결시켜주는 역할을 한다. 이번 예제의 경우 prod라는 이름의 Product 매개변수는 prod의 Category 속성 값이 Soccer인 경우 true가 되는 bool 형식의 결과로 이동한다. 또한 목록 4-22에서 볼 수 있는 것처럼 Func 관련 구문 전체를 제거해서 보다 압축된 코드를 만들 수도 있다. 
+
+
+목록4-22 람다 식에서 Func를 제거한 HomeController.cs 파일
+public ViewResult UseFilterExtensionMethod()
+        {
+            IEnumerable<Product> products = new ShoppingCart
+            {
+                Products = new List<Product>
+                {new Product { Name = "Kayak", Category = "Watersports", Price = 275M }, new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },
+                new Product() { Name = "Soccer ball", Category = "Soccer", Price = 19.50M }, new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+                }
+            };            
+            decimal total = 0;
+            foreach(Product prod in products.Filter(prod => prod.Category == "Soccer")) <<변경 Filter메서드에 바로람다로 넘김
+            {
+                total += prod.Price;
+            }
+            return View("Result", (object)String.Format("Total: {0}", total));
+
+        }
+	
+
+목록 4-22 에서는 Filter 메서드의 매개변수로 람다 식을 전달하고 있다. 이 방법을 사용하면 적용하려는 필터를 멋지고 자연스럽게 표현할 수 있다. 게다가 람다 식의 결과 부분을 확장해서 목록4-23에서 볼 수 있는 것처럼 다중 필터 조건을 결합시킬 수도 있다. 
+
+목록4-23 람다 식으로 표현된 필터링을 확장하고 있는 HomeController.cs 파일
+
+ public ViewResult UseFilterExtensionMethod()
+        {
+            IEnumerable<Product> products = new ShoppingCart
+            {
+                Products = new List<Product>
+                {new Product { Name = "Kayak", Category = "Watersports", Price = 275M }, new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },
+                new Product() { Name = "Soccer ball", Category = "Soccer", Price = 19.50M }, new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+                }
+            };            
+            decimal total = 0;
+            foreach(Product prod in products.Filter(prod => prod.Category == "Soccer" || prod.Price > 20)) <<Price도 필터의 조건으로 설정
+            {
+                total += prod.Price;
+            }
+            return View("Result", (object)String.Format("Total: {0}", total));
+
+        }
+이 수정된 람다식은 Category 속성값이 Soccer이거나 Price 속성 값이 20보다 큰 Product 개체들과 일치한다. 
+
+
+
+※ 다른 형태의 람다 식
+델리게이트 로직을 반드시 람다 식으로 표현해야 할 필요는 없다. 다음처럼 간단히 메서드로 호출할 수도 있다. 
+
+prod => EvaluateProduct(prod)
+
+여러 개의 매개변수를 갖고 있는 델리게이트를 람다 식으로 표현하려면 다음과 같이 매개변수들을 괄호로 감싸야 한다. 
+
+(prod, count) => prod.Price > 20 && count > 0
+
+마지막으로 하나 이상의 구문이 필요한 람다 식 로직이 필요하다면 다음과 같이 중괄호 ( { } ) 를 사용할수 있으며 구문의 마지막 부분에 return 구문을 사용하면 된다. 
+
+(prod, count) => 
+{
+	//다중 코드 구문
+	return result;
+}
+
+코드를 작성할 때 반드시 람다 식을 사용해야만 하는 것은 아니지만, 람다 식은 복잡한 기능을 깔끔한 방식으로 간결하게 표현할 수 있게 해주고, 코드를 읽기 쉽고 명확하게 만들어준다. 필자는 람다식을 아주 좋아한다. 이 책의 곳곳에서 람다 식이 사용되는 것을 볼 수 있을 것이다. 
+
+
+
+※ 자동 형식 추론 사용하기
+목록4-24에서 볼 수 있는 것처럼 C#의 var 키워드를 사용하면 명시적으로 변수의 형식을 지정하지 않고도 지역변수를 선언할 수 있다. 이 기능을 형식 추론(Type Inference)또는 암시적 형식(Implicit Typing)이라고 한다. 
+
+목록4-24 형식 추론 사용하기
+...
+var myVariable = new Product {Name="Kayak", Category="Watersports", Price=275M};
+
+string name = myVariable.Name; //정상
+int count = myVariable.Count; //컴파일러 오류 발생
+...
+
+그러나 myVariable 변수에 형식이 없는 것은 아니다. 단지 컴파일러에 코드를 분석해서 형식을 추론하도록 지시하는 것일 뿐이다. 목록4-24의 가장 마지막 구문을 살펴보면 컴파일러가 추론된 클래스에(이 예제에서는 Product 클래스에)존재하는 멤버에 대한 호출만 허용한다는 것을 알 수 있다. 
+
+
+
+
+※ 익명 형식 사용하기
+개체 이니셜라이저와 형식 추론을 조합해서 사용하면 클래스나 구조체를 정의하지 않고도 간단한 데이터 저장 개체를 생성할 수 있다. 목록 4-25는 그 사례를 보여주고 있다. 
+
+목록4-25 익명 형식 작성하기
+...
+var myAnonType = new {
+Name ="MVC", Category="Pattern"
+};
+...
+
+목록 4-25의 myAnonType이 바로 익명 형식의 개체다. 그러나 익명 형식 개체는 JavaScript의 변수 같은 동적 개체와는 다르다. 단지 컴파일러에 의해서 자동으로 형식 정의가 이루어지는 것일 뿐이며, 여전히 강력한 형식이 강제적으로 적용된다. 단적으로 이니셜라이저에 의해서 정의된 속성들만 값을 얻거나 설정할 수 있는 것이다. 
+
+C# 컴파일러는 이니셜라이저의 매개변수 이름과 형식을 근거로 클래스를 생성한다. 같은 속성 이름과 형식을 갖고 있는 두 개의 익명 형식은 자동으로 생성된 동일한 클래스에 할당된다. 결국 이 얘기는 익명 형식 개체에 대한 배열을 생성할 수도 있다는 뜻으로, 목록 4-26은 Home컨트롤러에 추가한 CreateAnonArray 액션 메서드에 적용된 사례를 보여주고 있다. 
+
+목록4-26 익명 형식 개체의 배열을 생성하고있는 HomeController.cs 파일
+using System.Text;
+
+public ViewResult CreateAnonArray()
+        {
+            var oddsAndEnds = new[]
+            {
+                new { Name="MVC", Category="Pattern"}, new {Name="Hat", Category="Clothing" }, new {Name="Apple", Category="Fruit"}
+            };
+
+            StringBuilder result = new StringBuilder();
+            foreach(var item in oddsAndEnds)
+            {
+                result.Append(item.Name).Append(" ");
+            }
+            return View("Result", (object)result.ToString());
+        }
+
+목록 4-26에서 배열 변수를 선언하면서 var 키워드를 사용하고 있다는 점에 주목하기 바란다. 일반적인 배열을 선언할 때와는 달리 지정할 구체적인 형식이 존재하지 않기 때문에 반드시 이 키워드를 사용해야만 한다. 이 개체들에 대해 어떠한 클래스 정의도 작성하지 않앗지만 반복문을 통해서 배열에 저장된 개체들에 접근할 수도 있고 해당 개체들 각각의 Name 속성 값을 읽어올 수도 있다. 이 기능은 매우 중요한데, 만약 이 기능이 지원되지 않았다면 익명 형식 개체들의 배열을 작성할수 없었을 것이기 때문이다. 또는 어떻게든 배열은 만들수 있었다 치더라도, 그 배열로 어떠한 유용한 작업도 할수 없었을 것이다. 예제를 실행한 다음, 액션 메서드를 실행해보면 다음과 같은 결과를 확인할 수 있을 것이다. 
+
+MVC Hat Apple	
