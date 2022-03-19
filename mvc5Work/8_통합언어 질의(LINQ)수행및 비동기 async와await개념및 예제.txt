@@ -1,0 +1,333 @@
+※ 통합 언어 질의(LINQ)수행하기
+
+지금까지 살펴본 모든 기능들은 사실상 LINQ를 준비하기 위한 것이다. 필자는 LINQ를 사랑한다. LINQ는 .NET에 멋지면서도 묘한 매력을 더해준다. 만약 지금까지 LINQ를 사용해본 적이 없다면 멋진 기회를 놓쳐온 것이다. LINQ는 클래스에 존재하는 데이터를 질의하기 위한 SQL과 유사한 구문이다. 가령 Product 개체들을 담고 있는 임의의 컬렉션에서 가격이 높은 순서대로 세 개의 제품을 찾아서 그 이름과 가격을 View 메서드에 전달해야 한다고 가정해보자. LINQ 를 사용하지 않는다면 목록4-27과 비슷한 코드를 작성해야 할 것이다. 이 코드는 Home 컨트롤에 추가한 FindProducts 액션 메서드의 내용이다. 
+
+
+목록4-27 LINQ를 사용하지 않고 질의를 수행하는 HomeController.cs 파일의 FindProducts 액션 메서드
+public ViewResult FindProducts()
+        {
+            Product[] products = { new Product { Name = "Kayak", Category = "Watersports", Price = 275M } ,
+                new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },new Product { Name = "Soccer ball", Category = "Soccer", Price = 19.50M },
+                new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+             };
+
+            //결과를 담아둘 배열을 정의한다. 
+            Product[] foundProducts = new Product[3];
+
+            //배열의 내용을 정렬한다. 
+            Array.Sort(products, (item1, item2) =>
+            {
+                return Comparer<decimal>.Default.Compare(item1.Price, item2.Price);
+            });
+
+            //배열에서 첫 번째 세 개의 항목들을 결과로 얻는다. 
+
+            Array.Copy(products, foundProducts, 3);
+
+            //결과를 작성한다
+            StringBuilder result = new StringBuilder();
+            foreach (Product p in foundProducts)
+            {
+                result.AppendFormat("Price: {0} ", p.Price);
+            }
+            return View("Result", (object)result.ToString());
+        }
+
+반면 LINQ를 사용하면 목록4-28에서 볼 수 있는 것처럼 확실하게 질의 과정을 단순화시킬수 있다. 
+	
+목록4-28 LINQ를 사용해서 질의를 수행하도록 변경된 HomeController.cs 파일의 FindProducts 액션 메서드
+public ViewResult FindProducts()
+        {
+            Product[] products = { new Product { Name = "Kayak", Category = "Watersports", Price = 275M } ,
+                new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },new Product { Name = "Soccer ball", Category = "Soccer", Price = 19.50M },
+                new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+             };
+
+            //결과를 담아둘 배열을 정의한다. 
+            var foundProducts = from match in products
+                                orderby match.Price descending
+                                select new { match.Name, match.Price };   //LINQ사용 변경
+
+
+
+
+            //결과를 작성한다
+            int count = 0;
+            StringBuilder result = new StringBuilder();
+            foreach (var p in foundProducts)
+            {
+                result.AppendFormat("Price: {0} ", p.Price);
+                if (++count == 3)
+                    break;
+            }
+            return View("Result", (object)result.ToString());
+        }
+
+게다가 이 방식이 훨씬 더 깔끔하다. 목록 4-28에서 굵은 글씨로 강조된 SQL문과 비슷한 질의를 볼 수 있는데 이 질의는 먼저 Product 개체들을 Price 속성값을 기준으로 역순으로 정렬한 다음, select 키워드를 사용해서 Name 속성과 Price 속성만 익명 형식에 담아서 반환한다. 이런 스타일의 LINQ 코드를 질의 구문(Query Syntax)이라고 부르며, 아마도 이제 막 LINQ를 사용하기 시작한 개발자들에게는 가장 친숙한 형태일 것이다. 이 질의의 멋진 점은 원본 질의에 사용된 배열에 존재하는 모든 Product 개체들마다 각각 하나씩 익명 형식을 반환해주므로 단지 그결과를 이용해서 처음 세 개의 제품을 얻고 정보를 출력하기만 하면 된다는 사실이다. 
+
+반면 질의 구문의 간결함을 포기하는 대신 LINQ의 강력한 기능들을 더 많이 사용할 수도 있다. 확장 메서드를 기반으로 하는 마침표 기법(Dot Notation)구문을 사용하는 것이다. 목록 4-29는 마침표 표기법 구문을 사용해서 Product 개체들을 질의하는 방법을 보여주고 있다. 
+
+
+목록4-29 마침표 표기법 방식으로 LINQ를 사용하고있는 HomeController.cs 파일
+public ViewResult FindProducts()
+        {
+            Product[] products = { new Product { Name = "Kayak", Category = "Watersports", Price = 275M } ,
+                new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },new Product { Name = "Soccer ball", Category = "Soccer", Price = 19.50M },
+                new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+             };
+
+            //결과를 담아둘 배열을 정의한다. 
+            var foundProducts = products.OrderByDescending(e => e.Price).Take(3).Select(e => new { e.Name, e.Price });
+
+
+
+
+            //결과를 작성한다            
+            StringBuilder result = new StringBuilder();
+            foreach (var p in foundProducts)
+            {
+                result.AppendFormat("Price: {0} ", p.Price);
+                
+            }
+            return View("Result", (object)result.ToString());
+        }
+
+이 코드에서 굵게 강조된 LINQ 질의는 질의 구문으로 작성된 LINQ 질의만큼 멋져 보이지는 않는다. 그러나 모든 LINQ의 기능들이 그에 대응하는 C# 키워드를 갖고 있는 것은 아니다. 따라서 본격적인 LINQ 쿼리를 작성하려면 이런 확장 메서드들을 사용할 수 있어야 한다. 목록 4-29에 사용된 LINQ의 확장 메서드들은 IEnumerable<T>에 적용되어 다시 IEnumerable<T>를 반환하므로 이 메서드들을 반복적으로 섞어서 사용함으로써 복잡한 형태의 질으를 작성할 수 있다. 
+
+
+NOTE:
+모든 LINQ 확장 메서드들은 System.Linq 네임스페이스에 존재하므로 질의를 작성하려면 먼저 using 구문을 사용해서 현재 영역에 이 네임스페이스를 추가해야 한다. 컨트롤러 클래스에는 Visual Studio가 자동으로 System.Linq 네임스페이스를 추가해주지만 MVC 프로젝트의 다른 곳에서는 이 네임스페이스를 직접 추가해야 할 것이다. 
+
+이 예제에 사용된 OrderByDescending 메서드는 원본 데이터의 항목들을 재정렬해주는 역할을 한다. 목록4-29에서는 이 메서드에 람다식을 지정해서 비교에 사용될 값들을 얻어내고 있다. Take 메서드는 반환된 결과의 맨 앞에서부터 지정된 개수만큼 항목들을 반환해준다. (바로 이 작업이 질의 구문을 통해서는 수행할수 없는 작업이다)마지막으로 Select 메서드는 원하는 구조로 결과를 반환할수 있게 해준다. 이번 예제에서는 Name 속성과 Price 속성만 담고 있는 익명 개체를 반환하고 있다. 
+
+
+TIP:
+반환되는 익명 형식이 담고 있는 속성들의 이름을 직접 지정할 필요가 없다는 점에 주목하기 바란다. C#이 자동으로 Select 메서드에 지정된 속성들로부터 그 이름을 추론해내기 때문이다. 
+
+
+
+표4-2에 주로 사용되는 LINQ 확장 메서드들이 정리되어 있다. 이 책에서는 LINQ를 빈번하게 사용하고 있으므로 예전에 사용해보지 않은 확장 메서드를 접했을 때 이표를 이용해서 관련 정보를 편리하게 찾아볼 수 있을 것이다. 표4-2에 나타나 있는 모든 LINQ메서드들은 IEnumerable<T>를 대상으로 동작한다. 
+
+표4-2 유용한 LINQ 확장 메서드
+
+확장메서드					설명													지연 여부
+All						데이터 소스의 모든 항목이 지정한 조건과 일치하면 true를 반환 한다. 			No
+
+Any						데이터 소스의 항목 중 하나라도 지정한 조건과 일치하면, true를 반환한다. 		No
+
+Contains					데이터 소스에 지정한 항목이나 값이 존재하면 true를 반환한다. 				No
+
+Count						데이터 소스에 존재하는 항목의 개수를 반환한다. 						No
+
+First						데이터 소스의 첫 번째 항목을 반환한다. 							No
+
+FirstOrDefault				데이터 소스의 첫 번쨰 항목을 반환한다. 만약 항목이 하나도 존재하지 않으면 
+						기본 값을 반환한다. 										No
+
+Last						데이터 소스의 마지막 항목을 반환한다. 							No
+
+LastOrDefault				데이터 소스의 마지막 항목을 반환한다. 만약 항목이 하나도 존재하지 않으면
+						기본값을 반환한다. 										No
+
+Max Min					람다 식에 의해 지정된 최댓값 또는 최솟값을 반환한다. 					No
+
+OrderBy OrderByDescending		람다 식에 의해 반환된 값을 기준으로 데이터 소스를 정렬한다. 				Yes
+
+Reverse					데이터 소스에 존재하는 항목들의 순서를 뒤집는다. 						Yes
+
+Select						질의의 결과를 투영한다. 										Yes
+
+SelectMany					각각의 데이터 항목을 항목들의 시퀀스로 투영한 다음, 그 결과 시퀀스들을 연결해서
+						단일 시퀀으로 평면화시킨다.									Yes
+
+Single						데이터 소스에서 첫 번째 항목을 반환한다. 만약 항목이 하나 이상 존재하면 예외를
+						던진다.												No
+
+SingleOrDefault				데이터 소스에서 첫 번째 항목을 반환한다. 만약 항목이 하나도 존재하지 않으면 기본 
+						값을 반환하고 하나 이상 존재하면 예외를 던진다.						No
+
+Skip SkipWhile				지정한 개수만큼 항목을 건너뛰거나 지정한 조건이 일치하는 항목을 건너뛴다.		Yes
+
+Sum						지정한 조건에 의해 선택된 값들의 합계를 계산한다. 						No
+
+Take						데이터 소스의 시작에서부터 지정한 개수의 항목을 선택하거나 지정한
+TakeWhile					조건이 일치하는 항목들을 선택한다. 								Yes
+
+ToArray					데이터 소스를 배열이나 다른 컬렉션 형식으로 변환한다. 					No
+ToDictionary ToList			
+
+Where					데이터 소스에서 지정한 조건과 일치하지 않는 항목들을 필터링한다. 			Yes
+
+
+
+※ 지연된 LINQ 질의 이해하기
+표4-2를 살펴보면 지연 여부 라는 하옴ㄱ이 존재하는 것을 확인할 수 있다. 이 항목의 값에 따라 LINQ 질의에서 확장 메서드가 실행되는 방식에 재미있는 변화가 발생한다. 목록 4-30은 간단하게 변경된 FindProducts 액션 메서드를 보여주고 있는데, 이 예제처럼 지연되는 메서드들로만 구성된 질의는 결과의 항목들이 열거되기 전까지는 실행되지 않는다. 
+
+목록 4-30 지연되는 LINQ 확장 메서드들로 구성된 질의를 사용하고 있는 HomeController.cs 파일
+
+public ViewResult FindProducts()
+        {
+            Product[] products = { new Product { Name = "Kayak", Category = "Watersports", Price = 275M } ,
+                new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },new Product { Name = "Soccer ball", Category = "Soccer", Price = 19.50M },
+                new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+             };
+
+            //결과를 담아둘 배열을 정의한다. 
+            var foundProducts = products.OrderByDescending(e => e.Price).Take(3).Select(e => new { e.Name, e.Price });
+
+            products[2] = new Product { Name = "Stadim", Price = 7960M };     //추가된 소스코드
+
+
+
+            //결과를 작성한다            
+            StringBuilder result = new StringBuilder();
+            foreach (var p in foundProducts)
+            {
+                result.AppendFormat("Price: {0} ", p.Price);
+                
+            }
+            return View("Result", (object)result.ToString());
+        }
+
+
+이 코드에서는 LINQ질의를 정의하고 그 결과를 열거하는 중간에 제품 배열의 항목들 중 한 항목을 변경하고 있다. 이 예제의 출력은 다음과 같다. 
+
+Price : 79600 Price: 275 Price: 48.95
+
+결과를 살펴보면 결과가 열거되기 전까지 질의가 평가되지 않았으며, Product 배열의 한 항목을 Stadim으로 대체한 변경 내용이 정상적으로 출력에 반영되고 있다는 점을 확인할수 있다. 
+
+
+TIP:
+지연되는 LINQ 확장 메서드로부터 발생하는 한 가지 흥미로운 특징은 결과가 열거될 때마다 매번 처음부터 다시 질의가 수행되기 때문에 변경된 소스 데이터에 대한 질의를 수행해서 반복적으로 소스 데이터의 현재 상태가 반영된 결과를 얻을수 있다는 점이다. 
+
+반면 지연되지 않는 확장 메서드들 중 한 가지를 사용하면 LINQ 질의가 그 즉시 수행된다. 목록4-31은 Home 컨트롤러에 추가된 SumProducts 액션 메서드를 보여준다. 
+
+목록4-31. 즉시 수행되는 LINQ질의를 보여주는 HomeController.cs 파일
+
+public ViewResult FindProducts()
+        {
+            Product[] products = { new Product { Name = "Kayak", Category = "Watersports", Price = 275M } ,
+                new Product { Name = "Lifejacket", Category = "Watersports", Price = 48.95M },new Product { Name = "Soccer ball", Category = "Soccer", Price = 19.50M },
+                new Product { Name = "Corner flag", Category = "Soccer", Price = 34.95M }
+             };
+
+            //결과를 담아둘 배열을 정의한다. 
+            var foundProducts = products.OrderByDescending(e => e.Price).Take(3).Select(e => new { e.Name, e.Price });
+
+            var results = products.Sum(e => e.Price); // Product의 모든 Price의 값을 더한다. 추가된 소스코드
+
+       	    products[2] = new Product { Name = "Stadim", Price = 7960M };  //추가되었던 소스 코드
+
+
+            //결과를 작성한다            
+            StringBuilder result = new StringBuilder();
+            foreach (var p in foundProducts)
+            {
+                result.AppendFormat("Price: {0} ", p.Price);
+                
+            }
+            return View("Result", (object)result.ToString());
+        }
+이 예제는 지연되지 않는 Sum 메서드를 사용하고 있으며 다음과 같은 결과를 만들어 낸다. 
+
+Sum: $378.40
+
+대단히 높은 가격을 갖고 있는 Stadiem항목이 결과에 포함되지 않았다는 점을 확인할 수 있는데 그 이유는 Sum 메서드로부터 얻어지는 결과가 실제로 사용될 때까지 지연되는 것이 아니라 이 메서드가 실행되자마자 평가되기 때문이다. 
+
+
+※ 비동기 메서드 사용하기
+최근에 추가된 C#의 주요 변경사항들 중 하나는 비동기 메서드의 처리 방식이 개선된 것이다. 비동기 메서드는 백그라운드에서 조용히 작업을 수행하다가 작업이 완료됐을 때 이를 통보해 주므로 백그라운드 작업이 실행되는 동안 코드가 다른 업무를 처리할 수 있다. 비동기 메서드는 코드의 병목 현상을 제거할수 있는 중요한 도구로서 응용프로그램이 작업을 병렬로 수행해서 다중 프로세서 및 프로세서코어들을 활용할수 있게 해준다. 
+
+C#과 .NET은 비동기 메서드를 훌륭하게 지원해주지만 코드가 장황해지는 경향이 있고 특이한 구문으로 인해서 병렬 프로그래밍에 익숙하지 않은 개발자들이 혼란에 빠지는 경우도 종종 발생한다. 예를 들어 목록 4-32는 MyAsyncMethods라는 클래스에 정의된 GetPageLength라는 비동기 메서드를 보여주는데, 이 클래스는 Models 폴더에 추가된 MyAsyncMethods.cs 라는 파일에 정의되어 있다. 
+
+목록4-32. 간단한 비동기 메서드를 정의하고 있는 MyAsyncMethods.cs 파일
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Net.Http;
+using System.Threading.Tasks;
+namespace LanguageFeatures.Models
+{
+    public class MyAsyncMethods
+    {
+        public static Task<long?> GetPageLength()
+        {
+            HttpClient client = new HttpClient();
+
+            var httpTask = client.GetAsync("http://apress.com");
+
+            //HTTP 요청이 완료기를 기다리는 동안 
+            //여기에서 다른 작업들을 처리할 수 있다. 
+		//하단 아래가 혼란을 가져올수 있는 코드
+            return httpTask.ContinueWith((Task<HttpResponseMessage> antecedent) =>
+            {
+                return antecedent.Result.Content.Headers.ContentLength;
+            });
+        }
+    }
+}
+
+
+주의 : 
+이번 예제는 이번 장의 시작 부분에서 프로젝트에 추가했던 System.Net.Http 어셈블리를 필요로 한다. 
+
+이 목록4-32의 간단한 메서드는 System.Net.Http.HttpClient 개체를 이용해서 Apress홈 페이지의 내용을 요청한 다음 그 길이를 반환해준다. 이 메서드의 코드에서 혼란을 가져오기 쉬운 부분을 굵은 글씨로 표시해놨는데 이 부분은 연속 작업(Task Continuation)의 한 사례를 보여주고 있다. 
+
+.NET은 비동기적으로 수행되는 작업을 Task 형식으로 나타낸다. Task 개체는 백그라운드 작업이 만들어내는 결과에 기반한 강력한 형식이다. 따라서 이번 예제에서 HttpClient.GetAsync 메서드를 호출하면 그 결과로 Task<HttpResponseMessage> 형식이 반환된다. 이 결과는 요청이 백그라운드로 실행될 것이며, 요청의 결과는 HttpResponseMessage 개체가 될 것이라는 사실을 말해준다. 
+
+
+TIP:
+이번 절에서는 MVC에 중요한 핵심사항에 보다 집중하기 위해서 백그라운드 같은 단어들을 언급할 때 많은 세부사항들을 설명 없이 지나치고 있다. 비동기 메서드와 병렬 프로그래밍에 대한 .NET 지원은 대체적으로 훌륭한 편이다. 만약 멀티 코어나 멀티 프로세서 하드웨어의 이점을 활용할 수 있는 진정한 고성능 응용프로그램을 개발하고 싶다면 이 주제에 관해서 더 자세하게 살펴보기를 권한다.MVC의 비동기 메서드들에 관해서는 19장에서 다시 살펴본다. 
+
+
+대부분의 프로그래머들이 혼란을 겪는 부분은 백그라운드 작업이 완료되었을 때 수행할 작업을 지정하기 위한 매커니즘인 연속(Continuation)을 구현하는 부분이다. 가령 이번 예제에서는 ContinueWith 메서드에 Apress 웹 서버에서 가져온 내용의 길이에 대한 속성 값을 반환하는 람다 식을 전달해서 HttpClient.GetAsync 메서드가 반환한 HttpResponseMessage 개체를 처리하고 있다. 이때 return 키워드가 두번 사용되고 있다는 점에 주목하기 바란다. 
+
+return httpTask.ContinueWith((Task<HttpResponseMessage> antecedent) =>
+            {
+                return antecedent.Result.Content.Headers.ContentLength;
+            });
+
+바로 이 부분이 머리를 복잡하게 만드는 부분이다. 처음 사용된 return 키워드는 Task<HttpResponseMessage> 개체를 반환하고 있음을 명시하고 있는데, 이 개체는 작업이 완료 됐을 때 ContentLength 헤더에 담겨 있는 길이를 반환해주게 된다. 이 ContentLength 헤더는 long? 형식의 결과 (Nullable long 값)를 반환하므로, GetPageLength 메서드는 다음과 같이 다시 Task<long?> 형식의 결과를 반환하게 된다. 
+
+...
+public static Task<long?> GetPageLength()
+{
+..
+}
+잘 이해가 되지 않더라도 너무 걱정할 필요는 없다. 왜냐하면 여러분만 혼란스러운 것이 아니기 때문이다. 그나마 이번 예제는 간단한 편에 속한다. 더 복잡한 비동기 작업에서는 ContinueWith 메서드를 이용해서 많은 작업들을 함께 연결하는 경우도 많아서, 읽기도 어렵고 관리하기도 어려운 코드가 만들어지게 된다. 
+
+
+
+※ async 키워드와 await 키워드 적용하기
+Microsoft는 HttpClient.getAsync 같은 비동기 메서드들을 간단하게 사용할수 있도록 도와주기 위한 두 가지 특화된 키워드를 C#에 도입했다. async키워드와 await 키워드가 바로 그것으로 목록 4-33의 예제 메서드를 살펴보면 이 키워드들을 얼마나 간단하게 사용하고 있는지 실감할수 있다. 
+
+목록4-33 async키워드와 await키워드를 사용하고 있는 MyAsyncMethods.cs 파일
+public async static Task<long?> GetPageLength()
+        {
+            HttpClient client = new HttpClient();
+
+            var httpMessage = await client.GetAsync("http://apress.com");
+
+            //HTTP 요청이 완료기를 기다리는 동안 
+            //여기에서 다른 작업들을 처리할 수 있다. 
+
+            return httpMessage.Content.Headers.ContentLength;
+        }
+
+이 메서드에서는 GetAsync 비동기 메서드를 호출하면서 await 키워드를 사용하고 있다. 이는 GetAsync 메서드가 반환해주는 Task의 결과를 대기하는 한편 계속해서 메서드 내의 나머지 구문들을 실행하도록 C# 컴파일러에 지시한다. 
+
+이런 방식으로 await 키워드를 적용하면 GetAsync 메서드의 결과를 마치 일반적인 메서드에서 반환된 결과처럼 다룰 수 있고, 메서드에서 반환된 HttpResponseMessage개체를 바로 변수에 할당할 수도 있다. 또한 일반적인 코드처럼 return 키워드를 사용해서 다른 메서드로부터 얻어진 결과, 즉 이번 예제의 경우에는 ContentLength 속성 값을 반환할수도 있다. 이 기법을 사용하면 코드가 보다 자연스러워지고, ContinueWith 메서드나 반복적인 return 키워드에 사용에 대해서 걱정할 필요도 없다. 
+
+이번 에제에서 볼 수 있는 것처럼 await 키워드를 사용하는 경우에는 반드시 async 키워드를 메서드 시그니처에 추가해줘야 한다. 메서드 의 반환 형식은 변경할 필요가 없는데 가령 GetPageLength 예제 메서드는 여전히 Task<long?> 형식을 반환하고 있다. 그 이유는 await 키워드와 async 키워드가 몇 가지 멋진 컴파일러 트릭을 이용해서 구현되었으며, 보다 자연스러운 구문을 사용할 수 있게 지원해주기는 하지만, 적용된 메서드 내부에서 벌어지는 근본적인 작업 자체까지 바뀌지는 않기 때문이다. 여전히 백그라운드 작업에서는 Nullable long 형식의 결과를 만들어내기 때문에 GetPageLength 메서드를 호출하는 그 누군가도 여전히 Task<long?>형식의 결과를 처리해야만 한다. 물론 그 프로그래머 역시 await 키워드와 async 키워드를 사용할지 선택할 수 있기는 하지만 말이다. 
+
+
+Note:
+이번 절에서는 async 키워드와 await 키워드를 테스트할수 있는 MVC 예제를 제공하지는 않는다. MVC 컨트롤러에서 비동기 메서드를 사용하기 위해서는 특별한 기법이 필요하고, 19장에서 이 기법을 소개하기 전에 먼저 살펴봐야 할 수 많은 다른 정보들이 존재하기 때문이다. 
+
+
+
+※ 요약:
+이번 장에서는 유능한 MVC 프로그래머라면 알고 있어야 할 핵심적인 C# 언어의 기능들을 간략하게 살펴봤다. 이 기능들은 서로 어우러져 LINQ에서 사용되는데 LINQ는 이 책 전반에서 데이터 질의를 위해 사용된다. 이미 언급했던 것처럼 필자는 LINQ의 열렬한 팬으로 LINQ는 MVC 응용프로그램에서 중요한 역할을 수행한다. 그리고 비동기 메서드를 이용한 작업을 보다 손쉽게 만들어주는 async 키워드와 await 키워드도 살펴봤다. 이 키워드들에 관해서는 19장에서 MVC 컨트롤러에 비동기 프로그래밍을 통합하기 위한 고급 기법을 살펴보면서 다 시 살펴볼 것이다.
+
+다음 장에서는 뷰에 전달된 동적 데이터를 처리해주는 메커니즘인 Razor 뷰 엔진에 관해서 살펴보도록 하자. 
