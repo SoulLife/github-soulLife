@@ -1,0 +1,115 @@
+※ 함수의 종류
+함수는 크게 기본 제공 함수와 사용자 정의 함수로 나눌 수 있다. 또 사용자 정의 함수는 스칼라 함수와 테이블 반환 함수로 분리할 수 있다. 
+
+(1) 기본 제공 함수
+6장에서 이미 살펴보았으므로 이 장에서는 언급하지 않겠다. SQL Server가 제공해주는 시스템 함수를 주로 말한다. 상세한 내용은 SQL Server 2012도움말을 살펴보거나 또는 SSMS의 개체 탐색기에서 확인할 수 있다. 
+
+해당db명 > 프로그래밍 기능 > 함수 안에 있음 
+
+
+(2) 사용자 정의 스칼라 함수
+RETURN 문에 의해서 하나의 단일값을 돌려주는 함수를 스칼라 함수라고 한다. 6장에서 사용해본 시스템 함수들도 대부분 스칼라 함수였다. 예를 들면 SUM() 함수는 전체를 합한 하나의 값만을 돌려준다. 하지만 시스템 함수에 모든 것이 있지는 않으므로 직접 사용자 정의 스칼라 함수를 만들어서 사용할 수 있다. 잠시 후 <실습7>에서 확인해 보자. 
+
+* 스칼라 함수가 돌려주는 값의 데이터 형식은 text, ntext, image, cursor, timestamp를 제외한 모든 데이터 형식이 가능하다. 
+
+
+
+(3)사용자 정의 테이블 반환 함수
+그냥 테이블 함수라고도 부른다. 반환하는 값(=RETURN 값)이 하나의 값이 아닌 테이블인 함수를 말한다. 종류로는 인라인 테이블 반환 함수(Inline Table-valued Function)와 다중 문 테이블 반환 함수(Multistatement Table-valued Function)두 가지가 있다. 
+
+
+※ 인라인 테이블 반환 함수
+간단히 테이블을 돌려주는 함수이며, 매개 변수가 있는 뷰와 비슷한 역할을 한다. 인라인 테이블 반환함수에는 별도의 내용이 없으며 단지 SELECT 문만 사용되어 그 결과 집합을 돌려줄 뿐이다. 쉽게 다음과 같은 형식으로 생각하면 된다. 
+
+CREATE FUNCTION 함수이름(매개 변수)
+	RETURNS TABLE
+AS
+	RETURN (
+		단일 SELECT 문장;
+	)
+GO
+
+인라인 테이블 반환 함수는 뷰와 같은 역할을 하게 된다. 즉 앞에서 SELECT 문장의 결과를 테이블에 반환하게 되는 것이다. 
+
+
+※ 다중 문 테이블 반환 함수
+다중 문 테이블 반환 함수의 내용에는 BEGIN ... END 로 정의되며, 그 내부에 일련의 T-SQL을 이용해서 반환될 테이블에 행 값을 Insert하는 형식을 가진다. 이것도 다음과 같은 형식으로 기억해두면 된다. 
+
+
+CREATE FUNCTION 함수이름(매개 변수)
+	RETURN @테이블변수 TABLE
+		(열 이름과 데이터 형식 정의...)
+AS
+	BEGIN
+		위(헤더)에서 정의한 테이블변수에 행을 INSERT 시키는 작업들 ...
+		RETURN;
+	END
+
+
+실습6: 테이블 함수를 사용해 보자. 
+1. 인라인 테이블 반환 함수를 정의해 보자. 
+1-1 입력한 값보다 키가 큰 사용자들을 돌려주는 함수를 정의하자. 
+
+USE sqlDB;
+GO
+CREATE FUNCTION ufn_getUser(@ht INT)
+	RETURNS TABLE
+AS
+	RETURN (
+		SELECT userID as [아이디], name AS [이름], height as [키] FROM userTbl WHERE height > @ht
+	)
+GO
+
+인라인 테이블 반환 함수는 뷰(View)와 거의 같은 목적으로 사용될 수 있다. 
+
+1-2 177 이상인 사용자를 함수를 이용해서 호출해 보자. 
+SELECT * FROM dbo.ufn_getUser(177);
+
+
+2. 다중문 테이블 반환 함수를 사용해 보자. 고객 등급을 분류했던 <실습 1>의 2-3에서 생성한 저장 프로시저 usp_while 과 비슷한 기능을 하는 함수를 생성해 보자. 
+
+2-1 정수값을 매개변수로 받고 매개 변수보다 출생년도가 이후인 고객들만 등급을 분류하는 함수를 만들어 보자. 그런데 만약 입력한 매개 변수 이후에 태어난 고객이 없다면 없음 이라는 행 값을 반환하자. 
+CREATE FUNCTION ufn_userGrade(@bYear INT)
+--리턴할 테이블의 정의(@retTable은 BEGIN...END에서 사용될 테이블 변수임)
+	RETURNS @retTable TABLE
+		(userID char(8), name nchar(10), grade nchar(5) )
+AS
+BEGIN
+	DECLARE @rowCnt INT;
+	--행의 개수를 카운트
+	SELECT @rowCnt = COUNT(*) FROM userTbl WHERE birthYear >= @bYear;
+
+	--행이 하나도 없으면 없음 이라고 입력하고 테이블을 리턴함
+	IF @rowCnt <= 0
+	BEGIN
+		INSERT INTO @retTable VALUES('없음', '없음', '없음');
+		RETURN;
+	END;
+
+	--행이 1개 이상 있다면 아래를 수행하게 됨
+	INSERT INTO @retTable
+		SELECT U.userID, U.name,
+		CASE
+			WHEN(sum(price*amount) >= 1500) THEN N'최우수고객'
+			WHEN(sum(price*amount) >= 1000) THEN N'우수고객'			
+			WHEN(sum(price*amount) >= 1) THEN N'일반고객'
+			ELSE N'유령고객'
+		END
+	FROM buyTbl B 
+		RIGHT OUTER JOIN userTbl U
+		ON B.userID = U.userID
+	WHERE birthYear >= @bYear
+	GROUP BY U.userID, U.name;
+	RETURN;
+END;
+
+코드가 조금 길어지기는 했지만, 천천히 읽어보면 별로 어렵지 않을 것이다. 위쪽(헤더)에서 정의된 테이블 변수(@retTable)의 형식에 값을 입력하고 입력이 끝나면 RETURN 문을 실행해서 테이블을 통째로 돌려주게 된다. 
+
+2-3 실행해 보자. 1970년 이후의 고객을 살펴보자. 
+
+SELECT * FROM dbo.ufn_userGrade(1970);
+
+결과가 잘 나왔다. 이번에는 1990년 이후의 고객을 살펴보자. 
+SELECT * FROM dbo.ufn_userGrade(1990);
+
+1990년 이후에 출생한 고객이 한명도 없으므로 '없음'으로 입력되어 처리되었다. 
