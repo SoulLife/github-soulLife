@@ -1,0 +1,412 @@
+CHAPTER 6장 : 필수 MVC 도구
+이번 장에서는 모든 MVC 프로그래머들의 주요 무기가 되어야 할 세 가지 도구, 즉 의존성 주입(Dependency Injection DI)컨테이너, 단위 테스트 프레임워크 Mocking 도구를 살펴본다.
+
+이 책에서는 이 세가지 도구에 대해 각각 특정 제품을 하나씩 선정해서 살펴보고 있지만 분야별로 도구마다 다양한 대안들이 존재한다. 그 중에서 얼마든지 자신의 취향과 작업 방식에 적합한 도구를 찾아낼 수 있을 것이므로, 이 책에서 선정된 도구들이 마음에 들지 않더라도 걱정할 필요는 없다. 
+
+이미 3장에서 언급했던 것처럼, 이 책에서 살펴볼 DI 컨테이너는 Ninject로 단순하고 우아하며 사용하기도 쉽다. 물론 더 세련된 도구들도 많겠지만 Ninject의 접근 방식은 최소한의 구성만으로도 잘 동작한다. 만약 Ninject가 마음에 들지 않는다면 그 대신 Microsoft가 제시하는 대안인 Unity를 사용해보는 것을 권하고 싶다. 
+
+단위 테스트 도구로는 Visual Studio의 내장 테스트 도구를 사용하려고 한다. 개인적으로는 인기 있는 .NET 단위 테스트 프레임워크인 NUnit을 선호하는 편이지만, 지금까지 Microsoft는 Visual Studio의 단위 테스트 기능을 개선하기 위해 많은 노력을 기울여 왔으며, 이제는 Visual Studio의 무료 에디션들에도 단위 테스트 기능이 포함됐다. 그 결과 단위 테스트 프레임워크와 IDE의 다른 부분들이 견고하게 통합되었으며, 실제로도 제법 쓸만한 프레임워크로 거듭난 상태다. 
+
+마지막 세 번째 도구는 Mocking 툴 킷인 Moq이다. 이 책에서는 Moq을 사용해서 단위 테스트에 사용할 인터페이스 구현을 작성할 것이다. 프로그래머들은 대부분 Moq을 선호하거나 증오할 뿐, 그 중간 입장은 거의 존재하지 않는다. 아마 여러분도 Moq 구문의 우아함과 강력한 표현력에 감탄하게 되거나 Moq을 사용할 때마다 저주를 되뇌게 되거나 둘 중 하나일 것이다. 만약 Moq을 사용할수 없는 상황이라면 그 대안으로 Rhino Mocks를 고려해보기 바란다. 
+
+이번 장에서는 이 세가지 도구를 하나씩 소개하고 주요 기능들에 관해서 살펴보고자 한다. 다만 이 도구들에 관한 상세한 내용들을 모두 다루지는 않는다. 왜냐하면 각각의 도구들에 대한 기본적인 내용만으로도 이 책의 모든 페이지를 꽉 채울 수 있는 분량이기 때문이다. 따라서 이번 장에서는 기초적인 내용들과 이 책의 나머지 부분에서 제공되는 예제들을 이해하기에 충분한 수준의 내용들만 살펴볼 생각이다. 표6-1은 이번 장의 개요를 요약해서 보여주고 있다. 
+
+
+표6-1 6장 요약
+주제								내용											목록
+클래스들을 서로 분리시키기				인터페이스를 도입하고 클래스 생성자에 그에 대한 의존성을 선언한다.	1-9, 13 - 16
+
+인터페이스를 사용해서 선언된 의존성을 자동으로	Ninject나 다른 의존성 주입 컨테이너를 사용한다.				10
+해결하기
+
+MVC 응용프로그램에 Ninject 통합하기			Ninject 커널을 호출하는 IDependencyResolver 인터페이스의 구현을 	11, 12
+								생성하고 System.Web.Mvc.DependencyResolver.SetResolver 
+								메서드를 호출해서 이를 해결자로 등록한다.
+
+새로 생성된 개체에 속성 값이나 생성자 값 		WithPropertyValue 메서드나 WithConstructorArgument 메서드를 	17 - 20
+주입하기							사용한다. 
+
+동적으로 특정 인터페이스에 대한 구현 선택하기	Ninject의 조건적 바인딩 기능을 사용한다. 					21, 22
+
+Ninject가 생성하는 개체의 생명주기 제어하기		개체 범위를 설정한다.								23 - 25
+
+단위 테스트 생성하기					솔루션에 단위 테스트 프로젝트를 추가하고 클래스 파일에 TestClass	26, 27
+								어트리뷰트 및 TestMethod 어트리뷰트를 적용한다. 				29, 30
+
+단위 테스트에서 기대되는 결과 값 점검하기		Assert 클래스를 사용한다. 							28
+
+구성요소의 특정 단일 기능에 단위 테스트 집중하기	Mock 개체를 이용해서 테스트 대상을 격리시킨다. 				31 - 34
+
+
+이번 장은 여러분이 다양한 테스트를 지원하고 손쉽게 수정하거나 관리할 수 있는 응용프로그램의 작성을 강조하는 아키텍처를 비롯한 그 밖에 MVC 프레임워크로부터 얻을 수 있는 모든 장점들을 누리고 싶어한다고 전제하고 있다. 개인적으로는 이런 작업들을 선호하지만, 일부 독자들은 MVC 프레임워크가 제공해주는 기능들을 이해하는 데만 관심이 있을 뿐, 개발 철학이나 방법론에 대해서는 그다지 신경 쓰고 싶어하지 않는다는 점도 잘 알고 있다. 필자는 여러 분을 바꾸려 들지 않을 것이다. 이는 어디까지나 개인적인 결정사항일 뿐이며, 여러분의 프로젝트를 배포하기 위해서 필요한 것이 무엇인지는 여러분이 가장 잘 알고 있다. 다만 어떤 일들이 가능한지를 살펴보기 위해서 최소한 이번 장을 훑어보기만이라도 할 것을 권하고 싶다. 그런 뒤에도 단위 테스트가 자신과 맞지 않다고 생각된다면 바로 다음 장으로 건너뛰어서 보다 실질적인 예제 MVC 응용프로그램의 작성 방법을 살펴보기 바란다. 
+
+
+
+
+※ 예제 프로젝트 준비하기
+
+먼저 이번 장에서 사용할 EssentialTools라는 이름의 간단한 예제 프로젝트를 생성한다. [ASP .NET MVC 웹 응용프로그램(ASP .NET MVC Web Application)] 템플릿을 선택한 다음 Empty 옵션을 선택하고, MVC 체크박스를 설정해서 MVC 프로젝트를 위한 가장 기본적인 구성을 선택한다. ( 이 설명이 부족하게 느껴진다면 4장의 예제 프로젝트 준비하기 절을 다시 참고해보면 도움이 될 것이다)
+
+
+
+※모델 클래스 생성하기
+프로젝트의 Models 폴더에 Product.cs 라는 클래스 파일을 추가하고 그 내용을 목록 6-1과 같이 작성한다. 이 클래스는 이전 장에서 사용했던 모델 클래스와 같은 클래스로 유일한 차이점은 EssentialTools 프로젝트에 맞게 변경된 네임스페이스뿐이다. 
+
+목록6-1 Product.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace EssentialTools.Models
+{
+    public class Product
+    {
+        public int ProductID { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public decimal Price { get; set; }
+        public string Category { get; set; }
+    }
+}
+
+계속해서 Product 개체들의 컬렉션의 전체 가격 합계를 계산하기 위한 클래스를 추가한다. Models 폴더에 LinqValueCalculator.cs라는 이름으로 새로운 클래스를 추가하고 목록6-2와 같이 내용을 작성한다. 
+
+목록6-2 LinqValueCalculator.cs파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace EssentialTools.Models
+{
+    public class LinqValueCalculator
+    {
+        public decimal ValueProducts(IEnumerable<Product> products)
+        {
+            return products.Sum(p => p.Price);
+        }
+    }
+}
+
+
+이 LinqValueCalculator 클래스는 LINQ의 Sum 메서드를 이용해서 메서드에 전달된 Enumerable형에 포함된 모든 Product 개체들의 Price 속성 값을 더하는 ValueProducts라는 메서드를 하나 정의하고 있다(필자가 자주애용하는 LINQ의 멋진 기능이다)
+
+마지막으로 추가할 모델 클래스는 ShoppingCart로 이 클래스는 Product 개체들의 컬렉션을 포현하고 방금 작성한 LinqValueCalculator클래스를 이용해서 합계 값을 구한다. ShoppingCart.cs 라는 이름으로 새로운 클래스 파일을 생성한 다음 목록6-3과 같은 구문들을 추가한다. 
+
+목록6-3 ShoppingCart.cs파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace EssentialTools.Models
+{
+    public class ShoppingCart
+    {
+        private LinqValueCalculator calc;
+
+        public ShoppingCart(LinqValueCalculator calcParam)
+        {
+            calc = calcParam;
+        }
+        public IEnumerable<Product> Products { get; set; }
+
+        public decimal CalculateProductsTotal()
+        {
+            return calc.ValueProducts(Products);
+        }
+    }
+}
+
+
+
+※ 컨트롤러 추가하기
+Controllers 폴더에 HomeController라는 이름으로 새로운 컨트롤러를 추가한 다음 그 내용을 목록6-4와 같이 작성한다. Index액션 메서드는 LinqValueCalculator 개체를 이용해서 컨트롤러 클래스의 필드로 생성한 Product 개체 배열의 합계 값을 구한 다음, 그 값을 View 메서드에 전달한다. 이때 View 메서드를 호출하면서 뷰를 지정하지 않고 있으므로 MVC 프레임워크는 액션 메서드에 대한 기본 뷰를 (Views/Home/Index.cshtml 파일)선택 하게 된다. 
+
+목록6-4 HomeController.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using EssentialTools.Models;
+namespace EssentialTools.Controllers
+{
+    public class HomeController : Controller
+    {
+        private Product[] products =
+        {
+            new Product{Name="Kayak", Category="Watersports", Price=275M},new Product{ Name="Lifejacket", Category="Watersports", Price=48.95M},
+            new Product{Name="Soccer ball", Category="Soccer", Price=19.50M}, new Product{Name="Corner flag", Category="Soccer", Price=34.95M}
+        };
+
+        // GET: Home
+        public ActionResult Index()
+        {
+            LinqValueCalculator calc = new LinqValueCalculator();
+            ShoppingCart cart = new ShoppingCart(calc) { Products = products };
+
+            decimal totalValue = cart.CalculateProductsTotal();
+
+            return View(totalValue);
+        }
+    }
+}
+
+
+
+※ 뷰 추가하기
+마지막으로 프로젝트에 추가할 파일은 Index라는 이름의 뷰다. 최종적으로 목록 6-5의 구문으로 뷰의 내용을 변경할 것이므로 뷰를 생성할 때 어떤 옵션들을 선택하는지는 그다지 중요하지 않다. 
+
+목록6-5 Index.cshtml 파일의 내용
+@model decimal
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+    <div> 
+        Total Value is @Model
+    </div>
+</body>
+</html>
+
+
+이 뷰에서는 @Model 표현식을 사용해서 액션 메서드로부터 전달된 decimal값을 출력한다. 이제 프로젝트를 실행해보면 그림6-1과 같이 LinqValueCalculator 클래스에 의해 계산된 합계 값이 출력되는 것을 확인할 수 있을 것이다. 비록 간단한 프로젝트에 불과하지만 이번장에서 살펴볼 각각의 도구들과 기법들을 직접 테스트해보기에는 충분하다. 
+
+
+
+
+※ Ninject 사용하기
+이미 3장에서 의존성 주입에 대해서 간단하게 살펴봤다. 그 내용을 다시 정리해보면 인터페이스와 DI 컨테이너의 조합을 이용해서 MVC 응용프로그램 내부의 구성요소들을 서로 분리시킨다는 개념이다. 이때 DI 컨테이너는 개체가 의존하는 인터페이스 구현들의 인스턴스를 생성한 다음 이를 개체의 생성자에 주입해서 개체의 인스턴스들을 생성해주는 역할을 수행하게 된다. 
+
+이어지는 절들에서는 이번 장의 예제에 의도적으로 만들어놓은 문제점을 살펴보고 Ninject를 사용해서 그 문제점을 직접 해결해본다. 만약 Ninject를 사용하기 어려운 상황이더라도 걱정할 필요는 없다. 대신 선택할 수 있는 다른 DI 컨테이너들이 다수 존재하는 데다가, 대부분의 DI 컨테이너들의 기본적인 원리는 거의 동일하기 때문이다. 
+
+
+※ 문제점 이해하기
+이번 예제 응용프로그램에는 DI를 도입함으로써 해결할 수 있는 기본적인 문제점이 한 가지 존재하는데, 바로 클래스들이 서로 강력하게 결합되어 있다는 점이다. 즉 ShoppingCart 클래스는 LinqValueCalculator 클래스와 강력하게 결합되어 있고, HomeController 클래스는 ShoppingCart 클래스와 LinqValueCalculator 클래스 양쪽에 강력하게 결합되어 있다. 
+
+따라서 LinqValueCalculator 클래스를 교체하려면 이 클래스와 강력하게 결합된 클래스들을 모두 찾아 참조를 변경해줘야 한다. 이번 예제 같은 간단한 프로젝트에서는 큰 문제가 되지 않지만 실제 프로젝트에서는 따분하고 오류를 만들어내기 쉬운 작업이다.  게다가 단지 한 클래스를 다른 클래스로 교체하는 상황이 아니라, 테스트나 예제 작성을 위해서 각기 다른 계산구현 클래스들을 바꿔가면서 작업하고 싶은 경우에는 문제가 더 심각해진다. 
+
+
+※ 인터페이스 적용하기
+
+C#의 인터페이스 기능을 이용해서 계산 기능에 대한 정의를 그 구현과 분리해서 추상화시키면 문제점을 일부분 해결할 수 있다. 이를 위해서 Models 폴더에 IValueCalculator.cs라는 이름의 클래스 파일을 추가한 다음 목록6-6과 같이 인터페이스를 작성한다. 
+
+
+목록6-6 IValueCalculator.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace EssentialTools.Models
+{
+    public interface IValueCalculator
+    {
+        decimal ValueProducts(IEnumerable<Product> products);
+    }
+}
+
+그런 다음 목록6-7에서 볼 수 있는 것처럼 LinqValueCalculator 클래스에서 이 인터페이스를 구현한다. 
+
+목록6-7 인터페이스를 구현한 LinqValueCalculator.cs 파일
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace EssentialTools.Models
+{
+    public class LinqValueCalculator : IValueCalculator
+    {
+        public decimal ValueProducts(IEnumerable<Product> products)
+        {
+            return products.Sum(p => p.Price);
+        }
+    }
+}
+
+이렇게 인터페이스를 도입함으로써 목록 6-8에서 볼 수 있는 것처럼 ShoppingCart 클래스와 LinqValueCalculator 클래스 간의 강력한 결합을 제거할 수 있다. 
+
+목록6-8 인터페이스를 적용한 ShoppingCart.cs 파일
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace EssentialTools.Models
+{
+    public class ShoppingCart
+    {
+        private IValueCalculator calc;
+
+        public ShoppingCart(IValueCalculator calcParam)
+        {
+            calc = calcParam;
+        }
+        public IEnumerable<Product> Products { get; set; }
+
+        public decimal CalculateProductsTotal()
+        {
+            return calc.ValueProducts(Products);
+        }
+    }
+}
+
+다소 진전괸 결과를 얻기는 했지만 C#으로 인스턴스를 생성하려면 여전히 이 인터페이스를 구현한 클래스를 명시적으로 지정해야 한다. 최소한 사용하고자 하는 구현 클래스가 무엇인지는 알아야 하므로 충분히 이해할수 있는 일이다. 그러나 이 말은 목록6-9에서 볼 수 있는 것 처럼 Home 컨트롤러에서 LinqValueCalculator 개체를 생성할 때 아직 문제점이(즉 강력하게 결합되어 있는 코드가)남아있다는 뜻이기도 하다. 
+
+목록6-9 HomeController.cs 파일에 인터페이스 적용하기
+public ActionResult Index()
+        {
+            IValueCalculator calc = new LinqValueCalculator();
+            ShoppingCart cart = new ShoppingCart(calc) { Products = products };
+
+            decimal totalValue = cart.CalculateProductsTotal();
+
+            return View(totalValue);
+        }
+
+이번 예제에서 Ninject를 도입해서 달성하고자 하는 목표는 IValueCalculator 인터페이스를 구현한 클래스의 인스턴스를 생성할 때 필요한 구현 클래스에 대한 세부 정보들을 Home 컨트롤러 내부에 직접 코드로 작성할 필요가 없도록 만드는 것이다. 
+
+결론적으로 이 얘기는 사용하고자 하는 IValueCalculator 인터페이스의 구현이 LinqValueCalculator 클래스라는 것을 Ninject에게 알려주고 new 키워드 대신 Ninject를 통해서 LinqValueCalculator 클래스의 개체를 얻을수 있도록 HomeController 클래스를 변경해야 한다는 뜻이다. 
+
+
+
+※ Visual Studio 프로젝트에 Ninject 추가하기
+MVC 프로젝트에 Ninject를 추가할수 있는 가장 간단한 방법은 Visual Studio에 통합되어 있는 NuGet지원 기능을 이용하는 것이다. NuGet을 사용하면 손쉽게 광범위한 분야의 패키지들을 설치하고, 최신 버전을 유지할 수 있다. 이미 우리는 2장에서 NuGet으로 Bootstrap라이브러리를 설치해봤다. 그러나 NuGet에는 Ninject를 비롯한 더 많은 사용 가능한 패키지들의 거대한 카탈로그가 존재한다. Visual Studio에서 [도구(Tools)] > [NuGet 패키지 관리자(Library Package Manager)] > [패키지 관리자 콘솔(Package Manager Console)] 을 선택해서 NuGet 명령어 라인을 열고 다음의 명령어들을 입력한다. 
+
+Install-Package Ninject -version 3.0.1.10
+Install-Package Ninject.Web.Common -version 3.0.0.7
+Install-Package Ninject.MVC3 -Version 3.0.0.6
+
+
+첫 번째 명령어는 Ninject의 핵심 패키지를 설치해준다. 그리고 나머지 두 명령어는 Ninject가 ASP .NET응용프로그램과 잘 어울려서 동작할수 있도록 지원해주는 핵심 패키지에 대한 확장 기능들을 설치해준다(이에 관해서는 잠시 뒤에 살펴볼 것이다) 참고로 마지막 명령어에 지정된 패키지 이름에 MVC3라는 단어가 포함되어 있지만 MVC5에서도 정상적으로 동작하므로 걱정할 필요는 없다. 
+
+또한 이 명령어들에서는 version 인자를 지정해서 패키지들의 특정 버전을 설치하고 있는데, 이 버전들은 필자가 책을 집필하던 당시의 최신 버전들이다. 이번 장의 예제들에서 책의 내용과 정확하게 일치하는 결과를 얻으려면 이처럼 version 인자를 지정하는 편이 좋겠지만 실제 프로젝트에서는 이 인자를 생략해서 가장 마지막(그리고 아마도 가장 최신의)릴리즈들을 설치하는 것이 좋을 것이다. 
+
+
+※ Ninject 시작하기
+기본적인 Ninject의 기능을 사용하려면 모두 세 가지 단계가 필요하다. 관련 코드들이 추가된 Home 컨트롤러를 보여주고 있는 목록 6-10에서 이 세 가지 단계를 모두 확인할수 있다. 
+
+
+TIP:
+이번 절과 이어지는 절들은 다소 천천히 진행해나갈 생각이다. 의존성 주입을 이해하기 위해서는 어느 정도 시간이 필요할 뿐만 아니라 독자들의 이해에 도움이 될 수 있다면 어떤 것도 그냥 넘어가고 싶지 않기 때문이다. 
+
+
+
+
+목록6-10 Index 액션메서드에 기본적인 Ninject 기능을 추가한 HomeController.cs 파일
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using EssentialTools.Models;
+using Ninject;
+namespace EssentialTools.Controllers
+{
+    public class HomeController : Controller
+    {
+        private Product[] products =
+        {
+            new Product{Name="Kayak", Category="Watersports", Price=275M},new Product{ Name="Lifejacket", Category="Watersports", Price=48.95M},
+            new Product{Name="Soccer ball", Category="Soccer", Price=19.50M}, new Product{Name="Corner flag", Category="Soccer", Price=34.95M}
+        };
+
+        // GET: Home
+        public ActionResult Index()
+        {
+            IKernel ninjectKernel = new StandardKernel();
+            ninjectKernel.Bind<IValueCalculator>().To<LinqValueCalculator>();
+            IValueCalculator calc = ninjectKernel.Get<IValueCalculator>();
+            ShoppingCart cart = new ShoppingCart(calc) { Products = products };
+
+            decimal totalValue = cart.CalculateProductsTotal();
+
+            return View(totalValue);
+        }
+    }
+}
+
+가장 첫 번째 단계는 Ninject 를 사용할 준비를 하는 것이다. Ninject를 사용하려면 먼저 의존성을 해결하고 새로운 개체들을 생성해주는 역할을 담당하는 개체인 Ninject커널의 인스턴스 부터 생성해야 한다. 지금부터는 개체가 필요할 때마다 new 키워드 대신 이 커널을 이용해서 인스턴스를 얻게 될 것이다. 다음은 목록 6-10에서 커널을 생성하는 부분의 구문이다. 
+
+...
+IKernel ninjectKernel = new StandardKernel();
+....
+이 코드에서 볼수 있는 것처럼 Ninject.IKernel 인터페이스를 구현하고 있는 클래스를 생성해야 하는데 이번 예제에서는 내장 StandardKernel클래스의 새로운 인스턴스를 생성하고 있다. 물론 다른 종류의 커널을 사용해서 Ninject를 확장하거나 사용자 지정할수도 있지만 이번 장에서는 내장 StandardKernel 만으로도 충분하다(사실 필자는 지난 몇 년간 Ninject를 사용해왔지만 지금까지 StandardKernel만으로도 충분했다)
+
+작업의 두 번째 단계는 Ninject 커널을 구성해서 각각의 인터페이스마다 실제로 어떤 구현 개체들을 사용해서 의존성을 해결하고자 하는지를 Ninject가 이해할수 있도록 지정해주는 것이다. 다음은 이 작업을 수행하는 목록 6-10의 구문이다. 
+
+..
+ninjectKernel.Bind<IValueCalculator>().To<LinqValueCalculator>();
+...
+
+
+Ninject는 C#의 형식 매개변수(Type Parameters)를 이용해서 관계를 설정한다. 먼저 작업에 사용하고자 하는 인터페이스를 Bind 메서드의 형식 매개변수로 지정한다. 그런 다음, 이 메서드에서 반환되는 결과에서 다시 To 메서드를 호출하는데, 이때 인스턴스를 생성하고자 하는 구현 클래스를 이 To 메서드의 형식 매개변수로 지정한다. 가령 이번 예제의 구문은 Ninject 에게 IValueCalculator 인터페이스에 대한 의존성은 LinqValueCalculator 클래스의 인스턴스를 생성해서 해결해야 한다고 지정하고 있는 셈이다. 작업의 마지막 단계는 Ninject를 이용해서 실제로 개체를 생성하는 것이다. 이 작업은 다음과 같이 커널이 제공해주는 Get 메서드를 이용해서 수행한다. 
+
+...
+IValueCalculator calc = ninjectKernel.Get<IValueCalculator>();
+..
+
+
+이렇게 Get 메서드에 형식 매개변수를 지정해서 Ninject에 사용하고자 하는 인터페이스를 알려주면 두 번째 단계에서 To 메서드로 설정한 구현 형식의 인스턴스가 Get 메서드의 결과로 반환된다. 
+
+
+
+※MVC 의존성 주입 설정하기
+이전 절에서 살펴본 세 단계의 걸친 작업의 결과로, Ninject에 IValueCalculator 인터페이스에 관한 요청을 만족시키기 위해서 인스턴스를 생성해야 하는 구현 클래스에 관한 정보가 구성됐다. 물론 이 정보들은 Home 컨트롤러 내부에 작성되어 있기 때문에 아직까지는 Home컨트롤러가 LinqValueCalculator 클래스와 강력하게 결합되어 있다고 말할 수 있으므로 여전히 응용프로그램이 개선된 상태라고는 볼 수는 없다. 
+
+이어지는 절들에서는 MVC 응용프로그램의 엔진에 Ninject를 끼워 넣는 방법을 살펴볼것이다. 그럼으로써 컨트롤러의 코드도 간단해지고 Ninject의 영향력도 응용프로그램 전반으로 확대되어 어디에서나 사용할 수 있게 될 것이다. 그리고 구성 자체도 컨트롤러 외부로 이동 시켜 본다. 
+
+
+※ 의존성 해결자 작성하기
+가장 먼저 해야 할 일은 사용자 지정 의존성 해결자(Dependency Resolver)를 작성하는 것이다. MVC 프레임워크는 요청을 서비스하기 위해서 필요한 클래스들의 인스턴스들을 생성해야 할 때마다 의존성 해결자를 이용한다. 사용자 지정 의존성 해결자를 생성함으로써 MVC 프레임워크가 개체를 생성할 때마다 가령 컨트롤러의 인스턴스를 생성할 때 조차도 항상 Ninject를 사용하도록 구성할 수 있다. 
+
+먼저 Infrastructure라는 이름으로 새로운 폴더를 생성한다. 이 폴더는 MVC 응용프로그램의 다른 폴더들에 생성하기 애매한 클래스들을 저장하기 위한 용도로 사용할 것이다. 이 폴더에 NinjectDependencyResolver.cs라는 이름으로 새로운 클래스 파일을 추가하고, 클래스의 내용을 목록 6-11과 같이 작성한다. 
+
+목록6-11. NinjectDependencyResolver.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using EssentialTools.Models;
+using System.Web.Mvc;
+using Ninject;
+namespace EssentialTools.Infrastructure
+{
+    public class NinjectDependencyResolver : IDependencyResolver
+    {
+        private IKernel kernel;
+
+        public NinjectDependencyResolver(IKernel kernelParam)
+        {
+            kernel = kernelParam;
+            AddBindings();
+        }
+        public object GetService(Type serviceType)
+        {
+            return kernel.TryGet(serviceType);
+        }
+        public IEnumerable<object> GetServices(Type serviceType)
+        {
+            return kernel.GetAll(serviceType);
+        }
+        private void AddBindings()
+        {
+            kernel.Bind<IValueCalculator>().To<LinqValueCalculator>();
+        }
+    }
+}
+
+이 NinjectDependencyResolver 클래스는 System.Web.Mvc 네임스페이스의 일부이자 MVC 프레임워크가 필요한 개체들을 얻을 때 사용하는 IDenpendencyResolver 인터페이스를 구현하고 있다 MVC 프레임워크는 전달된 요청을 서비스하기 위해서 클래스의 인스턴스가 필요할 때마다 GetService 메서드나 GetServices 메서드를 호출한다. 의존성 해결자의 임무는 바로 그 인스턴스를 생성하는 것으로 이번 예제에서는 Ninject의 TryGet 메서드나 GetAll 메서드를 호출해서 그 작업을 수행하고 있다. TryGet 메서드는 앞에서 살펴봤던 Get 메서드와 비슷하게 동작하지만 적합한 바인딩이 존재하지 않을 경우 예외를 던지는 대신 null을 반환해준다. GetAll 메서드는 하나의 형식에 대해 다수의 바인딩을 지원해주는데, 여러가지 다른 구현 개체들을 사용할 수 있는 경우에 사용된다. 
+
+그리고 바로 이 의존성 해결자 클래스에서 Ninject 바인딩 설정도 함께 수행한다. 즉 AddBindings 메서드 내에서 Bind 메서드와 To 메서드를 이용해서 IValueCalculator 인터페이스와 LinqValueCalculator 클래스 간의 관계를 구성하고 있다. 
