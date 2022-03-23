@@ -1,0 +1,184 @@
+CHAPTER 12장 : 커서
+
+Section 01 : 커서의 기본
+
+커서는 행의 집합을 다루기에 편리한 기능을 많이 제공한다. 커서는 크게 T-SQL을 이용하는 서버 커서와 ODBC, ADO.NET등을 이용하는 클라이언트 커서로 나눌수 있다. 이 책에서 다루는 것은 모두 서버 커서를 말하며, 클라이언트 커서는 이 책의 범주를 벗어나는 것이므로 다루지 않겠다. 
+
+
+※ 커서의 개요
+커서는 테이블에서 여러 개의 행을 쿼리한 후에 쿼리의 결과인 행 집합을 한 행씩 처리하는 방식이다. 혹 파일 처리 프로그래밍을 해본 독자라면 파일을 읽고 쓰기 위해서 파일을 오픈(Open)한 후에 한 행씩 읽거나 썼던 것을 기억할 것이다. 한 행씩 읽을 때마다 파일 포인터는 자동으로 다음줄을 가리키게 된다. 커서도 이와 비슷한 동작을 한다. 
+
+			파일의 시작(BOF)
+LSG	이승기	1987	서울
+KBS	김범수	1979	경남
+KKH	김경호	1971	전남
+JYP	조용필	1950	경기
+SSK	성시경	1979	서울
+LJB	임재범	1963	서울
+YJS	윤종신	1969	경남
+EJW	은지원	1978	경북
+JKW	조관우	1965	경기
+BBK	바비킴	1973	서울
+			파일의 끝(EOF)
+[그림12-1]
+
+예를 들어 [그림12-1]과 같은 텍스트 파일이 저장되어 있다고 생각해 보자. 이 파일을 처리하려면 다음의 순서를 거치게 된다. 
+
+1. 파일을 연다(Open)그러면 파일 포인터는 파일의 시작(BOF: Begin Of File)을 가리키게 된다. 
+
+2. 처음 데이터를 읽는다. 그러면 이승기의 데이터가 읽히고 파일 포인터는 김범수로 이동한다. 
+
+3. 파일의 끝(EOF : End Of File)까지 다음을 반복한다. 
+
+3-1 읽은 데이터를 처리한다
+
+3-2 현재의 파일 포인터가 가리키는 데이터를 읽는다. 파일 포인터는 자동으로 다음으로 이동한다. 
+
+4. 파일을 닫는다(Close)
+
+[그림 12-1]의 텍스트 파일을 이제는 테이블의 행 집합으로 생각해 보자. 거의 비슷한 방식으로 처리할수 있다. 
+
+
+
+※ 커서의 처리 순서
+커서는 대부분 다음의 순서를 통해서 처리된다. 
+
+커서의 선언(DECLARE)
+	↓
+커서 열기(Open)
+	↓
+커서에서 데이터 가져오기(FETCH) 
+	↓			WHILE 문으로 모든 행이 처리될때까지 반복 데이터처리를 반복
+데이터 처리
+	↓
+커서 닫기(CLOSE)
+	↓
+커서의 해제
+(DEALLOCATE)
+
+커서를 하나씩 이해하기 보다는 우선 간단한 예제를 통해 활용해 보자. 아직은 세부 문법을 배우지 않았으므로 구문 전부 이해할 수 없어도 된다. 단지 [그림12-2]와 같이 커서를 사용하는 전반적인 흐름에 초점을 맞춰서 실습을 진행하도록 하자. 
+
+
+실습1 : 커서를 이용해서 고객의 평균 키를 구해보도록 하자. 
+
+0. 백업받았던 sqlDB를 사용하자. (C:\SQL\sqlDB2012.bak 파일이 없는 독자는 6장의  <실습2> 를 다시 수행하거나 책의 사이트인 http://brain.hanb.co.kr/sql2012/에서 sqlDB2012.bak을 내려받아서 C:\SQL\폴더에 저장하자)
+
+USE tempdb;
+RESTORE DATABASE sqlDB FROM DISK = 'C:\SQL\sqlDB2012.bak' WITH REPLACE;
+
+1. 커서를 선언한다. 
+
+USE sqlDB;
+DECLARE userTbl_cursor CURSOR GLOBAL
+	FOR SELECT height FROM userTbl;
+
+이 커서는 회원 테이블(userTbl)에서 키(height)의 행 집합을 가져오는 커서이다. 
+
+2. 커서를 연다
+OPEN userTbl_cursor;
+
+3. 커서에서 데이터를 가져오고 데이터 처리를 반복한다. 다음 코드는 한꺼번에 실행해야 한다. 
+
+--우선 사용할 변수를 선언한다
+DECLARE @height INT --고객의 키
+DECLARE @cnt INT = 0 -- 고객의 인원수(=읽은 행의 수)
+DECLARE @totalHeight INT = 0 --키의 합계
+
+FETCH NEXT FROM userTbl_cursor INTO @height -- 첫 행을 읽어서 키를 @height변수에 넣는다. 
+
+--성공적으로 읽어졌다면 @@FETCH_STATUS 함수는 0을 반환하므로, 계속 처리한다. 
+--즉 더 이상 읽은 행이 없다면(= EOF을 만나면) WHILE 문을 종료한다. 
+WHILE @@FETCH_STATUS = 0
+BEGIN
+	SET @cnt += 1 --읽은 개수를 증가시킨다
+	SET @totalHeight += @height -- 키를 계속 누적시킨다
+	FETCH NEXT FROM userTbl_cursor INTO @height -- 다음 행을 읽는다. 
+END
+
+--고객 키의 평균을 출력한다
+PRINT '고객 키의 평균==>' + CAST(@totalHeight / @cnt AS CHAR(10))
+
+결과값 :
+고객 키의 평균==> 175
+
+4. 커서를 닫는다
+CLOSE userTbl_cursor;
+
+5. 커서의 할당을 해제한다. 
+DEALLOCATE userTbl_cursor;
+
+
+(1)커서의 선언
+커서가 어떻게 사용될 것이고 또 어떠한 성격을 가지는지 여부가 이 커서의 선언 부분에 서 모두 결정된다. 조금 어려울 수도 있는 부분이지만 우선은 잘 읽어본 후에 <실습3> 과 <실습4> 를 통해서 확실히 이해해 보자. 
+
+ISO 표준 문법 :
+DECLARE cursor_name [ INSENSITIVE ] [SCROLL ] CURSOR
+	FOR select_statement
+	[ FOR { READ ONLY | UPDATE [ OF column_name [ ,...n ] ] } ]
+
+
+Transact-SQL 확장 문법 :
+DECLARE cursor_name CURSOR [ LOCAL | GLLOBAL ]
+	[ FORWARD_ONLY | SCROLL ]
+	[ STATIC | KEYSET | DYNAMIC | FAST_FORWARD ]
+	[ READ_ONLY | SCROLL_LOCKS | OPTIMISTIC ]
+	[ TYPE_WARNING ]
+	FOR select_statement
+	[ FOR UPDATE [ OF column_name [ ,...n ] ] ]
+[;]
+
+앞의 <실습1>에서 나왔듯이 userTbl을 처리하는 커서는 다음과 같이 정의하면 된다. 
+
+DECLARE userTbl_cursor CURSOR GLOBAL
+	FOR SELECT height FROM userTbl;
+
+옵션의 설명은 T-SQL 확장 구문을 가지고 설명하도록 하겠다. 
+
+* [LOCAL | GLOBAL ]
+GLOBAL은 전역 커서를 LOCAL은 지역 커서를 지정한다. 전역 커서(Global Cursor)는 모든 저장 프로시저나 일괄 처리에서 커서의 이름을 참조할 수 있다. 지역 커서(Local Cursor)는 지정된 범위(Scope)에서만 유효하며 해당 범위를 벗어나면 자동으로 소멸한다. 예를 들어 저장 프로시저 안에서 지역 커서를 사용하면 저장 프로시저가 끝나는 시점에 커서도 소멸한다. 하지만 OUTPUT 매개 변수로 저장 프로시저의 외부로 커서를 돌려주면 그 커서를 참조하는 변수가 해제되거나 소멸할 때 커서도 같이 소멸된다. 
+
+전역 커서의 경우에는 몇 가지 문제점이 있을 수 있으므로 되도록 지역 커서를 사용하기를 권장한다. 별도로 GLOBAL이나 LOCAL을 지정하지 않으면 SQL Server의 디폴트는 데이터베이스 옵션 default to local cursor에 따라 달라지게 되므로 명시적으로 지정하는 것이 바람직하겠다. 특별히 변경하지 않으면, 데이터 베이스의 해당 옵션은 OFF로 되어있어 디폴트는 GLOBAL이 된다. 
+
+
+* [ FORWARD_ONLY | SCROLL]
+FORWARD_ONLY는 시작 행부터 끝 행의 방향으로만 커서가 이동된다. 그러므로 사용할 수 있는 데이터 가져오기(인출)는 FETCH NEXT 뿐이다. SCROLL 옵션은 자유롭게 커서가 이동할 수 있으므로 FETCH NEXT/FIRST/LAST/PRIOR 등을 사용할수 있지만 그리 자주 사용하지는 않는다. 
+
+
+* [ STATIC | KEYSET | DYNAMIC | FAST_FORWARD]
+조금 이해하기 어려운 부분이다. 지금은 개념을 잘 읽어보고 <실습4> 를 통해서 실제 작동을 확인해 보자. STATIC/KEYSET/DYNAMCI은 원본 테이블을 tempdb에 복사해 놓을 때 어떻게 복사할지 그 방법을 지정한다. STATIC은 커서에서 사용할 데이터를 모두 tempdb에 복사한 후에 데이터를 사용한다. 그러므로 커서의 선언 이후에 원본 테이블의 데이터가 변경되어도 커서에서 데이터를 인출할 때는 tempdb에 복사된 변경 전의 데이터를 가져오게 된다(즉 원본 테이블의 변경된 사항을 알 수가 없다)
+
+DYNAMIC과 KEYSET은 STATIC과 반대의 개념으로 커서에서 행 데이터를 접근할 때 마다 원본 테이블에서 가져온다고 생각하면 된다. 두 개의 차이점은 DYNAMIC은 현재의 키 값만 tempdb에 복사하고, KEYSET은 모든 키 값을 tempdb에 저장한다는 점이다. 그러므로 DYNAMIC으로 설정하면 원본 테이블의 UPDATE 및 INSERT된 내용이 모두 보이지만 KEYSET은 원본 테이블의 UPDATE된 내용만 보이며, INSERT된 내용은 보이지 않는다. 잠시 후 [그림12-6]에서 다시 확인하겠다. 또한 KEYSET을 사용하려면 원본테이블에 꼭 고유 인덱스(Unique Index)가 있어야 한다. 
+
+FAST_FORWARD는 FORWARD_ONLY 옵션과 READ_ONLY 옵션이 합쳐진 것이다. 커서에서 행 데이터를 수정하지 않을 것이라면 성능 측면에서 가장 바람직한 옵션이다. 이상 네 가지 중에서 되도록 필요한 옵션을 지정해서 커서를 정의하는 게 좋다. 특별히 서버의 옵션을 변경하지 않으면 디폴트로 DYNAMIC이 생성된다. 
+
+
+
+※ 여기서잠깐?
+커서에서 성능이 좋은 것부터 순서대로 나열하면 FAST_FORWARD > STATIC > KEYSET > DYNAMIC이다. 커서는 되도록 사용하지 않는 것이 좋다고 이야기했다. 그래도 커서를 사용해야 한다면 특별한 경우가 아니라면 DYNAMIC은 사용하지 말자. 성능에 가장 나쁜 옵션이다. 
+
+
+
+
+* [ READ_ONLY | SCROLL_LOCKS | OPTIMISTIC ]
+READ_ONLY는 읽기 전용으로 설정하는 것이며, SCROLL_LOCKS는 위치 지정 업데이트나 삭제가 가능하게 설정하는 것이다. OPTIMISTIC은 커서로 행을 읽어들인 후에 원본 테이블의 행이 업데이트되었다면 커서에서는 해당 행을 위치 지정 업데이트나 삭제되지 않게 지정한다. 
+
+
+* TYPE_WARNING
+암시적으로 요청한 커서 형식이 다른 형식으로 변환된 경우 클라이언트에 경고 메시지를 보낸다. 암시적인 변환의 예를 들면, 고유 인덱스가 없을 경우에 KEYSET 커서로 만들려고 하면 암시적인 변환이 작동해서 STATIC 커서로 자동 변경된다. 이때 이 옵션을 설정하지 않으면 아무런 메시지가 나오지 않는다. 그렇게 되면 원본 테이블의 업데이트된 데이터를 확인할 수 없으므로, 추후에 문제가 발생할 수 있다. 그러므로 TYPE_WARNING 을 설정하면 이렇게 암시적인 변환으로 발생하는 문제를 미리 경고 메시지로 확인할 수 있다. 잠시 후 <실습5>에서 확인해 보자. 
+
+
+
+* FOR select_statement
+SELECT 문장을 이 부분에 사용한다. SELECT 문의 결과가 바로 커서에서 한 행씩 처리할 행 집합이 된다. COMPUTE, COMPUTE BY, FOR BROWSE, INTO 키워드는 사용할 수 없다. 
+
+
+* FOR UPDATE [ OF column_name [,...n]]
+그냥 FOR UPDATE만 지정하면 SELECT 문의 모든 열을 업데이트할 수 있으며, 특정 열을 지정하려면 OF 열이름을 지정하면 된다. 
+
+
+
+※ 여기서 잠깐?
+DECLARE CURSOR에서 READ_ONLY, OPTIMISTIC, SCROLL_LOCKS를 지정하지 않을 경우 기본값은 다음과 같다. 
+* 권한이 부족하거나 업데이트되지 않는 테이블일 경우 커서는 READ_ONLY가 된다. 
+* STATIC 및 FAST_FORWARD 커서는 기본적으로 READ_ONLY가 된다. 
+* DYNAMIC 및 KEYSET 커서는 기본적으로 OPTIMISTIC이 된다. 
