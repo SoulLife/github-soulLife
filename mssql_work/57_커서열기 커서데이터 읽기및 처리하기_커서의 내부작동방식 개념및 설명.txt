@@ -1,0 +1,159 @@
+(2) 커서 열기
+커서 열기의 형식은 다음과 같다
+
+OPEN { { [ GLOBAL ] cursor_name } | cursor_variable_name }
+
+커서를 여는 형식은 간단하다. 다음 예를 보자. 
+
+OPEN userTb_cursor;
+
+이 예에서 userTbl_cursor 커서는 지역(Local)커서에 같은 이름이 없다는 전제 하에 현재 앞에서 선언한 전역(Global)커서가 열리게 된다. 하지만 만약 전역커서에도 userTbl_cursor 이름이 있고 지역 커서에도 userTbl_cursor이름이 있다면, 먼저 지역 커서가 열리게 된다. 따라서 전역 커서를 열고자 한다면 꼭 GLOBAL 키워드를 써줘야 한다. 즉 지역이 전역보다 우선한다. 이것은 FETCH/CLOSE/DEALLOCATE에서도 마찬가지다. 
+
+
+(3) 커서에서 데이터 가져오기 및 데이터 처리하기
+
+커서에서 데이터를 가져오는 FETCH의 형식은 다음과 같다. 
+
+FETCH
+		[ [ NEXT | PRIOR | FIRST | LAST
+			| ABSOLUTE { n | @nvar }
+			| RELATIVE { n | @nvar }
+			]
+			FROM
+		]
+	{	{	[ GLOBAL ] cursor_name } | @cursor_variable_name	}
+[	INTO @variable_name [ ,...n ] ]
+
+FETCH는 커서에서 데이터를 가져오는 명령이다. 대부분 다음과 같은 방식으로 사용된다 
+
+FETCH NEXT FROM userTbl_cursor -- 우선 첫 행을 읽는다. 
+
+--성공적으로 읽어 졌다면 @@FETCH_STATUS 함수는 0을 반환하므로, 계속 처리한다. 
+WHILE @@FETCH_STATUS = 0
+BEGIN
+	----------------------------------------
+	-- 이부분에서 데이터를 처리한다 -----
+	----------------------------------------
+	FETCH NEXT FROM userTbl_cursor -- 다음 행을 읽고, WHILE 문으로 간다
+END
+
+
+(4) 커서 닫기
+커서 닫기의 형식은 다음과 같다. 
+
+CLOSE { { [ GLOBAL ] cursor_name } | cursor_variable_name }
+
+사용도 간단하다. 
+
+CLOSE userTbl_cursor;
+
+LOCAL 커서는 범위(Scope)를 빠져나가게 되면 자동으로 커서가 닫히게 된다. 즉 저장 프로시저나 트리거에서 커서를 사용할 때 해당 프로시저나 트리거가 종료되면 커서도 닫히게 되므로 CLOSE 문을 써주지 않아도 된다. 
+
+
+(5) 커서 할당 해제
+
+커서 할당 해제의 형식은 다음과 같다. 
+
+DEALLOCATE { { [ GLOBAL ] cursor_name } | @cursor_variable_name }
+
+역시 사용도 간단하다.
+
+DEALLOCATE userTbl_cursor;
+
+마찬가지로 LOCAL 커서의 경우에는 범위를 벗어나면 자동으로 할당도 해제된다. 
+
+
+여기서잠깐?
+커서와 관련된 시스템 저장 프로시저로는 sp_cursor_list, sp_describe_cursor, sp_describe_cursor_columns, sp_describe_cursor_tables가 있다. 
+
+
+
+
+
+Setchion 02 : 커서의 활용
+
+※ 커서의 성능과 일반적인 쿼리의 성능 비교
+커서는 SQL Server의 성능에 좋지 않은 영향을 준다. 물론 적은 양의 데이터에 커서를 사용하는 것은 그다지 문제가 되지 않지만 많은 양의 데이터에 사용하거나, 커서가 자주 호출된다면 시스템의 부하가 많이 발생할 수밖에 없다. 
+
+
+실습2 : 커서와 일반 쿼리의 성능을 비교해 보자. 
+
+0. 실습에 사용할 DB를 생성하고 대량의 데이터를 복사하자. 
+
+USE tempdb;
+CREATE DATABASE cursorDB;
+GO
+USE cursorDB;
+SELECT * INTO cursorTbl FROM AdventureWorks.Sales.SalesorderDetail;
+
+
+1. 앞의 <실습 1>과 비슷한 커서를 사용해 보자. 그냥 LineTotal의 총 합계 및 평균을 구하기 위한 커서다. 
+
+DECLARE cursorTbl_cursor CURSOR GLOBAL FAST_FORWARD
+	FOR SELECT LineTotal FROM cursorTbl;
+
+OPEN cursorTbl_cursor;
+
+
+1. 데이터베이스 옵션인 기본 커서(CURSOR_DEFAULT)의 설정 값을 확인해 보자. 
+SSMS의 개체 탐색기에서 [데이터베이스] > [cursorDB]를 선택한 후, 마우스 오른쪽 버튼을 클릭하고 [속성]을 선택한다. 그리고 페이지 선택에서 [옵션]을 클릭하고 기본 커서가 GLOBAL인 것을 확인한다 <취소> 버튼을 클릭해서 창을 닫는다. 
+
+2. 커서를 정의하고 그 형식을 확인해 보자. 
+2-1 옵션을 주지 말고 커서를 정의해 보자. 
+
+DECLARE cursorTbl_cursor CURSOR
+	FOR SELECT LineTotal FROM cursorTbl;
+
+2-2 커서의 상태를 확인해 보자. 다음 구문은 커서의 상태를 확인하는 방식이다. sp_describe_cursor 시스템 저장 프로시저는 지정한 커서의 정보를 보여주는 기능을 한다. 구문 자체에는 잘 이해되지 않아도 된다. 그 결과가 뜻하는 것만 확인해 보도록 하자. 
+
+DECLARE @result CURSOR
+EXEC sp_describe_cursor @cursor_return = @result OUTPUT, @cursor_source = N'GLOBAL', -- GLOBAL 커서임을 지정
+	@cursor_identity = N'cursorTbl_cursor' -- 커서 이름을 지정
+
+FETCH NEXT from @result
+WHILE (@@FETCH_STATUS <> -1)
+	FETCH NEXT FROM @result
+
+결과를 보면 cursor_scope가 2로 설정되어 있다. 1은 지역커서를 2는 전역 커서를 뜻한다. 그러므로 디폴트로 전역 커서가 설정되어 있음을 확인할 수 있다. 
+
+*나머지 열에 대한 더 상세한 내용은 SQL Server 도움말에서 sp_describe_cursor를 검색해서 확인해 보자. 
+
+2-3 커서를 해제한다. 
+
+DEALLOCATE cursorTbl_cursor;
+
+3. 디폴트가 지역 커서가 되게 데이터베이스 옵션을 변경해 보자. 
+
+3-1 다시 SSMS의 개체 탐색기에서 [데이터 베이스] > [cursorDB]를 선택한 후, 마우스 오른쪽 버튼을 클릭하고 [속성]을 선택한다. 그리고 [옵션] 페이지에서 기본 커서를 LOCAL로 변경하고 <확인> 버튼을 클릭한다. 
+
+3-2 옵션을 주지 말고 커서를 정의한다. 이제는 지역 커서로 정의될 것이다. 
+
+DECLARE cursorTbl_cursor CURSOR 
+	FOR SELECT LineTool FROM cursorTbl;
+
+명령어가 잘 실행되었을 것이다.
+
+3-3 다시 커서의 정보를 확인해 보자. 이번에는 @cursor_source를 LOCAL로 변경한다. 
+
+DECLARE @result CURSOR
+EXEC sp_describe_cursor @cursor_return = @result OUTPUT, @cursor_source = N'LOCAL', -- LOCAL 커서임을 지정
+	@cursor_identity = N'cursorTbl_cursor' -- 커서 이름을 지정
+
+FETCH NEXT from @result
+WHILE (@@FETCH_STATUS <> -1)
+	FETCH NEXT FROM @result
+
+오류 메시지:
+메시지 16916, 수준 16, 상태 4, 프로시저 sp_describe_cursor 줄 14
+이름이 cursorTbl_source 인 커서가 없습니다. 
+메시지 16950, 수준 16, 상태 2, 줄 2
+변수 @result에 현재 할당된 커서가 없습니다. 
+
+
+그런데 왜 오류가 발생했을까?지역 커서의 생존 범위는 해당 범위뿐이다. 우리는 3-2에서 두줄만 실행했으므로 그 두 줄을 벗어나게 되면 지역 커서는 자동으로 해제되기 때문이다. 
+
+3-4 앞의 3-2와 3-3의 내용을 한꺼번에 선택한 후에 실행해 보자. 결과를 보면 cursor_scope가 1로 설정되어 있는 것을 확인할 수 있을 것이다. 즉 지역 커서로 생성되어 있는것이다. 
+
+3-5 별도로 커서를 해제해줄 필요는 없다. 앞에서 이미 커서의 범위가 벗어난 것이므로 커서는 자동으로 소멸되었을 것이다. 
+
+3-6 다시 SSMS의 개체 탐색기에서 [데이터 베이스] > [cursorDB]를 선택한 후, 마우스 오른쪽 버튼을 클릭하고 [속성]을 선택한다. 그리고 [옵션]페이지에서 기본 커서를 원래의 GLOBAL로 변경하고 <확인> 버튼을 클릭한다.
