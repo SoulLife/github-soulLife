@@ -1,0 +1,250 @@
+(2) STATIC/ DYNAMIC/KEYSET
+각각의 의미는 앞에서 설명했지만 좀 더 쉽게 이해하려면 다음 그림을 보자. 다음 그림은 sqlDB의 userTbl의 예를 든것이다. id 열에는 Primary Key가 설정되어서 고유 인덱스(클러스터형 인덱스도 고유 인덱스이다)가 설정된 상태이다. 
+
+STATIC(정적) -> tempdb			<--	커서를 열면 모두 복사됨		원본db
+		-> 커서포인터
+
+KEYSET(키 집합)->	커서포인터		<--	커서를 열면 키값만 모두 복사됨	
+
+DYNAMIC(동적)->	커서 포인터		<--	커서를 열면 현재 커서 포인터의 키 값만 복사됨
+
+우선 STATIC을 살펴보자. 당연히 처음에는 전체 데이터를 복사하느라 오랜 시간이 걸릴 것이다. 하지만 커서를 사용할 때는 tempdb의 것만 사용하게 되므로 결과적으로 성능이 다른 것보다는 낫다. 
+
+만약 원본 DB의 테이블에서 이승기의 주소가 변경되면 어떻게 될까? [그림 12-6]에서 알 수 있듯이 이미 전체 데이터를 복사해 온 것이므로 원본 DB의 변경(UPDATE)및 삽입(INSERT)은 현재 커서에는 반영되지 않는다. 
+
+KEYSET은 테이블의 키로 설정된 열만 복사하는 개념이다. 그래서 원본 DB의 테이블에서 데이터가 변경(UPDATE)되면 커서에서도 확인할 수 있다. 하지만 원본 테이블에 새로운 열이 삽입(INSERT)되면 커서에는 새로 삽입된 데이터의 ID가 없으므로 알 수가 없다. 
+
+DYNAMIC은 현재 커서 포인터의 키 값만 복사한다. 그러므로 원본 데이터가 변경(UPDATE)되거나 삽입(INSERT)된 정보를 모두 커서에서 확인할 수 있다. 
+
+
+
+실습4 : 커서의 형태(model)가 내부적으로 작동되는 것을 확인해 보자. 
+
+1. 데이터의 양이 조금 많아야 확인이 잘 되므로 cursorDB를 사용해 보자. 
+
+2. 디폴트로 커서를 정의하고, 커서의 형태(model)를 확인해 보자. 
+
+2-1 커서를 정의한다.
+USE cursorDB;
+GO
+DECLARE cursorTbl_cursor CURSOR
+	FOR SELECT LineTotal FROM cursorTbl;
+
+2-2 커서의 정보를 확인한다. 
+DECLARE @result CURSOR
+EXEC sp_describe_cursor @cursor_return = @result OUTPUT,
+	@cursor_source = N'GLOBAL', -- GLOBAL 커서임을 지정
+	@cursor_identity = N'cursorTbl_cursor' -- 커서 이름을 지정
+
+FETCH NEXT from @result
+WHILE ( @@FETCH_STATUS <> -1)
+	FETCH NEXT FROM @result
+
+
+model이 3으로 설정된 것을 확인할 수 있다. 여기서 1은 STATIC(정적), 2는 KEYSET(키집합), 3은 DYNAMIC(동적), 4는 FAST_FORWARD(빠른전진)를 의미한다. 즉 아무것도 설정하지 않으면 디폴트로 DYNAMIC이 설정되는 것이다. 그러므로 되도록 커서의 형태(model)를 지정해서 커서를 정의하기를 권장한다.(DYNAMIC은 가장 성능이 나쁘다)
+
+* model 열의 오른쪽 concurrency는 1은 READ_ONLY(읽기 전용), 2는 SCROLL_LOCKS(스크롤 잠금), 3은 OPTIMISTIC(낙관적)을 의미한다. 또한 왼쪽 status가 -1은 커서가 아직 열리지 않은 상태를 의미한다. 
+
+
+2-3 커서를 해제한다. 
+DEALLOCATE cursorTbl_cursor;
+
+3. 커서를 STATIC(정적)으로 선언한다. 
+3-0 우선은 SalesOrderDetailID를 Unique Key로 지정해서 고유 인덱스가 생성되게 한다. 
+ALTER TABLE cursorTbl
+	ADD CONSTRAINT uk_id
+	UNIQUE (SalesOrderDetailID);
+
+3-1 전역이며 정적인 커서로 선언한다. 
+DECLARE cursorTbl_cursor CURSOR GLOBAL STATIC
+	FOR SELECT * FROM cursorTbl;
+
+3-2 커서를 연다. 
+OPEN cursorTbl_cursor;
+
+약간 시간이 걸렸다 컴퓨터 사양이 아주 좋은 독자는 잘 느끼지 못했을지도 모르겠지만, 아무튼 [그림 12-6]처음에 나온 STATIC(정적) 커서에 작동된 것이다. 즉 원본 테이블을 전부 tempdb로 복사하는 대량의 작업이 수행된 것이다. 
+
+3-3 커서의데이터를 인출해서 확인해 보자. 
+
+FETCH NEXT FROM cursorTbl_cursor;
+
+첫 행을 인출(Fetch)한다. 즉 SalesOrderDetailID가 1인 데이터가 인출된다. 몇 번 더 수행해 보자. 계속 다음 데이터가 인출되는 것을 확인할 수 있다. 
+
+3-4 원본 데이터를 SalesOrderID를 전부 0으로 변경해 보자. 
+UPDATE cursorTbl SET SalesOrderID = 0;
+
+3-5 다시 인출해 보자. 
+FETCH NEXT FROM cursorTbl_cursor;
+
+SalesOrderID가 0으로 보이지는 않을 것이다. 그 이유는 [그림12-6]에 나와 있듯 정적(STATIC)커서는 tempdb에 이미 변경되기 전의 모든 행을 복사해 놓았기 때문이다. 
+
+3-6 커서를 닫고 해제한다. 
+CLOSE cursorTbl_cursor;
+DEALLOCATE cursorTbl_cursor;
+
+
+
+(3)커서의 이동 및 암시적 커서 변환
+이번 내용은 실습을 통해서 직접 확인해 보도록 하자. 
+
+
+실습5 : 커서의 이동을 확인해 보고 암시적 커서 변환에 대해서도 알아보자. 
+
+1. 커서의 이동이 앞 또는 뒤로도 가능하게 커서를 선언해 보자. 
+
+1-1 sqlDB를 사용해 보자. 그리고 데이터의 순서를 확인해 놓자. 
+USE sqlDB;
+SELECT name, height FROM userTbl;
+
+1-2 커서를 스크롤 가능하도록 정의하고 커서를 열자. 
+DECLARE userTbl_cursor CURSOR GLOBAL SCROLL
+	FOR SELECT name, height FROM userTbl;
+
+OPEN userTbl_cursor;
+
+* 사실 별도로 SCROLL을 지정하지 않아도 디폴트로 스크롤 기능으로 설정된다. 단 FORWARED_ONLY 또는 FAST_FORWARD로 지정된 경우에는 스크롤되지 않는다.
+
+
+1-3 다음 구문을 두 번 실행해 보자. 
+DECLARE @name NVARCHAR(10)
+DECLARE @height INT
+FETCH NEXT FROM userTbl_cursor INTO @name, @height 
+SELECT @name, @height
+
+바비킴과 은지원이 차례로 나왔을 것이다. 
+
+1-4 제일 뒤로 가보도록 하자. 
+DECLARE @name NVARCHAR(10)
+DECLARE @height INT
+FETCH LAST FROM userTbl_cursor INTO @name, @height 
+SELECT @name, @height
+
+제일 뒤에 있던 윤종신 이 나왔을 것이다. 
+
+
+1-5 다시 이전의 행으로 이동하자. 
+
+DECLARE @name NVARCHAR(10)
+DECLARE @height INT
+FETCH PRIOR FROM userTbl_cursor INTO @name, @height 
+SELECT @name, @height
+
+윤종신 바로 위의 성시경이 나왔을 것이다. 
+
+1-6 이번에는 처음으로 돌아가 보자. 
+
+DECLARE @name NVARCHAR(10)
+DECLARE @height INT
+FETCH FIRST FROM userTbl_cursor INTO @name, @height 
+SELECT @name, @height
+
+다시 바비킴 이 나왔을 것이다. SCROLL로 지정할 때는 방향에 제한 없이 자유롭게 커서를 이동시킬 수 있다는 것을 확인했다. 
+
+1-7 커서를닫고 해제 한다. 
+CLOSE userTbl_cursor;
+DEALLOCATE userTbl_cursor;
+
+2. 커서의 암시적인 커서 변환에 대한 실습해 보자. 
+2-1 실습에 사용할 고유(Unique)인덱스가 없는 테이블을 만들자. 
+
+USE sqlDB;
+CREATE TABLE keysetTbl(id INT, txt CHAR(5));
+INSERT INTO keysetTbl VALUES(1, 'AAA');
+INSERT INTO keysetTbl VALUES(2, 'BBB');
+INSERT INTO keysetTbl VALUES(3, 'CCC');
+
+
+2-2 KEYSET 커서로 선언하자. 또한 커서를 뒤로 돌릴 일이 없다면 FORWARD_ONLY 옵션을 사용하는 것이 성능에 도움이 된다. 
+
+DECLARE keysetTbl_cursor CURSOR GLOBAL FORWARD_ONLY KEYSET
+	FOR SELECT id, txt FROM keysetTbl;
+
+명령이 성공적으로 수행되었으므로, 커서의 모델이 KEYSET(키 집합)으로 설정되었을 것이다. KEYSET의 내부 구성은 [그림12-6]에 나타나 있다. 
+
+
+2-3 sp_describe_cursor 시스템 저장 프로시저를 이용해서 커서의 정보를 확인해 보자. 
+
+DECLARE @result CURSOR
+EXEC sp_describe_cursor @cursor_return = @result OUTPUT,
+	@cursor_source = N'GLOBAL',
+	@cursor_identity = N'keysetTbl_cursor'
+
+FETCH NEXT from @result
+WHILE (@@FETCH_STATUS <> -1)
+	FETCH NEXT FROM @result
+
+결과를 보면 model이 1(STATIC)로 설정된 것을 확인할 수 있다. 그런데 우리는 커서를 선언할 때 KEYSET으로 설정했음에도 현재 커서가 STATIC으로 되어 있다. 그 이유는 테이블 keysetTbl에 고유 인덱스가 없으므로 암시적인 커서 변환이 일어나서 KEYSET이 STATIC으로 변환된 것이다. STATIC에서는 원본 테이블을 모두 tempdb에 복사한 다음 데이터를 인출(FETCH)하게 되므로 원본 테이블의 변경을 감지할 수 없다. 앞의 실습에서 확인해 보았다. 
+
+2-4 이러한 암시적인 커서 변환을 모른다고 가정하고, 첫 번째 행을 인출해 보자. 
+OPEN keysetTbl_cursor;
+FETCH NEXT FROM keysetTbl_cursor;
+
+2-5 원본 테이블의 데이터를 모두 변경한 다음, 다시 데이터를 인출해 보자. 
+
+* 현재 우리는 이 커서에 암시적 커서 변환이 일어난 것을 모르고 있으므로 변경된 데이터가 나올 것을 기대하고 있는 상황이다. 
+
+UPDATE keysetTbl SET text = 'ZZZ';
+FETCH NEXT FROM ketsetTbl_cursor;
+
+결과를 보니 변경된 데이터가 아닌 처음 커서를 선언할 시점의 데이터가 보인다. 현재 이 결과(BBB)자체가 문제가 아니라, 우리가 기대한 값(ZZZ)이 아니라는 것이 문제다. 
+
+2-6 커서를 닫고 해제한다. 또 샘플 테이블도 다시 만든다. 
+CLOSE keysetTbl_cursor;
+DEALLOCATE keysetTbl_cursor;
+
+DROP TABLE keysetTbl;
+CREATE TABLE keysetTbl(id INT, txt CHAR(5));
+INSERT INTO keysetTbl VALUES(1, 'AAA');
+INSERT INTO keysetTbl VALUES(2, 'BBB');
+INSERT INTO keysetTbl VALUES(3, 'CCC');
+
+3. 그래서 앞에서와 같은 암시적 커서 변환이 될 때 메시지를 보여줄 수 있다. 
+3-1 TYPE_WARNING 옵션을 사용해 보자. 
+DECLARE keysetTbl_cursor CURSOR GLOBAL FORWARD_ONLY KEYSET TYPE_WARNING
+	FOR SELECT id, txt FROM keysetTbl;
+메시지 :
+생성된 커서는 요청한 유형이 아닙니다. 
+
+메시지에 의해서 암시적 커서 변환을 예측할 수 있다. 
+
+3-2 ekysetTbl의 id 열을 UNIQUE로 지정해서 고유 인덱스를 생성하자(Primary Key로 지정해도 된다)
+ALTER TABLE ketsetTbl
+	ADD CONSTRAINT uk_keysetTbl
+	UNIQUE (id);
+
+3-3 커서를 해제하고 다시 선언하자 
+DEALLOCATE keysetTbl_cursor;
+DECLARE keysetTbl_cursor CURSOR GLOBAL FORWARD_ONLY KEYSET TYPE_WARNING
+	FOR SELECT id, txt FROM keysetTbl;
+
+
+이번에는 잘 생성되었을 것이다. 
+
+3-4 커서의 정보를 확인해 보자. 
+DECLARE @result CURSOR
+EXEC sp_describe_cursor @cursor_return = @result OUTPUT,
+	@cursor_source = N'GLOBAL',
+	@cursor_identity = N'keysetTbl_cursor'
+
+FETCH NEXT from @result
+WHILE (@@FETCH_STATUS <> -1)
+	FETCH NEXT FROM @result
+
+모델이 2번 KEYSET(키 집합)임을 확인할 수 있다. 
+
+3-5 커서를 열고 데이터를 확인해 보자. 
+
+OPEN keysetTbl_cursor;
+FETCH NEXT FROM keysetTbl_cursor;
+
+아직 원본 테이블이 변경되지 않았으므로 원래의 값(AAA)이 보인다. 
+
+3-6 원본 테이블을 변경하고 확인해 보자. 
+
+UPDATE keysetTbl SET txt = 'ZZZ';
+FETCH NEXT FROM keysetTbl_cursor;
+
+변경된 데이터(ZZZ)가 확인된다. 그 이유는 KEYSET의 경우 [그림12-6]과 같이 tempdb에 ketsetTbl의 키인 id 열만 가지고 있기 때문이다. 
+
+
+커서는 성능 면에서 좋지 않으므로 되도록 사용하지 않는 것이 좋다. 다만 이번 장에서는 왜 사용하지 않는 것이 좋은지를 확인할수 있었다. 커서에 대해서 이 책에서 다루지 않은 더 많은 내용이 있지만 이 정도에서 마치겠다. 혹 커서에 관심이 있는 독자는 SQL Server 2012 도움말을 참조하자. 여기서 다룬 내용을 이해했다면 도움말을 보고도 충분히 내용을 이해할수 있을 것이다. 
