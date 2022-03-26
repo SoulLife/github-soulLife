@@ -1,0 +1,288 @@
+※ Moq 사용하기
+이전 절의 예제에서 테스트들을 매우 간단하게 유지할 수 있었던 이유 중 하나는 다른 클래스에 의존하지 않고 동작하는 단일 클래스를 테스트했기 때문이다. 물론 실제 프로젝트에도 이런 개체들은 존재하지만 반대로 독립적으로는 동작할 수 없는 개체들을 테스트해야 하는 경우도 많다. 그런 상황에서 의존성까지 테스트하지 않더라도 관심 있는 클래스나 메서드에만 테스트를 집중할 수 있어야 한다. 
+
+이를 위한 한 가지 유용한 접근 방식은 제어가 가능하고 지정한 방식으로 프로젝트상의 실제 개체의 기능들을 가장해주는 Mock 개체를 사용하는 것이다. Mock 개체를 사용하면 관심을 갖고 있는 기능들을 검사하는 일에만 테스트 범위를 집중할 수 있다. 
+
+Visual Studio 의 유료 버전에서는 Fakes라는 기능을 이용해서 Mock 개체의 생성을 지원해준다. 그러나 필자는 Moq이라는 라이브러리를 선호하는 편인데, 이 라이브러리는 간단하고 사용하기 쉬울 뿐만 아니라 무료 버전을 비롯한 모든 Visual Studio 에디션에서 사용가능하기 때문이다. 
+
+
+
+※ 문제점 이해하기
+
+먼저 직접 Moq을 사용해보기 전에 수정하려고 하는 문제점부터 살펴보자. 이번 절에서는 예제 프로젝트의 Models 폴더에 정의해놓은 LinqValueCalculator 클래스의 단위 테스트를 수행해볼 것이다. 그러면 잠시 기억을 되돌려보기 위해서 목록6-31에서 LinqValueCalculator 클래스의 정의를 다시 살펴보도록 하자. 
+
+목록6-31. LinqValueCalculator.cs 파일의 내용. 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace EssentialTools.Models
+{
+    public class LinqValueCalculator : IValueCalculator
+    {
+        private IDiscountHelper discounter;
+        private static int counter = 0;
+
+        public LinqValueCalculator(IDiscountHelper discountParam)
+        {
+            discounter = discountParam;
+            System.Diagnostics.Debug.WriteLine($"Instance {++counter} created");
+        }
+        public decimal ValueProducts(IEnumerable<Product> products)
+        {
+            return discounter.ApplyDiscount(products.Sum(p => p.Price));
+        }
+    }
+}
+
+테스트 프로젝트에 이 클래스를 테스트하기 위한 새로운 단위 테스트 클래스를 추가한다. 솔루션 탐색기에서 테스트 프로젝트를 마우스 오른쪽 버튼으로 클릭한 다음 팝업 메뉴에서 [추가(Add)] > [단위 테스트(Unit Test)]를 선택한다. 만약 [추가(Add)] 메뉴에 [단위 테스트(Unit Test)] 항목이 나타나지 않는다면 그 대신 [새 항목(New Item)]을 선택한 다음 [기본 단위 테스트(Basic Unit Test)] 템플릿을 이용한다. 그러면 Visual Studio가 자동으로 UnitTest2.cs 라는 이름으로 새로운 단위 테스트 클래스 파일을 생성해주는데 목록6-32에 이 파일에 작성해야 할 단위 테스트의 내용이 나타나 있다. 
+
+
+목록6-32 UnitTest2.cs 파일에 LinqValueCalculator 클래스에 대한 단위 테스트 생성하기
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using EssentialTools.Models;
+using System.Linq;
+namespace EssentialTools.Tests
+{
+    [TestClass]
+    public class UnitTest2
+    {
+
+        private Product[] products =
+        {
+            new Product {Name="Kayak", Category="Watersports", Price=275M },
+            new Product { Name="Lifejacket", Category="Watersports", Price=48.95M },
+            new Product {Name="Soccer ball", Category="Soccer", Price=19.50M},
+            new Product {Name="Corner flag", Category="Soccer", Price=34.95M}
+        };
+
+        [TestMethod]
+        public void Sum_Products_Correctly()
+        {
+            //Arrange(시나리오를 설정한다)
+            var discounter = new MinumumDiscountHelper();
+            var target = new LinqValueCalculator(discounter);
+
+            var goalTotal = products.Sum(e => e.Price);
+
+            //Act(작업을 시도한다)
+            var result = target.ValueProducts(products);
+
+            //Assert(결과를 검증한다. 
+            Assert.AreEqual(goalTotal, result);
+        }
+    }
+}
+
+
+이 단위 테스트에 존재하는 문제점은 바로 LinqValueCalculator 클래스가 IDiscountHelper 인터페이스의 구현에 의존해서 동작한다는 점이다. 이 단위 테스트에서는 MinimumDiscountHelper 클래스를 사용해서 이 의존성을 해결하고 있는데, 이 때문에 두 가지 문제점이 발생한다. 
+
+먼저 첫 번째 문제점은 이 단위 테스트가 복잡하고 불안정하게 만들어졋다는 점이다. 정상적으로 동작하는 단위 테스트를 작성하려면 ValueProducts 메서드에 기대하는 값을 계산하기 위해서 IDiscountHelper 구현의 할인율 로직까지 감안해야만 한다. 비록 LinqValueCalculator 클래스가 적절하게 동작한다고 하더라도 IDiscountHelper 인터페이스 구현의 할인율 로직이 변경되면 테스트가 실패할 수 밖에 없기 때문에 테스트 자체가 불안정하다고 밖에 볼 수 없다. 
+
+두 번째 문제점이자 가장 중요한 점은 암시적으로 MinimumDiscountHelper 클래스까지 단위 테스트의 범위에 포함시켜버린 셈이 됐다는 것이다. 그렇기 때문에 단위 테스트가 실패할 경우 문제점이 LinqValueCalculator 클래스로부터 비롯된 것인지 아니면 MinimumDiscountHelper 클래스로부터 비롯된 것인지를 파악하기가 힘들어졋다. 
+
+잘 만들어진 단위 테스트는 간결하고 한 가지 문제에만 집중해야 하지만 이 단위 테스트는 이런 특징들을 전혀 따르지 못하고 있다. 이어지는 절들에서는 MVC 프로젝트에 Moq을 추가하고 적용해서 이런 문제점을 해결하는 방법을 살펴본다. 
+
+
+
+
+※ Visual Studio 프로젝트에 Moq 추가하기
+이번 장의 앞부분에서 살펴본 Ninject의 경우와 마찬가지로 MVC 프로젝트에 Moq을 추가할 수 있는 가장 쉬운 방법은 Visual Studio에 통합된 NuGet 기능을 이용하는 것이다. NuGet콘솔을 열고 다음 명령어를 입력한다. 
+
+Install-Package Moq -version 4.1.1309.1617 -projectname EssentialTools.Tests
+
+이 명령어에서 볼 수 있듯이 projectname 인자를 지정하면 NuGet에 메인 응용프로그램 프로젝트가 아닌 단위 테스트 프로젝트에 Moq 패키지를 설치하도록 명시적으로 지정할 수 있다. 
+
+
+
+※ 단위 테스트에 Mock 개체 추가하기
+단위 테스트에 Mock 개체를 추가한다는 말은 Moq에 작업하고자 하는 개체가 무엇인지 알려주고 그 개체의 동작을 구성한 다음 테스트 대상에 이 개체를 적용하는 작업을 의미한다. 목록 6-33에서 LinqValueCalculator 클래스에 대한 단위 테스트에 Mock 개체가 추가된 방식을 살펴볼수 있다. 
+
+
+목록6-23 UnitTest2.cs 파일의 단위 테스트에서 Mock 개체 사용하기 
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using EssentialTools.Models;
+using System.Linq;
+using Moq;
+namespace EssentialTools.Tests
+{
+    [TestClass]
+    public class UnitTest2
+    {
+
+        private Product[] products =
+        {
+            new Product {Name="Kayak", Category="Watersports", Price=275M },
+            new Product { Name="Lifejacket", Category="Watersports", Price=48.95M },
+            new Product {Name="Soccer ball", Category="Soccer", Price=19.50M},
+            new Product {Name="Corner flag", Category="Soccer", Price=34.95M}
+        };
+
+        [TestMethod]
+        public void Sum_Products_Correctly()
+        {
+            //Arrange(시나리오를 설정한다)
+            Mock<IDiscountHelper> mock = new Mock<IDiscountHelper>();
+            mock.Setup(m => m.ApplyDiscount(It.IsAny<decimal>())).Returns<decimal>(total => total);
+            var target = new LinqValueCalculator(mock.Object);
+
+            //Act(작업을 시도한다)
+            var result = target.ValueProducts(products);
+
+            //Assert(결과를 검증한다. 
+            Assert.AreEqual(products.Sum(e => e.Price), result);
+        }
+    }
+}
+
+
+Moq을 사용하기 위한 구문은 처음 보면 조금 이상하게 보이므로, 각 단계별로 차근차근 그 과정을 살펴보도록 하자. 
+
+TIP :
+여러분이 선택할 수 있는 다양한 Mocking 라이브러리들이 존재한다는 점을 기억해두기 바란다. 분명 Moq도 좋은 라이브러리이긴 하지만 Moq 의 동작 방식이 마음에 들지 않는다면 자신에게 적합한 다른 라이브러리를 찾아서 바꾸는 것도 나쁘지 않다. 수백 페이지 분량의 매뉴얼을 제공해주는 다른 몇몇 유명한 라이브러리들을 선택할 수도 있을 것이다. 
+
+
+
+
+※ Mock 개체 생성하기
+가장 첫 번째 단계는 작업하고자 하는 Mock 개체의 종류를 Moq에 알려주는 것이다. Moq은 형식 매개변수에 많이 의존하는데, 다음과 같은 구문을 이용해서 Moq에 IDiscountHelper 인터페이스를 구현하는 Mock 개체를 사용하려고 한다는 것을 알려줄 수 있다. 
+
+Mock<IDiscountHelper> mock = new Mock<IDiscountHelper>();
+
+이 코드는 강력한 형식의 Mock<IDiscountHelper> 개체를 생성해서 IDiscountHelper 형식을 처리하려고 한다는 것을 Moq 라이브러리에 알려준다. 이번 단위 테스트 예제에서는 IDiscountHelper 인터페이스를 지정하고 있지만 단위 테스트의 관심을 집중시키기 위해서 격리할 필요가 있는 형식이라면 어떤 형식이라도지정할 수 있다. 
+
+
+※ 메서드 선택하기
+강력한 형식이 Mock 개체를 생성했으므로 이번에는 이 개체가 동작할 방식을 명시할 차례다. 그리고 바로 이 부분이 Mocking 작업 과정의 핵심인데, 이 과정을 통해서 단위 테스트에서 대상 개체의 기능을 테스트하기 위해 필요한 Mock 개체의 기준 동작을 구성할 수 있다. 다음은 필요한 동작을 설정하고 있는 단위 테스트의 구문이다. 
+mock.Setup(m => m.ApplyDiscount(It.IsAny<decimal>())).Returns<decimal>(total => total);
+
+이 코드에서는 먼저 Setup 메서드를 호출해서 Mock 개체에 메서드를 추가하고 있다. Moq은 기본적으로 LINQ와 람다식을 이용해서 동작한다. Setup 메서드를 호출하면 Moq은 구현을 요청한 인터페이스에 접근할수 있도록 해당 인터페이스를 전달해주는데, 그 과정은 LINQ의 마법으로 교묘하게 감춰져 있으며 여기에서는 자세히 살펴보지 않을 것이다. 이 전달된 인터페이스를 이용해서 람다 식으로 구성하고자 하는 메서드를 선택할 수 있다. 이번 예제 단위테스트에서는 IDiscountHelper 인터페이스와 유일한 메서드이자 LinqValueCalculator클래스를 테스트하기 위해 필요한 ApplyDiscount 메서드의 동작을 선택하고 있다. 
+
+그런 다음 다음에 강조된 구문처럼 It 클래스를 사용해서 관심을 갖고 있는 매개변수 값들을 Moq에 알려줘야 한다. 
+
+
+이 It 클래스는 제네릭 형식 매개변수와 함께 사용되는 몇 가지 메서드들을 정의하고 있다. 이 번 예제에서는 제네릭 형식 매개변수로 decimal을 지정해서 IsAny 메서드를 호출하고 있는데, 이는 임의의 decimal 값을 전달해서 ApplyDiscount 메서드를 호출할 때마다, 지금부터 정의할 동작을 적용하라고 Moq에 지시한다. 표6-5에는 It 클래스가 제공해주는 메서드들이 정리되어 있는데, 참고로 이 메서드들은 모두 정적 메서드다. 
+
+표6-5 It 클래스의 메서드
+
+메서드					설명
+Is<T>([조건)]					조건이 true를 반환하는 T 형식의 값들을 지정한다(목록6-34참고)
+
+IsAny<T>()					모든 T 형식의 값들을 지정한다
+
+IsInRange<T>(min, max, kind)		매개변수가 정의된 값들 사이에 존재하는 T 형식인 경우 일치한다. 마지막 매개변수는 경계 값(min 값과, max 값)을 포함
+						할지 또는 제외할지를 지정하는 Range 열거형 값이다. 
+
+IsRegex([정규식])				문자열 매개변수가 지정한 정규식과 일치하는 경우에 일치한다. 
+
+
+잠시 뒤에는 It 클래스의 다른 메서드들을 사용하는 보다 복잡한 예제를 살펴보겠지만 지금은 모든 decimal 값에 대응하는 IsAny<decimal>메서드에만 집중하도록 하자. 
+
+
+
+
+※ 결과 정의하기
+Returns 메서드를 이용하면 Mock으로 구성한 메서드를 호출했을 때 Moq이 반환할 결과를 지정할 수 있다. 결과 값의 형식은 형식 매개변수를 통해서 지정할 수 있으며 결과 자체는 람다 식을 사용해서 지정할 수 있다. 가령 이번 예제에서는 이 메서드를 다음과 같이 호출하고 있다. 
+
+먼저 decimal 형식 매개변수를 전달해서 Returns 메서드를 호출해서(예: Returns<decimal>) Moq에 decimal 형식 값을 반환하고자 한다는 것을 알려준다. Moq은 ApplyDiscount 메서드가 전달받은 형식의 값을 람다 식으로 그대로 전달해주는데 이번 예제에서는 Mock ApplyDiscount 메서드에 전달된 값에 아무런 작업도 수행하지 않고 그대로 반환해주는 통과(Pass-Through)메서드를 정의하고 있다. 이는 가장 간단한 유형의 Mock 메서드로 잠시 뒤에는 보다 세련된 사례들을 살펴볼 것이다. 
+
+
+※ Mock 개체 사용하기
+마지막 과정은 단위 테스트에서 Mock<IDiscountHelper> 개체의 Object 속성 값을 읽어서 Mock 개체를 사용하는 것이다. 
+
+...
+var target = new LinqValueCalculator(mock.Object);
+
+이번 예제를 요약해보면 이 Object 속성은 전달된 decimal 매개변수의 값을 그대로 반환해주는 ApplyDiscount 메서드가 정의된 IDiscountHelper 인터페이스의 구현을 반환해준다. 
+
+따라서 직접 테스트 Product 개체들의 가격 합계를 구한 다음, 그 값과 LinqValueCalculator 개체에서 반환된 값이 동일한지 점검할 수 있기 때문에 단위 테스트가 단순해진다. 
+
+Assert.AreEqual(products.Sum(e => e.Price), result);
+
+이처럼 Moq을 활용하면 Models 폴더에 만들어진 IDiscountHelper 인터페이스의 실제 구현들에 전혀 의존하지 않고도 단위 테스트에서 오직 LinqValueCalculator 개체의 동작만 점검할 수 있다. 이 얘기는 테스트가 실패할 경우, 문제점이 LinqValueCalculator 의 구현이나 Mock 개체를 설정한 방식에 있다는 것을 확신할 수 있기 때문에 실제 개체들의 체인이나 그 개체들 간의 상호작용을 살펴볼 필요 없이 훨씬 쉽고 간단하게 해당 부분의 소스들에 존재하는 문제점만 해결할 수 있다는 뜻이다. 
+
+
+
+
+※ 보다 복잡한 Mock 개체 생성하기
+이전 절에서는 간단한 Mock 개체를 살펴봤지만, Moq의 진정한 장점은 다양한 상황들을 테스트하기 위한 복잡한 동작들을 구성할 수 있다는 점에 있다. 목록6-34는 보다 복잡한 구현을 모방하기 위해서 UnitTest2.cs 파일에 추가한 IDiscountHelper 인터페이스에 대한 새로운 단위 테스트를 보여준다. 사실상 이 단위 테스트는 Moq을 이용해서 MinimumDiscountHelper 클래스의 동작 자체를 설계하고 있다. 
+
+목록6-34 MinimumDiscountHelper 클래스의 동작을 모방하고 있는 UnitTest2.cs 파일의 내용
+	private Product[] CreateProduct(decimal value)
+        {
+            return new[] { new Product { Price = value } };
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(System.ArgumentOutOfRangeException))]
+        public void Pass_Through_Variable_Discounts()
+        {
+            //Arrange (시나리오를 설정한다)
+            Mock<IDiscountHelper> mock = new Mock<IDiscountHelper>();
+            mock.Setup(m => m.ApplyDiscount(It.IsAny<decimal>())).Returns<decimal>(total => total);
+            mock.Setup(m => m.ApplyDiscount(It.Is<decimal>(v => v == 0))).Throws<System.ArgumentOutOfRangeException>();
+            mock.Setup(m => m.ApplyDiscount(It.Is<decimal>(v => v > 100))).Returns<decimal>(total => (total * 0.9M));
+            mock.Setup(m => m.ApplyDiscount(It.IsInRange<decimal>(10, 100, Range.Inclusive))).Returns<decimal>(total => total - 5);
+            var target = new LinqValueCalculator(mock.Object);
+
+            //Act (작업을 시도한다)
+            decimal FiveDollarDiscount = target.ValueProducts(CreateProduct(5));
+            decimal TenDollarDiscount = target.ValueProducts(CreateProduct(10));
+            decimal FiftyDollrDiscount = target.ValueProducts(CreateProduct(50));
+            decimal HundredDollarDiscount = target.ValueProducts(CreateProduct(100));
+            decimal FiveHundredDollarDiscount = target.ValueProducts(CreateProduct(500));
+
+            //Assert (결과를 검증한다)
+            Assert.AreEqual(5, FiveDollarDiscount, "$5 Fail");
+            Assert.AreEqual(5, TenDollarDiscount, "$10 Fail");
+            Assert.AreEqual(45, FiftyDollrDiscount, "$50 Fail");
+            Assert.AreEqual(95, HundredDollarDiscount, "$100 Fail");
+            Assert.AreEqual(450, FiveHundredDollarDiscount, "$500 Fail");
+            target.ValueProducts(CreateProduct(0));
+        }
+
+
+단위 테스트의 관점에서 본다면 이런 식으로 다른 모델 클래스들 중 하나의 예상 동작을 복제한다는 것이 이상한 일이겠지만 지금처럼 다양한 Moq의 기능들을 살펴보기 위한 용도로는 완벽한 사례로 볼 수 있을 것이다. 
+
+이 단위 테스트에서는 ApplyDiscount 메서드에 전달되는 매개변수 값들을 기준으로 각각 네 가지 다른 동작들을 정의하고 있다. 이 중 가장 간단한 것은 다음과 같이 임의의 decimal 값을 반환하는 가장 범용적인 동작이다. 
+
+mock.Setup(m => m.ApplyDiscount(It.IsAny<decimal>())).Returns<decimal>(total => total);
+
+이 동작은 이전 예제에서 살펴봤던 것과 완벽하게 같은 동작인데, 이 단위 테스트에 다시 포함시킨 이유는 Setup 메서드를 호출한 순서가 Mock 개체의 동작에 영향을 주기 때문이다. Moq은 정의된 순서의 역순으로 동작들을 평가하기 때문에 가장 마지막으로 호출된 Setup 메서드를 첫 번째로 고려한다. 그러므로 Mock 개체의 동작들을 생성할 때는 가장 일반적인 동작을 먼저 작성하고 가장 제한적인 동작을 나중에 작성하도록 순서에 주의해야만 한다. 이번 예제에서는 정의된 조건들 중에서 It.Any<decimal>조건이 가장 일반적인 조건이므로이를 가장 먼저 적용했다. 만약 Setup 메서드들의 호출 순서를 반대로 한다면 ApplyDiscount 메서드에 대한 모든 호출을 이 동작이 처리하게 되어 잘못된 Mock 결과가 만들어질 것이다. 
+
+
+
+※ 특정 값들에 대한 Mocking(그리고 예외 던지기)
+두 번째 Setup 메서드에서는 It.Is 메서드를 사용하고 있다. 
+
+mock.Setup(m => m.ApplyDiscount(It.Is<decimal>(v => v == 0))).Throws<System.ArgumentOutOfRangeException>();
+
+이 코드에서 Is 메서드에 전달된 조건은 ApplyDiscount 메서드에 전달된 값이 0이면 true 를 반환해준다. 그리고 결과를 반환하는 대신 Throws 메서드를 호출하고 있는데, 이 메서드는 형식 매개변수로 지정한 예외의 새로운 인스턴스를 던지도록 Moq에 지시한다. 또한 전달된 값이 100보다 큰 경우를 처리하고자 할때도 다음과 같이 Is메서드를 사용하고 있다. 
+
+ mock.Setup(m => m.ApplyDiscount(It.Is<decimal>(v => v > 100))).Returns<decimal>(total => (total * 0.9M));
+
+이 It.Is 메서드에는 true나 false를 반환하는 모든 유형의 조건을 지정할 수 있기 때문에 다양한 매개변수 값들에 대한 특정 동작을 설정할 수 있는 가장 유연한 방법이다. 필자는 복잡한 Mock 개체를 생성할 때 이 메서드를 자주 사용하는 편이다. 
+
+mock.Setup(m => m.ApplyDiscount(It.IsInRange<decimal>(10, 100, Range.Inclusive))).Returns<decimal>(total => total - 5);
+
+이번 예제에서는 예제의 완성도를 높이기 위해서 이 메서드를 사용하고 있지만, 개인적으로 실제 프로젝트에서는 동일한 작업을 처리하기 위해서 다음과 같이 Is 메서드에 조건을 지정하는 방식을 선호하는 편이다. 
+
+mock.Setup(m => m.ApplyDiscount(It.Is<decimal>(v => v >= 10 &&  v <= 100))).Returns<decimal>(total => (total * 0.9M));
+
+결과는 같지만 조건 지정 방식이 상대적으로 더 유연한 편이다. Moq은 이 밖에도 매우 유용한 기능들을 다양하게 제공해주는데, 이 기능들의 적용 방법에 대해서는 http://code.google.com/p/moq/wiki/QuickStart에서 제공되는 퀵 스타트 문서를 참고하기 바란다. 
+
+
+
+※ 요약
+이번 장에서는 효과적인 MVC 개발에 필수적인 세 가지 도구, 즉 Ninject , Visual Studio 의 내장 단위 테스트 지원 기능, Moq에 관해서 살펴봤다. 이 세 가지 도구를 대신할 수 있는 수 많은 오픈 소스 또는 상업적 제품들이 존재하고 있으므로, 이번 장에서 살펴본 도구들을 사용하지 않더라도 대안이 부족하지는 않을 것이다. 
+
+어쩌면 여러분은 TDD나 단위 테스트가 별로 달갑게 느껴지지 않거나 , DI나 Mocking 작업을 직접 처리하는 방식을 더 선호할 수도 있을 것이다. 물론 결정은 전적으로 여러분의 선택에 달려있다. 그러나 필자는 이 세 가지 도구를 개발 과정에 도입하면 여러 가지 실질적인 이점들을 얻을 수 있다고 믿고 있다. 만약 지금까지 이 도구들을 단 한번도 사용해본 적이 없어서 받아들이기를 주저하고 있다면 적어도 이 책을 읽는 동안만이라도 두려움을 버리고 적극적으로 사용해보기 바란다. 
+
+
+※ 특정 범위의 값들을 위한 Mocking
+
+It 개체를 이용한 마지막 동작 정의에서는 특정 범위의 매개변수 값들을 대상으로 적용되는 IsInRange 메서드를 사용하고 있다. 
