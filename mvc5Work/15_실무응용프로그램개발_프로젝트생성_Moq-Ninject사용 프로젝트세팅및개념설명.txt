@@ -1,0 +1,317 @@
+CHAPTER 7장 
+
+※SportsStore: 실무 응용 프로그램
+
+지금까지 여러 장에 걸쳐서 짧고 간단한 MVC 응용프로그램들을 만들어봤다. MVC 패턴과 우리가 알고 있어야 할 C# 언어의 기능들에 관해서알아보고 훌륭한 MVC 개발자들에게 필요한 도구들에 대해서도 살펴봤다. 이번에는 지금까지 살펴본 내용들을 모두 활용해서 실무에 가까운 전자상거래 응용프로그램을 구축해보도록 하자. 
+
+SportsStore라는 이름의 이번 예제 응용프로그램은 대부분의 온라인 상점에서 사용하고 있는 전형적인 접근법을 따를 것이다. 카테고리별, 페이지별로 둘러볼 수 있는 온라인 상품 카탈로그와 사용자들이 상품을 보관할 수 있는 장바구니를 만들어보고, 고객들이 배송정보를 입력할 수 있는 지불(checkout)페이지도 만들어 볼 것이다. 또한 카탈로그를 생성 * 조회 * 수정 * 삭제 (CRUD)할 수 있는 관리자 영역도 만들어서 관리자로 로그인한 사용자만 카탈로그를 변경할 수 있도록 접근을 제한해볼 것이다. 
+
+이번 장을 비롯한 이어지는 몇 장들의 목표는 MVC 프레임워크를 이용한 실무에 가까운 예제를만들어 보면서 실제 개발에 대한 감을 익히는 것이다. 그렇기 때문에 MVC 프레임워크에만 집중할수 있도록 데이터베이스 같은 외부 시스템과의 통합 작업은 단순화시켰으며, 결제 프로세스 같은 경우는 아예 생략했다. 
+
+기본적인 수준의 인프라(infrastructure)를 구축하는 처음 몇 단계의 과정에서는 진행이 느리다고 느껴질 수도 있을 것이다. Web Forms으로 개발할 때는 데이터베이스와 연동되는 컨트롤들을 드래그 앤 드롭으로 배치할수 있으므로 보다 빠르게 초기 기능들을 구현할 수 있다. 반면 MVC 응용프로그램에 대한 초기 투자는 상대적으로 조금 느린 것처럼 느껴지지만 유지보수가 쉽고 확장 가능하며, 단위 테스트를 훌륭히 지원하는 구조화된 코드로 여러분의 노력을 보상해 줄 것이다. 
+
+
+단위테스트:
+지금까지 필자는 MVC의 단위 테스트 용이성과 개발 과정 상의 중요한 일부분으로서의 단위 테스트에 대해서 지나칠 정도로 강조해왔다. 지금부터 여러분은 몇 장에 걸쳐서 SportsStore 예제 응용프로그램을 직접 구현해보면서 단위 테스트 및 MVC의 기능들과 관련된 기법들에 대한 자세한 설명들을 통해서 실제로 그 사례들을 살펴보게 될 것이다. 
+
+그러나 단위 테스트가 모든 사람들에게 일반적인 것은 아니라는 점도 잘 알고 있다. 여러분이 원치않는다면 단위 테스트에 관해서는 무시해도 좋다. 독자들의 편의를 위해서 순수하게 테스트에 관해서만 언급할 일이 있다면 지금 이 문단과 같은 별도의 영역에 따로 설명할 것이다. 따라서 단위 테스트에 관심이 없다면 지금처럼 별도 영역으로 편집된 부분들은 무시해도 무방하다. 그렇더라도 SportsStore는 정상적으로 동작할 것이다. 물론 MVC 프레임워크를 도입하는 중요한 이유 중 하나가 단위 테스트를 지원하기 위함이기는 하지만 단지 ASP .NET MVC의 기술적인 장점을 받아들이는 것이 목적이 되어 단위 테스트에 얽매일 필요는 없다. 
+
+
+
+그리고 SportsStore 응용프로그램을 구현하기 위해서 사용되는 대부분의 MVC 기능들에 관해서는 이 책의 후반부에서 각각 하나의 장을 할애하여 따로 살펴볼 것이다. 따라서 이어지는 몇 개의 장들에서는 가급적 중복 설명을 피하기 위해서 예제를 이해하기에 부족함이 없는 수준에서만 설명을 할 것이다. 보다 자세한 내용은 해당 장을 명시해서 상세한 정보를 원하는 독자들을 위해 쉽게 찾아볼 수 있도록 배려했다. 
+
+또한 이번 장에서는 MVC의 각 기능들이 어떻게 서로 결합되는지를 보여주기 위해서 구현에 필요한 각각의 단계들을 분리해서 설명할 것이다. 그리고 뷰를 생성할 때는 특별히 주의하기 바란다. 예제를 충실히 따르지 않으면 이상한 결과를 보게 될 수도 있기 때문이다. 
+
+
+※ 시작하기
+이번 장을 비롯한 SportsStore 예제 응용프로그램을 살펴보는 앞으로의 몇 장들을 읽어보면서 직접 예제를 따라서 코딩해보려면 Visual Studio를 설치해야 한다. 그러나 이 책에 포함된 SportsStore 프로젝트를 다운로드할 수도 있으므로 반드시 직접 코딩을 해야 할 필요는 없다. 기차 안이나 커피숍같은 곳에서 이 책을 읽을 것을 대비해서 스크린샷과 코드 목록을 최대한 따라오기 쉽게 작성하려고 노력했다. 
+
+
+
+※Visual Studio 솔루션 및 프로젝트 생성하기
+이번 예제를 위해서는 세 개의 프로젝트를 포함한 솔루션이 필요하다. 그 중 첫 번째 프로젝트에는 도메인 모델을, 두 번째 프로젝트에는 MVC 응용프로그램을 세 번째 프로젝트에는 단위 테스트를 작성하게 될 것이다. 먼저 [빈 솔루션(Blank Solution)] 템플릿을 선택해서 SportsStore라는 이름으로 빈 Visual Studio 솔루션을 생성한다. 이 템플릿은 그림7-1에서 볼 수 있는 것처럼 [새 프로젝트(New Project)] 대화 상자의 [기타 프로젝트 형식(Other ProjectTypes)]하위의 [Visual Studio 솔루션(Visual Studio Solutions)] 영역에서 찾을 수 있다. 솔루션 이름을 입력하고 [확인(OK)] 버튼을 클릭하면 솔루션이 생성된다. 
+
+Visual Studio의 솔루션은 하나 이상의 프로젝트를 담기 위한 컨테이너다. 이번 예제 응용프로그램에는 표7-1에 정리한 것처럼 세 가지 프로젝트가 필요하다 [솔루션 탐색기(Solution Explorer)]에서 SportsStore 솔루션을 마우스 오른쪽 버튼으로 클릭한 다음 [추가(Add)] > [새 프로젝트(New Project)]를 선택하여 이 세 가지 프로젝트를 하나씩 추가한다. 
+
+표7-1 SportsStore의 세 가지 프로젝트 
+
+프로젝트명				Visual Studio 프로젝트 템플릿			용도
+SportsStore.Domain		클래스 라이브러리(Class Library)			Entity Framework를 이용해서 작성한 리파지토리를 통해서 데이터를 저장한다. 
+
+SportsStore.WebUI			ASP .WEB 웹 응용프로그램([Empty] 프로젝트	컨트롤러와 뷰를 담고 있으며 SportsStore 응용프로그램의 사용자 인터페이스(UI)
+					템플릿을 선택하고 하단에서 [MVC]옵션을	로 동작한다.
+					선택한다)
+
+SportsStore.UnitTests		단위 테스트 프로젝트(Unit Test Project)	다른 두 프로젝트에 대한 단위 테스트를 작성한다. 
+
+필자는 개인적으로 ASP .NET MVC 웹 응용프로그램을 만들때 항상 Empty 템플릿을 사용하는 편이다. 다른 템플릿을 선택하면 프로젝트의 초기 설정에 JavaScript 라이브러리와 CSS 스타일시트, 그리고 보안 및 라우팅 설정에 필요한 C# 클래스들이 자동으로 추가되기 때문이다. 물론 이 템플릿들이 특별히 나쁜 구성인 것도 아니고, 최근에 Microsoft가 일부 오픈 소스 라이브러리들을 새 프로젝트 템플릿에 포함시킨 것은 오히려 바람직한 일이다. 그러나 이런 내용들을 직접 수작업으로 추가하고 구성해봄으로써 MVC 프레임워크의 작동 방식을 더 자세하게 살펴볼 수있다. 
+
+세 가지 프로젝트를 모두 생성하고 나면 솔루션 탐색기는 그림 7-2와 같은 모습이 될 것이다. 다만 Visual Studio가 SportsStore.Domain 프로젝트에 자동으로 추가해주는 Class1.cs 파일은 이번 예제에서는 사용하지 않을 것이므로 삭제하도록 하자. 
+
+그리고 디버깅 시의 편의를 위해서 SportsStore.WebUI 프로젝트를 마우스 오른쪽 버튼으로 클릭한 다음 팝업 메뉴에서 [시작 프로젝트로 설정(Set as Startup Project)]를 선택한다(그러면 프로젝트명이 굵은 글씨로 강조될 것이다). 이렇게 하면 [디버그(Debug)] 메뉴에서 [디버깅 시작(Start Debugging)]이나 [디버깅하지 않고 시작(Start without Debugging)]을 선택했을 때 작업 중이던 위치에 상관 없이 바로 SportsStore.WebUI 프로젝트가 시작된다. 
+
+Visual Studio는 디버깅을 시작할 때 뷰 파일을 편집하던 중이었다면 해당 뷰 파일을 찾아가려고 시도한다. 이를 피하려면 서버 탐색기에서 SportsStore.WebUI 프로젝트를 마우스 오른쪽 버튼으로 클릭한 다음 팝업 메뉴에서 [속성(Properties)]을 선택한다. 그리고 웹과 관련된 속성들이 제공되는 [웹(Web)]탭을 선택한 다음 [특정 페이지(Specific Page)] 옵션을 선택하고 입력란은 비워둔다. 단지 이 옵션을 선택하는 것만으로도 Visual Studio는 여러분이 작업하던 뷰를 찾아가려고 시도하지 않게 된다. 그리고 디버깅시 브라우저 응용프로그램의 루트 URL을 요청하게 만들어준다(2장의 시작 URL 설정하기 절에서도 같은 내용에 관해서 설명하고 있다. 2장에서는 해당 옵션에 대한 그림도 제공되므로 참고하기 바란다.)
+
+
+
+
+※ 도구 패키지들 설치하기
+이번 장에서는 Ninject와 Moq을 사용할 것이다. 따라서 Visual Studio에서 [도구(Tools)] > [라이브러리 패키지 관리자(Library Package Manager)] > [패키지 관리자 콘솔(Package Manager Console)]을 선택하여 NuGet 명령어 창을 열고 다음의 명령어들을 입력한다. 
+
+Install-Package Ninject -version 3.0.1.10 -projectname SportsStore.WebUI
+Install-Package Ninject.Web.Common -version 3.0.0.7 -projectname SportsStore.WebUI
+Install-Package Ninject.MVC3 -version 3.0.0.6 -projectname SportsStore.WebUI
+Install-Package Ninject -version 3.0.1.10 -projectname SportsStore.UnitTests
+Install-Package Ninject.Web.Common -version 3.0.0.7 -projectname SportsStore.UnitTests
+Install-Package Ninject.MVC3 -version 3.0.0.6 -projectname SportsStore.UnitTests
+Install-Package Moq -version 4.1.1309.1617 -projectname SportsStore.WebUI
+Install-Package Moq -version 4.1.1309.1617 -projectname SportsStore.UnitTests
+Install-Package Microsoft.Aspnet.Mvc -version 5.0.0 -projectname SportsStore.Domain
+Install-Package Microsoft.Aspnet.Mvc -version 5.0.0 -projectname SportsStore.UnitTests
+
+NuGet 패키지를 설치하면서 어떤 패키지를 어떤 프로젝트에 선택적으로 설치할 것인지를 명확하게 지정하고 있다. 또한 6장에서 살펴봤던 것처럼 다운로드 해서 설치할 패키지의 버전도 명시적으로 지정하고 있기 때문에 입력해야 할 NuGet 명령어가 다소 길다. 
+
+
+
+※ 프로젝트 간 참조 추가하기
+이번에는 프로젝트 간 의존성과 Microsoft 어셈블리에 대한 참조를 설정해보자. 솔루션 탐색기에서 각 프로젝트 하위의 참조 폴더를 마우스 오른쪽 버튼으로 클릭한 다음 [참조추가(Add Reference)]를 선택해서 [참조 관리자(Reference manager)] 대화상자를 열고 [어셈블리(Assemblies)] 하위의 [프레임워크(Framework)] 영역이나 [확장(Extensions)] 영역에서 , 또는 [솔루션(Solution)] 하위의 [프로젝트(Projects)] 영역에서 표7-2에 명시된 대로 프로젝트와 어셈블리에 대한 참조를 추가한다. 
+
+
+표7-2 필요한 프로젝트의 의존성
+
+프로젝트명				솔루션 의존성			어셈블리 참조
+SportsStore.Domain		None					System.ComponentModel.DataAnnotations
+
+SportsStore.WebUI			SportsStore.Domain		없음
+
+SportsStore.UnitTests		SportsStore.Domain		System.Web
+					SportsStore.WebUI			Microsoft.CSharp
+
+
+주의:
+시간을 충분히 갖고 이 관계들을 주의 깊게 설정해야 한다. 라이브러리나 프로젝트 참조가 제대로 설정되지 않으면 프로젝트 빌드 시 오류가 발생할 것이다. 
+
+
+
+※ DI(Dependency Injection) 컨테이너 설정하기
+6장에서는 Ninject를 이용해서 사용자 지정 의존성 해결자를 생성하는 방법을 살펴봤는데 MVC 프레임워크는 응용프로그램 전반에 걸쳐 이 사용자 지정 의존성 해결자를 통해서 개체의 인스턴스를 생성하게 된다. 이번 장에서도 같은 작업을 반복해볼 텐데 먼저 SportsStore.WebUI 프로젝트에 Infrastrcture라는 폴더를 추가하고 NinjectDependencyResolver.cs라는 파일을 추가한다. 이 클래스 파일에 작성해야 할 내용은 목록 7-1과 같다. 
+
+목록7-1 NinjectDependencyResolver.cs파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Web.Mvc;
+using Ninject;
+namespace SportsStore.WebUI.Infrastructure
+{
+    public class NinjectDependencyResolver :IDependencyResolver
+    {
+        private IKernel kernel;
+
+        public NinjectDependencyResolver(IKernel kernelParam)
+        {
+            kernel = kernelParam;
+            AddBindings();
+        }
+        public object GetService(Type serviceType)
+        {
+            return kernel.TryGet(serviceType);
+        }
+        public IEnumerable<object> GetServices(Type serviceType)
+        {
+            return kernel.GetAll(serviceType);
+        }
+        private void AddBindings()
+        {
+            //여기에 바인딩 정보를 입력한다. 
+
+        }
+    }
+}
+
+
+6장에서 살펴본 내용을 다시 떠올려 본다면 다음 단계로 수행해야 할 작업은 목록 7-2에서 볼수 있는 것처럼 Ninject의 NuGet 패키지가 App_Start 폴더에 추가해준 NinjectWebCommon.cs 파일을 열어서 NinjectDependencyResolver 클래스와 MVC 프레임워크의 의존성 주입(Dependency Injection)컨테이너 간의 연결 고리를 구성하는 일이다. 
+
+목록7-2 NinjectWebCommon.cs 파일에서 Ninject를 MVC의 의존성 해결자로 등록한다. 
+...
+private static void RegisterServices(IKernel kernel)
+        {
+            System.Web.Mvc.DependencyResolver.SetResolver(new SportsStore.WebUI.Infrastructure.NinjectDependencyResolver(kernel));
+        }   
+...
+
+
+※ 응용프로그램 실행하기
+그러나 현재 상태로 [디버그(Debug)] 메뉴의 [디버깅 시작(Start Debugging)]을 선택해서 응용프로그램을 실행시켜보면 그림7-3과 같이 오류가 발생할 것이다. 그 이유는 아직 존재하지 않는 컨트롤러에 대한 URL을 요청했기 때문이다. 
+
+
+※ 도메인 모델 작성하기
+모든 MVC 프레임워크 프로젝트는 도메인 모델부터 작성한다. 그 이유는 MVC 응용프로그램의 모든 부분이 도메인 모델을 주축으로 하기 때문이다. SportsStore는 전자상거래 응용프로그램이므로 무엇보다도 확실한 도메인 엔티티는 상품이다. SportsStore.Domain 프로젝트에 Entities라는 폴더를 만들고 여기에 Product.cs 라는 클래스를 추가한다. 그림7-4에서 그 구조를 확인할 수 있다. 
+
+이전 장들에서 사용했던 클래스와 동일한 클래스를 다시 사용하고 있기 때문에 이제는 다음과 같은 Product 클래스의 정의가 친숙할 것이다. 목록7-3처럼 Product.cs 클래스 파일의 내용을 편집한다. 
+
+
+목록7-3 Product.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SportsStore.Domain.Entities
+{
+    public class Product
+    {
+        public int ProductID { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public decimal Price { get; set; }
+        public string Category { get; set; }
+
+    }
+}
+
+
+이번 예제에서는 도메인 모델을 별도의 Visual Studio 프로젝트에 정의하는 접근 방식을 따르고 있다. 따라서 이 클래스는 다른 프로젝트들에서 참조될 것이므로 반드시 public으로 선언되어야 한다. 이번 예제처럼 도메인 모델을 반드시 별도의 프로젝트로 분리할 필요는 없지만, 필자의 개인적인 경험에 따르면 크고 복잡한 프로젝트일수록 모델과 컨트롤러를 분리하는 편이 훨씬 유용하다. 
+
+
+
+※ 추상 리파지토리 생성하기
+3장에서 설명한 것처럼 모델은 영구적인 데이터 저장소에서 데이터를 가져오거나 저장하는 영속화 로직(persistence logic)을 포함하고 있는데, 그 로직은 심지어 모델 내부에서조차 일관성있게 사용된다. 이번 예제에서는 데이터 모델 엔티티와 조회, 저장 로직 사이에 일정한 분리도 (degree of separation)를 유지하고자 하며, 이 요건을 리파지토리 패턴을 사용해서 구현하려고 한다. 당장은 데이터를 저장하는 구체적인 방식에 대해서는 걱정하지말고, 데이터를 저장하기 위한 인터페이스를 정의하는 것으로부터 작업을 시작하도록 하자. 
+
+먼저 SportsStore.Domain 프로젝트에 Abstract라는 폴더를 추가한다. 그리고 방금 만든 새 폴더를 마우스 오른쪽 버튼으로 클릭하고 [추가(Add)] > [새 항목(New Item)]을 선택한 다음 [인터페이스(Interface)] 템플릿을 사용해서 IProductRepository.cs라는 파일을 추가한다. 이 파일의 내용은 목록7-4와 같다. 
+
+목록7-4 IProductRepository.cs 파일의 코드 내용
+using System.Collections.Generic;
+using SportsStore.Domain.Entities;
+namespace SportsStore.Domain.Abstract
+{
+    public interface IProductRepository
+    {
+        IEnumerable<Product> Products { get; }
+    }
+}
+
+
+이 인터페이스는 데이터가 어디에 어떻게 저장되어 있는지, 또는 어디에서 어떻게 조회해야 하는지를 몰라도호출자가 일련의 Product개체들을 얻을 수 있도록 IEnumerable<T>를 사용하고 있다. IProductRepository 인터페이스에 의존하는 클래스는 데이터가 어디서 오는지, 인터페이스를 구현한 클래스가 그 데이터를 어떻게 전달하는지 전혀 알지 못하더라도 Product 개체들을 얻을 수 있다. 바로 이런 특징이 리파지토리 패턴의 주요 특징이다. 앞으로 SportsStore 예제 응용프로그램의 개발이 진행되는 동안, 필요한 기능을 추가하기 위해서 여러차례 이 IProductRepository 인터페이스를 다시 수정하게 될 것이다. 
+
+
+
+※ Mock 리파지토리 만들기
+이제 추상 인터페이스를 정의했으므로 영구화 로직을 구현해서 데이터베이스와 연결할 수 있게 되었지만 그 전에 응용프로그램의 다른 부분들을 먼저 추가해보기로 하자. 다만 추가할 부분들이 정상적으로 동작하려면 데이터가 필요하기 때문에 임시로 IProductRepository 인터페이스의 Mock 구현을 만들 것이다. 데이터 저장소에 대한 내용을 다루기 전까지는 이 Mock 구현이 그 자리를 대신하게 된다. 
+
+SportsStore.WebUI 프로젝트에 정의된 NinjectDependencyResolver 클래스의 AddBindings 메서드에 목록7-5와 같이 Mock 구현을 정의해서 IProductRepository 인터페이스와 바인딩한다. 
+
+목록7-5 NinjectDependencyResolver.cs 파일에 IProductRepository 인터페이스의 Mock 구현 추가하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
+using Moq;
+using Ninject;
+using SportsStore.Domain.Abstract;
+using SportsStore.Domain.Entities;
+
+namespace SportsStore.WebUI.Infrastructure
+{
+    public class NinjectDependencyResolver :IDependencyResolver
+    {
+        private IKernel kernel;
+
+        public NinjectDependencyResolver(IKernel kernelParam)
+        {
+            kernel = kernelParam;
+            AddBindings();
+        }
+        public object GetService(Type serviceType)
+        {
+            return kernel.TryGet(serviceType);
+        }
+        public IEnumerable<object> GetServices(Type serviceType)
+        {
+            return kernel.GetAll(serviceType);
+        }
+        private void AddBindings()
+        {
+
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new List<Product> {
+                new Product{ Name="Football", Price=25  },new Product{Name="Surf board", Price=179 },new Product{Name="Running shoes", Price=95 }
+            });
+            kernel.Bind<IProductRepository>().ToConstant(mock.Object);
+        }
+    }
+}
+
+비록 이 클래스에 많은 네임스페이스들이 추가되기는 했지만 Mock 리파지토리 구현을 만드는 과정 그 자체는 6장에서 살펴봤던 Moq 기법과 같다. 또한 Ninject 가 IProductRepository 인터페이스에 대한 구현 요청을 받을 때마다 항상 동일한 Mock 개체의 인스턴스를 반환하도록 하기 위해서 다음과 같이 ToConstant 메서드를 사용해서 Ninject 의 범위를 지정하고 있다. 
+
+...
+kernel.Bind<IProductRepository>().ToConstant(mock.Object);
+...
+
+그 결과 Ninject는 매번 인터페이스 구현 개체의 인스턴스를 새로 생성하는 대신 항상 동일한 Mock 개체를 사용해서 IProductRepository 인터페이스에 대한 요청을 만족시키게 된다. 
+
+
+※ 상품 목록 보여주기
+이번 장의 나머지 부분들을 도메인 모델과 리파지토리를 구축하는 데 할애하고, UI 프로젝트는 아예 살펴보지도 않을 수도 있겠지만 그렇게 한다면 이야기가 꽤나 지루해질 것이다. 그래서 잠시 주제를 바꿔서 본격적으로 MVC 프레임워크를 사용해보도록 하자. 모델과 리포지토리 기능은 필요한 시점에서 추가하기로 한다. 
+
+이번 절에서는 리포지토리의 상품 내용을 보여주기 위한 컨트롤러와 액션 메서드를 작성해볼 것이다. 당장은 Mock 리포지토리의 데이터만 사용하겠지만 이 문제는 나중에 정리할 것이다. 
+또한 초기 라우팅구성을 설정해서 응용프로그램에 대한 요청을 이번 절에서 작성한 컨트롤러에 매핑하도록 MVC 프레임워크에 지시할 것이다. 
+
+
+※ 컨트롤러 추가하기
+SportsStore.WebUI 프로젝트의 Controllers 폴더를 마우스 오른쪽 버튼으로 클릭하고, 팝업 메뉴에서 [추가(Add)] > [컨트롤러(Controller)]를 선택한다. 그런 다음 [MVC5 컨트롤러-비어 있음(MVC 5 Controller Empty)]을 선택하고 [추가(Add)] 버튼을 클릭한 후 ProductController라고 이름 짓는다. 마지막으로 [추가(Add)] 버튼을 클릭하면 Visual Studio가 ProductController.cs라는 파일을 생성해 줄 것이다. 이 컨트롤러의 내용을 목록 7-6과 같이 수정한다. 
+
+목록7-6 ProductController.cs 파일의 초기 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using SportsStore.Domain.Abstract;
+using SportsStore.Domain.Entities;
+namespace SportsStore.WebUI.Controllers
+{
+    public class ProductController : Controller
+    {
+        private IProductRepository repository;
+
+        public ProductController(IProductRepository productRepository)
+        {
+            this.repository = productRepository;
+        }
+        
+    }
+}
+
+자동으로 생성된 코드에서 Index 액션 메서드를 제거했을 뿐만 아니라 IProductRepository 인터페이스에 대한 의존성을 선언하고 있는 생성자를 추가했는데 그 결과 컨트롤러 클래스가 생성될 때 Ninject가 상품 리포지토리에 대한 의존성을 주입하게 된다(Ninject는 인터페이스와 연결할 Mock 구현 또는그 인터페이스를 구현한 클래스와의 바인딩 정보를 정의하고 있다. 의존성 주입은 인터페이스와 연결된 개체의 인스턴스를 전달한다는 의미다.)
+또한 SportsStore.Domain 네임스페이스를 추가하여 리파지토리와 모델 클래스를 참조할 때 클래스명만 입력해서 사용할 수 있도록 만들었다. 그러면 이번에는 List라는 이름의 액션 메서드를 추가해보도록 하자. 이 메서드는 목록7-7에서 볼 수 있는 것처럼 전체 상품 목록을 보여주는 뷰를 랜더한다. 
+
+목록7-7 ProductController.cs 파일에 액션 메서드 추가하기. 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using SportsStore.Domain.Abstract;
+using SportsStore.Domain.Entities;
+namespace SportsStore.WebUI.Controllers
+{
+    public class ProductController : Controller
+    {
+        private IProductRepository repository;
+
+        public ProductController(IProductRepository productRepository)
+        {
+            this.repository = productRepository;
+        }
+
+        public ViewResult List()
+        {
+            return View(repository.Products);
+        }
+        
+    }
+}
+
+
+목록7-7 에서처럼 뷰 이름을 명시하지 않고 View 메서드를 호출하게 되면 프레임워크가 액션 메서드에 대한 기본 뷰를 렌더해준다. 그리고 View 메서드에 Product 개체들을 담고 있는 List 컬렉션을 매개변수로 전달하면 프레임워크가 그 데이터를 받아서 강력한 형식의 뷰의 Model 개체를 채워준다. 
