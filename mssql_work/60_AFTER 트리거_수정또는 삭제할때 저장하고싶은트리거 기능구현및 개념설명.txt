@@ -1,0 +1,153 @@
+(1) AFTER 트리거
+다음의 경우를 생각해 보자. sqlDB의 고객 테이블(userTbl)에 입력된 회원의 정보가 종종 변경된다. 그런데 누가 언제 그것을 변경했고, 또 변경 전에 데이터는 어떤 것이었는지 알 필요가 있다면 다음 실습과 같이 트리거를 활용할 수 있다. 
+
+
+실습2 : 회원 테이블에 update나 insert를 시도하면 수정 또는 삭제된 데이터를 별도의 테이블에 보관하고 변경된 일자와 변경한 사람을 기록해 놓자. 
+
+0. 기존의 sqlDB를 복원해서 사용하자. 
+0-1 복원하자(C:\SQL\sqlDB2012.bak 파일이 없는 독자는 6장의 <실습 2>를 다시 수행하거나 책의 사이트인 http://brain.hanb.co.kr/sql2012/에서 sqlDB2012.bak을 내려받아서 C:\SQL\폴더에 저장하자)
+
+USE tempdb;
+RESTORE DATABASE sqlDB FROM DISK = 'C:\SQL\sqlDB2012.bak' WITH REPLACE;
+
+0-2 insert나 update 작업이 일어나는 경우 변경되기 전의 데이터를 저장할 테이블을 하나 생성하자. 
+
+USE sqlDB;
+DROP TABLE buyTbl; -- 구매 테이블은 필요 없으므로 삭제
+CREATE TABLE backup_userTbl
+(
+	userID 	char(8) NOT NULL PRIMARY KEY,
+	name		nvarchar(10) NOT NULL,
+	birthYear	int	NOT NULL,
+	addr		nchar(2) NOT NULL,
+	mobile1	char(3),
+	mobile2	char(8),
+	height		smallint,
+	mdate		date,
+	modType	nchar(2), --변경된 타입, '수정' 또는 '삭제'
+	modDate	date, --변경된 날짜
+	modUser	nvarchar(256) --변경한 사용자
+);
+
+1. 변경 또는 삭제가 발생했을 때 작동하는 트리거를 userTbl에 부착하자 
+CREATE TRIGGER trg_BackupUserTbl --트리거 이름
+ON userTbl --트리거를 부착할 테이블
+AFTER UPDATE, DELETE --삭제, 수정 후에 작동하도록 지정
+AS
+	DECLARE @modType NCHAR(2) --변경타입
+
+	IF( COLUMNS_UPDATED() > 0) --업데이트 되었다면
+		BEGIN
+			SET @modType = N'수정'
+		END
+	ELSE -- 삭제되었다면,
+		BEGIN
+			SET @modType = N'삭제'
+		END
+
+	--delete 테이블의 내용(변경 전의 내용)을 백업 테이블에 삽입
+	INSERT INTO backup_userTbl
+		SELECT userID, name, birthYear, addr, mobile1, mobile2, height, mdate, @modType, GETDATE(), USER_NAME() FROM deleted;
+
+여기서 마지막 행에 deleted 테이블이 나왔다. 잠시 후에 이 테이블에 대해서 상세히 알아보겠다. 지금은 deleted 테이블이란 update또는 delete가 수행되기 전의 데이터가 잠깐 저장되어 있는 임시테이블이라고 생각하면 된다. 
+
+
+2. 데이터를 변경해 보고 결과를 확인해 보자. 
+
+2-1 데이터를 업데이트도하고 삭제도 하자. 
+
+UPDATE userTbl SET addr= N'몽고' WHERE userID = 'JKW';
+DELETE userTbl WHERE height >= 177;
+
+2-2 당연히 userTbl에는 수정이나 삭제가 적용되었을 것이다. 방금 수정 또는 삭제된 내용이 잘 보관되어 있는지 결과를 확인햅 ㅗ자. 
+
+SELECT * FROM backup_userTbl;
+
+수정 또는 삭제된 내용이 잘 저장되어 있다. 
+
+
+3. 이번에는 테이블의 모든 행 데이터를 삭제해 보자. 
+3-1 이번에는 DELETE 대신에 TRUNCATE TABLE 문으로 사용해 보자. TRUNCATE TABLE 테이블이름 구문은 DELETE FROM 테이블 이름과 같은 효과를 낼 수 있다. 즉 모든 행 데이터를 삭제한다. 
+
+TRUNCATE TABLE userTbl;
+
+3-2 백업 테이블을 확인해 보자. 
+
+SELECT * FROM backup_userTbl;
+
+
+그런데 백업 테이블에 삭제된 내용이 들어가지 않았다 이유는 TRUNCATE TABLE로 삭제할 때는 트리거가 작동하지 않기 때문이다. 따라서 주의할 필요가 있다. 
+
+* 지금 사용하는 트리거는 정확히는 DML 트리거라고 이야기했다. TRUNCATE는 DDL 문이므로 트리거가 당연히 작동하지 않는다. 
+
+
+4. 이번에는 좀 다른 경우를 생각해 보자. userTbl에는 절대 새로운 데이터가 입력되지 못하게 설정하고 만약 누군가 수정이나 삭제를 시도하면 시도한 사람에게는 경고 메시지를 보이게 해서 겁(?)을 주자.
+4-1 INSERT 트리거를 생성한다. 
+
+CREATE TRIGGER trg_insertUserTbl
+ON userTbl
+AFTER INSERT -- 삽입 후에 작동하도록 지정
+AS
+	RAISERROR(N'데이터의 입력을 시도했습니다.',10,1)
+	RAISERROR(N'귀하의 정보가 서버에 기록되었습니다.',10,1)
+	RAISERROR(N'그리고 입력한 데이터는 적용되지 않았습니다.',10,1)
+
+	ROLLBACK TRAN;
+
+RAISERROR() 함수는 오류를 강제로 발생시키는 함수이다. 이 함수에 의해서 방금 데이터 입력을 시도한 사용자에게 경고 메시지를 보낸다. 그리고 마지막의 ROLLBACK TRAN을 만나면 사용자가 시도한 INSERT는 롤백되어 테이블에 적용되지 않는다. 
+
+이렇게 트리거에서 사용자의 작업을 취소시킬 수 있는 이유는 트리거가 완전히 종료되어야 만 사용자의 트랜잭션도 정상으로 커밋되기 때문이다. 
+
+4-2 데이터를 입력해 보자. 
+INSERT INTO userTbl VALUES(N'ABC', N'에비씨', 1977, N'서울', N'011', N'1111111', 181, '2014-12-25')
+
+메시지:
+데이터의 입력을 시도했습니다. 
+귀하의 정보가 서버에 기록되었습니다. 
+그리고 입력한 데이터는 적용되지 않았습니다. 
+메시지 3609, 수준 16, 상태 1, 줄 1
+트리거가 발생하여 트랜잭션이 종료되었습니다. 일괄 처리가 중단되었습니다. 
+
+예상대로 메시지가 출력되고, 트랜잭션이 종료되었다. 경고 메시지가 출력된 후에 INSERT 작업은 롤백되고 userTbl에는 데이터가 삽입되지 않았다. 
+
+
+여기서잠깐?
+DROP TABLE 문은 테이블의 내용 및 테이블과 관련된 모든 것(테이블의 구조, 제약 조건, 인덱스 등)이 모두 삭제되지만, TRUNCATE TABLE은 테이블의 행 데이터만 삭제된다. 그러므로 TRUNCATE TABLE 테이블이름과 DELETE 테이블이름을 사용하는 것은 결과적으로 똑같이 모든 행 데이터를 삭제하게 된다. 
+
+하지만 TRUNCATE TABLE 문은 트랜잭션 로그 공간을 덜 사용하고 잠금도 적게 사용하므로 시스템의 성능 측면에서는 DELETE 문보다 효율적이다. 특히 대량의 행 데이터가 있는 테이블의 데이터를 모두 삭제할 경우에는 TRUNCATE TABLE 문이 훨씬 빠른 성능을 보여주면 시스템에 부하를 덜 준다. 
+단 TRUNCATE TABLE 문은 각 행이 삭제된 내용을 deleted 테이블에 기록하지 않으므로 트리거가 작동하지 않는다. 그러므로 결과적으로 실행 속도는 더 빠른 것이다. 
+
+
+
+
+(2) 트리거가 생성하는 임시 테이블
+트리거에서 INSERT, UPDATE, DELETE 작업이 수행되면 임시로 사용되는 시스템 테이블이 두 개 있는데, 이름은 inserted와 deleted 이다. 이 두 테이블은 사용자가 임의로 변경 작업을 할 수는 없고, 단지 참조(Select)만 할 수 있다. 
+우선 inserted 테이블은 INSERT와 UPDATE 작업을 할 때 변경 후의 행 데이터와 같은 데이터가 저장된다. 즉 테이블에 INSERT 트리거나 UPDATE 트리거를 부착시켜 놓았다면 해당 테이블에 INSERT나 UPDATE 명령이 수행될 경우 우선은 해당 테이블의 데이터가 삽입 또는 변경되고 그 다음에 inserted 테이블에 삽입 또는 변경된 같은 데이터가 저장된다(변경전의 데이터가 아니라 변경 후의 데이터임을 주의하자) 그리고 deleted 테이블은 DELETE와 UPDATE 작업이 수행되면 우선 해당 테이블의 행 데이터가 삭제 또는 변경된 후에 삭제 또는 변경되기 전의 데이터가 저장된다. 
+
+결론적으로 트리거가 작동할 경우, 변경된 후의 데이터를 참조하려면 inserted 테이블을 확인하면 되고 변경되기 전의 데이터를 참조하려면 deleted 테이블을 참조하면 된다. INSERT 작업이 수행되면 inserted 테이블에 삽입된 행이 저장되고, UPDATE 작업이 수행되면 inserted 테이블에 변경 후의 데이터가 저장되면서 deleted 테이블에는 변경 전의 데이터가 저장된다. 끝으로 DELETE 작업이 수행되면 삭제되기 전의 데이터가 deleted 테이블에 저장된다. 
+
+
+
+*여기서 잠깐?
+성능 측면에서는 INSERT가 inserted 테이블 1개에, DELETE는 updated 테이블에 1개에 저장하는 것에 비해 UPDATE는 inserted와 updated 테이블 2개 모두에 저장하므로 가장 성능이 나쁘다. 또한 inserted 테이블과 deleted 테이블은 메모리에 임시적으로 생성되는 테이블이다. 즉 트리거가 작동하면 생성되고 트리거가 종료되면 자동 소멸한다. 
+
+
+
+(3) INSTEAD OF 트리거
+INSTEAD OF 트리거는 테이블에 변경이 가해지기 전에 작동되는 트리거다. 
+
+* INSTEAD OF 트리거를 BEFORE 트리거라고 부르기도 한다. 
+
+INSTEAD OF 트리거는 주로 뷰에 행이 삽입되거나 변경, 삭제될 때 사용된다. INSTEAD OF 트리거는 작동하면 시도된 INSERT, UPDATE, DELETE 문은 무시된다는 것에 주의해야 한다. 즉 해당 INSERT, UPDATE, DELETE 대신에 INSTEAD OF 트리거가 작동하는 것이다. 
+
+* instead of 의 사전적 의미가 ~ 대신에 이므로 작동되는 쿼리 대신에 INSTEAD OF 트리거가 작동하는 것으로 생각하면 되겠다. 
+
+
+sqlDB의 내용을 가지고 하나의 시나리오를 가정해 보자.
+
+* 이번예는 sqlDB의 내용과 INSTEAD OF 트리거의 예를 짜맞추려고 필자가 조금 억지스럽게 가정한 내용이다. 시나리오가 조금 어색해도 그냥 넘어가자. 
+
+
+택배 회사를 가정해 보자. 고객 테이블(userTbl)과 구매 테이블(buyTbl)의 정보를 조합해서 배송 정보 뷰(uv_deliver)를 생성한다면 이 배송 정보 뷰는 배송 담당자가 태블릿 PC를 이용해서 배송할 때 조회하게 될 것이다. 그런데 배송 담당자가 해당 고객에게 물건을 배송할 때, 가끔은 고객이 직접 배송 담당자에게 새로운 주문을 요청하는 경우도 발생하고 있다. 그럴 때 현장에서 직접 태블릿 PC를 이용해서 배송 정보 뷰에 새로운 고객 정보 및 구매 정보를 입력해야 한다. 
+
+* 배송 담당자는 고객 테이블과 구매 테이블에 직접 데이터를 입력할 권한은 없다고 가정한다. 
