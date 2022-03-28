@@ -1,0 +1,143 @@
+실습3 : INSTEAD OF 트리거를 실습해 보자. 
+
+* 8장 <실습 10>의 8번에서 복합 뷰를 생성하면 데이터가 입력되지 않는 것을 확인했다. INSTEAD OF 트리거는 그러한 문제를 해결할 수 있다. 
+
+
+0. 다시 기존의 sqlDB를 복원해서 사용하자. 
+
+0-1 복원하자
+USE tempdb;
+RESTORE DATABASE sqlDB FROM DISK = 'C:\SQL\sqlDB2012.bak' WITH REPLACE;
+
+0-2 배송 정보 뷰를 생성하자
+USE sqlDB;
+GO
+CREATE VIEW uv_deliver -- 배송 정보를 위한 뷰
+AS
+	SELECT b.userID, u.name, b.prodName, b.price, b.amount, u.addr FROM buyTbl b
+		INNER JOIN userTbl u ON b.userID = u.userID;
+
+1. 배송 담당자는 배송할 때 계속 배송 정보뷰를 확인하면서 배송한다. 
+1-1 배송 담당자가 사용할 배송 정보 뷰를 확인해 보자. 
+
+SELECT * FROM uv_deliver;
+
+
+1-2 그런데 새로운 고객 '존밴이'에게 주문 요청을 받았다. 배송 정보 뷰에 주문사항을 입력해 보자. 
+
+INSERT INTO uv_deliver VALUES('JBI', N'존밴이', N'구두', 50, 1, N'인천');
+
+오류 메시지:
+메시지 4405, 수준 16, 상태 1, 줄 1
+뷰 또는 함수 uv_deliver은(는) 수정 시 여러 기본 테이블에 영향을 주므로 업데이트할 수 없습니다. 
+
+배송 정보 뷰는 복합 뷰이기에 데이터를 입력할 수 없다. 이럴 때 배송 정보 뷰에 INSTEAD OF 트리거를 부착해서 해결할 수있다. 
+
+2. 배송 정보 뷰에 INSTEAD OF 트리거를 생성하자. 
+2-1 배송 정보 뷰에 입력되는 정보 중에서 고객 테이블과 구매 테이블에 입력될 것을 분리해서 입력하게 지정한다 . 
+
+CREATE TRIGGER trg_insert
+ON uv_deliver
+INSTEAD OF INSERT
+AS
+BEGIN
+	INSERT INTO userTbl (userID, name, birthYear, addr, mDate)
+		SELECT userID, name, 1900, addr, GETDATE() FROM inserted
+
+	INSERT INTO buyTbl(userID, prodName, price, amount)
+		SELECT userID, prodName, price, amount FROM inserted
+END;
+
+uv_deliver 뷰에 INSERT가 시도되면 우선 INSERT되는 내용이 inserted 테이블에 입력된다. 그러므로 inserted 테이블의 내용에서 각각 필요한 내용을 고객 테이블과 구매 테이블에 분리해서 입력하면 되는 것이다. 그리고 원래 uv_deliver 뷰에 수행된 INSERT 구문은 무시된다. 
+
+2-2 다시 존밴이에게 받은 주문을 입력하자. 
+INSERT INTO uv_deliver VALUES('JBI', N'존밴이', N'구두', 50, 1, N'인천');
+
+이번에는 정상적으로 수행되었을 것이다. 
+
+2-3 각 테이블에 데이터가 잘 입력되었는지 확인해 보자. 
+
+SELECT * FROM userTbl WHERE userID = 'JBI';
+SELECT * FROM buyTbl WHERE userID = 'JBI';
+
+정상적으로 트리거가 작동하고 데이터가 입력되었음이 확인된다. 그러므로 INSTEAD OF 트리거를 활용하면 데이터 삽입 및 수정이 불가능한 복합 뷰를 업데이트가 가능한 뷰로 변경할 수 있다. 
+
+
+3. 생성되어 있는 트리거의 정보를 확인해 보자. 
+3-1 쿼리 창에서 확인하려면 sp_helptrigger를 사용한다.
+
+EXEC sp_helptrigger uv_deliver;
+
+isupdate, isdelete, isinsert는 UPDATE, DELETE, INSERT 트리거 여부를 확인한다. 값이 1이면 설정된 것이다. 이 trg_insert 트리거는 INSERT 트리거이면서 INSTEAD OF 트리거임을 확인할 수 있다. 
+
+3-2 해당 트리거의 내용을 보려면 sp_helptext를 사용하면 된다. 
+
+EXEC sp_helptext trg_insert;
+
+트리거 내용이 출력되었을 것이다. 당연히 트리거를 생성할 때 WITH EXCRYPTION 옵션을 사용했으면 텍스트의 내용은 당연히 볼 수 없다. 
+
+3-3 SSMS에서 트리거의 정보를 확인하려면 개체 탐색기에서 해당 데이터베이스의 테이블이나 뷰의 하위 메뉴에서 확인할 수 있다. 
+
+
+4. 트리거를 변경해 보자. 
+4-1 트리거의 내용을 변경하려면 ALTER TRIGGER를 사용하면 된다. 사용법은 다른 ALTER 문과 같으므로 생략하겠다. 
+
+4-2 만약 트리거의 이름을 변경하려면 sp_rename 시스템 저장 프로시저를 사용해야 한다. 
+EXEC sp_rename 'dbo.trg_insert', 'dbo.trg_uvInsert';
+
+경고는 나오지만 잘 변경되었을 것이다. 
+
+4-3 트리거를 삭제하려면 DROP TRIGGER를 사용하면 된다. 
+
+DROP TRIGGER dbo.trg_uvInsert;
+
+오류 메시지:
+메시지 3701, 수준 11, 상태 5, 줄 1
+트리거 'dbo.trg_uvInsert이(가) 없거나 권한이 없어서 삭제할 수 없습니다. 
+
+
+왜 삭제되지 않을까? 기존 트리거 이름인 trg_insert를 삭제해도 마찬가지로 삭제되지 않는다. 이유는 sp_rename 저장 프로시저를 사용해서 그렇다. sp_rename 저장 프로시저로 트리거의 이름은 바뀌지만 sys.sql_modules 카탈로그 뷰의 내용은 변경되지 않으므로 삭제되지 않는 것이다. 
+
+4-4 카탈로그 뷰를 확인해 보자. 
+SELECT * FROM sys.sql_modules;
+
+
+definition 열의 내용은 변경되지 않았다. 결론적으로 트리거의 이름을 sp_rename으로 변경하는 것은 바람직하지 않다. 되도록 DROP 하고 다시 CREATE 하는 방법을 사용하자. 
+
+
+여기서잠깐?
+트리거뿐 아니라 뷰, 저장 프로시저, 함수 이름을 변경할 때는 sp_rename 시스템 저장 프로시저를 사용하지말고, 삭제(DROP)후에 다시 생성(CREATE)하는 방법을 사용하는 것이 좋다. 또한 트리거는 임시 트리거(#, ##를 이름 앞에 붙임)로 생성할 수 없다. 
+
+
+4-5 뷰를 삭제하면, 트리거는 뷰에 부착된 것이므로 같이 삭제된다. 
+
+DROP VIEW uv_deliver;
+
+이외에 INSTEAD OF UPDATE 및 INSTEAD OF DELETE 트리거도 마찬가지로 사용할 수 있다. 
+
+
+
+
+
+Section02 : 기타 트리거에 관한 사항
+
+
+※ 다중 트리거
+다중 트리거(Multiple Triggers)란 하나의 테이블에 같은 트리거가 여러 개 부착되어 있는 것을 말한다. 예를 들어 AFTER INSERT 트리거가 한 개 테이블에 2개 이상 부착 되어 있을 수도 있다. 
+
+* SQL Server 2005부터 하나의 테이블에 여러 개 트리거 부착이 지원된다. 
+
+
+
+※ 중첩 트리거
+중첩 트리거(Nested Triggers)란 트리거가 또 다른 트리거를 작동하는 것을 말한다. 다음 의 예를 보면서 이해해 보자. 
+
+1. 고객이 물건을 구매하면 물건을 구매한 기록이 구매 테이블에 INSERT된다. 
+2. 구매 테이블에 부착된 INSERT 트리거가 작동한다. 내용은 물품 테이블의 남은 개수를 구매한 개수만큼 빼는 UPDATE를 한다(인터넷 쇼핑몰에서 물건을 구매하면 즉시 남은 수량이 하나 줄어드는 것을 보았을 것이다. 
+
+3. 물품 테이블에 장착된 UPDATE 트리거가 작동한다. 내용은 배송 테이블에 배송할 내용을 INSERT 하는 것이다. 
+
+
+하나의 물건 구매(INSERT)작업으로 2개의 트리거가 연속적으로 작동했다. 이런 것을 중첩 트리거라고 한다. 이와 같은 중첩 트리거는 32단계까지 사용할 수 있다. SQL Server는 기본적으로 중첩 트리거를 허용한다. 만약 중첩 트리거를 허용하지 않으려면 서버 구성 옵션 중에 nested triggers를 OFF 시켜야 한다. 중첩 트리거를 허용하지 않게 설정한 후에 트리거를 작동시키려면 직접 테이블에 INSERT나 UPDATE 작업을 수행해야만 한다. 앞의 예에서 물품 테이블의 UPDATE 트리거를 작동시키려면 직접 UPDATE 문으로 물품 테이블의 데이터를 변경해야 한다. 
+
+중첩 트리거는 때떄로 시스템의 성능에 좋지 않은 영향을 미칠 수 있다. 앞의 경우에 고객이 물건을 구매하는 INSERT 작업이 일어나면 트랜잭션이 시작할 것이다. 이 트랜잭션은 마지막 배송 테이블에 정상 입력되면 트랜잭션이 종료(커밋)된다. 만약 마지막 배송 테이블에 INSERT 작업이 실패한다면 그 앞의 모든 작업은 자동으로 ROLLBACK된다. 이것은 시스템에 부담이 되므로 성능에 나쁜 영향을 끼칠 소지가 있다. 잠시 후에 실습에서 확인해 보자. 
