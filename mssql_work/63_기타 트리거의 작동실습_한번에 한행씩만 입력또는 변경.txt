@@ -1,0 +1,265 @@
+실습4 : 기타 트리거의 작동을 실습해 보자. 주의할 점은 이번 실습의 전제 조건은 한 번에 한 행씩만 입력 또는 변경된다는 전제 하에 실습하자. 
+
+* 그 이유는 코드를 최대한 간단히 작성해서 이해를 쉽게 하기 위한 것이다. 한 번에 여러 건이 입력 또는 변경되는 것까지 고려할 경우 코드가 복잡해져서 SQL 을 이해하느라고 정작 이번 실습에서 이해하고자 하는 트리거를 이해하기가 어려워질 것이다. 
+
+0. 새로운 데이터베이스를 생성해서 실습하자. 
+0-1 기존의 쿼리 창을 모두 닫고 새 쿼리 창을 하나 연다. 
+0-2 연습용 DB를 생성한다. 
+USE tempdb;
+CREATE DATABASE triggerDB;
+
+0-3 [그림13-8]의 중첩 트리거를 실습할 테이블을 만든다. 실제로 물건을 구매하고 배송하려면 더 많은 열이 필요하지만 지금은 중첩 트리거를 실습하는 최소화된 테이블을 생성하자. 
+
+USE triggerDB;
+CREATE TABLE orderTbl --구매 테이블
+(	
+	orderNo	INT IDENTITY, --구매 일련번호
+	userID		NVARCHAR(5),	--구매한 회원 아이디
+	prodName	NVARCHAR(5), 	-- 구매한 물건
+	orderAmount	INT);		-- 구매한 개수
+GO
+CREATE TABLE prodTbl -- 물품 테이블
+(
+	prodName	NVARCHAR(5),	--물건 이름
+	account	INT);			--구매한 개수
+GO
+CREATE TABLE deliverTbl		--배송 테이블
+(
+	deliverNo	INT	IDENTITY,	--배송 일련번호
+	prodName	NVARCHAR(5),	--배송할 물건
+	amount	INT);			--배송할 물건 개수
+
+그리고 물품 테이블에는 몇 건의 물건을 넣어 놓자. 
+INSERT INTO prodTbl VALUES(N'사과', 100);
+INSERT INTO prodTbl VALUES(N'배', 100);
+INSERT INTO prodTbl VALUES(N'귤', 100);
+
+0-4[그림13-9], [그림13-10]의 재귀 트리거 실습용 테이블을 생성하자. 
+
+--간접 재귀 트리거용 테이블 A
+CREATE TABLE recuA 
+(
+	id	INT	IDENTITY,
+	txt	NVARCHAR(10));
+GO
+--간접 재귀 트리거용 테이블 B
+CREATE TABLE recuB
+(
+	id	INT	IDENTITY,
+	txt	NVARCHAR(10));
+GO
+--직접 재귀 트리거용 테이블 AA
+CREATE TABLE recuAA
+(
+	id	INT	IDENTITY,
+	txt	NVARCHAR(10));
+
+1. 중첩 트리거를 실습해 보자. 
+1-0 먼저 중첩 트리거가 수행될 수 있게 서버 구성 옵션인 nested triggers가 ON 되어 있는지 확인해 보자. 디폴트는 ON되어 있다. 
+
+EXEC sp_configure 'nested triggers';
+
+run_value 열이 1로 구성되어 있으므로 현재 ON  되어 있는 상태이다(즉 중첩 트리거가 허용되어 있다). 
+
+
+여기서잠깐?
+sp_configure의 열의 의미를 살펴보면 minimum은 구성 옵션(이 예는 nested triggers)에 지정할 수 있는 최소값, maximum은 최대값을 의미하고, config_value는 설정되어 있는 값, run_value는 현재 가동되고 있는 값을 의미한다. 예를 들어, nested triggers의 서버 구성 옵션값(config_value)를 변경하려면
+EXEC sp_configure 'nested triggers', 0;
+과 같이 변경하면 된다. 하지만 현재 가동중인 값(run_value)이 변경된 것은 아니므로, 
+RECONFIGURE;
+로 run_value까지 변경해 줘야 실제로 새로운 구성 값(config_value)이 적용되는 것이다. 
+
+1-1 [그림13-8]의 트리거를 구매 테이블(orderTbl)과 물품 테이블(prodTbl)에 부착하자. 
+
+--물품 테이블에서 개수를 감소시키는 트리거
+CREATE TRIGGER trg_order
+ON orderTbl
+AFTER INSERT
+AS
+PRINT N'1. trg_order를 실행합니다.'
+DECLARE @orderAmount INT
+DECLARE @prodName NVARCHAR(5)
+
+SELECT @orderAmount = orderAmount FROM inserted
+SELECT @prodName = prodName FROM inserted
+
+UPDATE prodTbl SET account -= @orderAmount
+	WHERE prodName = @prodName;
+GO
+-- 배송 테이블에 새 배송건을 입력하는 트리거
+CREATE TRIGGER trg_prod
+ON prodTbl
+AFTER UPDATE
+AS
+	PIRNT N'2. trg_prod를 실행합니다.'
+	DECLARE @prodName NVARCHAR(5)
+	DECLARE @amount	INT
+
+	SELECT @prodName = prodName FROM inserted
+	SELECT @amount = D.account - I.account
+		FROM inserted I, deleted D --(변경 전의 개수 - 변경 후의 개수) = 주문 개수
+
+	INSERT INTO deliverTbl(prodName, amount) VALUES(@prodName, @amount);
+GO
+
+1-2 고객이 물건을 구매한 [그림13-8]의 3INSERT 작업을 수행하자. 
+
+INSERT INTO orderTbl VALUES('JONH', N'배', 5);
+
+메시지창:
+1. trg_order를 실행합니다.
+2. trg_prod를 실행합니다. 
+
+(1개 행이 영향을 받음)
+
+(1개 행이 영향을 받음)
+
+(1개 행이 영향을 받음)
+
+트리거가 두 개 모두 작동한 것 같다. 
+
+1-3 중첩 트리거가 잘 작동했는지 세 테이블을 모두 확인해 보자. 
+
+SELECT * FROM orderTbl;
+SELECT * FROM prodTbl;
+SELECT * FROM deliverTbl;
+
+[그림13-8]의 중첩 트리거가 작동해서 1.INSERT, 2.UPDATE, 3.INSERT가 모두 성공하였다. 
+
+1-4 이번에는 배송 테이블(deliverTbl)의 열 이름을 변경해서 [그림13-8]의 3INSERT가 실패하게 해 보자.
+
+EXEC sp_rename 'dbo.deliverTbl.prodName', 'productName', 'COLUMN';
+
+주의 메시지는 나오지만 실행된다. 
+
+1-5 다시 데이터를 입력해 보자. 
+
+INSERT INTO orderTbl VALUES ('DANG', N'사과', 9);
+
+오류 메시지:
+1. trg_order를 실행합니다.
+2. trg_prod를 실행합니다.
+메시지 207, 수준 16, 상태 1, 프로시저 trg_prod, 줄 15
+열 이름 prodName 이(가) 잘못되었습니다. 
+
+
+트리거는 작동했으나 마지막에 열 이름 때문에 3.INSERT가 실패했다. 
+
+
+1-6 테이블을 확인해 보자. 
+SELECT * FROM orderTbl;
+SELECT * FROM prodTbl;
+SELECT * FROM deliverTbl;
+
+데이터가 변겨오디지 않았다. 중첩 트리거에서 [그림13-8]의 3.INSERT가 실패하면 그 앞의 1.INSERT, 2.UPDATE도 모두 롤백되는 것을 확인할 수 있다. 
+
+
+2. 간접 재귀 트리거를 실습해 보자. 
+2-0 triggerDB에 간접 재귀 트리거가 허용되어 있는지 데이터베이스 옵션 RECURSIVE_TRIGGERS를 ON으로 설정해줘야 한다. 우선 현재 설정된 값을 확인하자. 
+
+USE triggerDB;
+SELECT name, is_recursive_triggers_on FROM sys.databases WHERE name = 'triggerDB';
+
+0(OFF)으로 설정되어 있을 것이다. 1(ON)로 변경해 주도록 하자. 
+
+ALTER DATABASE triggerDB
+	SET RECURSIVE_TRIGGERS ON;
+
+다시 sys.databases 카탈로그 뷰를 확인하면 1(ON)로 변경되었을 것이다. 
+
+
+2-1 [그림13-9]와 같이 두 테이블이 서로 물려 있는 간접 재귀 트리거를 테이블 A(recuA)와 테이블 B(recuB)에 부착하자. 
+CREATE TRIGGER trg_recuA
+ON recuA
+AFTER INSERT
+AS
+	DECLARE @id INT
+	SELECT @id = trigger_nestlevel() --현재 트리거 레벨 값
+
+	PRINT N'트리거 레벨==> ' + CAST(@id AS CHAR(5))
+	INSERT INTO recuB VALUES (N'간접 재귀 트리거')
+GO
+
+CREATE TRIGGER trg_recuB
+ON recuB
+AFTER INSERT
+AS
+	DECLARE @id	INT
+	SELECT @id = trigger_nestlevel() --현재 트리거 레벨 값
+
+	PRINT N'트리거 레벨==> ' + CAST(@id AS CHAR(5))
+	INSERT INTO recuA VALUES(N'간접 재귀 트리거')
+
+
+2-2 [그림 13-9]의 1.INSERT 작업을 수행해서 2와 3의 INSERT가 수행되는지 확인해 보자. 
+
+INSERT INTO recuA VALUES(N'처음 입력값');
+
+결과 메시지:
+트리거 레벨==> 1
+트리거 레벨==> 2
+트리거 레벨==> 3
+...(중간 생략)
+트리거 레벨==> 31
+트리거 레벨==> 32
+메시지 217, 수준 16, 상태 1, 프로시저 trg_recuB, 줄10
+저장 프로시저, 함수, 트리거 또는 뷰의 최대 중첩 수준(32)을 초과했습니다. 
+
+
+계속 서로 트리거가 수행되다가 33단계가 넘어서자 중지되었다. 만약 32단계의 제한이 없었다면 무한 루프를 돌았을 것이다. 
+
+2-3 테이블에 무엇이 들어갔는지 확인해 보자. 
+
+SELECT * FROM recuA;
+SELECT * FROM recuB;
+
+아무것도 들어가지 않았을 것이다. 마지막에 발생한 오류가 모든 트리거의 트랜잭션을 취소 시켰기 때문이다. 
+
+
+2-4 그러므로 재귀 트리거는 재귀를 빠져나올 수 있는 루틴을 추가해야 의미가 있다. 트리거를 수정해 보자. 
+
+
+ALTER TRIGGER trg_recuA
+ON recuA
+AFTER INSERT
+AS
+	IF( (SELECT trigger_nestlevel() ) >= 32)
+		RETURN
+
+	DECLARE @id INT
+	SELECT @id = trigger_nestlevel() --현재 트리거 레벨 값
+
+	PRINT N'트리거 레벨==> ' + CAST(@id AS CHAR(5))
+	INSERT INTO recuB VALUES (N'간접 재귀 트리거')
+GO
+
+ALTER TRIGGER trg_recuB
+ON recuB
+AFTER INSERT
+AS
+	IF( (SELECT trigger_nestlevel() ) >= 32)
+		RETURN
+
+	DECLARE @id	INT
+	SELECT @id = trigger_nestlevel() --현재 트리거 레벨 값
+
+	PRINT N'트리거 레벨==> ' + CAST(@id AS CHAR(5))
+	INSERT INTO recuA VALUES(N'간접 재귀 트리거')
+
+trigger_nestlevel() 함수는 현재의 트리거 레벨을 구하는함수이다. 즉 현재의 트리거 레벨이 32가 넘으면 RETURN 문으로 재귀를 빠져나가게 된다. 
+
+2-5 다시 입력해 보자. 
+
+INSERT INTO recuA VALUES (N'처음입력값');
+
+이번에는 오류가 발생하지 않았을 것이다. 
+
+2-6 테이블을 확인해 보자. 
+SELECT * FROM recuA;
+SELECT * FROM recuB;
+
+
+16개씩 행이 입력되어 있다. 참고로 id 열의 값이 1부터 시작하지 않은 이유는 2-2에서 INSERT가 실패하더라도 IDENTITY 값은 계속 증가하기 때문이다. 
+[그림13-10]의 간접 재귀 트리거도 같은 방식으로 recuAA 테이블을 사용할 수있다. 이에대한 실습은 직접 재귀 트리거와 거의 같으므로 여러분 스스로 해보자. 
+
+이상으로 트리거에 대한 내용을 마무리 짓겠다. 앞에서도 이미 이야기했지만 지금 소개된 트리거는 SQL Server에서 주로 사용되는 내용을 정리했으므로 모두 DML 트리거를 이야기한 것이다. 데이터베이스 개발자가 주로 활용해야 할 내용이므로 잘 기억해 놓자. 
