@@ -1,0 +1,317 @@
+※ 단위 테스트 : 페이지 모델 뷰 데이터
+컨트롤러가 정확한 페이징 데이터를 뷰에 전달하는지도 확인해야 한다. 이를 테스트하기 위해서 테스트 프로젝트에 다음과 같은 단위 테스트를 추가한다. 
+[TestMethod]
+        public void Can_Send_Pagination_View_Model()
+        {
+            //Arrange
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]
+            {
+                new Product { ProductID=1, Name="P1"},new Product { ProductID=2, Name="P2"},new Product { ProductID=3, Name="P3"},
+                new Product { ProductID=4, Name="P4"},new Product { ProductID=5, Name="P5"}
+            });
+
+            //Arrange
+            ProductController controller = new ProductController(mock.Object);
+            controller.PageSize = 3;
+
+            //Act
+            ProductsListViewModel result = (ProductsListViewModel)controller.List(2).Model;
+
+            //Assert
+            PagingInfo pageInfo = result.PagingInfo;
+            Assert.AreEqual(pageInfo.CurrentPage, 2);
+            Assert.AreEqual(pageInfo.ItemsPerpage, 3);
+            Assert.AreEqual(pageInfo.TotalItems, 5);
+            Assert.AreEqual(pageInfo.TotalPages, 2);
+        }
+
+또한 앞서 페이징과 관련해서 Can_Paginate 메서드에 작성한 단위 테스트도 수정할 필요가 있다. 지금까지는 List 액션 메서드에서 ViewResult 의 Model 속성으로 일련의 Product 개체들이 반환됐지만 이제는 그 데이터를 새로운 뷰 모델 형식의 내부에 포함시킨 상태다. 다음은 수정된 코드다. 
+
+[TestMethod]
+        public void Can_Paginate()
+        {
+            //Arrange
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]
+            {
+                new Product {ProductID=1, Name="P1" }, new Product{ProductID=2, Name="P2"}, new Product{ProductID=3, Name="P3"},
+                new Product {ProductID=4, Name="P4"}, new Product{ProductID=5, Name="P5"}
+            });
+
+            ProductController controller = new ProductController(mock.Object);
+            controller.PageSize = 3;
+
+            //Act
+            ProductsListViewModel result = (ProductsListViewModel)controller.List(2).Model;
+
+            //Assert
+            Product[] prodArray = result.Products.ToArray();
+            Assert.IsTrue(prodArray.Length == 2);
+            Assert.AreEqual(prodArray[0].Name, "P4");
+            Assert.AreEqual(prodArray[1].Name, "P5");
+        }
+
+
+여기에서 보여주고 있는 두 개의 단위 테스트 메서드를 살펴보면 중복된 내용이 있음을 알 수 있다. 필자는 이렇게 두 메서드에 어느 정도 중복된 부분이 존재하면 보통 중복된 내용을 한 곳에서 설정하도록 공통 메서드로 작성하는 편이다. 그러나 이번 예제에서는 단위 테스트를 단편 뉴스 기사처럼 필요할 때마다 작성하고 있기 때문에 공통 메서드 없이 모든 것을 개별적으로 유지하고자 한다. 각각의 테스트에 대한 모든 내용들을 테스트 메서드 자체에서 파악할 수 있도록 말이다. 
+
+
+뷰는 현재 일련의 Product 개체가 전달될 것으로 기대하고 있으므로 목록7-22와 같이 List.cshtml 파일을 수정하여 새로운 뷰 모델 형식을 다루도록 변경한다. 
+
+목록7-22 List.cshtml 파일 수정하기
+@model SportsStore.WebUI.Models.ProductsListViewModel
+
+@{
+    ViewBag.Title = "Products";
+}
+@foreach (var p in Model.Products)
+{
+    <div>
+        <h3>@p.Name</h3>
+        @p.Description
+        <h4>@p.Price.ToString("c")</h4>
+    </div>
+}
+
+
+
+뷰의 @model 지시문을 변경해서 Razor에 다른 데이터 형식을 사용할 것임을 알려주고 있다. 또 한 모델 데이터의 Products 속성을 데이터 소스로 사용하도록 foreach 반복문도 수정했다. 
+
+
+
+※ 페이지 링크 표시하기
+List 뷰에 페이지 링크를 추가하기 위한 모든 작업을 마쳤다. 페이징 정보를 포함하고 있는 뷰 모델을 새로 만들었고 컨트롤러가 그 뷰 모델을 뷰에 전달하도록 수정했으며, 뷰에서 @model 지시문을 새로 만든 뷰 모델과 일치시켰다. 이제 마지막으로 남은 것은 목록7-23과 같이 뷰에서 HTML 헬퍼 메서드를 호출하는 것뿐이다. 
+
+
+목록7-23 List.cshtml 파일에서 HTML 헬퍼 메서드 호출하기
+@model SportsStore.WebUI.Models.ProductsListViewModel
+
+@{
+    ViewBag.Title = "Products";
+}
+@foreach (var p in Model.Products)
+{
+    <div>
+        <h3>@p.Name</h3>
+        @p.Description
+        <h4>@p.Price.ToString("c")</h4>
+    </div>
+}
+<div>
+    @Html.PageLinks(Model.PagingInfo, x => Url.Action("List", new { page=x}))
+</div>
+
+
+
+이제 응용프로그램을 실행해보면 그림7-14와 같이 새로운 페이지 링크를 확인할 수 있을 것이다. 비록 링크의 외형은 여전히 기본적인 스타일에 불과하지만, 이 점은 이번 장의 후반부에서 개선할 것이다. 현재 시점에서 중요한 것은 사용자가 링크를 이용해서 페이지를 이동할 수 있고 상품을 탐색할 수 있다는 점이다. 
+
+
+
+
+※ 왜 그냥 그리드뷰(GridView)를 사용하지 않는가?
+기존에 ASP .NET으로 작업했던 경험이 있다면 아마도 이렇게 크게 인상적이지도 않은 결과를 얻기 위해서 너무나 많은 작업을 해야 한다고 느꼈을 것이다. 정말 많은 페이지에 걸쳐서 페이지 이동을 위한 페이지 목록을 만드는 과정을 설명했다. 필자는 같은 효과를 얻기 위해 ASP .NET WebForms의 GridView나 ListView를 Product 데이터베이스 테이블과 직접 연결하여 쉽게 작업할 수도 있었다. 
+이장에서 필자가 해낸 것이 그렇게 대단해 보이지 않을 수 있지만 디자인 영역에 컨트롤을 끌어다 놓는 것과는 근본적인 차이점이 존재한다. 첫 번째로 관심사의 분리(separation of concerns)가 적용된 건강하고 유지보수 가능한 아키텍처로 응용프로그램을 구성했다. 간단히 ListView 컨트롤을 사용하는 것과는 달리 필자는 UI와 데이터베이스를 직접 결합시키지 않았다. 직접 결합하는 방식은 빠른 결과를 제공해주지만 시간이 지날수록 끔직한 고통을 초래할 것이다. 두 번째로 복잡한 Web Forms에서는 거의 불가능한 단위 테스트를 생성해 왔다. 각각 단계를 진행하면서 작성한 단위 테스트는 우리가 자연스러운 방법으로 응용프로그램의 작동 방식을 검증할 수 있게 해준다. 마지막으로 응용프로그램이 돌아가는 기본적인 인프라를 만들기 위해서 이번 장의 많은 부분을 할애했다. 예를 들어 최소한 한 번은 리파지토리를 정의하고 구현해야 했지만 이후에 이어지는 장들에서 새로운 기능을 얼마나 쉽고 빠르게 작성하고 또한 테스트할 수 있는지 보게 될 것이다. 
+
+물론 관심사의 분리나 단위 테스트의 용이함을 이유로 Web Forms이 주는 즉각적인 결과(혹은 높은 생산성)를 낮게 평가하는 것은 아니다. 다만 3장에서 설명했듯이 크고 복잡한 프로젝트에서 신속성은 비싸고 고통스러울수 있는 비용을 동반한다. 
+
+
+
+
+※ URL 개선하기
+멋지게 동작하는 페이지 링크를 만들었지만, 이 링크들은 서버에 페이지 정보를 전달하기 위해서 여전히 다음과 같은 질의 문자열을 사용하고 있다. 
+
+http://localhost/?page=2
+
+조합 가능한 URL(composable URLs) 패턴에 맞는 구성(scheme)을 적용하여 보다 흥미로운 URL을 만들어보자. 조합 가능한 URL은 다음과 같이 사용자가 이해하기 쉽다. 
+
+http://localhost/Page2
+
+MVC는 ASP.NET의 라이팅 기능을 사용해서 응용프로그램의 URL 구성을 쉽게 변경할수 있다 .SportsStore.WebUI 프로젝트의 App_Start 폴더에 있는 RouteConfig.cs 파일의 RegisterRoutes 메서드에 새 라우트를 추가하는 것이 필요한 작업의 전부다. 
+
+목록7-24 RouteConfig.cs 파일에 새 라우트 추가하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace SportsStore.WebUI
+{
+    public class RouteConfig
+    {        
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.MapRoute(
+                name: null, url: "Page{page}", defaults: new { Controller = "Product", Action = "List" });
+
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new { controller = "Product", action = "List", id = UrlParameter.Optional }
+            );
+
+
+        }
+    }
+}
+
+
+
+새 라우트를 파일에 이미 존재하는 Default라는 이름의 라우트보다 앞에 추가하는 것이 중요하다. 15장에서 다시 살펴보겠지만 라우팅 시스템은 작성된 코드 목록의 순서대로 요청을 처리한다. 따라서 새 라우트가 기존 것보다 우선순위가 높아야 한다. 
+
+이것이 상품 페이징을 위한 URL 구성을 수정하는데 필요한 유일한 변경 작업이다. MVC 프레임워크와 라우팅 기능은 서로 밀접하게 결합되어 있다. 그래서 List.cshtml 에서 사용한 Url.Action 메서드에 의해 생성된 결과에도 자동으로 이와 같은 변경이 반영된다. 당장 라우팅이 이해가 안되더라도 걱정할 필요는 없다. 15장과 16장에서 라우팅에 대해 자세하게 살펴볼 것이다. 
+
+이제 응용프로그램을 실행해서 페이지를 탐색해보면 그림7-15와 같이 새로운 URL 구성이 동작하는 것을 확인할 수 있다. 
+
+
+
+
+※ 내용 꾸미기
+정말 많은 양의 인프라를 구성했고 응용프로그램이 실제로 서로 맞아 들어가기 시작하지만 외형적인 모습에는 아직 많은 신경을 쓰지 못했다. 물론 이 책이 디자인이나 CSS에 대한 책은 아닐지라도 SportsStore의 디자인은 기술적인 모든 강점을 무력화시킬 정도로 끔찍하게 평범하다. 이번 절에서는 디자인을 일부 개선해보도록 한다. 그림7-16과 같이 전통적인 2단 구조에 헤더가 존재하는 레이아웃을 구현하려고 한다. 
+
+Sports Store(header)
+
+Home
+* Golf		|	* Product 1
+* Soccer	|	* Product 2
+* Sailing	|	* ...
+* ...		|	(main Body)
+[그림7-16] SportsStore 응용프로그램의 디자인 목표
+
+
+
+※ Bootstrap 패키지 설치하기
+응용프로그램에 CSS 스타일을 적용하기 위해서 Bootstrap 패키지를 사용할 것이다. Bootstrap 패키지를 설치하려면 Visual Studio [도구(Tools)] 메뉴에서 [라이브 러리 패키지 관리자(Library Package Manager)] > [패키지 관리자 콘솔(Package Manager Console)]을 선택한다. 그러면 Visual Studio가 NuGet 명령어 행을 활성화시켜줄 것이다. 다음의명령어를 입력하고 엔터(Enter)키를 친다. 
+
+
+Install-Package -version 3.0.0 bootstrap -projectname SportsStore.WebUI
+
+이 명령어는 2장에서 사용했던 기본 NuGet 명령어와 동일하지만 SportsStore.WebUI 프로젝트에만 파일을 추가하기 위해서 projectname 인자를 사용하고 있다. 
+
+
+※Note:
+다시 한번 말하지만 Bootstrap 패키지가 제공하는 상세 기능에 대해서는 깊게 설명하지 않고 일단 사용하기로 한다. Bootstrap 을 포함하여 Microsoft가 MVC 프레임워크를 위해서 사용하는 다른 클라이언트 라이브러리들에 대한 상세한 설명은 필자의 Pro ASP.NET MVC5 Client라는 책을참고하기 바란다. 
+
+
+
+
+※ 레이아웃에Bootstrap 스타일적용하기 
+이미 5장에서 Razor 레이아웃의 동작 방식과 적용 방법을 살펴봤다. 이번 예제에서는 Product 컨트롤러를 위한 List.cshtml 파일을 생성하면서 레이아웃을 사용하는 옵션을 선택하되 입력란은 공백으로 남겨두었다. 이는 Visual Studio 가 뷰와 함께 자동으로 생성한 Views/_ViewStart.cshtml 파일에 명시된 레이아웃을 사용하도록 만드는 효과를 갖는다. 목록7-25에서 뷰 시작(view start)파일의 내용을 볼 수 있다. 
+
+목록7-25 _ViewStart.cshtml 파일의 내용
+@{
+	Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+이 코드에서 Layout 속성 값은 Views/Shared/_Layout.cshtml 파일을 뷰에서 레이아웃으로 사용하도록 지정하고 있다. 만약 뷰 자체에서 다른 레이아웃을 명시적으로 지정하면 이 값은 무시된다. 필자는 이번 장의 앞 부분에서 _Layout.cshtml 파일의 내용을 재설정하면서 Visual Studio가 자동으로 추가한 템플릿 내용을 제거했었다. 이번에는 다시 _Layout.cshtml 파일로 돌아가서 목록 7-26의 내용처럼 Bootstrap CSS 파일을 추가하고 이 파일에 정의된 CSS 스타일을 일부 적용한다. 
+
+목록7-26 _Layout.cshtml 파일에 Bootstrap CSS 적용하기
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="~/Content/bootstrap.css" rel="stylesheet" />
+    <link href="~/Content/bootstrap-theme.css" rel="stylesheet" />
+    <title>@ViewBag.Title</title>
+</head>
+<body>
+    <div class="navbar navbar-inverse" role="navigation">
+        <a class="navbar-brand" href="#">SPORTS STORE</a>
+    </div>
+    <div class="row panel">
+        <div id="categories" class="col-xs-3">
+            Put something useful here later
+        </div>
+        <div class="col-xs-8">
+            @RenderBody()
+        </div>
+    </div>
+</body>
+</html>
+
+
+레이아웃에 bootstrap.css와 bootstrap-theme.css 파일을 link 형식으로 추가하고, 다양한 Bootstrap 클래스들을 적용해서 간단한 레이아웃을 구성하고 있다. 또한 List.cshtml 파일도 목록 7-27과 같이 수정해야 한다. 
+
+목록7-27 List.cshtml 파일에 Bootstrap 스타일 적용하기 
+
+@model SportsStore.WebUI.Models.ProductsListViewModel
+
+@{
+    ViewBag.Title = "Products";
+}
+@foreach (var p in Model.Products)
+{
+    <div class="well">        
+        <h3>
+            <strong>@p.Name</strong>
+            <span class="pull-right label label-primary">@p.Price.ToString("c")</span>
+        </h3>
+        <span class="lead">@p.Description</span>        
+    </div>
+}
+<div class="btn-group pull-right">
+    @Html.PageLinks(Model.PagingInfo, x => Url.Action("List", new { page=x }))
+</div>
+
+
+
+※ CSS 스타일이 지정된 HTML 요소의 문제점:
+MVC 응용프로그램에 의해서 생성되는 HTML 요소들은 정적 콘텐트_ Razor 표현식, HTML 헬퍼메서드 등의 다양한 방식으로 만들어지므로 결과적으로 프로젝트 전체에 스타일 클래스들이 여기저기 뒤섞이게된다. 이 사실이 심기를 불편하게 만든다면 여러분만 그런것이 아니다. 더군다나 HTML 요소를 생성하면서 동시에 CSS 스타일을 적용하는 작업 방식은 관계없는 기능들을 분리한다는 MVC의 개념에도 어긋난다. HTML 요소들의 응용프로그램상의 역할에 기반하여 Bootstrap 클래스와 겹치지 않는 사용자 클래스를 정의한 다음 jQuery나 LESS 같은 라이브러리를 이용해서 이 사용자 지정 클래스들과 Bootstrap 클래스들을 매핑하는 것도 이런 상황을 타개할 수 있는 하나의 개선안이 될 수 있다. 
+
+이런 개선안이 존재함에도 불구하고 SportsStore 예제 응용프로그램에서는 모든 것을 간단하게 유지하고자 한다. 그런 이유로 응용프로그램 전체에 일일이 Bootstrap 클래스를 지정하고 있다. 나중에 이 점이 스타일 변경 작업을 복잡하게 만들지 뻔히 알면서도 말이다. 실제 프로젝트에서는 이렇게 처리하지 않지만 한편으로 핑계를 들자면, 이 예제 응용프로그램은 유지보수 단계까지 가지 않기 때문이다. 
+
+
+
+이제 응용 프로그램을 실행해보면 그림7-17과 같이 개선된 응용프로그램의 모습을 확인할 수 있을 것이다. 
+
+
+※ 부분 뷰 생성하기
+응용프로그램을 리팩터링해서 List.cshtml 을 단순화시켜보는 것을 마지막으로 이번 장을 마무리하도록 하자. 이번 절에서는 콘텐트의 한 조각 또는 단편(fragment)이라고 할 수 있는 부분 뷰(Partial View)를 생성해볼 텐데 이 부분 뷰는 템플릿과 유사하게 다른 뷰에도 삽입될 수 있다. 부분 뷰는 그 자체의 파일을 갖고 여러 뷰에서 재사용된다. 여러분의 응용프로그램에서 같은 종류의 데이터를 여러 곳에 렌더할 필요가 있다면 이 방법으로 중복을 줄일 수 있다. 
+
+부분 뷰를 추가하려면 SportsStore.WebUI 프로젝트의 /Views/Shared 폴더를 마우스 오른쪽 버튼으로 클릭한 다음 [추가(Add)] > [뷰(View)] 를 선택한다. [뷰 이름(View Name)]은 ProductSummary로 지정하고 [템플릿(Template)]으로는 EMpty를 선택한다. [모델 클래스(Model Class)]드롭다운 리스트에서 Product를 선택하고 [부분 뷰로 만들기(Create As a Partial View)]옵션을 선택한다. 그림7-18에서 설정값들을 확인할 수 있다.
+
+
+[추가(Add)]버튼을 클릭하면 VIsual Studio가 Views/Shared/ProductSummary.cshtml 라는 부분 뷰 파일을 생성해줄 것이다. 부분 뷰는 일반적인 뷰와 비슷하지만 일반적인 뷰가 전체 HTML 문서를 생성하는 반면, 부분 뷰는 HTML 조각(fragment)을 생성한다. ProductSummary 뷰를 열어보면 단지 model 지시자만을 포함하고 있고 Product 도메인 모델 클래스를 지정하고 있다. 이 파일을 목록 7-28과 같이 수정하자. 
+
+목록7-28 ProductSummary.cshtml 파일에 마크업 추가하기
+@model SportsStore.Domain.Entities.Product
+
+<div class="well">
+    <h3>
+        <strong>@Model.Name</strong>
+        <span class="pull-right label label-primary">@Model.Price.ToString("c")</span>
+    </h3>
+    <span class="lead">@Model.Description</span>
+</div>
+
+이번에는 Views/Product/List.cshtml을 수정해서 방금 작성한 부분 뷰를 사용하도록 만들어보자. 목록7-29에 변경된 부분이 강조되어 있다. 
+
+목록7-29 List.cshtml 파일에서 부분 뷰 사용하기
+@model SportsStore.WebUI.Models.ProductsListViewModel
+
+@{
+    ViewBag.Title = "Products";
+}
+@foreach (var p in Model.Products)
+{
+    @Html.Partial("ProductSummary", p);
+}
+<div class="btn-group pull-right">
+    @Html.PageLinks(Model.PagingInfo, x => Url.Action("List", new { page=x }))
+</div>
+
+
+
+List.cshtml 뷰의 foreach 반복문에 있던 마크업을 새로 작성한 부분 뷰로 옮기고 반복문에서 Html.Partial 헬퍼 메서드를 사용해서 부분 뷰를 호출하고 있다. 매개변수는 부분 뷰의 이름과 뷰 모델 개체다 이렇게 부분 뷰를 활용하는 것은 좋은 접근 방식이지만 그림7-19에서 볼 수 있는 것처럼 그렇다고 해서 응용프로그램의 모습이 변경되지는 않는다. 
+
+
+
+요약:
+이번 장에서는 SportsStore 응용프로그램을 구축하기 위해서 필요한 대부분의 핵심적인 인프라를 작성했다. 다만 이 시점에서 고객에게 보여줄 만한 기능은 거의 없다. 대신 내부적으로 SQL Server와 Entity Framework를 이용해서 상품 리파지토리와 도메인 모델을 작성하는 초반 작업을 마쳤다. 또한 페이지 탐색이 가능한 상품 목록을 생성해주는 ProductController를 준비했으며, 의존성 주입(DI) 컨테이너를 설정하고 깔끔하고 친숙한 URL도 구성했다. 
+
+만약 이번 장을 살펴보면서 작은 이점을 위해 많은 작업을 한 것처럼 느껴졌다면다음 장부터는 그 균형이 잡힐 것이다. 이제 기본적인 구조가 자리잡았으므로 남은 과정들을 신속하게 진행할수 있다. 카테고리별 탐색, 장바구니, 결제 처리 등 고객과 대면하는 모든 기능들을 추가해보도록 하자. 
