@@ -1,0 +1,440 @@
+※ 단위 테스트 : 카테고리 목록 생성하기
+카테고리 목록을 생성할 수 있는지 여부에 대한 단위 테스트는 비교적 간단하다. 이번 예제의 목표는 중복 없이 알파벳 순서로 정렬된 카테고리 목록을 생성하는 것이다. 제일 간단한 방법은 다음과 같이 중복된 카테고리가 존재하는 제대로 정렬되지 않은 테스트 데이터를 NavController 에 전달해서 실행한다음 그 결과에서 중복이 제거되었는지 정렬이 제대로 되었는지를 확인하는 것이다(이 테스트를 빌드하려면 System.Collections.Generic 네임스페이스를 임포트해야 한다)
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+using Moq;
+using System.Web.Mvc;
+using SportsStore.Domain.Abstract;
+using SportsStore.Domain.Entities;
+using SportsStore.WebUI.Controllers;
+using SportsStore.WebUI.Models;
+using SportsStore.WebUI.HtmlHelpers;
+namespace SportsStore.UnitTests
+{
+    [TestClass]
+    public class UnitTest1
+    {
+
+        [TestMethod]
+        public void Can_Paginate()
+        {
+            //Arrange
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]
+            {
+                new Product {ProductID=1, Name="P1" }, new Product{ProductID=2, Name="P2"}, new Product{ProductID=3, Name="P3"},
+                new Product {ProductID=4, Name="P4"}, new Product{ProductID=5, Name="P5"}
+            });
+
+            ProductController controller = new ProductController(mock.Object);
+            controller.PageSize = 3;
+
+            //Act
+            ProductsListViewModel result = (ProductsListViewModel)controller.List(null,2).Model;
+
+            //Assert
+            Product[] prodArray = result.Products.ToArray();
+            Assert.IsTrue(prodArray.Length == 2);
+            Assert.AreEqual(prodArray[0].Name, "P4");
+            Assert.AreEqual(prodArray[1].Name, "P5");
+        }
+
+        [TestMethod]
+        public void Can_Generate_Page_Links()
+        {
+            //Arrange - 확장 메서드를 적용하기 위한 HTML 헬퍼 를 정의한다. 
+            HtmlHelper myHelper = null;
+
+            //Arrange -- PagingInfo 데이터를 생성한다.
+            PagingInfo pagingInfo = new PagingInfo { CurrentPage = 2, TotalItems = 28, ItemsPerpage = 10 };
+
+            //Arrange -- 람다 표현식을 사용해서 델리게이트를 설정한다. 
+            Func<int, string> pageUrlDelegate = i => "Page" + i;
+
+            //Act
+            MvcHtmlString result = myHelper.PageLinks(pagingInfo, pageUrlDelegate);
+
+            //Assert
+            Assert.AreEqual(@"<a class=""btn btn-default"" href=""Page1"">1</a>" + @"<a class=""btn btn-default btn-primary selected"" href=""Page2"">2</a>"
+                            + @"<a class=""btn btn-default"" href=""Page3"">3</a>", result.ToString());
+        }
+        [TestMethod]
+        public void Can_Send_Pagination_View_Model()
+        {
+            //Arrange
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]
+            {
+                new Product { ProductID=1, Name="P1"},new Product { ProductID=2, Name="P2"},new Product { ProductID=3, Name="P3"},
+                new Product { ProductID=4, Name="P4"},new Product { ProductID=5, Name="P5"}
+            });
+
+            //Arrange
+            ProductController controller = new ProductController(mock.Object);
+            controller.PageSize = 3;
+
+            //Act
+            ProductsListViewModel result = (ProductsListViewModel)controller.List(null,2).Model;
+
+            //Assert
+            PagingInfo pageInfo = result.PagingInfo;
+            Assert.AreEqual(pageInfo.CurrentPage, 2);
+            Assert.AreEqual(pageInfo.ItemsPerpage, 3);
+            Assert.AreEqual(pageInfo.TotalItems, 5);
+            Assert.AreEqual(pageInfo.TotalPages, 2);
+        }
+        [TestMethod]
+        public void Can_Filter_Products()
+        {
+            //Arrange
+            // - Mock 리파지토리를 생성한다
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]
+            {
+                new Product{ProductID=1, Name="P1", Category="Cat1"},new Product{ProductID=2, Name="P2", Category="Cat2"},
+                new Product{ProductID=3, Name="P3", Category="Cat3"},new Product{ProductID=4, Name="P4", Category="Cat4"},
+                new Product{ProductID=5, Name="P5", Category="Cat5"}
+            });
+            //Arrange - 컨트롤러를 생성하고 페이지 크기를 세 개의 항목으로 설정한다. 
+            ProductController controller = new ProductController(mock.Object);
+            controller.PageSize = 3;
+
+            //Action
+            Product[] result = ((ProductsListViewModel)controller.List("Cat2", 1).Model).Products.ToArray();
+
+            //Assert
+            Assert.AreEqual(result.Length, 1);
+            Assert.IsTrue(result[0].Name == "P2" && result[0].Category == "Cat2");
+            Assert.IsTrue(result[1].Name == "P4" && result[1].Category == "Cat4");
+        }
+
+        [TestMethod]
+        public void Can_Create_Categories()
+        {
+            //Arrange
+            // - Mock 리파지토리를 생성한다. 
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]
+            {
+                new Product{ProductID=1, Name="P1", Category="Apples"},new Product{ProductID=2, Name="P2", Category="Apples"},
+                new Product{ProductID=3, Name="P3", Category="Plums"},new Product{ProductID=4, Name="P4", Category="Oranges"}
+            });
+
+            //Arrange - 컨트롤러를 생성한다. 
+            NavController target = new NavController(mock.Object);
+
+            //Act - 카테고리들의 목록을 반환받는다. 
+            string[] results = ( (IEnumerable<string>)target.Menu().Model).ToArray();
+
+            //Assert
+            Assert.AreEqual(results.Length, 3);
+            Assert.AreEqual(results[0], "Apples");
+            Assert.AreEqual(results[1], "Oranges");
+            Assert.AreEqual(results[2], "Plums");
+        }
+       
+    }
+}
+
+먼저 반복이 있으면서 알파벳 순서로 정렬되지 않은 카테고리들의 Mock 리파지토리를 생성한다. 그런 다음 중복이 제거되었는지 알파벳 순서로 정렬되었는지를 검사하고 있다. 
+
+
+※ 뷰 생성하기
+Menu 액션 메서드에 대한 뷰를 생성하려면 Views/Nav 폴더를 마우스 오른쪽 버튼으로 클릭 하고 팝업 메뉴에서 [추가(Add)] > [MVC 5 뷰 페이지(Razor)(MVC5 View Page (Razor))] 를 선택한다. 그런 다음 뷰의 이름을 Menu로 지정하고 [확인 (OK)] 버튼을 누르면 Menu.cshtml 파일이 생성된다. Visual Studio 가 자동으로 생성해준 내용을 삭제하고 목록 8-8과 같이 수정한다. 
+
+목록8-8 Menu.cshtml 파일의 내용
+@model IEnumerable<string>
+
+@Html.ActionLink("Home", "List", "Product", null, new { @class="btn btn-block btn-default btn-lg"})
+
+@foreach(var link in Model)
+{
+                @Html.RouteLink(link, new {
+               controller = "Product",
+               action = "List",
+               category = link,
+               page = 1
+}, new
+{
+               @class = "btn btn-block btn-default btn-lg"
+})
+}
+
+목록 8-8에서는 카테고리 목록의 맨 위에 필터링 없이 모든 카테고리들의 상품을 보여주기 위해 Home 이라는 이름의 링크를 추가하고 있다. 이때 ActionLink 헬퍼 메서드를 사용하고 있는데 이 헬퍼 메서드는 앞에서 구성했던 라우팅 정보를 이용해서 HTML 링크(anchor)요소를 생성해준다. 
+
+그런 다음, 모델에 담긴 각각의 카테고리 이름들을 대상으로 반복문을 수행하면서, RouteLink 메서드를 이용해서 링크들을 생성한다. 이 메서드는 ActionLink 메서드와 유사하지만 라우팅 구성을 이용해서 URL을 생성할 때 고려해야 할 이름/값 쌍들을 지정할 수 있다. 혹시 라우팅에 대한 설명이 이해되지 않더라도 걱정할 필요는 없다. 라우팅에 관해서는 15장과 16장에서 상세하게 살펴볼 것이다. 
+
+기본적으로 이렇게 생성되는 링크들은 그다지 멋지게 보이지는 않으므로, ActionLink 헬퍼메서드와 RouteLink 헬퍼 메서드에 의해 생성될 HTML 요소들의 어트리뷰트 값들을 지정하기 위한 개체를 제공하고 있다. 이 예제에서는 class 속성을 정의해서 (class는 C#의 키워드이기 때문에 @를 접두사로 지정하고 있다.)링크를 큰 버튼으로 꾸며주는 Bootstrap 클래스를 적용했다. 
+
+이제 응용프로그램을 실행해보면 그림8-3과 같이 카테고리 링크들이 출력되는 것을 확인할 수 있다. 또한 카테고리를 클릭하면 선택한 카테고리의 상품만 보이도록 상품 목록이 갱신될 것이다. 
+
+
+
+
+※ 선택된 카테고리 강조하기
+지금은 네비게이션 컨트롤에서 사용자들이 현재 어떤 카테고리를 보고 있는지 표시해주지 않고 있다. 고객들이 상품 목록을 보고 직접 유추할 수도 있겠지만, 개인적으로는 확실한 시각적 효과를 선호한다. 이 기능을 구현하기 위해서, 카테고리 목록과 선택된 카테고리 정보를 포함하는 새로운 뷰 모델을 생성해서 처리할 수도 있지만 (사실 이것이 필자의 일반적인 작업 방식이다). 이번에는 MVC 프레임워크의 다양한 기능을 살펴보기 위해서 2장에서 소개했던 ViewBag 기능을 사용해본다. 이 기능은 뷰 모델을 사용하지 않고도 컨트롤러에서 뷰로 데이터를 전달할 수 있는 방법을 제공해준다. 목록 8-9는 Nav 컨트롤러의 Menu 액션 메서드를 수정한 내용을 보여주고 있다. 
+
+목록8-9 NavController.cs 파일에서 ViewBag 기능 사용하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
+using SportsStore.Domain.Abstract;
+
+namespace SportsStore.WebUI.Controllers
+{
+    public class NavController : Controller
+    {
+        private IProductRepository repository;
+
+        public NavController(IProductRepository repo)
+        {
+            repository = repo;
+        }
+        public PartialViewResult Menu(string category = null)
+        {
+            ViewBag.SelectedCategory = category;
+            IEnumerable<string> categories = repository.Products.Select(x => x.Category).Distinct().OrderBy(x => x);
+
+            return PartialView(categories);
+        }
+    }
+}
+
+
+Menu 액션 메서드에 category 라는 매개변수를 추가했다. 이 매개변수의 값은 라우팅 구성에 의해서 자동으로 제공될 것이다. 또한 메서드 내부에서는 SelectedCategory 속성을 ViewBag 개체에 동적으로 대입하고, 그 값을 선택된 카테고리로 설정했다. 2장에서 설명했던 것처럼 ViewBag 개체는 동적 개체이기 때문에 값을 설정하는 것만으로도 간단히 새로운 속성을 생성할 수 있다. 
+
+
+
+
+※ 단위 테스트 : 선택된 카테고리 표시하기
+단위 테스트에서 ViewBag 속성의 값을 읽어보면 Menu 액션 메서드에서 선택된 카테고리의 값이 올바르게 설정되었는지 테스트할 수 있다. 다음 테스트에서 볼 수 있는 것처럼 ViewResult 클래스를 통해서 ViewBag 에 접근할 수 있다. 
+
+....
+[TestMethod]
+        public void Indicates_Selected_Category()
+        {
+            //Arrange
+            // - Mock 리파지토리를 생성한다.
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]
+            {
+                new Product{ProductID=1, Name="P1", Category="Apples" },new Product{ProductID=2, Name="P2", Category="Oranges" }
+            });
+
+            //Arrange - 컨트롤러를 생성한다 
+            NavController target = new NavController(mock.Object);
+
+            //Arrange - 선택될 카테고리를 지정한다. 
+            string categoryToSelect = "Apples";
+
+            //Action
+
+            string result = target.Menu(categoryToSelect).ViewBag.SelectedCategory;
+
+            //Assert
+            Assert.AreEqual(categoryToSelect, result);
+        }
+
+
+다만 이번 장에서 설명한 대로 Microsoft.CSharp 어셈블리를 참조하지 않으면 이 단위 테스트는 컴파일 되지 않을 것이다. 
+
+
+
+이제 선택된 카테고리에 대한 정보를 제공하고 있으므로, 이를 활용해서 뷰를 수정할 수 있다. 현재 선택된 카테고리에 해당하는 HTML anchor 요소에 CSS 클래스를 추가하면 된다. 목록 8-10에 변경된 Menu.cshtml 파일의 내용이 나타나 있다. 
+
+
+목록8-10 Menu.cshtml 파일에서 선택된 카테고리 강조하기. 
+@model IEnumerable<string>
+
+@Html.ActionLink("Home", "List", "Product", null, new { @class="btn btn-block btn-default btn-lg"})
+
+@foreach(var link in Model)
+            {
+                @Html.RouteLink(link, new {
+               controller = "Product",
+               action = "List",
+               category = link,
+               page = 1
+           }, new
+           {
+               @class = "btn btn-block btn-default btn-lg" +(link == ViewBag.SelectedCategory ? "btn-primary" : "")
+           })
+}
+
+이번 변경은 간단하다. 반복문 내에서 현재 link 변수의 값이 ViewBag 으로 전달받은 SelectedCategory 속성 값과 같은 경우 HTML anchor 요소에 또 다른 Bootstrap 클래스를 추가해준다. 이 클래스는 버튼을 다른 색으로 강조해준다. 이제 응용프로그램을 실행시켜보면 그림8-4처럼 현재 선택된 카테고리가 강조되는 것을 확인할 수 있을 것이다. 
+
+
+
+※ 페이지 카운트 바로잡기
+이번에는 카테고리가 선택된 상태에서도 페이지 링크가 올바르게 동작하도록 수정해보자. 현재 페이지 링크의 개수는 선택된 카테고리에 존재하는 상품의 개수가 아닌 리파지토리에 존재하는 전체 상품의 개수에 의해서 결정되고 있다. 따라서 사용자가 Chess 카테고리의 2페이지를 클릭한다면 이 카테고리에 해당하는 상품은 2페이지를 채울 만큼 많지 않으므로 빈 페이지가 출력될 것이다. 그림8-5에서 이 문제점을 확인할 수 있다. 
+
+이 문제점을 수정하려면 Product 컨트롤러의 List 액션 메서드를 변경해서 카테고리까지 고려해서 페이징 정보가 만들어지도록 해야한다. 필요한 변경사항을 목록 8-11에서 확인할 수 있다. 
+
+목록8-11 ProductController.cs 파일에서 카테고리를 고려한 페이징 데이터 생성하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using SportsStore.Domain.Abstract;
+using SportsStore.Domain.Entities;
+using SportsStore.WebUI.Models;
+namespace SportsStore.WebUI.Controllers
+{
+    public class ProductController : Controller
+    {
+        private IProductRepository repository;
+        public int PageSize = 4;
+
+        public ProductController(IProductRepository productRepository)
+        {
+            this.repository = productRepository;
+        }
+
+        /*
+        public ViewResult List()
+        {
+            return View(repository.Products);
+        }
+        */
+        public ViewResult List(string category,int page=1)
+        {
+            ProductsListViewModel model = new ProductsListViewModel
+            {
+                Products = repository.Products.Where(p => category == null || p.Category == category)
+                .OrderBy(p => p.ProductID).Skip((page - 1) * PageSize).Take(PageSize),
+                PagingInfo = new PagingInfo
+                {
+                    CurrentPage = page,
+                    ItemsPerpage = PageSize,
+                    TotalItems = category == null? repository.Products.Count() : repository.Products.Where(e => e.Category == category).Count()
+                },
+                CurrentCategory = category
+            };
+            return View(model);
+        }
+
+    }
+}
+
+
+카테고리가 선택됐다면 카테고리 내에 존재하는 상품들의 개수를 반환하고, 그렇지 않으면 전체 상품들의 개수를 반환한다. 이제 각각의 카테고리를 클릭해보면 그림 8-6과 같이 카테고리 내의 상품 개수를 반영하여 페이지 링크를 생성하고 있음을 알 수 있다. 
+
+
+
+※ 단위 테스트 : 특정 카테고리의 상품 개수
+여러 가지 카테고리들을 대상으로 현재 상품의 개수를 올바르게 생성할 수 있는 지에 대한 테스트는 간단하다. 다음의 테스트에서는 다양한 카테고리들이 지정된 데이터들을 담고 있는 Mock 리파지토리를 생성한 다음 List 액션 메서드를 호출할 때 카테고리들을 차례로 요청해서 그 결과를 비교한다. 
+....
+[TestMethod]
+        public void Generate_Category_Specific_Product_Count()
+        {
+            //Arrange
+            // - Mock 리파지토리를 생성한다
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]
+            {
+                new Product{ProductID=1, Name="P1", Category="Cat1"},new Product{ProductID=2, Name="P2", Category="Cat2"},
+                new Product{ProductID=3, Name="P3", Category="Cat1"},new Product{ProductID=4, Name="P4", Category="Cat2"},
+                new Product{ProductID=5, Name="P5", Category="Cat3"}
+            });
+
+            //Arrange - 컨트롤러를 생성하고 페이지 크기를 3항목으로 설정한다. 
+            ProductController target = new ProductController(mock.Object);
+            target.PageSize = 3;
+
+            //Action - 여러 가지 카테고리들을 대상으로 상품의 개수를 테스트한다. 
+
+            int res1 = ((ProductsListViewModel)target.List("Cat1").Model).PagingInfo.TotalItems;
+            int res2 = ((ProductsListViewModel)target.List("Cat2").Model).PagingInfo.TotalItems;
+            int res3 = ((ProductsListViewModel)target.List("Cat3").Model).PagingInfo.TotalItems;
+            int resAll = ((ProductsListViewModel)target.List(null).Model).PagingInfo.TotalItems;
+
+            //Assert
+            Assert.AreEqual(res1, 2);
+            Assert.AreEqual(res2, 2);
+            Assert.AreEqual(res3, 1);
+            Assert.AreEqual(resAll, 5);
+        }
+
+
+이 테스트에서 List 메서드를 호출하면서 카테고리를 null로 지정하고 있는 네 번째 호출에 주목하자. 카테고리가 지정되지 않은 경우에도 전체 상품수를 올바르게 반환하는지도 확인해야 하기 때문이다. 
+
+
+
+※ 쇼핑 카트 만들기
+응용프로그램의 구현은 순조롭게 진행되고 있지만 쇼핑 카트를 구현하기 전까지는 어떤 상품도 판매할 수 없을 것이다. 이번 절에서는 그림8-7과 같은 쇼핑 카트 경험을 구현해보려고 한다. 이런 형태의 프로세스는 온라인 구매 경험이 있는 사람이라면 누구에게나 친숙할 것이다. 
+
+
+Product						Your Cart						Enter shipping details
+Soccer Ball		Add to cart			1 x Stadium		$79,500,00			...etc
+Corner Flags		Add to cart			Total:			$79,500,00
+Stadium		Add to cart				Check out now
+								Continue shopping
+				[그림8-7] 기본적인 쇼핑 카트의 흐름
+
+우선 카탈로그 목록의 각 상품마다 옆에 [Add to Cart] 버튼이 제공될 것이다. 그리고 이 버튼을 클릭하면 고객이 현재까지 선택한 상품들의 요약 정보와 합계 금액을 보여준다. 이 시점에서 사용자는 [Continue Shopping] 버튼을 클릭해서 상품 카탈로그로 되돌아가거나, [Checkout Now]버튼을 클릭해서 주문을 마치고 쇼핑을 끝낼 수도 있다. 
+
+
+※ 카트 엔티티 정의하기
+쇼핑 카트는 비즈니스 모델의 일부분이므로, 도메인 모델의 엔티티를 생성해서 카트를 표현하는 것이 합리적일 것이다. SportsStore.Domain 프로젝트의 Entities 폴더에 Cart.cs라는 클래스를 추가하고, 목록8-12와 같이 클래스들을 정의한다. 
+
+
+목록8-12 Cart.cs 파일에 Cart 클래스와 CartLine 클래스 정의하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SportsStore.Domain.Entities
+{
+    public class Cart
+    {
+        private List<CartLine> lineCollection = new List<CartLine>();
+
+        public void AddItem(Product product, int quantity)
+        {
+            CartLine line = lineCollection.Where(p => p.Product.ProductID == product.ProductID).FirstOrDefault();
+
+            if(line == null)
+            {
+                lineCollection.Add(new CartLine { Product = product, Quantity = quantity });
+            }else
+            {
+                line.Quantity += quantity;
+            }
+        }
+
+        public void RemoveLine(Product product)
+        {
+            lineCollection.RemoveAll(l => l.Product.ProductID == product.ProductID);
+        }
+
+        public decimal ComputeTotalValue()
+        {
+            return lineCollection.Sum(e => e.Product.Price * e.Quantity);
+        }
+
+        public void Clear()
+        {
+            lineCollection.Clear();
+        }
+
+        public IEnumerable<CartLine> Lines
+        {
+            get { return lineCollection; }
+        }
+
+    }
+    public class CartLine
+    {
+        public Product Product { get; set; }
+        public int Quantity { get; set; }
+    }
+}
+
+
+같은 파일에 Cart 클래스와 CartLine 클래스를 정의해서 고객이 선택한 상품과 사고자하는 수량을 표현하고 있으며, Cart 클래스가 CartLine 클래스를 사용하는 구조를 갖고 있다. Cart 클래스에는 카트에 상품을 추가하고, 이전에 추가했던 상품을 카트에서 제거하고 카트에 담은 모든 상품들의 합계 금액을 계산하고 카트에 담았던 상품들을 모두 삭제함으로써 카트를 초기화하는 메서드들을 정의했다. 또한 카트의 내용물에 접근할 수 있도록 IEnumerable<CartLine> 형식의 Lines 라는 속성도 제공하고 있다. 모두 간단한 작업들로, LINQ를 일부 사용해서 C#으로 손쉽게 구현하고 있다. 
