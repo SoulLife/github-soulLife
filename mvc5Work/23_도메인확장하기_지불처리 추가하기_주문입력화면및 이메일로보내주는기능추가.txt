@@ -1,0 +1,362 @@
+※ 도메인 모델 확장하기
+먼저 ShippingDetails.cs라는 클래스 파일을 SportsStore.Domain 프로젝트의 Entities 폴더에 추가한 다음 목록9-8과 같이 파일 내용을 수정하도록 하자. 이 클래스를 사용해서 고객의 배송 정보를 표현할 것이다. 
+
+목록9-8 ShippingDetails.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
+
+namespace SportsStore.Domain.Entities
+{
+    public class ShippingDetails
+    {
+        [Required(ErrorMessage ="Please enter a name")]
+        public string Name { get; set; }
+
+        [Required(ErrorMessage ="Please enter the first address line")]
+        public string Line1 { get; set; }
+        public string Line2 { get; set; }
+        public string Line3 { get; set; }
+
+        [Required(ErrorMessage ="Please enter a city name")]
+        public string City { get; set; }
+
+        [Required(ErrorMessage ="Please enter a state name")]
+        public string State { get; set; }
+
+        public string Zip { get; set; }
+
+        [Required(ErrorMessage ="Please enter a country name")]
+        public string Country { get; set; }
+
+        public bool GiftWrap { get; set; }
+    }
+}
+
+
+
+이 모델 클래스에는 2장에서 살펴봤던 것과 같은 System.ComponentModel.DataAnnotations 네임스페이스의 유효성 검사 어트리뷰트들이 적용되어 있다. 유효성 검사에 대해서는 25장에서 좀 더 자세하게 알아볼 것이다. 
+
+Note:
+이 ShippingDetails 클래스는 아무런 기능도 갖고 있지 않기 때문에 단위 테스트를 수행할 필요가 없다. 
+
+
+
+
+※ 지불 처리 추가하기
+이번 절의 목표는 사용자들에게 배송 정보를 입력하고 주문을 제출할 수 있는 기능을 제공해주는 것이다. 따라서 가장 먼저 해야할 일은 카트 요약 정보 뷰에 [Checkout now] 버튼을 추가하는 것이다. 목록9-9는 Views/Cart/Index.cshtml 파일에 적용한 변경사항을 보여주고 있다. 
+
+목록9-9 Index.cshtml 파일에 Checkout now 버튼 추가하기
+...
+<div class="text-center">
+    <a class="btn btn-primary" href="@Model.ReturnUrl">Continue shopping</a>
+    @Html.ActionLink("Checkout now", "Checkout", null, new {@class="btn btn-primary"})
+</div>
+...하단 맨아래에 Continue shopping아래에 추가하면됨 
+
+카트 요약 정보 뷰에 새로운 링크를 생성하고 버튼으로 꾸몄다. 이 버튼을 클릭하면 Cart 컨트롤러의 Checkout 액션 메서드가 호출된다. 그림9-3 에서 버튼이 추가된 모습을 확인할 수 있다. 
+
+이미 예상하고 있겠지만 이제 목록9-10과 같이 CartController 클래스에 Checkout 메서드를 정의해야 한다. 
+
+목록9-10 CartController.cs 파일의 Checkout 액션 메서드
+public ViewResult Checkout()
+        {
+            return View(new ShippingDetails());
+        }
+
+이 Checkout 메서드는 기본 뷰를 반환하고 새 ShippingDetails 개체를 뷰 모델로 전달한다. 이 액션 메서드에 대한 뷰를 생성하기 위해서 Checkout 액션 메서드를 마우스 오른쪽 버튼으로 클릭한 다음 [뷰 추가(Add View)]를 선택한다. 뷰의 이름을 Checkout 이라고 지정하고 [추가(OK)] 버튼을 눌러서 뷰를 생성한다. 그러면 Visual Studio 가 Views/Cart/Checkout.cshtml 파일을 생성해줄 것이다. 뷰 파일의 내용을 목록 9-11과 같이 편집한다. 
+
+목록9-11 Checkout.cshtml 파일의 내용
+@model SportsStore.Domain.Entities.ShippingDetails
+@{
+    ViewBag.Title = "SportsStore: Checkout";
+}
+
+<h2>Checkout now</h2>
+<p>Please enter your details, and we'll ship your goods right away!</p>
+
+@using (Html.BeginForm())
+{
+    <h3>Ship to</h3>
+    <div class="form-group">
+        <label>Name:</label>
+        @Html.TextBoxFor(x => x.Name, new { @class = "form-control" })
+    </div>
+
+    <h3>Address</h3>
+
+    <div class="form-group">
+        <label>Line1:</label>
+        @Html.TextBoxFor(x => x.Line1, new { @class = "form-control" })
+    </div>
+    <div class="form-group">
+        <label>Line2:</label>
+        @Html.TextBoxFor(x => x.Line2, new { @class = "form-control" })
+    </div>
+    <div class="form-group">
+        <label>Line3:</label>
+        @Html.TextBoxFor(x => x.Line3, new { @class = "form-control" })
+    </div>
+
+    <div class="form-group">
+        <label>City:</label>
+        @Html.TextBoxFor(x => x.City, new { @class = "form-control" })
+    </div>
+
+    <div class="form-group">
+        <label>State:</label>
+        @Html.TextBoxFor(x => x.State, new { @class = "form-control" })
+    </div>
+
+    <div class="form-group">
+        <label>Zip:</label>
+        @Html.TextBoxFor(x => x.Zip, new { @class = "form-control" })
+    </div>
+
+    <div class="form-group">
+        <label>Country:</label>
+        @Html.TextBoxFor(x => x.Country, new { @class = "form-control" })
+    </div>
+
+    <h3>Options</h3>
+    <div class="checkbox">
+        <label>
+            @Html.EditorFor(x => x.GiftWrap)
+            Gift wrap these items
+        </label>
+    </div>
+
+    <div class="text-center">
+        <input class="btn btn-primary" type="submit" value="Complete order" />
+    </div>
+
+}
+
+이 뷰에서는 사용자의 입력을 받기 위해서 모델의 각 속성들에 해당하는 label 및 input 요소를 생성하고 이를 Bootstrap 클래스로 꾸미고 있다. 응용프로그램을 실행하고 상단의 [Checkout] 버튼을 클릭해서 페이지를 이동한 다음 [Checkout now] 버튼을 클릭해보면 그림 9-4와 같은 뷰의 모습을 확인할 수 있을 것이다. (직접 주소창에 /Cart/Checkout URL을 입력해서 이 뷰에 접근할 수도 있다)
+
+그러나 이 뷰에는 문제점이 한 가지 있는데, 바로 다량의 HTML 마크업이 반복되고 있다는 점이다. MVC 프레임워크의 HTML 헬퍼 메서드들을 활용해서 이런 중복들을 줄일 수도 있지만, 그렇게 헬퍼 메서드를 사용하는 것은 오히려 원하는 형태로 내용을 구성하고 꾸미는 일이 더욱 어렵게 만든다. 그래서 이번 예제에서는 뷰 모델 개체의 메타 데이터를 가져올수 있는 편리한 기능을 C#,Razor 구문과 함께 사용해서 이 문제점을 해결해볼 것이다. 목록9-12에서 구체적인 작업 내용을 확인할수 있다. 
+
+
+목록9-12 Checkout.cshtml 파일에서 중복된 부분 줄이기
+@model SportsStore.Domain.Entities.ShippingDetails
+@{
+    ViewBag.Title = "SportsStore: Checkout";
+}
+
+<h2>Checkout now</h2>
+<p>Please enter your details, and we'll ship your goods right away!</p>
+
+@using (Html.BeginForm())
+{
+    <h3>Ship to</h3>
+    <div class="form-group">
+        <label>Name:</label>
+        @Html.TextBoxFor(x => x.Name, new { @class = "form-control" })
+    </div>
+
+    <h3>Address</h3>
+
+    foreach(var property in ViewData.ModelMetadata.Properties)
+    {
+        if (property.PropertyName != "Name" && property.PropertyName != "GiftWrap")
+        {
+            <div class="form-group">
+                <label>@(property.DisplayName ?? property.PropertyName)</label>
+                @Html.TextBox(property.PropertyName, null, new { @class = "form-control" })
+            </div>
+        }
+    }
+
+    <h3>Options</h3>
+    <div class="checkbox">
+        <label>
+            @Html.EditorFor(x => x.GiftWrap)
+            Gift wrap these items
+        </label>
+    </div>
+
+    <div class="text-center">
+        <input class="btn btn-primary" type="submit" value="Complete order" />
+    </div>
+
+}
+
+
+이 예제 코드에 사용된 ViewData.ModelMetadata라는 정적 속성은 뷰의 모델 형식에 대한 정보를 제공해주는 System.Web.Mvc.ModelMetaData 개체를 반환해준다. 그리고 foreach 반복문에서 사용하고 있는 Properties라는 속성은 다시 ModelMetaData 개체들의 컬렉션을 반환해주는데, 이 컬렉션의 각 항목들은 모델 형식에 정의된 속성들을 나타낸다. 이 코드에서는 속성명이 Name이나 GiftWrap인 경우 HTML 마크업을 생성하지 않으려고 PropertyName이라는 속성 값을 비교하고 있다. 이 두개 의 속성은 뷰의 다른 부분에서 직접 처리하고 있기 때문이다. 나머지 모든 속성들에 대해서는 foreach 반복문에서 HTML 요소를 생성하고 Boottstrap 클래스를 지정하고 있다. 
+
+
+TIP:
+이번 예제에서 사용하고 있는 foreach 및 if 키워드는 폼을 생성하기 위해서 사용된 @using 문의 범위 내에 존재하기 때문에 별도로 @문자를 지정할 필요가 없다. 오히려 @문자를 해당 키워드 앞에 붙인다면 Razor가 오류를 발생시킬 것이다. Razor 에서 언제 @ 문자가 필요한지 익숙하게 알게 되기까지는 다소 시간이 걸릴 수도 있겠지만 대부분의 프로그래머들은 금방 자연스럽게 알게 된다. 또한 필자처럼 Razor를 처음 접했을 때, 이런 점들을 잘 이해하지 못하는 사람들을 위해서 브라우저에 출력되는 Razor의 오류 메시지는 매우 상세한 안내를 제공해주기 때문에 실수를 쉽게 바로 잡을 수 있을 것이다. 
+
+
+그러나 아직 모든 작업이 끝난 것은 아니다. 이제 다시 예제를실행해서 뷰에 의해서 생성된 결과물을 살펴보면 그림9-5와 같이 일부 라벨들의 경우 적절하게 표현됐다고 보기는 어렵다(즉 Line이라는 단어와 숫자 사이에 빈 칸이 있어야 한다는 뜻이다. 이 얘기가 잘 이해되지 않는다면 한글 응용프로그램을 작성하고 있는 중이라고 생각해보면 이해가 쉬울 것이다. 즉 모델 클래스의 속성 이름은 Line1이지만, 응용프로그램의 뷰 화면에는 상세주소 1로 출력되야 하는 상황이라고 생각해보기 바란다.)
+
+문제는 속성명을 이용해서 라벨을 생성할 경우 항상 적절한 결과를 얻을수 있는 것이 아니라 는 점이다. 이런 이유 때문에 폼 요소를 생성할 때는 다음과 같이 DisplayName속성값이 존재하는지를 확인하는 것이 좋다. 
+
+...
+<label>@(property.DisplayName ?? property.PropertyName)</label>
+...
+
+뿐만 아니라 이렇게 DisplayName 속성의 이점을 활용하기 위해서는 먼저 목록9-13과 같이 모델 클래스에 Display 어트리뷰트를 적용해야 한다. 
+
+목록9-13 ShippingDetails.cs 파일에 Display 어트리뷰트 적용하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
+
+namespace SportsStore.Domain.Entities
+{
+    public class ShippingDetails
+    {
+        [Required(ErrorMessage ="Please enter a name")]
+        public string Name { get; set; }
+
+        [Required(ErrorMessage ="Please enter the first address line")]
+        [Display(Name= "Line 1")]
+        public string Line1 { get; set; }
+        [Display(Name = "Line 2")]
+        public string Line2 { get; set; }
+        [Display(Name = "Line 3")]
+        public string Line3 { get; set; }
+
+        [Required(ErrorMessage ="Please enter a city name")]
+        public string City { get; set; }
+
+        [Required(ErrorMessage ="Please enter a state name")]
+        public string State { get; set; }
+
+        public string Zip { get; set; }
+
+        [Required(ErrorMessage ="Please enter a country name")]
+        public string Country { get; set; }
+
+        public bool GiftWrap { get; set; }
+    }
+}
+
+이렇게 Display 어트리뷰트의 Name 값을 설정함으로써 뷰에서 DisplayName 속성을 통해 서 읽혀질 값을 지정할 수 있다. 응용프로그램을 실행하고 다시 Checkout 뷰로 이동해보면 그림 9-6과 같은 결과를 확인할 수 있다. 
+
+이번 예제는 MVC 프레임워크를 이용해서 작업할 때 접할 수 있는 두 가지 다른 측면을 보여주고 있다. 첫 번째는 어떤 상황에서도 마크업이나 코드를 단순화시킬 수 있는 대안이 존재한다는 것이다. 두 번째는 비록 MVC 패턴에서 뷰의 역할이 데이터와 마크업을 출력하는 용도로 만 한정되어 있음에도 불구하고, Razor 와 C#에서 제공되는 도구들이 매우 풍부하고 유연하기 때문에 이를 잘 활용하면 심지어 형식의 메타데이터를 활용하는 수준까지도 뷰의 기능을 확장할 수 있다는 것이다. 
+
+
+
+※ 주문 처리 구현하기
+이번에는 주문과 관련된 상세 내용들을 처리할 수 있는 응용프로그램상의 구성요소를 만들어 볼 차례다.  MVC 모델의 원칙에 따라 먼저 이 주문 처리 기능에 대한 인터페이스를 정의한 다음 인터페이스에 대한 실제 구현을 작성하고, DI 컨테이너인 Ninject를 사용해서 이 둘을 연결할 것이다. 
+
+
+※ 인터페이스 정의하기
+먼저 SportsStore.Domain 프로젝트의 Abstract 폴더에 IOrderProcessor라는 이름의 인터페이스를 추가하고 목록9-14와 같이 내용을 편집하자. 
+
+목록9-14 IOrderProcesseor.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using SportsStore.Domain.Entities;
+namespace SportsStore.Domain.Abstract
+{
+    public interface IOrderProcessor
+    {
+        void ProcessOrder(Cart cart, ShippingDetails shippingDetails);
+    }
+}
+
+
+
+※ 인터페이스 구현하기
+이번 예제에서는 웹 사이트 관리자에게 전자 메일을 보내는 방식으로 주문을 처리하도록 IOrderProcessor 인터페이스를 구현해볼 것이다. 그 이유는 물론 판매 과정을 단순화시키기 위함이지만, 대부분의 전자상거래 사이트에서는 이처럼 전자 메일만 보내는 간단한 방식으로 주문을 처리하지는 않을 것이다. 또한 신용카드를 비롯한 어떤 지불 수단도 지원하지 않을 것이다. 오직 MVC 에만 집중하기 위해서 전자 메일만 사용하기로 한다. 
+
+SportsStore.Domain 프로젝트의 Concrete 폴더에 EmailOrderProcessor.cs라는 새 클래스 파일을 생성하고 목록9-15의 내용과 같이 편집한다. 
+
+목록9-15 EmailOrderProcessor.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Net;
+using System.Net.Mail;
+using SportsStore.Domain.Abstract;
+using SportsStore.Domain.Entities;
+namespace SportsStore.Domain.Concrete
+{
+    public class EmaillSettings
+    {
+        public string MailToAddress = "orders@example.com";
+        public string MailFromAddress = "sportsstore@example.com";
+        public bool UseSsl = true;
+        public string Username = "MySmtpUsername";
+        public string Password = "MySmtpPassword";
+        public string ServerName = "smtp.example.com";
+        public int ServerPort = 587;
+        public bool WriteAsFile = false;
+        public string FileLocation = @"c:\sports_store_emails";
+    }
+    public class EmailOrderProcessor : IOrderProcessor
+    {
+        private EmaillSettings emailSettings;
+
+        public EmailOrderProcessor(EmaillSettings settings)
+        {
+            emailSettings = settings;
+        }
+
+        public void ProcessOrder(Cart cart, ShippingDetails shippingInfo)
+        {
+            using(var smtpClient = new SmtpClient())
+            {
+                smtpClient.EnableSsl = emailSettings.UseSsl;
+                smtpClient.Host = emailSettings.ServerName;
+                smtpClient.Port = emailSettings.ServerPort;
+                smtpClient.UseDefaultCredentials = false;
+                smtpClient.Credentials = new NetworkCredential(emailSettings.Username, emailSettings.Password);
+
+                if(emailSettings.WriteAsFile)
+                {
+                    smtpClient.DeliveryMethod = SmtpDeliveryMethod.SpecifiedPickupDirectory;
+                    smtpClient.PickupDirectoryLocation = emailSettings.FileLocation;
+                    smtpClient.EnableSsl = false;
+                }
+
+                StringBuilder body = new StringBuilder().AppendLine("A new order has been submitted").AppendLine("---").AppendLine("Items:");
+
+                foreach(var line in cart.Lines)
+                {
+                    var subtotal = line.Product.Price * line.Quantity;
+                    body.AppendFormat("{0} x {1} (subtotal: {2:c}", line.Quantity, line.Product.Name, subtotal);
+                }
+
+                body.AppendFormat("Total order value:{0:c}", cart.ComputeTotalValue()).AppendLine("---")
+                    .AppendLine("Ship to:").AppendLine(shippingInfo.Name).AppendLine(shippingInfo.Name)
+                    .AppendLine(shippingInfo.Line1).AppendLine(shippingInfo.Line2 ?? "").AppendLine(shippingInfo.Line3 ?? "")
+                    .AppendLine(shippingInfo.City).AppendLine(shippingInfo.State ?? "").AppendLine(shippingInfo.Country)
+                    .AppendLine(shippingInfo.Zip).AppendLine("---").AppendFormat("Gift wrap: {0}", shippingInfo.GiftWrap ? "Yes" : "No");
+
+                MailMessage mailMessage = new MailMessage(emailSettings.MailFromAddress, //보내는 메일주소
+                                                            emailSettings.MailToAddress, //받는 메일주소
+                                                            "New order submitted!", //제목
+                                                            body.ToString());       // 본문
+                if(emailSettings.WriteAsFile)
+                {
+                    mailMessage.BodyEncoding = Encoding.ASCII;
+                }
+                smtpClient.Send(mailMessage);
+
+            }
+        }
+        
+    }
+}
+
+작업을 간단히 하기 위해서 목록9-15에 EmailSettings 클래스까지 함께 정의하고 있다. 이 클래스의 인스턴스는 EmailOrderProcessor 생성자에 의해서 요청되는데 .NET 전자 메일 관련 클래스들을 구성하기 위한 모든 정보들을 포함하고 있다. 
+
+
+TIP:
+사용할 수 있는 SMTP 서버가 없더라도 고민할 필요는 없다. EmailSettings.WriteAsFile 속성을 true로 설정하면 FileLocation 속성에 정의된 디렉터리에 전자 메일 메시지가 파일로 생성될 것이다. 단 이 디렉터리는 반드시 존재해야 하고 쓰기 가능해야 한다. 이 파일은 .eml 확장자로 생성되지만 어떤 텍스트 편집기에서도 읽을 수 있다. 목록9-15에서는 전자 메일 파일의 저장 위치를 c:\sports_store_emails로 설정하고 있다. 
