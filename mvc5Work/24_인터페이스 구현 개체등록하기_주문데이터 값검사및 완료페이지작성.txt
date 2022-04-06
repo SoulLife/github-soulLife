@@ -1,0 +1,262 @@
+※ 인터페이스 구현 개체 등록하기
+이제 IOrderProcessor 인터페이스를 구현하고 구성했으므로 Ninject를 이용해서 해당 인스턴스를 생성할 수 있다. SportsStore.WebUI 프로젝트의 Infrastructure 폴더에서 NinjectDependencyResolver.cs 파일을 열고 목록9-16에서 볼 수 있는 것처럼 AddBindings 메서드를 편집한다. 
+
+목록9-16 NinjectDependencyResolver.cs 파일에서 IOrderProcessor 인터페이스에 대한 Ninject 바인딩 추가하기
+using System;
+using System.Collections.Generic;
+using System.Configuration; //추가
+using System.Linq;
+using System.Web.Mvc;
+using Moq;
+using Ninject;
+using SportsStore.Domain.Abstract;
+using SportsStore.Domain.Entities;
+using SportsStore.Domain.Concrete;
+namespace SportsStore.WebUI.Infrastructure
+{
+    public class NinjectDependencyResolver :IDependencyResolver
+    {
+        private IKernel kernel;
+
+        public NinjectDependencyResolver(IKernel kernelParam)
+        {
+            kernel = kernelParam;
+            AddBindings();
+        }
+        public object GetService(Type serviceType)
+        {
+            return kernel.TryGet(serviceType);
+        }
+        public IEnumerable<object> GetServices(Type serviceType)
+        {
+            return kernel.GetAll(serviceType);
+        }
+        private void AddBindings()
+        {
+
+            kernel.Bind<IProductRepository>().To<EFProductRepository>();
+	    //아래부터 추가
+            EmaillSettings emailSettings = new EmaillSettings
+            {
+                WriteAsFile = bool.Parse(ConfigurationManager.AppSettings["Email.WriteAsFile"] ?? "false")
+            };
+            kernel.Bind<IOrderProcessor>().To<EmailOrderProcessor>().WithConstructorArgument("settings", emailSettings);
+        }
+    }
+}
+
+먼저 Ninject의 WithConstructorArgument 메서드에 전달할 EmailSettings 개체를 생성한다. 이 개체는 IOrderProcessor 인터페이스에 대한 요청을 서비스하기 위해서 새 인스턴스가 생성될 때 EmailOrderProcessor 클래스의 생성자에 주입된다. 목록9-16에서는 EmailSettings 개체의 속성들 중에서 유일하게 WriteAsFile 속성만을 설정하고 있다. 이 속성에 설정될 값은 ConfigurationManager.AppSettings 속성을 통해서 Web.config 파일(프로젝트의 루트 폴더에 위치한)에 목록9-17과 같이 설정되어 있다. 
+
+목록9-17 Web.config 파일의 응용프로그램 설정
+...
+<appSettings>
+    <add key="webpages:Version" value="3.0.0.0" />
+    <add key="webpages:Enabled" value="false" />
+    <add key="ClientValidationEnabled" value="true" />
+    <add key="UnobtrusiveJavaScriptEnabled" value="true" />
+    <add key="Email.WriteAsFile" value="true"/> <!-- 추가 -->
+  </appSettings>
+
+
+
+※ 카트 컨트롤러 완성하기
+계속해서 CartController 클래스를 완성하기 위해서는 컨트롤러 클래스의 생성자가 IOrderProcessor 인터페이스의 구현 인스턴스를 요청하도록 수정해야 한다. 그리고 사용자가 [Complete order] 버튼을 클릭할 때 HTTP 폼의 POST 요청을 처리할 액션 메서드를 추가해야 한다. 목록9-18에서 이 두 가지 변경사항을 모두 확인할수 있다. 
+
+목록9-18 CartController.cs 파일에서 Cart컨트롤러 완성하기
+public class CartController : Controller
+    {
+        private IProductRepository repository;
+        private IOrderProcessor orderProcessor;
+        public CartController(IProductRepository repo, IOrderProcessor proc)
+        {
+            repository = repo;
+            orderProcessor = proc;
+        }
+
+	public ViewResult Checkout(Cart cart, ShippingDetails shippingDetails)
+        {
+            if(cart.Lines.Count() == 0)
+            {
+                ModelState.AddModelError("", "Sorry, your cart is empty!");
+            }
+
+            if(ModelState.IsValid)
+            {
+                orderProcessor.ProcessOrder(cart, shippingDetails);
+                cart.Clear();
+                return View("Completed");
+            }else
+            {
+                return View(shippingDetails);
+            }
+        }
+
+    }
+
+목록 9-18에 추가된 Checkout 액션 메서드에는 HttpPost 어트리뷰트가 지정되어 있다. 따라서 이 액션 메서드는 사용자가 POST 방식으로 폼 데이터를 제출할 때만 실행된다. 그리고 이번에도 역시 두 가지 매개변수를 개체로 전달받기 위해서 모델 바인더를 이용하고 있다. 즉 ShippingDetails 매개변수는 HTTP 폼 데이터를 통해서 자동으로 생성되고 Cart 매개변수는 사용자 지정 모델 바인더를 통해서 생성된다. 
+
+※ Note:
+CartController 클래스의 생성자를 변경했기 때문에 이 클래스를 테스트하기 위해서 생성했던 단위 테스트들도 수정해야 한다. 새롭게 추가된 생성자 매개변수에 null을 전달하면 단위 테스트 들이 정상적으로 컴파일 될 것이다. 
+
+
+
+MVC 프레임워크는 데이터 주석(data annotation)을 통해서 ShippingDetails 클래스에 적용된 유효성 검사 제약조건들을 검사하고, 만약 위반된 내용이 있다면 이를 ModelState 속성을 통해서 액션 메서드에 전달해준다. 따라서 ModelState.IsValid 속성을 확인해보면 데이터의 유효성에 문제가 있는지 여부를 확인할 수 있다. 또한 카트에 상품이 담겨있지 않은 경우 오류 메시지를 뷰에 전달하기 위해서 ModelState.AddModelError 메서드를 호출하고 있는 부분에 주목하자. 이 오류를 출력하는 방법에 대해서는 잠시 후에 살펴볼 것이다. 그리고 24장과 25장에서는 모델 바인딩과 유효성 검사에 관해서 더 많은 내용들을 자세하게 살펴볼 것이다. 
+
+
+
+※ 단위 테스트 : 주문 처리
+CartController 클래스에 대한 단위 테스트를 완료하기 위해서는 새롭게 오버로드한 Checkout 메서드의 동작을 테스트해야 한다. 메서드가 짧고 간단해 보이지만 MVC 프레임워크의 모델 바인딩 기능을 사용하고 있기 때문에 보이지 않는 곳에서 진행되는 많은 부분들까지 테스트해야 할 필요가 있다. 
+
+우선 카트에 상품이 담겨있고 고객이 유효한 배송 정보를 제공한 경우에만 주문을 처리하고자 한다. 그 밖의 다른 모든 상황에서는 고객에게 오류를 보여줘야 한다. 다음은 이러한 동작을 테스트하는 첫 번째 테스트 메서드를 보여준다. 
+...
+[TestMethod]
+        public void Cannot_Checkout_Empty_Cart()
+        {
+            //Arrange - Mock 주문처리기를 생성한다. 
+            Mock<IOrderProcessor> mock = new Mock<IOrderProcessor>();
+            //Arrange - 빈 Cart 개체를 생성한다. 
+            Cart cart = new Cart();
+            // Arrange - 배송정보를 생성한다. 
+            ShippingDetails shippingDetails = new ShippingDetails();
+            //Arrange - 컨트롤러의 인스턴스를 생성한다. 
+            CartController target = new CartController(null, mock.Object);
+
+            //Act
+            ViewResult result = target.Checkout(cart, shippingDetails);
+
+            // Assert - 주문이 모두 처리기에 전달되지 않은 것을 확인한다. 
+            mock.Verify(m => m.ProcessOrder(It.IsAny<Cart>(), It.IsAny<ShippingDetails>()), Times.Never());
+            //Assert - 메서드가 기본 뷰를 반환했는지 확인한다
+            Assert.AreEqual("", result.ViewName);
+            //Assert - 유효하지 않은 모델을 뷰에 전달하는지 확인한다
+            Assert.AreEqual(false, result.ViewData.ModelState.IsValid);
+        }
+...
+
+이 테스트는 카트가 빈 상태로는 지불 처리가 되지 않는다는 점을 보장해 준다. IOrderProcessor의 Mock 구현 개체에서 ProcessOrder 메서드가 호출된 적이 없다는 것을 확인하고 Checkout 메서드가 반환하는 뷰가 기본 뷰인지 그렇다면 고객이 정정할 수 있도록 기존 입력 값이 보존되어 있는지도 확인한다. 그리고 마지막으로 뷰에 전달된 모델 상태(model state)가 유효하지 않다는 점을 확인하는 것이 테스트의 내용이다. 지나치게 주의를 기울이고 있는 것처럼 보일수도 있지만, 세 가지 사항 모두를 확인하여 만전을 기했다. 다음 테스트 역시 아주 비슷한 방식이지만 모델 바인더에 의해서 문제가 보고되는 상황을 연출하기 위해서(운영 시 일어날 법한 유효하지 않은 배송 정보를 제공함으로써) 오류가 있는 뷰 모델을 사용하고 있다. 
+
+...
+[TestMethod]
+        public void Cannot_Checkout_Invalid_ShippingDetails()
+        {
+            // Arrage - Mock 주문 처리기를 생성한다
+            Mock<IOrderProcessor> mock = new Mock<IOrderProcessor>();
+            // Arrange - 하나의 상품이 담긴 Cart 개체를 생성한다
+            Cart cart = new Cart();
+            cart.AddItem(new Product(), 1);
+
+            //Arrange - 컨트롤러의 인스턴스를 생성한다
+            CartController target = new CartController(null, mock.Object);
+            //Arrange - 모델에 오류를 추가한다. 
+            target.ModelState.AddModelError("error", "error");
+
+            //Act - 지불 처리를 시도한다. 
+            ViewResult result = target.Checkout(cart, new ShippingDetails());
+
+            //Assert - 주문이 처리기에 전달되지 않은 것을 확인한다. 
+            mock.Verify(m => m.ProcessOrder(It.IsAny<Cart>(), It.IsAny<ShippingDetails>()), Times.Never());
+            // Assert - 메서드가 기본 뷰를 반환했는지 확인한다
+            Assert.AreEqual("", result.ViewName);
+            //Assert - 유효하지 않은 모델을 뷰에 전달하는지 확인한다. 
+            Assert.AreEqual(false, result.ViewData.ModelState.IsValid);
+        }
+...
+
+카트가 비어있거나 잘못된 배송 정보가 제출됐을 때는 주문이 처리되지 않는다는 동작을 테스트했으므로 , 이번에는 조건이 부합할 때 주문이 제대로 처리되는지 여부도 테스트할 필요가 있다 다음은 그에 대한 테스트 메서드다. 
+
+...
+[TestMethod]
+        public void Can_Checkout_And_Submit_Order()
+        {
+            //Arrange - Mock 주문 처리기를 생성한다. 
+            Mock<IOrderProcessor> mock = new Mock<IOrderProcessor>();
+            //Arrange - 하나의 상품이 담긴 Cart 개체를 생성한다
+            Cart cart = new Cart();
+            cart.AddItem(new Product(), 1);
+            // Arrange - 컨트롤러의 인스턴스를 생성한다
+            CartController target = new CartController(null, mock.Object);
+
+            //Act - 지불 처리를 시도한다. 
+            ViewResult result = target.Checkout(cart, new ShippingDetails());
+
+            //Assert - 주문 처리기에 주문이 전달된 것을 확인한다
+            mock.Verify(m => m.ProcessOrder(It.IsAny<Cart>(), It.IsAny<ShippingDetails>()), Times.Once());
+            //Assert - 메서드가 Completed 뷰를 반환하는지 확인한다. 
+            Assert.AreEqual("Completed", result.ViewName);
+            //Assert = 유효한 모델을 뷰에 전달하는지 확인한다
+            Assert.AreEqual(true, result.ViewData.ModelState.IsValid);
+        }
+...
+
+이 테스트에서 배송 정보가 유효한지 직접 확인해볼 필요가 없었다는 점에 주목하자. 유효성 검사는 ShippingDetails 클래스의 각 속성들에 적용된 어트리뷰트를 사용하여 모델 바인더가 자동으로 처리해준다. 
+
+
+
+※ 유효성 검사 오류 표시하기
+MVC 프레임워크는 사용자가 입력한 데이터를 검증하기 위해서 ShippingDetails 클래스에 적용된 유효성 검사 어트리뷰트들을 사용하게 된다. 그렇지만 사용자에게 발생한 모든 오류들에 대한 정보를 적절하게 보여주기 위해서는 몇 가지 변경사항을 적용해야 한다. 무엇보다도 사용자에게 모든 문제점들에 대한 요약 정보를 제공해주는 것이 좋다. 특히 이 정보는 사용자가 카트에 상품을 담지 않은 상태로 지불 처리를 시도하는 경우처럼, 특정 필드와 관련이 없는 오류가 발생했을 때 유용하다(만약 특정 필드와 관련된 오류들만 표시해준다면 모델 전반에 관련된 오류나 여러 필드들의 상태나 값의 조합에 대한 오류 메시지를 표시할 곳이 마땅치가 않아진다.)
+
+이렇게 유효성 검사오류들에 대한 유용한 요약 정보를 보여주기 위해서는 이미 2장에서 살펴봤던 것처럼 Html.ValidationSummary 헬퍼 메서드를 사용하면 된다. 목록9-19는 이 헬퍼 메서드가 추가된 Checkout.cshtml 뷰를 보여주고 있다. 
+
+목록9-19 Checkout.cshtml 파일에 유효성 검사 요약 정보 추가하기
+...
+@using (Html.BeginForm())
+{
+    @Html.ValidationSummary()
+    <h3>Ship to</h3>
+    <div class="form-group">
+        <label>Name:</label>
+        @Html.TextBoxFor(x => x.Name, new { @class = "form-control" })
+    </div>
+
+    <h3>Address</h3>
+....
+
+다음 단계로 몇 가지 CSS 스타일들을 생성해야 하는데, 이 스타일들은 유효성 검사 요약 정보에 적용되거나 MVC 프레임워크가 유효하지 않은 요소들에 자동으로 추가해주는 클래스들이다. SportsStore.WebUI 프로젝트의 Content 폴더에 목록 9-20과 같은 내용으로 ErrorStyles.css라는 새로운 스타일 시트를 생성한다. 이는 2장에서 사용했던 것과 동일한 스타일들의 모음이다. 
+
+목록9-20 ErrorStyles.css 파일의 내용
+.field-validation-error { color:#f00;}
+.field-validation-valid { display: none;}
+.input-validation-error { border: 1px solid #f00; background-color: #fee;}
+.validation-summary-errors { font-weight:bold; color: #f00;}
+.validation-summary-valid { display: none;}
+
+그리고 이 스타일들을 적용하기 위해서 목록9-21에서 볼 수 있는 것처럼 _Layout.cshtml 파일에 ErrorStyles.css 파일에 대한 link 요소를 추가한다. 
+
+목록9-21 _Layout.cshtml 파일에 Link 요소 추가하기
+...
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="~/Content/bootstrap.css" rel="stylesheet" />
+    <link href="~/Content/bootstrap-theme.css" rel="stylesheet" />
+    <link href="~/Content/ErrorStyles.css" rel="stylesheet" /> <!-- 추가 -->
+    <title>@ViewBag.Title</title>
+</head>
+...
+
+이렇게 작업을 마치고 나면 그림9-7에서 볼 수 있는 것처럼 유효성 검사 오류가 표시된다. 즉 문제가 있는 필드들이 강조되고, 그 요약 정보들이 상단에 출력되고 있다. 
+
+
+※ TIP:
+사용자가 제출한 데이터는 검증되기 전에 먼저 서버 측으로 전송된다. 이를 서버 측 유효성 검사(server-side validation)라고 하며, MVC 프레임워크는 이 기능을 훌륭하게 지원해준다. 그러나 서버 측 유효성 검사의 문제점은 데이터가 서버에 전송되어 처리되기 전까지는 사용자가 오류에 대해서 알 수 없다는 점이다. 또한 서버에 부하가 많은 경우에는 결과 페이지를 보게 되기까지 몇 초까지도 걸릴 수 있다는 점도 문제다. 이런 이유 때문에 서버 측 유효성 검사는 클라이언트 측 유효성 검사와 함께 병용되어 보완되는 경우가 많다. 클라이언트 측 유효성 검사는 JavaScript 를 사용하여 사용자 입력 값을 서버에 전송하기 전에 미리 확인하는 과정을 뜻하며 이에 관해서는 25장에서 상세히 살펴볼 예정이다. 
+
+
+
+※ 감사 페이지 보여주기
+마지막으로 지불 처리 과정을 완료하기 위해서 고객에게 주문이 처리되었음을 확인하고, 고객과의 비즈니스에 대한 감사 인사를 전하도록 해보자. Views/Cart 폴더에 Completed.cshtml 라는 새로운 뷰를 추가하고 목록 9-22와 같이 내용을 편집한다. 
+
+목록9-22 Completed.cshtml 파일의 내용
+@{
+    ViewBag.Title = "SportsStore: Order Submitted";
+}
+
+<h2>Thanks!</h2>
+Thanks for placing your order. We'll ship your goods as soon as possible.
+
+목록 9-18에서 Checkout 액션 메서드를 정의하면서 이미 필요한 구문을 추가해두었기 때문에 이 뷰를 사용하기 위해서 코드를 변경해야 할 필요는 없다. 이제 고객들은 상품 선택에서 부터 지불과 함께 구매를 완료하는 전체 과정을 진행할 수 있다. 고객들이 유효한 배송 정보를 제공했다면 [Complete order] 버튼을 눌러서 주문을 완료했을 때 그림9-8과 같은 감사 페이지를 보게 될 것이다. 
+
+
+※ 요약
+이번 장에서는 SportsStore 응용프로그램의 주요한 고객 기능들을 완성했다. 물론 완성된 기능들이 Amazon을 긴장시킬 정도는 아니겠지만 카테고리와 페이지별로 탐색할 수 있는 상품 카탈로그를 갖추었고 깔끔한 쇼핑 카트와 간단한 지불 처리 과정까지 준비를 마쳤다. 
+
+이처럼 잘 분리된 아키텍처는 응용프로그램의 어딘가에 미칠 문제나 비일관성을 걱정하지 않고도, 응용프로그램의 모든 부분들을 손쉽게 변경할 수 있게 해준다. 예를 들어 이번 장에서 주문을 데이터베이스에 저장해서 처리하도록 구현할 수도 있었을 것이다. 그러나 그렇게 했다고 해서 쇼핑 카트나 상품 카탈로그, 또는 그외 응용프로그램의 어떤 영역에도 영향을 미치지는 않았을 것이다. 계속해서 다음 장에서는 두 가지 다른 기술을 사용하여 SportsStore 응용프로그램의 모바일 버전을 만들어볼 것이다. 
