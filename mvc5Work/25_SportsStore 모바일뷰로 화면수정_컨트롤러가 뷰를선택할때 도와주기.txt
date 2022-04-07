@@ -1,0 +1,286 @@
+CHAPTER 10장 : SportsStore : 모바일
+오늘날 스마트폰이나 태블릿 같은 모바일 장비의 인기로부터 개발자가 벗어날 길이 과연 있을까? 여러분의 응용프로그램을 최대한 넓은 잠재 고객층에게 전달하고자 한다면 모바일 웹 브라우저의 세계를 적극적으로 수용해야만 한다. 이 얘기를 하는 필자의 말투가 그다지 열정적으로 들리지 않는다면 그 이유는 아마도 모바일 웹 브라우저(Mobile Web Browsers)라는 단어 때문일 것이다. 이 한 단어에는 데스크톱 브라우저와 견줄만한 빠르고 유능한 현대적인 브라우저에서부터 느리고 비일관적이고 오래된 브라우저들이 모두 포함되어 있다. 이런 점을 감안 해본다면 모바일 웹 브라우저 지원이라는 단순한 명제가 그렇게 간단하게 만은 들리지 않을 것이다. 
+
+이런 상황에서 가장 중요한 사실은 모바일 사용자에게 괜찮은 사용자 경험을 제공하기가 쉽지 않다는 점이다. 실제로 단순히 데스크톱에 콘텐트를 전달하는 것보다 훨씬 어렵다 신중한 계획과 설계 그리고 대단히 많은 양의 테스트가 필요하지만 그럼에도 불구하고 테스트가 끝날 즈음에 출시된 새로운 스마트폰과 태블릿에서는 정상적으로 동작하지 않을 가능성도 크다. 
+
+
+※ 모바일 웹 개발 이해하기
+MVC 프레임워크는 모바일 개발에 도움이 되는 몇 가지 기능들을 제공해준다. 그러나 MVC 프레임워크 자체는 HTTP 요청을 받고 HTML 응답을 생성하는 서버 측 프레임워크 이기 때문에 모바일 클라이언트를 대상으로 다양한 상황에 대처하기에는 기능적인 제약이 많다. 대부분의 경우 MVC 프레임워크가 얼마나 도움이 될지는 여러분이 채택한 모바일 전략에 달려있다. 이어지는 절들에서는 여러분이 납득할 수 있을 만한 세 가지 기본적인 모바일 웹 전략을 살펴볼 것이다. 
+
+
+TIP:
+물론 특정 모바일 운영체제에서만 동작하는 네이티브 응용프로그램을 만드는 네 번째 옵션도 있겠지만 이 방식은 MVC 프레임워크와는 직접 관련되지 않기 때문에 여기서는 논하지 않겠다. 
+
+
+
+※ 모바일 지원 - 아무것도 하지 않기(또는 가능한 적게 하기)
+모바일 화면을 고려한다고 말하면서 아무것도 하지 않는다는 것이 이상한 생각 같기도 하지만 어떤 모바일 기기들은 데스크톱 클라이언트용으로 개발된 콘텐트를 다룰 수 있는 충분한 능력을 갖고 있다. 가장 최근에 등장했다고 일반적으로 인정할수 있는 많은 기기들이 충분한 메모리와 함께 고해상도, 고화질의 디스플레이를 갖추고 있으며, 빠르게 HTML 을 렌더하고 JavaScript를 실행할 수 있는 브라우저도 내장하고 있다. 여러분의 응용프로그램이 특별히 많은 하드웨어 자원을 요구하지 않는다는 전제하에 많은 모바일 기기들에서 응용프로그램이 특별히 많은 하드웨어 자원를 요구하지 않는다는 전제하에 많은 모바일 기기들에서 응용프로그램의 콘텐트를 보여주는 데 아무 문제가 없을 것이다. 그 한 가지 예로 그림 10-1은 iPad로 전혀 수정되지 않은 SportsStore 응용프로그램에 접근한 모습을 보여준다. 
+
+여러분이 어떻게 예상했을지는 모르지만 iPad에서도 꽤 괜찮게 동작한다. 오직 한 가지 문제점은 페이지 이동 링크가 페이지 영역의 최하단에서도 더 아래로 떨어져 있다는 점뿐이다. 그러나 이 문제점은 페이지의 레이아웃을 변경하거나 한 페이지에 출력되는 상품의 수를 조정해서 쉽게 해결할 수 있는 문제다. 
+
+
+NOTE:
+이번 장의 모든 스크린샷은 browserstack.com 사이트를 이용해서 얻은 결과다. 이 사이트는 필자가 개인 프로젝트를 수행할 때 사용하는 크로스 플랫폼 브라우저 테스트 서비스다. 물론 완벽한 서비스는 아니라서 접속이 최고조에 달하는 시간에는 종종 느리기도 하고, 미국 외에서는 안정적인 서비스가 어려울 수도 있고 모바일 기기는 에뮬레이트된다. 필자는 주로 다양한 데스크톱 브라우저를 지원하기 위해 이 서비스를 사용하지만, 직접 일일이 에뮬레이터들을 관리하지 않고도 제법 괜찮은 모바일 에뮬레이터 결과를 얻을 수 있다. 이번 장의 예제들을 따라해보기 위해서 이 사이트의 무료 체험 계정을 신청해도 되지만, 다른 비슷한 서비스를 찾고자 한다면 수많은 경쟁 서비스들이 존재하므로 어렵지 않게 대안을 찾을 수 있을 것이다. 필자는 Browser Stack의 평범한 고객일 뿐 아무런 연고도 없다. 정상적인 금액을 지불하고 유료로 계정을 사용하고 있지만, 그런 이유로 어떤 특별한 혜택도 받고 있지는 않다. 
+
+
+
+
+※ 반응형 웹 디자인 사용하기
+아무것도 하지 않거나 최소한의 지원만 제공하는 것이 첫 번째 전략이라면, 다음 전략은 콘텐트가 표현되는 기기의 능력을 고려해서 콘텐트를 제작하는 것이다. 이 방식은 반응형 디자인(Responsive Design)이라는 이름으로 알려져 있다. 가령 CSS 표준의 기능들을 이용하면 기기의 능력을 감안해서 HTML 요소들에 적용된 스타일링을 변경할 수 있는데, 주로 화면의 너비에 기반해서 콘텐트의 레이아웃을 변경하는 기법이 가장 많이 사용된다. 
+
+그러나 반응형 디자인은 클라이언트가 CSS를 이용해서 처리하는 기법이지 MVC 프레임워크가 직접 관리하는 대상은 아니다. 필자는 Pro ASP .NET MVC 5 Client라는 책에서 반응형 디자인에 대해 심도 깊게 접근하고 있지만 이번 절에서는 지금까지 SportsStore 응용프로그램을 스타일링하면서 사용해왔고 Microsoft가 Visual Studio 2013의 MVC5 프로젝트 템플릿에 포함시킨 Bootstrap 라이브러리가 제공해주는 반응형 기능들을 사용해서 반응형 디자인을 적용하는 방법을 (MVC 프레임워크와 관련하여) 간단하게만 살펴볼 것이다. 
+
+이번 절의 목표는 응용프로그램의 기본 레이아웃을 조정해서 iPhone에서도 정상적으로 보이게 만드는 것이다. 이전 절의 아무것도 하지 않기(do nothing) 전략은 iPhone처럼 화면이 좁은 기기에서는 통하지 않기 때문이다. 그림 10-2에서 iPhone으로 SportsStore 예제 응용프로그램에 접근한 결과를 확인할 수 있다. 
+
+이어지는 절들에서는 레이아웃의 다양한 측면들에 초점을 두고 이 문제를 직접 해결해보고자 한다. 즉 응용프로그램의 모든 기능들은 그대로 유지하면서 다른 방식으로 표현하는 것이 목표인 것이다. 
+
+
+Note:
+MVC 프레임워크는 반응형 디자인에 적극적으로 관여하지 않는다. 그저 모든 브라우저에 동일한 콘텐트를 전송하고 어떤 부분을 어떻게 출력해야 할지는 브라우저가 알아서 판단하도록 한다. 결국 이 얘기는 Visual Studio 프로젝트에 단위 테스트를 추가해서 반응형 디자인을 테스트할 수 있는 합리적인 방법이 없다는 결론을 의미한다. 이처럼 반응형 디자인은 클라이언트 측의 세심한 테스트가 필요한 기술로 이에 관한 테스트를 자동화하기는 쉽지 않다. 
+
+
+
+※ 반응형 페이지 헤더 만들기
+먼저 SportsStore 응용프로그램의 텍스트 로고와 카트 요약정보, 지불 처리 버튼이 위치한 페이지의 헤더 부분부터 반응형 디자인을 적용해보자. 좁은 화면을 고려한다면 페이지 헤더에서 나머지 콘텐트를 위해 SportsStore 로고를 없애서 공간을 넓히는 것이 가장 쉬운 해결책이겠지만 일단 로고는 그대로 유지하려고 한다(브랜딩의 현실 이해하기를 참조하기 바란다)그 대신 모든 항목들을 두 줄에 걸쳐서 재배치할 것이다. 
+
+
+
+브랜딩의 현실 이해하기:
+방금 설명한 것처럼, 화면 공간을 확보하는 가장 쉬운 방법중 하나는 응용프로그램에서 브랜딩을 제거하는 것이다. 단순히 SportsStore라는 로고를 텍스트로 보여주고 있을 뿐이지만, 화면에서 얼마나 큰 공간을 차지하고 있는지는 여러분도 잘 알것 이다. 데스크톱에서는 평범한 수준의 브랜딩도 스마트폰에서는 공간을 많이 차지한다. 
+
+그렇다고는 해도 브랜딩을 제거하기란 어려운 일이다. 기술적인 이유 때문이 아니라, 거의 모든 마케팅팀이 모든 것에 브랜드 이미지를 두껍게 발라야 한다는 강박관념을 갖고 있기 때문이다. 회사 이름과 로고가 적혀 있는 펜이며, 휴게실의 컵들, 또 18개월마다 새로운 로고와 함께 받는 회사 명함들 이 다 그런 맥락에서 비롯된 것들이다. 브랜딩에 종사하는 사람들은 그들이 진짜 일을 갖고 있지 않다는 사실을 잘 알고 있기 때문에 회사의 브랜드를 자주 변경한다. 그래서 지속적으로 로고와 색 구성표를 강조하는 일들이 그들을 매 시간 괴롭히고 있는 서서히 진행되는 근본적인 두려움을 잠시 멀리할 수 있는 광란의 활동을 만들어낸다고 생각한다. 
+
+개인적인 조언은 어느 정도의 화면 공간은 항상 브랜딩에 사용되는 현실을 받아들이라는 것이다. 아무리 작고 기능이 빈약한 기기도 마찬가지다. 당장 그 아이디어에서 맞서 싸울 수도 있겠지만 브랜딩팀은 보통 마케팅 부서의 일부이고, 마케팅은 보통 판매 담당 부사장에게 보고한다. 그리고 경영층의 최우선 관심사는 수익이기 때문에 거의 모든 판매 담당 부사장은 CEO 와의 핫라인을 갖고 있다. 때로는 결코 승리할 수 없는 논쟁도 있는 것이다. 
+
+
+
+
+목록10-1은 SportsStore.WebUI 프로젝트의 _Layout.cshtml 파일의 수정된 헤더 내용을 보여주고 있다. 
+
+목록10-1 _Layout.cshtml 파일에 반응형 콘텐트 추가하기
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="~/Content/bootstrap.css" rel="stylesheet" />
+    <link href="~/Content/bootstrap-theme.css" rel="stylesheet" />
+    <link href="~/Content/ErrorStyles.css" rel="stylesheet" />
+    <title>@ViewBag.Title</title>
+<!-- 하단 style 추가-->
+    <style>
+        .navbar-right{
+            float: right !important;
+            margin-right: 15px; margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar navbar-inverse" role="navigation">
+	<!-- 하단 추가-->
+        <a class="navbar-brand" href="#">
+            <span class="hidden-xs">SPORTS STORE</span>
+            <div class="visible-xs">SPORTS</div>
+            <div class="visible-xs">STORE</div>
+        </a>
+	<!-- 여기까지 추가 -->
+        @Html.Action("Summary", "Cart")
+    </div>
+    <div class="row panel">
+        <div id="categories" class="col-xs-3">
+            @Html.Action("Menu", "Nav");
+        </div>
+        <div class="col-xs-8">
+            @RenderBody()
+        </div>
+    </div>
+</body>
+</html>
+
+
+Bootstrap은 장치 화면의 가로 너비에 기반해서 HTML 요소들을 숨기거나 보여주는 클래스들의 모음을 정의하고 있다. CSS의 미디어 쿼리(media queries)를 이용해서 직접 처리할 수도 있겠지만 Bootstrap의 클래스들은 다른 스타일들과 통합되어 있어서 편리하다. 
+
+목록 10-1에서는 SportsStore의 브랜딩에 visible-xs 클래스와 hidden-xs 클래스를 사용하고 있으며 그에 따라 창 크기가 768 픽셀 이하로 줄어들면 한 줄로 표시되던 텍스트가 두줄로 바뀔 것이다. Bootstrap은 각기 다른 브라우저 창 크기에 대응하여 HTML 요소들을 숨기거나 보여주는 클래스들을 쌍으로 제공한다. 이 클래스들의 이름은 visible-또는 hidden-으로 시작하는데 이번 예제에서는 *-xs로 끝나는 클래스들을 사용했다. *-sm으로 끝나는 클래스들은 너비가 768픽셀보다 큰 화면에서 동작하고 *-md로 끝나는 클래스들은 너비가 992픽셀보다 큰 화면에서 동작한다. 마지막으로 *-lg로 끝나는 클래스들은 너비가 1200픽셀보다 큰 화면에서 동작한다. 
+
+
+
+주의:
+Bootstrap이 제공하는 것처럼 반응형 CSS 기능들은 브라우저 창의 크기에 기반하고 있다. 즉 장치 화면의 크기가 아니다. 대부분의 경우 모바일 기기의 브라우저는 전체 화면으로 보여지므로 창의 크기와 화면의 크기가 같지만 항상 그렇다고 볼수는 없다. 언제나 그렇듯이 대상으로 하는 기기들을 테스트하여 잘못된 가정을 하지 않도록 주의해야 한다. 
+
+
+
+
+일반적인 데스크톱 브라우저는 창 크기를 조정할수 있으므로, 데스크톱 브라우저로 상품 목록을 살펴보면 이번 변경의 효과를 확인할수 있다. 창의 너비를 786픽셀 이하로 작게 조정해보면 그림10-3과 같이 SportsStore 텍스트가 두 줄로 나뉘는 것을 확인할수 있다. 
+
+대단한 변경사항으로 다가오지 않을수도 있겠지만 이 변경은 작은 크기의 화면에서, 특히 헤더 영역에서 쇼핑 카트의 요약 정보를 제공해주는 뷰(Views/Cart/Summary.cshtml)까지 변경한 결과와 조합되었을 때 더욱 큰 효과를 발휘한다. 목록10-2에서 카트 요약 정보 뷰에 대한 변경 내용을 확인할 수 있다
+
+목록10-2 Summary.cshtml 파일에 대한 반응형 콘텐트 추가하기
+@model SportsStore.Domain.Entities.Cart
+
+<div class="navbar-right hidden-xs">
+    @Html.ActionLink("Checkout", "Index", "Cart",
+    new { returnUrl=Request.Url.PathAndQuery}, new { @class="btn btn-default navbar-btn"})
+</div>
+<div class="navbar-right visible-xs">
+    <a href=@Url.Action("Index", "Cart", new { returnUrl=Request.Url.PathAndQuery}) class="btn btn-default navbar-btn">
+        <span class="glyphicon glyphicon-shopping-cart"></span>
+    </a>
+</div> 
+<div class="navbar-text navbar-right">
+    <b class="hidden-xs">Your cart:</b>
+    @Model.Lines.Sum(x => x.Quantity) item(s),
+    @Model.ComputeTotalValue().ToString("c")
+</div>
+
+이번 작업 내용도 _Layout.cshtml 파일에서 선택적으로 콘텐트의 일부를 감추거나 보여줬던 것과 같은 기법을 사용하고 있다. 다만 이 경우에는 [Checkout] 버튼을 작은 화면에서 감추고 Bootstrap 패키지에 포함된 아이콘을 이용해서 아이콘 버튼으로 대치하고있다. 
+
+Bootstrap 아이콘은 span 요소를 통해서 적용되었는데, 이는 Html.ActionLink 헬퍼메서드를 사용할 수 없음을 의미한다. 이 헬퍼 메서드는 아이콘을 적용하기 위해서 링크 내부에 span 요소를 생성하는 것을 허용하지 않기 때문이다.(Html.ActionLink 헬퍼 메서드의 첫 번째 매개변수는 링크의 텍스트인데, 이 매개변수에 <span>...</span>과 같은 HTML 태그를 전달하더라도 HTML 요소가 아닌 일반 문자열로 취급되기 때문이다)
+대신 a 요소를 직접 정의하고 Url.Action 헬퍼 메서드를 사용해서 생성한 URL을 href 어트리뷰트에 지정한다(Url.Action 헬퍼 메서드에 관해서는 20장에서 자세하게 설명한다) 그 결과 Html.ActionLink 메서드를 사용해서 생성한 것과 똑같은 a 요소가 만들어지지만, 이 요소에는 span 요소가 포함된다. 이제 지금까지 두 개의 파일(_Layout.cshtml 파일과 Views/Cart/Summary.cshtml 파일)에서 변경한 내용의 효과를 그림 10-4에서 확인할 수 있다. 이 그림은 iPhone에 출력되는 헤더의 콘텐트를 보여주고 있다. 
+
+
+
+
+모바일 우선 vs 데스크톱 우선
+대부분의 웹 응용프로그램 프로젝트들에서는 이 책에서 접근하고 있는 방식처럼 데스크톱 클라이언트로부터 개발을 시작해서 점차 모바일 클라이언트 지원 기능을 추가하는 경우가 많다. 이런 방식을 데스크톱 우선 디자인/개발(desktop first degign/development)이라고 하는데, 이 방식의 일반적인 문제점은 모바일 클라이언트를 위한 작업을 수행하기 전에 이미 서버 측 개발의 상당 부분이 완료되었다는 사실이다. 이런 경우 결국 데스크톱 클라이언트 위주로 디자인된 풍부한 기능에서 난도질 당한 듯한 부자연스러운 모바일 경험을 사용자에게 제공하게 된다. 
+
+이에 대한 대안으로 모바일 우선 디자인 /개발 (mobile first design/development)이라는 철학이 있는데, 그 이름에서 짐작할 수 있듯이 모바일 클라이언트로부터 개발을 시작해서 데스크톱 클라이언트의 장점을 취하기 위해 보다 강력한 기능을 점진적으로 추가해 나가는 접근법이다. 
+
+또 다른 측면에서 살펴본다면 데스크톱 우선 방식은 필요한 전체 기능으로 시작해서 능력이 떨어지는 기기들을 위해 기능을 저하시키는 반면 모바일 우선 방식은 작은 기능으로 시작해서 능력이 우월한 기기들을 위해 기능을 점진적으로 향상시키는 방식이라고 표현할 수 있겠다. 
+
+두 가지 접근 방식 모두 각각의 장점이 있지만 필자의 개인적으로 데스크톱 우선 개발을 선호하는 경향이 있다. 로컬 개발 워크스테이션의 데스크톱 브라우저로 콘텐트를 확인하는 것이 실제 모바일 하드웨어로 콘텐트를 확인하는 것보다 훨씬 쉽기 때문이다. 필자는 코드 작성- 컴파일- 확인의 과정을 매우 짧은 주기로 수행하는 편인데(브라우저에서 자주 새로 고침하면서)모바일 기기에서 이렇게 짧은 주기로 작업을 하다보면 각각의 단계마다 거쳐야할 장애물들이 많아서 그만 질려버리고 만다. 
+
+특정 사용자 그룹(예: 모바일 사용자 그룹)을 우선시할 때의 위험요소는 다른 사용자 그룹(예: 데스크톱 사용자 그룹)에 기준 미달의 사용자 경험을 제공하게 될 수도 있다는 점이다. 모바일 우선 방식의 지지자들은 기본 기능에서부터 시작해서 기능을 확장하기 때문에 이런 경우가 생기지 않는다고 종종 논쟁을 벌이지만 필자의 경험에 따르면 반드시 그런 것만은 아니었다. 
+
+모바일이든 데스크톱이든 어느 한 쪽의 개발을 시작하기 전에 모든 기기를 고려해서 어떤 기능과 레이아웃으로 구현할 것인지에 대한 확고한 계획을 세우는 것이 중요하다. 여러분이 그런 계획을 수립했다면 어떤 기기를 위주로 개발을 시작할 것인지는 문제가 되지 않는다. 그리고 결정적으로 응용프로그램의 서버 측 구현이 자연스럽게 다양한 클라이언트들을 지원하기 위한 방향으로 흘러갈 것이다. 
+
+
+
+※ 반응형 상품 목록 생성하기
+새롭게 도입한 반응형 디자인을 완성하려면 상품 목록이 좁은 너비의 화면에서도 정상적으로 보여야 한다. 가장 큰 문제점은 카테고리 버튼들이 공간을 많이 차지하고 있어서 수평 공간이 부족하다는 데 있다. 따라서 카테고리 버튼들을 모두 사라지게 만들고, 각각의 상품에 대한 설명들이 화면의 전체 너비를 차지하도록 수정할 것이다 목록10-3에서 다시 한 번 수정된 _Layout.cshtml 파일을 확인할 수 있다. 
+
+목록10-3 반응형 상품 목록이 구성된 _Layout.cshtml 파일
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="~/Content/bootstrap.css" rel="stylesheet" />
+    <link href="~/Content/bootstrap-theme.css" rel="stylesheet" />
+    <link href="~/Content/ErrorStyles.css" rel="stylesheet" />
+    <title>@ViewBag.Title</title>
+    <style>
+        .navbar-right{
+            float: right !important;
+            margin-right: 15px; margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar navbar-inverse" role="navigation">
+        <a class="navbar-brand" href="#">
+            <span class="hidden-xs">SPORTS STORE</span>
+            <div class="visible-xs">SPORTS</div>
+            <div class="visible-xs">STORE</div>
+        </a>
+        @Html.Action("Summary", "Cart")
+    </div>
+    <div class="row panel">
+        <div class="col-sm-3 hidden-xs">
+            @Html.Action("Menu", "Nav");
+        </div>
+        <div class="col-xs-12 col-sm-8">
+            @RenderBody()
+        </div>
+    </div>
+</body>
+</html>
+
+레이아웃에서 RendenBody 메서드는 오직 한 번만 호출할 수 있다. 20장에서 레이아웃에 대해 다시 자세하게 알아보겠지만, 이 제약 때문에 RenderBody 메서드를 호출하는 두 개의 디자인 요소를 각각 준비했다가 상황에 맞게 보여주거나 숨기는 방법은 사용할 수 없다. 그 대신 RenderBody 메서드를 포함하는 그리드의 레이아웃을 수정해서 레이아웃 내부에 존재하는 요소들이 뷰 콘텐트의 주변 상황에 맞게 대응하도록 변경해야 한다. 
+
+7장에서 _Layout.cshtml 파일의 콘텐트를 구성하면서 Bootstrap 그리드를 사용했던 이유중 하나는, 바로 Bootstrap이 RenderBody 제약을 피해갈수 있는 반응형 디자인 기능을 포함하고 있기 때문이다. Bootstrap의 그리드 레이아웃 기능은 열두 개의 열을 지원해주는데, CSS 클래스를 사용해서 특정 요소가 그 중 몇 개의 열을 점유할지를 지정할 수 있다. 가령 7장에서 적용했던 Bootstrap 클래스는 다음과 같다. 
+
+...
+<div class="col-xs-8">
+	@RenderBody()
+</div>
+...
+
+Bootstrap은 앞서 살펴봤던 hidden-* 클래스나 visible-* 클래스와 유사하게 창의 너비에 기반하여 한 요소가 점유할 그리드 열의 개수를 지정하는 클래스들을 제공해준다. (이 col-xs-* 유형의 클래스들은 일종의 고정값이라서 화면의 너비에 따라 변경되지는 않는다(예를 들어 col-md-4 클래스가 세 개의 div 요소에 지정되었다고 가정하면 세 개의 열이 각각 1/3씩 너비를 유지하면서 한 행에 모두 보인다. 그러나 992픽셀 미만으로 창의 크기가 줄어들면 div 요소는 한 행씩을 차지하며 세로 방향으로 쌓이게 된다. 오직 col-xs-* 종류의 클래스들만 이런 위치 변화를 일으키지 않으며 창의 크기에 상관없이 모두 한 행에 출력된다. )
+
+여기에 사용된 col-xs-8 클래스는 이 클래스가 적용된 div 요소가 창의 너비가 변경되더라도 항상 보여야 한다는 것을 Bootstrap에 알려주기 위한 것이다. col-sm-* 클래스들은 창의 너비가 768이상 일때, col-md-* 클래스들은 992픽셀 이상일 때, 마지막으로 col-lg-* 클래스들은 너비가 1200픽셀 이상인 창에서 열의 크기를 지정할 떄 쓰인다. 이를 염두에 두고 RenderBody 메서드를 감싸는 div 에 적용한 클래스는 다음과 같다. 
+
+...
+<div class="col-xs-12 col-sm-8">
+	@RenderBody()
+</div>
+...
+
+이렇게 두 개의 클래스를 적용한 효과는 다음과 같다 이 div 요소는 기본적으로 그리드상의 열두 개의 열을 점유하지만 창의 너비가 768픽셀 이상이 되는 순간 여럽 개의 열을 점유하도록 변경된다. 이 변경이 일어나면 그리드의 나머지열들은 다음과 같이 카테고리 버튼들이 차지하게 된다. 
+
+...
+<div class="col-sm-3 hidden-xs">
+	@Html.Action("Menu", "Nav");
+</div>
+...
+
+결과적으로 이 요소는 창의 크기가 768 픽셀 이상이 되면 세 개의 열을 점유하고, 그렇지 않으면 숨겨진다. 이처럼 두 가지 클래스를 조합함으로써 상품 설명은 작은 창에서만 꽉차게 보여지고 넓은 창에서는 카테고리 버튼과 공간을 같이 사용하게 된다. 그림10-5에서 두 가지 다른 레이아웃을 확인할 수 있다. 이 그림은 창의 너비를 쉽게 조절할 수 있는데 데스크톱 브라우저를 사용해서 얻은 것이다. 
+
+
+
+※ 컨트롤러가 뷰를 선택할 때 도와주기
+그러나 보다 나은 사용자 경험을 위해서는 모바일 사용자에게도 카테고리 필터링 기능을 제공해야 한다. 이 말은 곧, 모바일 화면에서는 카테고리 버튼들을 다른 방식으로 표현해야 함을 의미한다. 이를 구현하기 위해서 MenuHorizontal.cshtml 이라는 새로운 뷰를 Views/Nav 폴더에 추가한다. 그 내용은 목록 목록10-4와 같다. 
+
+목록10-4 MenuHorizontal.cshtml 파일의 내용
+@model IEnumerable<string>
+
+<div class="btn-group btn-group-sm btn-group-justified">
+    @Html.ActionLink("Home", "List", "Product", new {@class="btn btn-default btn-sm"})
+
+    @foreach(var link in Model)
+    {
+            @Html.RouteLink(link, new
+       {
+           controller= "Product",
+           action= "List",
+           category = link,
+           page = 1
+       },new { @class="btn btn-default btn-sm" + (link == ViewBag.SelectedCategory ? "btn-parimary":"")
+       })
+    }
+</div>
+
+
+이 뷰는 기존의 Menu.cshtml 레이아웃을 변형한 것이다. 다만 이번에는 Bootstrap 클래스들이 적용된 새로운 div 요소를 컨테이너로 추가해서 버튼들의 레이아웃을 수평으로 조정하고 있다. 물론 뷰의 기본적인 기능 자체는 동일하다. 즉 카테고리별로 상품을 필터링할 링크들의 모음을 만들어낸다. 
+
+카테고리 버튼들의 모음은 Nav 컨트롤러의 Menu 액션 메서드를 통해서 생성된다. 따라서 요청된 버튼 배열 방향에 따라 올바른 뷰 파일을 선택하도록 Menu 액션 메서드도 수정해야 한다. 목록 10-5에서 그 변경 내용을 볼 수 있다. 
+
+목록10-5 NavController.cs 파일에서 Menu 액션 메서드 수정하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
+using SportsStore.Domain.Abstract;
+
+namespace SportsStore.WebUI.Controllers
+{
+    public class NavController : Controller
+    {
+        private IProductRepository repository;
+
+        public NavController(IProductRepository repo)
+        {
+            repository = repo;
+        }
+        public PartialViewResult Menu(string category = null,bool horizontalLayout = false)
+        {
+            ViewBag.SelectedCategory = category;
+            IEnumerable<string> categories = repository.Products.Select(x => x.Category).Distinct().OrderBy(x => x);
+
+            string viewName = horizontalLayout ? "MenuHorizontal" : "Menu";
+
+            return PartialView(viewName,categories);
+        }
+    }
+}
+
+카테고리 버튼들의 출력 방향을 지정하기 위한 새로운 매개변수를 정의했으며, 그 값은 PartialView 메서드에 전달할 뷰의 이름을 지정하기 위해서 사용된다. 이 매개변수의 값을 설정하기 위해서 목록 10-6에서 볼 수 있는 것처럼 _Layout.cshtml 파일을 다시 수정해야 한다. 
