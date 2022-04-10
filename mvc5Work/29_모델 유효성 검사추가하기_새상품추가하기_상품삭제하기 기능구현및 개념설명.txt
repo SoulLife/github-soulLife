@@ -1,0 +1,328 @@
+※ 모델 유효성 검사 추가하기
+대부분의 프로젝트에서 그런 것처럼 이번 예제의 모델 엔티티에도 유효성 검사 규칙들을 추가해야 한다. 현재는 관리자가 마이너스 가격을 입련한다거나 아예 설명을 입력하지 않을 수도 있고 SportsStore 응용프로그램도 아무런 검증 없이 그런 상품들을 데이터베이스에 저장하려고 시도할 것이다. 현재 시점에서 유효하지 않은 데이터가 저장되고, 안 되고는 입력된 데이터가 7장에서 데이터베이스를 생성하면서 정의했던 테이블 규칙을 준수하는지 여부에 달려 있다. 목록11-13은 Product 클래스에 데이터 주석을 적용하는 방법을 보여주고 있는데, 이는 10장에서 ShippingDetails 클래스에 적용했던 작업과 동일한 것이다.
+
+목록11-13 Product.cs 파일에 유효성 검사 어트리뷰트 적용하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
+using System.Web.Mvc;
+namespace SportsStore.Domain.Entities
+{
+    public class Product
+    {
+        [HiddenInput(DisplayValue =false)]
+        public int ProductID { get; set; }
+        [Required(ErrorMessage ="Please enter a product name")]
+        public string Name { get; set; }
+        [DataType(DataType.MultilineText)]
+        [Required(ErrorMessage ="Please enter a description")]
+        public string Description { get; set; }
+        [Required]
+        [Range(0.01, double.MaxValue, ErrorMessage ="Please enter a positive price")]
+        public decimal Price { get; set; }
+        [Required(ErrorMessage ="Please specify a category")]
+        public string Category { get; set; }
+
+    }
+}
+
+
+Edit.cshtml 뷰에서 input 요소와 textarea 요소를 생성하기 위해서 사용했던 Html.TextBox 헬퍼 메서드와 Html.TextArea 헬퍼 메서드는 MVC 프레임워크가 유효성 검사 오류를 알려줄 때도 사용된다(오류가 있을 때 텍스트 박스가 빨간색으로 강조된다) 이런 유효성 검사 오류들은 Content/ErrorStyles.css 파일에 정의했던 스타일들에 대한 클래스들을 통해서 표시되는데 문제에 대한 내용을 다른 색으로 강조해주는 효과를 갖고 있다. 또한 사용자에게 각각의 문제점들에 대한 상세 내용을 제공해줄 필요도 있는데, 목록11-14에서 이를 위해 추가한 작업 내용을 확인할 수 있다. 
+
+목록11-14 Edit.cshtml 파일에 유효성 검사 메시지 추가하기
+<div class="panel-body">
+            @Html.HiddenFor(m => m.ProductID)
+            @foreach(var property in ViewData.ModelMetadata.Properties)
+            {
+                if(property.PropertyName != "ProductID")
+                {
+                    <div class="form-group">
+                        <label>@(property.DisplayName ?? property.PropertyName)</label>
+                        @if(property.PropertyName == "Description")
+                        {
+                            @Html.TextArea(property.PropertyName, null, new {@class="form-control", rows=5})
+                        }else
+                        {
+                            @Html.TextBox(property.PropertyName, null, new {@class="form-control"})
+                        }
+                        @Html.ValidationMessage(property.PropertyName)<!-- 마지막에 추가  -->
+                    </div>
+                }
+            }
+        </div>
+
+9장에서는 Html.ValidationsSummuary 헬퍼 메서드를 이용해서 폼에 존재하는 모든 유효성 검사 오류들을 하나의 목록으로 출력했었다. 그러나 목록 11-14에서는 Html.ValidationMessage 헬퍼 메서드를 사용해서 특정 모델 속성에 대한 메시지를 개별적으로 출력하고 있다. Html.ValidationMessage 헬퍼 메서드는 뷰의 어느 곳에나 위치시킬수 있는데, 관례적으로(그리고 합리적으로)유효성 검사 오류가 발생한 요소 근처에 배치해서 사용자의 주목을 이끌어내는 것이 일반적이다. 그림 11-9는 상품 정보를 수정할 때 Product 클래스에 정의된 입력 규칙을 위반했을 경우 유효성 검사 오류 메시지가 출력되는 모습을 보여주고 있다. 
+
+
+
+※ 클라이언트 측 유효성 검사 활성화하기
+현재는 관리자가 서버에 변경사항을 제출하는 경우에만 데이터 유효성 검사가 동작하는데, 대부분의 사용자들은 자신이 입력한 데이터에 문제가 있을 경우 즉각적인 피드백이 제공되기를 바란다. 개발자들이 JavaScript를 이용해서 브라우저상에서 입력된 데이터를 확인하는 클라이언트 측 유효성 검사를 수행하는 이유가 바로 이때문이다. MVC 프레임워크는 도메인 모델 클래스에 적용된 데이터 주석에 기반해서 클라이언트 측 유효성 검사를 수행할 수 있는 기능을 제공해준다. 
+
+이 기능 자체는 기본적으로 활성화되어 있지만 지금까지 의도적으로 해당 JavaScript 라이브러리에 대한 참조를 추가하지 않았기 때문에 동작하지 않았던 것이다. Microsoft는 jQuery 라이브러리와 jQuery Validation이라는 더할나위 없이 직관적인 이름을 갖고 있는 jQuery 플러그인에 기반한 클라이언트 측 유효성 검사 기능을 제공해준다. Microsoft는 유효성 검사 어트리뷰트들을 지원하기 위해서 이 도구들을 확장했다. 
+
+클라이언트 측 유효성 검사를 사용하기 위한 첫 번째 단계는 유효성 검사 패키지를 설치하는 것이다. Visual Studio에서 [도구(Tools)] > [라이브 러리 패키지 관리자(Library Package Manager)] > [패키지 관리자 콘솔(Package Manager Console)]을 선택해서 NuGet 명령어 창을 열고 다음의 명령어를 입력한다. (만약 Microsoft.jQuery.Unobtrusive.Validation 패키지가 jQuery 버전 문제로 설치되지 않는다면 NuGet 패키지 관리에서 Bootstrap을 제거하고 다시 설치한다. Microsoft.jQuery.Unobtrusive.Validation 패키지가 설치된 것을 확인하고 Bootstrap을 다음의 명령어를 통해 재설치 한다. 
+Install-Package Bootstrap -version 3.0.0 -projectname SportsStore.WebUI
+Microsoft.jQuery.Unobtrusive.Validation 패키지는 jQuery.Validation 1.8.1에 의존하고 또 이것은 jQuery 1.4.1에 의존한다. 그러나 Bootstrap은 jQuery 1.9.1에 의존하고 있기 때문에 Microsoft.jQuery.Unobtrusive.Validation 패키지를 나중에 설치하면 jQuery 1.9.1를 jQuery 1.4.1로 업데이트하려고 하면서 오류가 발생한다. Bootstrap을 나중에 설치하면 jQuery는 자연스럽게 상위 버전으로 업데이트된다. )
+
+Install-Package Microsoft.jQuery.Unobtrusive.Validation -version 3.0.0 -projectname SportsStore.WebUI
+
+
+TIP:
+패키지가 이미 설치되어 있다는 메시지가 나타나더라도 걱정하지 말자. 만약 스캐폴딩 기능을 이용해서 뷰를 생성할 때 [참조 스크립트 라이브러리(Reference Script Libraries)] 옵션을 실수로 선택했다면 Visual Studio 가 여러분이 모르는 사이에 이 패키지를 프로젝트에 추가했을 것이다. 
+
+
+다음으로 패키지 내의 JavaScript 파일들을 응용프로그램의 HTML에서 참조하기 위해서 script 요소를 추가해야 한다. 이 파일들의 링크를 추가하기에 가장 편리한 위치는 _AdminLayout.cshtml 파일로, 이 레이아웃 파일을 사용하는 모든 페이지에서 클라이언트 측 유효성 검사를 사용할 수 있게 되기 때문이다. 변경된 레이아웃 파일의 내용을 목록 11-15에서 확인할 수 있다(이때 script 요소들을 추가하는 순서가 매우 중요하다)
+
+목록11-15 클라이언트 측 유효성 검사를 위해 _AdminLayout.cshtml 파일에 JavaScript 파일들 추가하기
+@{ 
+    Layout = null;
+}
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <link href="~/Content/bootstrap.css" rel="stylesheet" />
+    <link href="~/Content/bootstrap-theme.css" rel="stylesheet" />
+    <link href="~/Content/ErrorStyles.css" rel="stylesheet" />
+<!-- 하단 script 태그 3개 추가 -->
+    <script src="~/Scripts/jquery-1.9.0.js"></script>
+    <script src="~/Scripts/jquery.validate.js"></script>
+    <script src="~/Scripts/jquery.validate.unobtrusive.js"></script>
+    <title></title>
+</head>
+<body>
+    <div>
+        @if(TempData["message"] != null)
+        {
+            <div class="alert alert-success">@TempData["message"]</div>
+        }
+        @RenderBody()
+    </div>
+</body>
+</html>
+
+이렇게 레이아웃에 script 요소들을 추가함으로써(패키지 설치에 문제가 있어서 재설치했다면 자신의 jQuery 버전을 확인하고 소스 코드에 반영하도록 한다. Bootstrap을 재설치했다면 jQuery 1.9.0이 함께 설치되었을 것이다. ) 
+클라이언트 측 유효성 검사 기능이 활성화되어 사용자가 폼을 서버에 제출하기 전에 입력된 값들에 대한 피드백을 받게 된다. 클라이언트 측 유효성 검사에 의해서 사용되는 CSS 클래스들과 서버 측 유효성 검사에 사용되는 CSS 클래스들은 동일하기 때문에 오류 메시지가 나타나는 모습에는 차이가 없지만, 응답이 즉각적으로 이루어지고 요청이 서버에 전달되어야 할 필요도 없다. 대부분의 경우 클라이언트 측 유효성 검사는 대단히 유용한 기능이지만, 어떤 이유에서든지 클라이언트에서 유효성 검사를 수행하고 싶지 않다면 뷰에 다음의 구문들을 추가해야 한다. 
+
+...
+@{
+    ViewBag.Title = "Admin: Edit " + @Model.Name;
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    HtmlHelper.ClientValidationEnabled = false;
+    HtmlHelper.UnobtrusiveJavaScriptEnabled = false;
+}
+....
+
+이 구문들이 포함된 뷰에서는 클라이언트 측 유효성 검사가 비활성화된다. 응용프로그램 전체에서 클라이언트 측 유효성 검사를 비활성화시키고 싶다면 다음과 같이 Web.config 파일에서 해당 값들을 설정한다. 
+<configuration>
+	
+  <appSettings>
+    <add key="webpages:Version" value="3.0.0.0" />
+    <add key="webpages:Enabled" value="false" />
+    <add key="ClientValidationEnabled" value="true" />
+    <add key="UnobtrusiveJavaScriptEnabled" value="true" />
+    <add key="Email.WriteAsFile" value="true" />
+    <add key="clientValidationEnabled" value="false"/>
+    <add key="UnobtrusiveJavaScriptEnabled" value="false"/>
+  </appSettings>
+</configuration>
+
+
+
+※ 새 상품 생성하기
+이번에는 Create 액션 메서드를 구현해보도록 하자. 이 메서드는 상품 목록 페이지의 [Add a new product] 링크에 의해서 호출되어 관리자가 새 항목을 상품 카탈로그에 추가할 수 있게 해준다. 새 상품을 생성하기 위한 기능을 추가하기 위해서는 한 가지 간단한 추가 작업과 또 한 가지 간단한 변경 작업만 처리하면 된다. 이는 잘 구조화된 MVC 응용프로그램의 힘과 유연성을 보여주는 멋진 예다. 먼저 Admin 컨트롤러에 목록 11-6과 같이 Create 메서드를 추가한다. 
+
+목록11-16 AdminController.cs 파일에 Create 액션 메서드 추가하기
+public ViewResult Create()
+        {
+            return View("Edit", new Product());
+        }
+
+이 Create 메서드는 자신의 기본 뷰를 렌더하는 대신 Edit 뷰를 사용하도록 명시적으로 지정하고 있다. 이런 식으로 특정 액션이 다른 액션과 연관된 뷰를 사용하더라도 전혀 문제가 되지 않는다. 그리고 이번 예제에서는 뷰 모델로 새로운 Product 개체를 주입함으로써 Edit 뷰가 빈 필드들을 출력하게 만들고 있다. 
+
+
+Note:
+이 액션 메서드에 대한 단위 테스트는 추가하지 않았다. 억지로 단위 테스트를 수행한다고 하더라도 이 액션 메서드의 결과로 반환되는 ViewResult를 MVC 프레임워크가 처리할 수 있느냐 하는 아주 당연한 결과만을 테스트할 수 있기 때문이다(특별히 의심되는 문제점이 없다면 프레임워크의 기본적인 기능들에 대해서는 보통 테스트를 작성하지 않는다)
+
+
+그러나 이 변경은 또 다른 변경을 수반한다. 일반적으로 폼은 자신을 렌더한 액션으로 다시 포스트백하는 경우가 대부분이므로 Html.BeginForm 헬퍼 메서드 역시 기본적으로 이런 상황을 가정해서 HTML form 요소를 생성한다. 지금의 상황에서 이런 가정은 Create 메서드에 맞지 않는다. 이번 예제에서는 폼이 Edit 액션으로 포스트백되어 새로 생성된 상품 데이터를 저장할 수 있어야 하기 때문이다. Html.BeginForm 헬퍼 메서드의 또 다른 오버로드 버전을 사용해서 Edit 뷰에 생성된 HTML form 요소가 Admin 컨트롤러의 Edit 액션 메서드를 대상으로 포스트백되도록 지정함으로써 이 문제점을 해결할 수 있다. 목록11-17은 Views/Admin/Edit.cshtml 뷰 파일을 수정한 내용을 보여주고 있다. 
+
+목록11-17 Edit.cshtml 파일에서 폼에 대한 액션 메서드와 컨트롤러의 명시적으로 지정하기
+@model SportsStore.Domain.Entities.Product
+
+@{
+    ViewBag.Title = "Admin: Edit " + @Model.Name;
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<h1>Edit @Model.Name</h1>
+<div class="panel">
+    <div class="panel-heading">
+        <h3>Edit @Model.Name</h3>
+    </div>
+
+    @using (Html.BeginForm("Edit", "Admin")) <!-- 추가 -->
+    {
+        <div class="panel-body">
+            @Html.HiddenFor(m => m.ProductID)
+            @foreach(var property in ViewData.ModelMetadata.Properties)
+            {
+                if(property.PropertyName != "ProductID")
+                {
+                    <div class="form-group">
+                        <label>@(property.DisplayName ?? property.PropertyName)</label>
+                        @if(property.PropertyName == "Description")
+                        {
+                            @Html.TextArea(property.PropertyName, null, new {@class="form-control", rows=5})
+                        }else
+                        {
+                            @Html.TextBox(property.PropertyName, null, new {@class="form-control"})
+                        }
+                        @Html.ValidationMessage(property.PropertyName)
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="panel-footer">
+            <input type="submit" value="Save" class="btn btn-primary" />
+            @Html.ActionLink("Cancel and return to List", "Index", null, new {@class="btn btn-default"})
+        </div>
+    }
+</div>
+
+이제 이 폼은 어떤 액션 메서드에 의해서 렌더되었는지에 상관 없이 항상 Edit 액션 메서드로 전송될 것이다. 응용프로그램을 실행한 다음 [Add a new product] 링크를 클릭해서 상품의 상세 내용을 입력하고 저장해보면 그림 11-10과 같이 새로운 상품이 추가될 것이다. 
+
+
+※ 상품 삭제하기
+상품 삭제 기능을 추가하기 위한 작업 역시 간단하다.  먼저 IProductRepository 인터페이스에 목록 11-18 과 같이 새로운 메서드를 추가한다. 
+
+목록11-18 IProductRepository.cs 파일에 상품 삭제를 위한 메서드 추가하기
+using System.Collections.Generic;
+using SportsStore.Domain.Entities;
+namespace SportsStore.Domain.Abstract
+{
+    public interface IProductRepository
+    {
+        IEnumerable<Product> Products { get; }
+
+        void SaveProduct(Product product);
+
+        Product DeleteProduct(int productID);
+    }
+}
+
+
+다음으로 목록 11-19와 같이 Entity Framework 리파지토리 클래스인 EFProductRepository 에서 이 메서드를 구현한다. 
+
+목록11-19 EFProductRepository.cs 파일에 삭제 기능 구현하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using SportsStore.Domain.Abstract;
+using SportsStore.Domain.Entities;
+
+namespace SportsStore.Domain.Concrete
+{
+    public class EFProductRepository : IProductRepository
+    {
+        private EFDbContext context = new EFDbContext();
+
+        public IEnumerable<Product> Products
+        {
+            get { return context.Products; }
+        }
+
+        public void SaveProduct(Product product)
+        {
+            if(product.ProductID == 0)
+            {
+                context.Products.Add(product);
+            }
+            else
+            {
+                Product dbEntry = context.Products.Find(product.ProductID);
+                if(dbEntry != null)
+                {
+                    dbEntry.Name = product.Name;
+                    dbEntry.Description = product.Description;
+                    dbEntry.Price = product.Price;
+                    dbEntry.Category = product.Category;
+                }
+            }
+            context.SaveChanges();
+        }
+	//상품삭제 메서드추가
+        public Product DeleteProduct(int productID)
+        {
+            Product dbEntry = context.Products.Find(productID);
+            if(dbEntry != null)
+            {
+                context.Products.Remove(dbEntry);
+                context.SaveChanges();
+            }
+            return dbEntry;
+        }
+    }
+}
+
+마지막 단계로 Admin 컨트롤러에 Delete 액션 메서드를 구현하기만 하면 된다. 다만 개체를 삭제하는 작업은 데이터의 변경을 유발하지 않으면서 계속 반복할 수 있는 유형의 동작이 아니므로, 이 액션 메서드는 반드시 POST 요청만 지원행 한다. 16장에서 다시 자세하게 살펴보겠지만 브라우저나 캐시로 인해서 사용자의 명시적인 동의 없이도 자유롭게 GET 요청이 만들어 질 수 있기 때문에 GET 요청으로 인한 부정적인 효과가 발생하지 않도록 유의해야 한다.(16장의 가장 마지막 부분에 위치한 GET과 POST: 올바른 방식을 선택해야 한다. 절에서 이에 대한 구체적인 사례를 설명하고 있으므로 참고하기 바란다)
+
+목록11-20은 이 새로운 액션 메서드를 보여 주고 있다. 
+
+목록11-20 AdminController.cs 파일에서 Delete 액션 메서드
+[HttpPost]
+        public ActionResult Delete(int productID)
+        {
+            Product deletedProduct = repository.DeleteProduct(productID);
+            if(deletedProduct != null)
+            {
+                TempData["message"] = string.Format("{0} was deleted", deletedProduct.Name);
+            }
+            return RedirectToAction("Index");
+        }
+
+
+
+
+※ 단위 테스트 : 상품 삭제하기
+Delete 액션 메서드의 기본적인 동작도 테스트해야 한다. 즉 Delete 액션 메서드에 유효한 ProductID가 매개변수로 전달되었을 때 액션 메서드가 정확한 ProductID 값을 리파지토리의 DeleteProduct 메서드에 전달하여 정상적으로 상품이 삭제되는지를 테스트한다. 다음은 이 동작에 대한 테스트 메서드를 보여준다. 
+
+...
+[TestMethod]
+        public void Can_Delete_Valid_Products()
+        {
+            //Arrange - 상품을 생성한다
+            Product prod = new Product { ProductID = 2, Name = "Test" };
+
+            //Arrange - Mock 리파지토리를 생성한다
+            Mock<IProductRepository> mock = new Mock<IProductRepository>();
+            mock.Setup(m => m.Products).Returns(new Product[]
+            {
+                new Product{ProductID=1, Name="P1"},prod,new Product{ProductID=3,Name="P3"}
+            });
+
+            //Arrange - 컨트롤러를 생성한다
+            AdminController target = new AdminController(mock.Object);
+
+            //Act - 상품을 삭제한다
+            target.Delete(prod.ProductID);
+
+            //Assert - 리파지토리의 DeleteProduct 메서드가
+            //올바른 상품과 함께 호출되었는지 확인한다 
+            mock.Verify(m => m.DeleteProduct(prod.ProductID));
+        }
+...
+
+그림 11-11에서 볼 수 있는 것처럼 상품 목록 페이지에서 [Delete] 버튼들 중 하나를 클릭해서 삭제 기능을 확인해볼 수 있다. 또한 이 그림에서 확인할 수 있는 것처럼 상품이 카탈로그 에서 삭제될 때도 TempData 기능의 이점을 활용하여 메시지를 출력하고 있다. 
+
+
+
+※ 요약
+이번 장에서는 CRUD 동작을 구현해서 관리자가 리파지토리에서 상품을 생성하고, 조회하고, 수정하고, 삭제할 수 있도록 관리 기능을 제공하는 방법을 살펴봤다. 다음 장에서는 이 관리자 기능에 대한 보안을 강화하여 일반 사용자들이 접근할 수 없도록 제한하고 상품 설명에 이미지를 추가하는 방법을 보여줄 것이다. 그리고 SportsStore 의 기능들을 완성하기 위한 마무리 작업도 진행할 것이다. 
