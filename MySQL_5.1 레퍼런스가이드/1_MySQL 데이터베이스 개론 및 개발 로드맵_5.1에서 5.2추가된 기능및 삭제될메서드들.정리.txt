@@ -1,0 +1,99 @@
+CHAPTER01 : MySQL 데이터베이스 개론
+1.1 MySQL 데이터베이스 관리 시스템 개론
+
+MySQL은 전세계적으로 가장 널리 사용되고 있는 오픈 소스 데이터베이스이며, 썬마이크로시스템즈사가 개발하여 배포/판매하고 있는 데이터베이스이다. 
+
+http://www.mysql.com/에서는 MySQL 데이터베이스에 대한 가장 최신의 정보를 제공하고 있으며, 또한 이러한 정보는 www.mysqlkorea.com에서도 참조할 수 있을 것이다. 
+
+
+* MySQL은 데이터베이스 관리 시스템이다. 
+데이터베이스란 구조화된 데이터 집합이다. 이러한 데이터 집합에는 간단한 쇼핑 리스트에서부터 기업의 전사적인 데이터까지 포함이 된다. 컴퓨터 데이터베이스에 저장되어 있는 데이터 집합을 추가, 접속, 처리하기 위해서는 MySQL과 같은 데이터베이스 관리 시스템을 사용해야 한다. 
+
+* MySQL은 관계형 데이터베이스 관리 시스템이다. 
+관계형 데이터베이스는 데이터를 하나의 커다란 저장 공간에 저장하지 않고 서로 별개의 테이블에 나누어서 저장을 하는 시스템이다. 이를 통해 처리 속도와 유연성이 확보된다. SQL은 Structured Query language의 약자이며, SQL은 ANSI/ISO 표준에서 정의한 데이터베이스 접속을 위한 가장 일반적인 표준 언어이다. 이 메뉴얼에서 언급하는 SQL 표준은 각 시점에서 발표된 SQL 표준을 의미하는 것이다. 
+
+
+* MySQL 소프트웨어는 오픈 소스이다. 
+MySQL 데이터베이스는 GPL(GNU Public License)를 준수하는 오픈 소스 데이터베이스이며, GPL을 준수해서 사용하는 모든 사용자에게 무료로 배포되고 있다. MySQL 데이터베이스에 대한 보다 자세한 정보는 http://www.mysql.com/company/legal/licensing/를 참조하기 바란다. 
+
+* MySQL 서버는 클라이언트 /서버 또는 임베디드 시스템에서 사용할 수 있다. 
+MySQL 데이터베이스 소프트웨어는 다중-쓰레드 SQL 서버로 구성된 클라이언트/서버 시스템이다. 또한 MySQL 서버를 임베디드 형태로도 다양한 용도로 사용할 수 있다. 
+
+
+
+
+1.2 MySQL 개발 로드맵
+이 섹션에서는 MySQL 개발 로드맵에 대해서 다루기로 한다. 우선 5.1 버전에 새롭게 추가된 기능에 대해서 설명을 한 후에 향후 5.2 버전에서 개발 계획 중인 기능에는 어떤 것이 있는지를 설명하기로 하겠다. 
+
+다음의 테이블은 각 버전 별로 추가된 주요 기능들을 정리한 것이다. 
+
+Feature				MySQL Series
+Unions				4.0
+Subqueries				4.1
+R-trees				4.1(for the MyISAM storage engine)
+Stored procedures			5.0
+Views					5.0
+Cursors				5.0
+XA transactions			5.0
+Triggers				5.0 and 5.1
+Event scheduler			5.1
+Partitioning				5.1
+Pluggable storage engine API	5.1
+Plugin API				5.1
+Row-based replication		5.1
+Server log tables			5.1
+Foreign keys				5.2(implemented in 3.23 for InnoDB)
+
+
+
+1.2.1 MySQL 5.1의 새로운 기능
+버전 5.1 에서는 아래와 같은 기능들이 새롭게 추가되었다. 
+
+* Partitioning : 이것은 테이블을 생성할 때 설정한 규칙에 따라서 개별적인 테이블 부분을 파일 시스템에 배포할 수 있도록 하는 기능이다. 실제로 테이블의 서로 다른 부분들은 서로 다른 위치에 있는 독립적인 테이블에 저장이 되지만 사용자 입장에서 본다면 파티션된 테이블은 여전히 하나의 테이블로 보이게 된다. 
+
+* Row-based replication : MySQL 의 리플리케이션은 원칙적으로 마스터에서 슬레이브로 SQL 명령문을 전달하는 것이다. 이것을 소위 statement-based replication이라고 부른다. MySQL 5.1.5 이후부터는 다른 방식의 리플리케이션을 사용할 수 있게 되었다. 이러한 새 방식을 row-based replication이라고 부른다. 이 방식에서는 SQL 명령문을 슬레이브에 전달하는 대신에 마스터가 리플리케이션에 해당하는 테이블 열이 얼마나 되는지를 가리키는 자신의 바이너리 로그에 이벤트를 기록하게 된다. MySQL 5.1.8 이후부터는 세 번째 옵션을 사용할 수 있게 된다. 이 방식은 명령문-기반 리플리케이션(statement-based replication)을 디폴트로 사용하고 특정 경우에서만 열-기반 리플리케이션(row-based replication)으로 전환한다. 
+
+* Plugin API : MySQL 5.1 은 서버를 재시작하지 않은 채로 다양한 컴포넌트를 로딩/언로딩 할 수 있게끔 해 주는 여러 가지 플러그인 API 지원을 추가하였다. 
+
+* Event scheduler : MySQL 이벤트란 스케줄에 따라서 구동되는 테스크(task)를 말하는 것이다. 
+
+* Server log tables : MySQL 5.1 이전 버전의 경우, 서버는 일반적인 쿼리 로그와 슬로우 쿼리 로그 엔트리를 로그파일에 기록하였다. 하지만 5.1 버전 이후부터는 이러한 로그들에 대한 서버의 로깅 기능이 보다 유연하게 개선되었다. 즉 로그 엔트리를 이전 버전에서와 마찬가지로 로그 파일에 기록하거나 또는 mysql 데이터베이스에 있는 general_log 및 slow_log 테이블에도 기록을 할 수 있게 되었다. 
+
+* Instance Manager(IM)에는 부가적인 기능들이 포함되어 있다 : SHOW Instance_name LOG FILES는 모든 로그 파일 리스트를 제공하며, SHOW instance_name LOG {ERROR | SLOW | GENERAL} size는 지정한 로그 파일 부분을 추출하고, 그리고 SET instance_name.option_name=option_value는 지정한 값에 대해서 옵션을 설정하고 그 값을 구성 파일에 기록을 한다. 
+
+* Upgrade program : mysql_upgrade 프로그램(MySQL 5.1.7 이후부터 사용 가능)은 현재 사용하고 있는 MySQL 버전의 테이블을 업그레이드하고자 하는 버전과 비교해서 필요할 경우 수정해야 할 부분에 대해서 조치를 취하게 된다. 
+
+* MySQL Cluster Disk Data : MySQL 5.1.6 이전 버전의 경우, NDBCluster 스토리지 엔진은 메모리에만 사중하였으나, MySQL 5.1.6 이후부터는 클러스터 데이터(인덱스가 되지 않은 데이터)를 디스크에 저장할 수 있게 되었다. 이를 통해서 MySQL 클러스터를 보다 적은 자원을 갖고 있는 시스템에서도 구동 시킬 수 있게 되었다. 
+
+* MySQL Cluster를 위한 온라인 ADD INDEX 및 DROP INDEX : NDB 스토리지 엔진을 사용하는 테이블에 대한 인덱스 추가 및 삭제가 이전 버전보다 매우 빨라졌다.
+
+* MySQL Cluster에서의 개선된 백업 : 이전 버전의 클러스터에서 발생했던 싱글 데이터 노드의 문제로 인한 전체 백업 중 지 문제를 5.1 버전에서는 해결하였다. 
+
+* tablespaces에 대한 백업 : mysqldump 유틸리티의 테이블스페이스 덤프 지원 옵션이 제공된다. -Y 또는 --all-tablespaces 옵션을 사용하면 이 기능을 활성화 시킬수 있다. 
+
+* INFORMATION_SCHEMA기능 개선 : MySQL 5.1에서는 자신의 메타데이터 데이터베이스에 대해서 보다 많은 정보를 제공한다. 이러한 데이터베이스에는 다음과 같은 새로운 테이블이 포함된다. : FILES, EVENTS, PARTITIONS, PROCESSLIST, ENGINES, 그리고 PLUGINS
+
+* XML 함수 : ExtractValue()함수는 주어진 Xpath 수식과 매치가 되는 XML 프래그먼트를 리턴한다. UpdateXML() 함수는 사용자가 제공한 Xpath 수식을 사용해서 XML 프래그먼트에서 선택한 부분을 그 다음 XML 프래그먼트(사용자가 제공한)로 대체하고, 수정된 XML을 리턴한다 
+
+* Load emulator : mysqlap 프로그램은 MySQL 서버를 위한 클라이언트 로드를 에뮬레이트해서 각 단계의 시간을 레포트하기 위해 고안된 것이다. 이것은 마치 여러 개의 클라이언트가 서버에 접속을 한 것처럼 동작을 한다. 
+
+
+1.2.2 MySQL 5.2 개발 계획
+이 섹션에서는 향후 5.2 버전에서 새롭게 추가할 예정인 기능에 대해서 간략하게 알아 보기로 한다. 현재까지 계획 중인 5.2 추가 기능들은 다음과 같다. 
+
+* RESET SLAVE는  더 이상 리플리케이션 연결 파라미터를 변경하지 못하게 된다. 현재까지의 버전에서는 이것이 명령어 라인에서 지정한 값으로 연결 파라미터들을 리셋한다. 
+
+아래의 기능들은 더 이상 5.2에서 사용되지 않거나 삭제될 예정인 것들이다. 이것들을 대체할 기능들이 함께 설명되고 있다. 
+
+* table_type 시스템 변수(storage_engine으로 대체)
+* log_bin_trust_routine_creators 변수(log_bin_trust_function_creators로 대체)
+* TIMESTAMP(N): N을 사용하지 않을 예정임
+* CREATE TABLE 또는 ALTER TABLE을 위한 스토리지 엔진을 저장하기 위한 테이블 옵션 TYPE(ENGINE으로 대체)
+* SHOW TABLE TYPES SQL 명령문( SHOW ENGINES으로 대체
+* SHOW INNODB STATUS SQL 명령문(SHOW ENGINE INNODB STATUS로 대체)
+* SHOW MUTEX STATUS SQL 명령문(SHOW ENGINE INNODB MUTEX로 대체)
+* LOAD TABLE... FROM MASTER 및 LOAD DATA FROM MASTER SQL 명령문
+* SHOW PLUGIN SQL 명령문(SHOW PLUGINS로 대체)
+* RESTORE TABLE SQL 명령문
+* BACKUP TABLE SQL 명령문
+* 리플리케이션 파라미터를 설정하기 위한 --master-xxx 서버 옵션(CHANGE MASTER 명령문으로 대체)
