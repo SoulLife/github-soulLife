@@ -1,0 +1,52 @@
+3.3.3 테이블 안에 데이터 넣기
+테이블을 생성한 다음에는 테이블에 데이터를 넣어야 한다 LOAD DATA와 INSERT 명령문이 이런 작업에서 매우 유용하게 사용된다. 
+
+애완 동물 기록이 아래와 같다고 가정하자(MySQL 은 날짜를 YYYY-MM-DD 포맷으로 다룬다는 것을 주의한다. 이것은 사용하는 방식과 다를 수 있다)
+
+name		owner		species	sex	birth		death
+Fluffy		Harold	cat		f	1993-02-04	
+Claws		Gwen		cat		m	1994-03-17
+Buffy		Harold	dog		f	1989-05-13
+Fang		Benny		dog		m	1990-08-27
+Bowser	Diane		dog		m	1979-08-31	1995-07-29
+Chirpy		Gwen		bird		f	1998-09-11
+Whistler	Gwen		bird			1997-12-09
+Slim		Benny		snake		m	1996-04-29
+
+비어 있는 테이블을 가지고 시작하고 있기 때문에, 그 안에 데이터를 넣는 쉬운 방법은 각각의 애완 동물에 대한 열(row)을 가지는 텍스트 파일을 만든 다음에 간단한 명령문을 사용해서 파일의 내용물을 테이블에 넣는 것이다. 
+
+라인당 하나의 기록을 갖고 있고 각각의 값들은 탭으로 구분되고 CREATE TABLE 명령문에서 나열된 컬럼 순서대로 텍스트 파일 pet.txt를 만들수 있다. 누락된 값들은(성별을 모르거나 아직 살아 있는 동물에 대한 죽은 날짜 등) NULL 값을 사용하면 된다. 텍스트 파일에서 이러한 것들을 표현하기 위해서는 \N(backslash, capital-N)를 사용하면 된다. 예를 들면 Whistler라는 이름의 새에 대해서는 아래와 같이 보이게 된다. 
+
+name		owner		species	sex	birth			death
+Whistler	Gwen		bird		\N	1997-12-09		\N
+
+텍스트 파일 pet.txt를 pet 테이블로 불러오기 위해서는 다음 명령어를 사용한다. 
+
+mysql> LOAD DATA LOCAL INFILE '\path\pet.txt' INTO TABLE pet;
+
+윈도우에서 \r\n을 라인 터미네이터로 사용하는 에디터를 가지고 파일을 작성하였다면 아래와 같은 것을 사용해야 한다. 
+
+mysql>LOAD DATA LOCAL INFILE '\path\pet.txt' INTO TABLE pet
+	->LINES TEMINATED BY '\r\n';
+
+(애플의 OS X를 사용하는 머신에서는 LINES TERMINATED BY '\r'을 사용한다)
+
+원한다면 컬럼 값 구분자(separator)와 라인 마커의 끝을 LOAD DATA 명령문에 지정할수 있지만 디폴트는 탭과 라인 피드(linefeed)이다. 이것들만 가지고도 파일 pet.txt 를 읽기 위한 명령문에서 충분히 사용할 수 있다. 
+
+명령문이 실패한다면 설치한 MySQL이 디폴트로 활성화된 로컬 파일을 갖고 있지 않은 것이다. 
+
+한 번에 한개씩 새로운 레코드를 추가하고자 할 때에는 INSERT 명령문이 유용하다. 이 명령문의 간단한 형식은 CREATE TABLE 명령문에서 지정한 컬럼 순서대로 각 컬럼 값을 입력하는 것이다. 다이안(Diane)이 'Puffball'이라는 이름의 새로운 햄스터를 얻었다고 하자. 아래와 같이 INSERT 명령문을 사용해서 새로운 레코드를 추가할 수 있다. 
+
+mysql>INSERT INTO pet
+	->VALUES('Puffball', 'Diane', 'hamster', 'f', '1993-03-30', NULL);
+스트링과 날짜 값은 인용 부호를 사용해서 지정하였다. 또한 INSERT 를 사용해서 누락된 값을 나타내는 NULL을 직접 삽입할수 있다. 하지만 LOAD DATA 에서 사용한 것과 같이 \N를 사용할 수는 없다. 
+
+
+3.3.4 테이블에서 정보 가져오기
+SELECT 명령문은 테이블에서 정보를 가져올 때 사용한다. 일반적인 형식은 다음과 같다. 
+
+SELECT what_to_select
+FROM which_table
+WHERE conditons_to_satisfy;
+
+what_to_select는 보고자 하는 것을 가리킨다. 이것은 컬럼 리스트가 될 수 있고, *를 사용하면 모든 컬럼을 나타내기도 한다. which_table은 데이터를 가져오고 싶은 테이블이 어떤 것인지를 나타낸다. WHERE 구문은 옵션이다. 이 구문이 표시되면 conditions_to_satisfy는 한 개 또는 그 이상의 조건문이 된다. 
