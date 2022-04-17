@@ -1,0 +1,399 @@
+※ 기본값 정의하기
+기본 URL로 응용프로그램에 요청을 보낼 때 오류가 발생하는 이유는 정의된 라우트와 URL이 매치되지 않기 때문이다. 기본 URL은 ~/로 표현하며 이 문자열에는 단순 라우트 패턴에 정의되어 있는 컨트롤러 변수나 액션 변수와 매치되는 세그먼트가 없다. 
+
+URL에 지정된 세그먼트의 수를 가지고만 매치한다는 점에서 URL 패턴은 보수적이라고 이미 설명했다. 또한 이런 동작이 기본 동작인데, 이런 동작을 변경하는 방법은 기본값을 사용하는 것이다. 기본 값은 URL이 값에 일치하는 세그먼트들로 구성되지 않았을 때 적용된다. 목록 15-9는 기본값이 지정된 라우트의 예제를 보여준다. 
+
+목록15-9 RouteConfig.cs 파일에 기본 값을 사용하도록 구성
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
+            );
+            //하단은 라우트 추가
+            routes.MapRoute("MyRoute", "{controller}/{action}" ,new { action = "Index" });
+        }
+    }
+}
+
+기본값은 익명 형식의 속성을 통해서 지정할 수 있다. 목록 15-9에서는 action 변수에 대해 Index라는 기본값을 지정하고 있다. 이 라우트는 앞에서 살펴본 것처럼 두 개의 세그먼트로 구성된 모든 URL들과 매치된다. 예를 들어서 http://mydomain.com/Home/Index라는 URL이 요청되는 경우, 이 라우트는 컨트롤러에 대한 값으로는 Home을, 액션에 대한 값으로는 Index를 추출할 것이다. 
+
+그러나 이제는 액션 세그먼트에 대한 기본값이 지정됐기 때문에 이 라우트는 하나의 세그먼트만 존재하는 URL과도 매치된다. 단일 세그먼트 URL을 처리하는 경우 라우팅 시스템은 하나뿐인 URL 세그먼트에서 컨트롤러 변수의 값을 추출하고 액션 변수는 지정된 기본값을 사용하게 된다. 따라서 http://mydomain.com/Home이라는 URL을 을 요청하면 Home 컨트롤러의 Index 액션 메서드를 호출하게 된다. 
+
+더 나아가 기본값만 이용해서 액션과 컨트롤러를 식별할 수 있게 만들어서 아무런 세그먼트 변수도 존재하지 않는 URL을 사용하도록 만들 수도 있다. 그 예로 목록15-10는 두 세그먼트 모두에 대한 기본값을 정의해서 응용프로그램의 루트 URL을 매핑하는 방법을 보여준다. 
+
+목록15-10 RouteConfig.cs 파일에서 액션과 컨트롤러를 위한 기본값 제공하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
+            );
+            //하단은 라우트 추가
+            routes.MapRoute("MyRoute", "{controller}/{action}" ,new { controller="Home" , action = "Index" });
+        }
+    }
+}
+표 15-2에서 보여주는 것처럼 컨트롤러와 액션 변수 모두에 기본값을 제공함으로써 세그먼트가 존재하지 않거나 하나 또는 두 개의 세그먼트가 존재하는 URL들까지 매치되는 라우트를 만들었다. 
+
+표15-3 URL 매칭
+세그먼트 수	예										매핑
+0		mydomain.com								controller = Home, action= Index
+1		mydomain.com/Customer							controller = Customer, action = Index
+2		mydomain.com/Customer/List						controller = Customer, action = List
+3		mydomain.com/Customer/List/All					세그먼트가 너무 많아서 매치되지 않는다. 
+
+들어오는 URL에서 추출하는 세그먼트의 수가 적을수록 기본값에 더 많이 의존하게 되며, URL이 아무런 세그먼트도 포함하고 있지 않다면 기본값만 사용하게 된다. 예제 프로그램을 다시 실행시켜보면 기본값의 효과를 확인할 수 있다. 이제 브라우저가 응용프로그램의 루트 URL을 요청하면 컨트롤러와 액션 세그먼트 변수로 기본값이 사용될 것이다. 그 결과 그림15-5에서 볼 수 있는 것처럼 MVC 프레임워크가 Home 컨트롤러의 Index 액션 메서드를 호출하게 된다. 
+
+
+
+※ 단위 테스트 : 기본값
+기본값이 정의된 라우트를 테스트하려면 추가적인 작업 없이 이미 앞에서 작성했던 지원 메서드들만 사용하면 된다. RouteTests.cs 파일에 작성했던 TestIncomingRoutes 테스트 메서드의 변경된 내용은 다음과 같다. 이 메서드는 목록15-10에서 정의한 경로에 대한 테스트를 수행할 수 있다. 
+
+.... 
+[TestMethod]
+        public void TestIncomingRoutes()
+        {
+            //기대하고 있는 URL을 검사한다
+
+            TestRouteMatch("~/", "Home", "Index");
+            TestRouteMatch("~/Customer", "Customer", "Index");
+            TestRouteMatch("~/Customer/List", "Customer", "List");
+            TestRouteFail("~/Customer/List/All");
+        }
+
+반드시 명심해야 할 점은 ASP .NET이 라우팅 시스템에 URL을 제공할 때처럼 반드시 기본 URL을 ~/로 지정해야 한다는 것이다. 만약 빈 문자열("")이나 /를 지정해서 라우트를 정의한다면 라우팅 시스템은 예외를 던지고 테스트는 실패하게 된다. 
+
+
+※ 정적 URL 세그먼트 사용하기
+URL 패턴의 모든 세그먼트들이 변수일 필요는 없다. 필요하다면 정적 세그먼트를 갖는 패턴을 만들 수도 있다. 가령 앞쪽에 Public이라는 세그먼트가 존재하는 다음과 같은 URL을 매치시키려 한다고 가정해보자. 
+
+http://mydomain.com/Public/Home/Index
+
+목록 15-11에서 볼 수 있는 패턴을 사용하면 이 문제를 해결할 수 있다. 
+
+목록15-11 RouteConfig.cs 파일에 작성된 정적 세그먼트가 존재하는 URL 패턴
+public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
+            );
+            //하단은 라우트 추가
+            routes.MapRoute("MyRoute", "{controller}/{action}" ,new { controller="Home" , action = "Index" });
+	    //하단 추가
+            routes.MapRoute("", "Public/{controller}/{action}", new { Controller = "Home", action = "Index" });
+        }
+
+이 새로운 패턴은 오직 세 개의 세그먼트로 구성된 URL과만 매치되는데 첫 번째 세그먼트는 반드시 Public 이어야 만 한다. 나머지 두 세그먼트들은 어떤 값이든 상관 없으며, 이 값들은 컨트롤러와 액션 변수로 사용될 것이다. 마지막 두 세그먼트가 생략되면 기본값이 사용된다. 
+
+또한 목록 15-12에서 볼 수 있는 것처럼 정적 요소와가변 요소가 섞여 있는 세그먼트가 존재하는 URL 패턴을 만들 수도 있다. 
+
+목록15-12 RouteConfig.cs 파일에 작성된 복합 형식의 세그먼트가 존재하는 URL 패턴
+public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+	   //하단 추가
+            routes.MapRoute("", "X{controller}/{action}");
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
+            );
+            //하단은 라우트 추가
+            routes.MapRoute("MyRoute", "{controller}/{action}" ,new { controller="Home" , action = "Index" });
+            routes.MapRoute("", "Public/{controller}/{action}", new { Controller = "Home", action = "Index" });
+        }
+
+이 라우트의 패턴은 두 개의 세그먼트로 구성된 모든 URL과 매치되지만 ,첫 번째 세그먼트는 문자 X로 시작해야 한다. 컨트롤러의 값은 첫 번째 세그먼트에서 X를 제외한 값을 사용하게 된다. 그리고 액션 값은 두 번째 세그먼트에서 가져온다. 응용프로그램을 실행하고 /XHome/Index로 이동해보면 이 라우트의 결과를 확인할 수 있다 그 결과가 그림15-6에 나타나 있다. 
+
+
+
+※ 라우트 순서 지정하기
+목록 15-12에서는 RegisterRoutes 메서드에 새로운 라우트를 정의하면서 다른 라우트보다 이 라우트를 먼저 배치하고 있다. 라우트는 RouteCollection 개체에서 나타나는 순서대로 적용되기 때문에 이렇게 한 것이다. MapRoute 메서드는 컬렉션의 가장 끝에 라우트를 추가하는데,이는 일반적으로 라우트가 정의된 순서대로 적용될 것이라는 점을 의미한다. 물론 특정 위치에 라우트를 삽입할수 있는 방법도 있기 때문에 "일반적으로"라고 말한 것이다. 하지만 정의한 순서대로 경로가 적용되는 것이 라우팅을 좀 더 쉽게 이해할수 있게 해주므로 특정 위치에 라우트를 삽입하는 방법은 잘 사용하지 않는다. 
+
+라우트 시스템은 가장 앞에 정의된 라우트의 URL 패턴과 들어온느 URL을 비교해본다. 그리고 결과가 일치하지 않는 경우에만 다음 라우트와 다시 비교한다. 이 과정을 계속 반복해서 일치하는 라우트 패턴을 찾거나 정의된 라우트들을 모두 비교해볼 때까지 순서대로 하나씩 시도해본다. 따라서 가장 특수한 라우트를 가장 처음에 정의해야 한다. 목록15-12에 추가된 라우트는 다른 라우트들보다는 좀 더 특별하다. 가령 라우트 순서를 다음처럼 바꾼다고 가정해보자. 
+
+...
+routes.MapRoute("", "Public/{controller}/{action}", new { Controller = "Home", action = "Index" });
+
+ routes.MapRoute("", "X{controller}/{action}");
+...
+
+그러면 세그먼트가 존재하지 않거나 하나 또는 두 개의 세그먼트로 구성된 모든 URL들은 첫 번째 라우트와 매치될 것이다. 보다 특수한 두 번째 라우트는 목록의 두번째로 위치해 있기 때문에 결코 평가되지 않는다. 새로운 라우트는 URL 앞쪽에 있는 X를 제외시키지만 이전 라우트 때문에 실행되지 않을 것이다. 그러므로 다음과 같은 URL은
+
+http://mydomain.com/XHome/Index
+
+XHome이라는 컨트롤러를 찾게 되고 그런 컨트롤러는 존재하지 않으므로 404-Not Found 오류가 발생하게 된다. 
+
+
+특정 URL에 대한 별칭을 만들기 위해 정적 URL 세그먼트와 기본값을 결합할 수 있다. 이는 여러분의 URL 스키마를 공개적으로 공지하여 사용자와 약속된 형태를 갖고 있는 경우에 효과적이다. 이런 상황에서 응용프로그램을 변경해야 한다면 사용자가 만든 모든 즐겨 찾기 URL, 매크로 또는 스크립트들이 앞으로도 이상 없이 동작하도록 기존의 URL 형식을 유지해야 한다. 가령 이제는 Home 컨트롤러로 대체되었지만 예전에는 Shop이라는 컨트롤러를 사용했었다고 가정해보자. 목록15-13에서는 기존 URL 스키마를 유지할수 있도록 라우트를 만드는 방법을 보여준다. 
+
+목록15-13 RouteConfig.cs 파일에 작성된 정적 URL 세그먼트와 기본값이 혼합된 라우트
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+	   //추가
+            routes.MapRoute("ShopSchema", "Shop/{action", new { controll = "Home" });
+            routes.MapRoute("", "X{controller}/{action}");
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
+            );
+            //하단은 라우트 추가
+            routes.MapRoute("MyRoute", "{controller}/{action}" ,new { controller="Home" , action = "Index" });
+            routes.MapRoute("", "Public/{controller}/{action}", new { Controller = "Home", action = "Index" });
+        }
+    }
+}
+
+
+이번에 추가된 라우트는 첫 번째 세그먼트가 Shop이고 모두 두 개의 세그먼트로 구성된 URL과 매치된다. 액션 값으로는 두 번째 URL 세그먼트가 사용된다. URL 패턴에는 컨트롤러에 대한 세그먼트 변수가 존재하지 않으며 지정해둔 기본값이 사용된다. 이는 Shop 컨트롤러의 액션에 대한 요청이 Home 컨트롤러의 액션에 대한 요청으로 변환된다는 것을 의미한다. 응용프로그램을 실행하고 /Shop/Index URL로 이동해보면 그 효과를 확인해볼 수 있다. 그림 15-7은 이 새로운 라우트로 인해서 MVC 프레임워크가 Home 컨트롤러의 Index 액션 메서드를 호출하는 모습을 보여준다. 
+
+그리고 한 단계 더 나아가 리팩터링 등으로 제거되어 컨트롤러에 더 이상 존재하지 않는 액션메서드를 위한 별칭을 생성할 수도 있다. 이렇게 하려면 목록15-4에서 보여주는 것처럼 정적 URL을 생성한 다음 컨트롤러와 액션 변수를 기본값을 통해서 제공하면 된다. 
+
+목록15-14 RouteConfig.cs 파일에 작성된 컨트롤러와 액션에 대한 별칭 생성하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+	   //추가
+            routes.MapRoute("ShopSchema2", "Shop/OldAction", new { controller = "Home", action = "Index" });
+            routes.MapRoute("ShopSchema", "Shop/{action", new { controll = "Home" });
+            routes.MapRoute("", "X{controller}/{action}");
+            routes.MapRoute(
+                name: "Default",
+                url: "{controller}/{action}/{id}",
+                defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
+            );
+            //하단은 라우트 추가
+            routes.MapRoute("MyRoute", "{controller}/{action}" ,new { controller="Home" , action = "Index" });
+            routes.MapRoute("", "Public/{controller}/{action}", new { Controller = "Home", action = "Index" });
+        }
+    }
+}
+
+이번에도 역시 새로운 라우트를 첫 번째에 오도록 배치하고 있다. 그 이유는 이 라우트가 다른 라우트들보다 더 제한적이기 때문이다. 예를 들어 Shop/OldAction에 대한 요청이 두 번째로 정의된 라우트를 통해서 처리된다면 원했던 결과와는 다른 결과를 얻게 될 것이다. 즉 클라이언트와의 계약을 유지할수 있도록 변환되는 대신 404 Not Found 오류가 발생할 것이다. 
+
+
+
+※ 단위 테스트 : 정적 세그먼트 테스트하기
+정적 세그먼트가 존재하는 URL 패턴을 갖고 있는 라우트들을 테스트하기 위해서 다시 한번 앞에서 작성한 지원 메서드를 사용한다. 다음은 목록15-14에서 추가한 라우트를 테스트하는 TestIncomingRoutes 단위 테스트 메서드다. 
+
+...
+[TestMethod]
+        public void TestIncomingRoutes()
+        {
+            //기대하고 있는 URL을 검사한다
+
+            TestRouteMatch("~/", "Home", "Index");
+            TestRouteMatch("~/Customer", "Customer", "Index");
+            TestRouteMatch("~/Customer/List", "Customer", "List");
+            TestRouteFail("~/Customer/List/All");
+	    //추가
+            TestRouteMatch("~/Shop/Index", "Home", "Index");
+        }
+
+※ 사용자 지정 세그먼트 변수 정의하기
+컨트롤러와 액션 세그먼트 변수들은 MVC 프레임워크에서 특별한 의미를 가지며 이 변수들은 요청을 처리하는 데 사용될 컨트롤러와 액션 메서드에 대응된다. 하지만 이 변수들은 단지 기본으로 제공되는 세그먼트 변수들일 뿐이다. 목록15-15에서 볼 수 있는 것처럼 자신만의 변수를 정의할 수도 있다(처음부터 다시 시작하기 위해서 이전 절에서 사용한 기존의 라우트들을 모두 제거했다)
+
+목록15-15 RouteConfig.cs 파일에 URL 패턴의 추가 변수 정의하기 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.MapRoute("MyRoute", "{controller}/{action}/{id}", new { controller = "Home", action = "Index", id = "DefaultId" });
+        }
+    }
+}
+
+이 라우트의 URL 패턴은 표준 컨트롤러 변수와 액션 변수뿐만 아니라 id라는 사용자 지정 변수를 정의하고 있다. 이 라우트는 0개부터 3개까지의 세그먼트들로 구성된 모든 URL과 매치된다. 만약 URL이 3개의 세그먼트로 구성되어 있다면 세 번째 세그먼트가 id 변수에 할당되며 세 번째 세그먼트가 존재하지 않는다면 id 변수에는 기본값이 사용될 것이다. 
+
+주의:
+몇가지 이름들은 미리 예약되어 있으므로 사용자 지정 세그먼트 변수 이름으로 사용할 수 없다. 예약어로는 controller, action, area가 있다. 이 중 앞의 두 예약어는 이미 잘 알고 있는 것들이며, area에 관해서는 다음 장에서 살펴볼 것이다. 
+
+
+
+RouteData.Values 속성을 사용하면 액션 메서드에서 모든 세그먼트 변수들에 접근할수 있다. 이를 직접 살펴보기 위해서 Home 컨트롤러에 CustomVariable이라는 액션 메서드를 추가했는데, 목록15-16에서 그 내용을 살펴볼 수 있다. 
+
+목록15-16 HomeController.cs 파일의 액션 메서드에서 사용자 지정 세그먼트 변수 접근하기
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace UrlsAndRoutes.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public ActionResult Index()
+        {
+            ViewBag.Controller = "Home";
+            ViewBag.Action = "Index";
+            return View("ActionName");
+        }
+
+        public ActionResult CustomVariable()
+        {
+            ViewBag.Controller = "Home";
+            ViewBag.Action = "CustomVariable";
+            ViewBag.CustomVariable = RouteData.Values["id"];
+            return View();
+        }
+    }
+}
+
+이 메서드는 라우트 URL 패턴에서 사용자 지정 변수의 값을 가져와서 ViewBag 을 사용하여 뷰로 전달한다. 이 액션 메서드에 대한 뷰를 만들려면 View/Home 폴더를 마우스 오른쪽 버튼을 클릭한 다음 팝업 메뉴에서 [추가(Add)]를 선택하고 [MVC 5 뷰 페이지(Razor)(Add MVC 5 View Page(Razor))]를 선택한 다음 이름을 CustomVariable.cshtml로 설정한다. [확인(OK)] 버튼을 클릭하여 뷰를 만들고 15-17처럼 내용을 편집한다. 
+
+목록15-17 CustomVariable.cshtml 파일의 내용
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Custom Variable</title>
+</head>
+<body>
+    <div>The controller is: @ViewBag.Controller        </div>
+    <div>The action is: @ViewBag.Action</div>
+    <div>The custom variable is: @ViewBag.CustomVariable</div>
+</body>
+</html>
+
+
+직접 사용자 지정 세그먼트 변수의 효과를 확인해보려면 응용프로그램을 시작하고 /Home/CustomVariable/Hello로 시작해보자. 그러면 Home 컨트롤러의 CustomVariable 액션 메서드가 호출되고 사용자 지정 세그먼트 변수의 값이 ViewBag으로부터 반환되어 뷰로 전달 될것이다. 그림15-8에서 그 결과를 확인할수 있다. 
+
+
+또한 라우트에서 id 세그먼트 변수에 대한 기본값을 지정했기 때문에 /Home/CustomVariable같이 세 번째 세그먼트가 존재하지 않는 URL로 이동할 경우 그림15-9에서 볼수 있는 것처럼 사용자 지정 세그먼트 변수에 기본값이 사용된다. 
+
+
+
+※ 단위 테스트 : 사용자 지정 세그먼트 변수 테스트하기
+테스트 지원 메서드에는 사용자 지정 세그먼트 변수를 테스트하기 위한 기능도 포함되어 있다. TestRouteMatch 메서드는 테스트하고자 하는 속성의 이름과 기대하는 값으로 구성된 익명 형식을 전달받을 수 있는 선택적 매개변수도 갖고 있다. 목록15-15에 정의된 라우트를 테스트하도록 변경된 TestIncomingRoutes 테스트 메서드는 다음과 같다. 
+
+...
+[TestMethod]
+        public void TestIncomingRoutes()
+        {
+            //기대하고 있는 URL을 검사한다
+
+            TestRouteMatch("~/", "Home", "Index",new { id = "DefaultId" });
+            TestRouteMatch("~/Customer", "Customer", "Index", new { id = "DefaultId" });
+            TestRouteMatch("~/Customer/List", "Customer", "List",new { id = "DefaultId" });
+            TestRouteMatch("~/Customer/List/All", "Customer", "List", new { id = "All" });
+            TestRouteFail("~/Customer/List/All/Delete");
+        }
+....
+
+
+※ 사용자 지정 세그먼트 변수를 액션 메서드 매개변수로 사용하기
+이전 절에서 살펴본 RouteData.Values 속성을 사용하는 방법은 사용자 지정 라우트 변수에 접근할수 있는 방법중 한 가지에 불과하다. 하지만 훨씬 더 멋진 방법이 있다. 액션 메서드의 매개변수 이름을 URL 패턴 변수의 이름과 동일하게 지정하면 MVC 프레임워크가 URL에서 가져온 값을 액션 메서드의 매개변수로 전달해준다. 목록15-15의 라우트에서 정의했던 사용자 지정 변수의 이름은 id 였다. 목록15-18에서 보여주는 것처럼 Home 컨트롤러의 CustomVariable 액션 메서드의 매개변수를 URL 패턴 변수와 동일하게 수정해보자. 
+
+목록15-18 HomeController.cs 파일의 액션 메서드에 매개변수 추가하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace UrlsAndRoutes.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public ActionResult Index()
+        {
+            ViewBag.Controller = "Home";
+            ViewBag.Action = "Index";
+            return View("ActionName");
+        }
+
+        public ActionResult CustomVariable(string id)
+        {
+            ViewBag.Controller = "Home";
+            ViewBag.Action = "CustomVariable";
+            ViewBag.CustomVariable = id;
+            return View();
+        }
+    }
+}
+
+그러면 라우팅 시스템이 목록15-18에서 정의한 라우트에 URL을 매치시키면서 URL의 세 번째 세그먼트 값을 사용자 지정 변수인 id에 할당해준다. MVC 프레임워크가 세그먼트 변수들의 목록과 액션 메서드 매개변수들의 목록을 비교해서 이름이 일치할 경우 URL에서 메서드로 값들을 전달해주는 것이다. 
+
+이번 예제에서는 id 매개변수를 문자열로 정의했지만, MVC 프레임워크는 정의된 매개변수가 어떤 형식이건 간에 URL값을 해당 형식으로 변환하려고 시도한다. 가령 id 매개변수를 int 형식이나 DateTime 형식으로 정의했다면 URL을 해당 형식의 인스턴스로 파싱한 값을 전달받게 된다. 이는 개발자가 직접 변환 작업을 수행할 필요가 없게 만들어주는 아주 멋지고 효과적인 기능이다. 
+
+
+Note:
+MVC 프레임워크는 URL에 포함된 값을 .NET 형식으로 변환하기 위해 모델 바인딩 기능을 사용하며, 이번 예제에서 살펴본 것보다 훨씬 더 복잡한 상황도 처리할수 있다. 모델 바인딩에 관해서는 24장에서 살펴본다. 
