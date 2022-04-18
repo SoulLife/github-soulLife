@@ -1,0 +1,69 @@
+3.3.4.1 모든 데이터 선택하기
+간단한 형태의 SELECT 명령문을 사용해서 테이블에서 모든 것을 가져올 수 있다. 
+
+mysql>SELECT * FROM pet;
+
+전체 테이블을 검토하고자 할 때에는 이러한 형식의 SELECT 명령문이 유용하다. 예를 들면 Bowser의 생일이 잘못 기록되었다고 생각할 수 있다. Bowser의 진료 기록표를 보았더니 원래 생일이 1979년이 아니라 1987년이라는 것을 발견하였다면 잘못된 부분을 수정해야 한다. 
+
+잘못된 내용은 다음의 방법 중에 하나를 선택해서 수정한다. 
+
+* pet.txt를 편집해서 에러를 수정한 다음에 테이블을 비우고 DELETE와 LOAD DATA를 사용해서 이것을 다시 읽어 온다. 
+
+mysql> DELETE FROM pet;
+mysql> LOAD DATA LOCAL INFILE 'pet.txt' INTO TABLE pet;
+
+하지만 이렇게 하면 Puffball용 레코드도 다시 입력을 해야 한다. 
+
+* UPDATE 명령문을 사용해서 에러가 있는 레코드만 수정한다. 
+mysql>UPDATE pet SET birth = '1989-08-31' WHERE name='Bowser';
+
+UPDATE 명령문은 의심스러운 레코드만을 변경시키며, 테이블을 재 로드 할 필요가 없게 된다. 
+
+
+3.3.4.2 특정 열(row) 선택하기
+위의 섹션에서 보았듯이, 전체 테이블을 읽어오는 것은 쉬운 일이다. SELECT 명령문에서 WHERE 구문만 생략하면 된다. 하지만 테이블이 매우 크다면 전체 테이블을 보고 싶지 않을 것이다. 대신에 특정 질문에 대한 대답을 얻고자 할 것이데 이러한 경우에는 원하는 정보에 몇가지 제한을 걸어 둘 수 있을 것이다. 애완 동물에 관해 질문을 하는 몇 가지 선택 쿼리(selection query)를 살펴보기로 하자. 
+
+테이블에서 특정 열만 선택할 수 있다. 예를 들면 Bowser의 생일이 변경된 것을 확인해 보고 싶다면 아래와 같이 Bowser의 레코드를 선택한다. 
+
+mysql>SELECT * FROM pet WHERE name = 'Bowser';
+
+결과값이 1979년이 아니라 1989년으로 올바르게 기록되어 있음을 확인할 수 있다. 
+
+스트링 비교는 일반적으로 대소문자를 구분하지 않기 때문에 이름을 'bowser', 'BOWSER', 및 다른 형식으로 지정할 수 있다. 쿼리 결과는 동일하게 나온다. 
+
+name 컬럼을 제외한 다른 어떤 컬럼에 대해서도 조건문을 작성할 수 있다. 예를 들면 어떤 동물이 1998년 또는 그 이후에 태어났는지 알고 싶다면 birth 컬럼을 테스트한다. 
+
+mysql>SELECT * FROM pet WHERE birth >= '1998-1-1';
+
+조건문을 여러개 조합할 수 있는데 예를 들면, 암컷 개를 찾을 때 사용할 수 있다. 
+
+mysql>SELECT * FROM pet WHERE species = 'dog' AND sex = 'f';
+
+앞의 쿼리는 AND 논리 연산자를 사용하였다. OR 연산자도 역시 사용할 수 있다. 
+
+mysql>SELECT * FROM pet WHERE species = 'snake' OR species = 'bird';
+
+AND및 OR 는 서로 혼용해서 사용할 수 있는데 AND가 OR보다 우선 순위가 높다. 이 두 가지 연산자를 모두 사용할 경우에는 어떤 조건문이 그룹으로 동작되어야 하는지를 지정하기 위해 괄호를 사용하는 것이 좋다. 
+
+mysql>SELECT * FROM pet WHERE(species = 'cat' AND sex = 'm')
+	->OR(species = 'dog' AND sex='f');
+
+
+
+3.3.4.3 특정 컬럼 선택하기
+
+테이블에서 전체 열을 보고 싶지 않을 경우에는 콤마를 사용해서 보고싶은 컬럼 이름만 입력하면 된다. 예를 들면 동물들이 언제 태어났는지 보고싶다면 name과 birth 컬럼만을 선택한다. 
+
+mysql>SELECT name, birth FROM pet;
+
+누가 주인인지를 보기 위해서는 아래의 쿼리를 사용한다. 
+mysql>SELECT owner FROM pet;
+
+쿼리는 각 레코드에서 간단하게 owner를 불러오는데, 어떤 사람의 이름은 여러 번 나온다는 점을 주목한다. 이것을 최소화하기 위해서는 각각의 이름이 딱 한번만 나오도록 하기 위해 DISTINCE를 추가할 수 있다. 
+
+mysql>SELECT DISTINCT owner FROM pet;
+
+WHERE 구문을 사용해서 열 선택과 컬럼 선택을 서로 묶을 수 있다. 예를 들면 개와 고양이의 생일만 얻기 위해서는 아래의 쿼리를 사용한다. 
+
+mysql>SELECT name, species, birth FROM pet
+	->WHERE species = 'dog' OR species = 'cat';
