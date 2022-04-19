@@ -1,0 +1,100 @@
+3.3.4.4 열 정렬하기
+앞의 예제에서 보면 쿼리 결과 값이 특정 규칙 없이 나왔다는 점을 알 수 있을 것이다. 결과값이 어떤 의미를 갖고 정렬되면 그 결과를 분석하는 것이 보다 쉬울 수 있을 것이다. 결과를 정렬하기 위해서는 ORDER BY 구문을 사용한다. 
+
+아래의 쿼리문은 동물의 생일을 날짜로 정렬하는 것이다.
+
+mysql>SELECT name, birth FROM pet ORDER BY birth;
+
+
+문자 타입 컬럼에서 정렬은 일반적으로 대소 문자를 구분하지 않는다. 하지만 BINARY를 사용하면 컬럼이 대소 문자를 구분하도록 정렬 시킬수 있다. ORDER BY BINARY col_name
+
+디폴트 정렬 순서는 오름 차순이고, 가장 작은 것이 먼저 나오게 된다. 내림 차순으로 정렬하기 위해서는 DESC 키워드를 정렬하고자 하는 컬럼 이름에 추가한다. 
+
+mysql> SELECT name, birth FROM pet ORDER BY birth DESC;
+
+
+다중 컬럼에서도 정렬을 할 수 있으며 서로 다른 순서로 컬럼을 정렬할 수 있다. 예를 들면 오름 차순으로 동물 타입을 정렬한 후에 동물 타입에서 내림차순으로 생일을 정렬하기 위해서는 아래의 쿼리를 사용한다. 
+
+mysql>SELECT name, species, birth FROM pet ORDER BY species, birth DESC;
+
+DESC 키워드는 바로 앞에 있는 컬럼 이름(birth)에만 적용된다는 점을 주목하기 바란다. 이것은 species 컬럼 정렬에는 관여하지 않는다. 
+
+
+
+3.3.4.5 날짜 계산하기
+MySQL은 날짜를 사용해서 나이를 계산하거나 날짜 포맷에서 특정 부분만을 추출해 낼수 있는 여러 가지 함수를 제공한다. 
+
+각 동물들이 얼마나 나이를 먹었는지 계산하기 위해서는 현재 날짜와 태어난 날짜의 연도차이를 계산하고 현재 날짜가 태어난 날짜보다 앞선 날짜면 1을 빼면 된다. 아래의 쿼리는 각 애완동물의 생일, 현재 날짜, 그리고 나이를 보여주고 있다. 
+
+mysql>SELECT name, birth, CURDATE(),
+	->(YEAR(CURDATE())-YEAR(birth))
+	->-(RIGHT(CURDATE(),5)<RIGHT(birth,5))
+	->AS age
+	->FROM pet;
+
+여기에서 YEAR()는 날짜에서 연도 부분을 가져오고 RIGHT()는 날짜 포맷의 MM-DD(calendaryear)를 나타내는 오른쪽 다섯 숫자를 가져온다. MM-DD 값을 비교하는 수식은 1 또는 0를 계산하는데, 이것은 CURDATE()가 birth보다 앞선 날짜이면 연도의 차이에서 한 해를 뺀다. 전체 수식은 다소 복잡하기 때문에 alias(age)는 보다 의미를 잘 나타내는 결과 컬럼을 만드는데 사용한다. 이 쿼리는 제대로 동작을 하기는 하지만 열이 특정 순서로 표시되어 있다면 보다 쉽게 검사할수 있을 것이다. ORDER BY name 구문을 추가하면 결과를 name으로 정렬할수 있다. 
+
+mysql>SELECT name, birth, CURDATE(),
+	->(YEAR(CURDATE())-YEAR(birth))
+	->-(RIGHT(CURDATE(),5)<RIGHT(birth,5))
+	->AS age
+	->FROM pet ORDER BY name;
+
+name으로 정렬하는 대신에 age로 정렬하기 위해서는 다른 ORDER BY 구문을 사용한다. 
+
+mysql>SELECT name, birth, CURDATE(),
+	->(YEAR(CURDATE())-YEAR(birth))
+	->-(RIGHT(CURDATE(),5)<RIGHT(birth,5))
+	->AS age
+	->FROM pet ORDER BY age;
+
+비슷한 쿼리를 사용해서 이미 죽은 동물의 나이를 검사할 수 있다. death 값이 NULL인지를 검사해서 죽은 동물을 먼저 알아낸다. 그 다음에 NULL 값이 아닌 동물에 대해서 death와 birth 값의 차이를 계산한다. 
+
+mysql> SELECT name, birth, death,
+	->(YEAR(death)-YEAR(birth)) -(RIGHT(death,5)<RIGHT(birth,5))
+	->AS age
+	-> FROM pet WHERE death IS NOT NULL ORDER BY age;
+
+쿼리는 death <> NULL 대신에 death IS NOT NULL 를 사용하고 있는데 그 이유는 NULL이 일반적인 비교 연산자로는 비교 연산을 실행할수 없는 특별한 값이기 때문이다. 
+
+다음달에 생일이 돌아오는 동물이 어떤 것인지 알고자 할 경우에는 어떻게 해야 하는가? 이것을 계산할 때에는 연도와 요일은 관련이 없게 된다. birth 컬럼에서 월(month)부분만 가져오면 된다. MySQL은 YEAR(), MONTH(), 그리고 DAYOFMONTH()와 같이 날짜 부분에서 필요한 부분을 추출해주는 함수를 제공한다. MONTH()는 여기에서 원하는 것을 작업할 수 있는 함수이다. 이 함수가 어떻게 동작하는지 보기 위해서 birth와 MONTH(birth)값을 알려주는 간단한 쿼리를 구동시킨다. 
+
+mysql> SELECT name, birth, MONTH(birth) FROM pet;
+
+
+앞으로 다가오는 달에 생일이 있는 동물을 찾는 것 역시 쉽다. 지금이 4월이라고 가정하자 그러면 월(month)값은 4가 되며 아래와 같이 5월에 생일이 있는 동물을 찾아낼수 있다. 
+
+mysql>SELECT name, birth FROM pet WHERE MONTH(birth) = 5;
+
+지금이 12월 이라면 다소 복잡한 일이 생긴다. 간단히 숫자 하나를 월(month)값에 더해서는 12월에 태어난 동물을 찾을 수 없는데 13월이라는 달은 없기 때문이다. 대신에 1월에 태어난 동물을 찾아야 한다. 
+
+지금이 무슨 달인지 상관없는 쿼리를 사용하면 숫자를 사용해서 특정 월을 표시하지 않아도 된다. DATE_ADD()는 날짜에 시간 간격(interval)을 추가할 수 있도록 하는 함수이다. 1개월을 CURDATE()값에 더한 후에 MONTH() 를 사용해서 월 부분을 가져오고자 한다면 결과는 생일이 들어 있는 월 부분이 된다. 
+
+mysql> SELECT name, birth FROM pet
+	-> WHERE MONTH(birth) = MONTH(DATE_ADD(CURDATE(), INTERVAL 1 MONTH));
+
+다른 방법으로는 지금이 12월이라면 월(month)값을 0으로 하기 위한 모듈로(modulo) 함수(MOD)를 사용한 후에 1을 더해서 다음달을 계산하면 된다. 
+
+mysql> SELECT name, birth FROM pet
+	->WHERE MONTH(birth) = MOD(MONTH(CURDATE()), 12) + 1;
+
+MONTH는 1에서 12사이 숫자를 리턴한다는 점을 알기 바란다. 그리고 MOD(something, 12)는 0과 11사이의 숫자를 리턴한다. 따라서 첨가 작업은 MOD() 다음에 해야 하는데 그렇지 않으면 11월에서 1월로 가게 된다. 
+
+
+
+3.3.4.6 NULL값 다루기
+NULL 값을 개념적으로 본다면 누락된 알려지지 않은 값(missing unknown value)을 의미하기 때문에 다른 값 과는 다소 다르게 취급이 된다. NULL값을 테스트할 때에는 =, <, 또는 <>과 같은 단순 비교 연산자는 사용할 수 없다. 다음의 쿼리를 시도해 보자. 
+
+mysql> SELECT 1= NULL, 1 <> NULL, 1 < NULL, 1 > NULL;
+
+앞의 결과에서 보듯이 이러한 비교문을 통해서는 의미있는 결과를 얻어낼 수 없다. 대신에 IS NULL과 IS NOT NULL연산자를 사용하도록 한다. 
+
+MySQL에서는 0 또는 NULL은 거짓(false)을 의미하며, 이외의 값이 참(true)을 의미한다. 불리안(boolean)연산에서 참은 디폴트로 1이다. 
+
+앞의 섹션에서 보았듯이 어떤 동물이 죽었는지를 판단하기 위한 방법을 death <> NULL이 아닌 death IS NOT NULL 로 사용한 이유가 바로 이러한 NULL 의 특성 때문이다. 
+
+하나의 GROUP BY 에서는 두 개의 NULL 값이 동등한 것으로 여겨진다. 
+
+ORDER BY 를 실행하면 NULL은 ORDER BY ... ASC에서는 가장 먼저 나오고, ORDER BY ... DESC 에서는 가장 나중에 나오는 값이 된다. 
+
+NULL을 가지고 작업을 할 때 범하는 일반적인 에러중의 하나는 NOT NULL로 정의된 컬럼에 0또는 빈 스트링을 삽입하는 것이 불가능하다고 생각하는 것이다. 실제로는 그렇지 않다. NULL이 값을 갖고 있지 않음(not having a value)을 의미하는 반면에 이러한 것들은 분명한 값으로 존재하는 것이다. 아래와 같이 IS [NOT] NULL을 사용해서 이 점을 간단히 테스트할 수 있다. 
