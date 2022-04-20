@@ -1,0 +1,368 @@
+CHAPTER 16장 : 고급 라우팅 기능
+이전 장에서는 라우팅 시스템을 이용해서 들어오는 URL 을 처리하는 방법들을 살펴봤다. 그러나 이는 라우팅에 관한 내용들 중 일부분에 불과하다. 사용자가 링크를 클릭하거나 응용프로그램으로 다시 폼을 제출해서 올바른 컨트롤러와 액션 메서드에 접근할 수 있도록 URL 스키마를 이용해서 뷰에 추가할수 있는 나가는 URL을 생성할 수도 있어야 한다. 이번 장에서는 나가는 URL을 생성하기 위한 다양한 기술들을 살펴보게 될 것이다. 또한 표준 MVC 라우팅 구현 클래스를 교체해서 라우팅 시스템을 사용자 지정하는 방법을 살펴보고 크고 복잡한 MVC 응용프로그램을 보다 관리하게 쉽게 만들어주는 MVC 프레임워크의 영역(Area) 기능의 사용 방법에 대해서도 알아본다. 마지막으로 MVC 프레임워크 응용프로그램의 URL 스키마에 대한 몇 가지 모범 사례들에 대한 조언으로 이번 장을 마무리하려고 한다. 표16-1은 이번장의 개요를 요약해서 보여주고 있다. 
+
+표16-1 16장 요약
+
+주제							내용													목록
+나가는 URL을 사용하는 요소 생성 하기		Html.ActionLink 헬퍼 메서드를 사용한다.							1 - 5, 9
+
+세그먼트 변수들에 값 제공하기			세그먼트 변수의 이름에 해당하는 속성들을 갖고 있는 익명 개체를 ActionLink 헬퍼 	6, 7
+							메서드에 전달한다.
+
+요소의 어트리뷰트들 정의하기			어트리뷰트의 이름에 해당하는 속성들을 갖고 있는 익명 개체를 ActionLink 헬퍼	8
+							메서드에 전달한다.
+
+요소 없이 나가는 URL 생성하기			Url.Action 헬퍼 메서드를 사용한다.								10 - 13
+
+특정 라우트로부터 URL 생성하기			헬퍼 메서드를 호출할 때 라우트 이름을 지정한다.						14, 15
+
+사용자 지정 URL 매칭 및 생성 정책 만들기	RouteBase 클래스를 상속받아서 구현한다.							16 - 21
+
+URL과 액션 메서드 간에 사용자 지정 매핑	IRouteHandler 인터페이스를 구현한다.								22, 23
+만들기
+
+응용프로그램을 섹션으로 분리하기		영역을 생성하거나 RouteArea 어트리뷰트를 적용한다.					24 - 27, 30
+
+영역(Areas)에서 모호한 컨트롤러 이름 결정	컨트롤러 네임스페이스에 우선순위를 부여한다.						28, 29
+하기
+
+정적 파일에 대한 요청이 라우팅 시스템에	RouteExistingFiles 속성을 사용한다.								31 - 33
+전달되기 전에 IIS와 ASP.NET이 처리하지 못
+하게 차단하기
+
+라우팅 시스템이 특정 요청을 처리 하지 못	IgnoreRoute 메서드를 사용한다.									34
+하게 막기
+
+
+※ 예제 프로젝트 준비하기
+
+이전 장에 이어서 계속 UrlsAndRoutes 프로젝트를 사용하겠지만 몇 가지 부분을 변경해야 한다. 먼저 AdditionalControllers 폴더와 이 폴더에 작성했던 HomeController.cs 파일을 삭제해야 한다. 따라서 AdditionalControllers 폴더를 마우스 오른쪽 버튼으로 클릭한 다음, 팝업 메뉴에서 [삭제 (Delete)]를 선택한다. 
+
+
+※ 기존 라우트 정리하기
+
+응용프로그램의 라우트도 정리해서 간략하게 만들어야 한다. 목록 16-1의 내용과 동일하게 App_Start/RouteConfig.cs 파일을 편집한다. 
+
+목록16-1 RouteConfig.cs 파일의 예제 라우트 정리하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Mvc.Routing.Constraints;
+using UrlsAndRoutes.Infrastructure;
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+
+            routes.MapRoute("MyRoute", "{controller}/{action}/{id}/{*catchall}", new { controller = "Home", action = "Index", id = UrlParameter.Optional });
+        
+        }
+    }
+}
+
+
+※ 최적화 패키지 추가
+이번 장의 뒷부분에서 영역(Areas) 기능을 살펴보려면 프로젝트에 새로운 패키지를 설치해야 한다. 다음 명령어를 NuGet 명령어 라인에 입력한다(Visual Studio Express 2013 for Web Update 2에서 이 패키지를 설치하고 나서 솔루션을 빌드해보면 확인할수 없는 같은 종속 어셈블리의 서로 다른 버전이 충돌합니다. 이러한 참조 충돌은 로그의 자세한 정보가 자세히로 설정된 경우 빌드 로그에 나열됩니다 라는 경고가 나타난다. 이 문제를 해결하려면 이 패키지를 최신 버전으로 업데이트 한다.)
+
+Install-Package Microsoft.AspNet.Web.Optimization -version 1.1.0 -projectname UrlsAndRoutes
+
+나중에 26장에서 다시 자세하게 살펴보겠지만 이 패키지에는 프로젝트의 JavaScript 파일들과 CSS 파일들을 최적화하기 위한 기능이 담겨있다. 비록 이번 장에서 최적화 기능을 직접 사용하지는 않지만 영역 기능이 이 기능에 의존하기 때문에 이 패키지가 필요하다. 
+
+
+
+※ 단위 테스트 프로젝트 변경하기
+단위 테스트 프로젝트에서도 두 가지 부분을 변경해야 한다. 첫 번째 변경사항은 TestIncomingRoutes 메서드를 삭제하는 것으로 나가는 라우트를 만드는 방법을 다루고 있는 이번 장에서는 이 메서드를 사용하지 않기 때문이다. 실패하는 테스트가 발생하지 않도록 그냥 RouteTests.cs 파일에서 이 메서드를 지워버리도록 하자. 
+
+두 번째 변경사항은 System.Web.Mvc 네임스페이스를 추가해야 한다는 것이다. 이 작업은 단위 테스트 프로젝트에 MVC NuGet 패키지를 설치하면 된다. 다음 명령어를 NuGet 명령어라인에 입력하자(역시 Microsoft.AspNet.Web.Optimization 패키지와 동일한 경고가 발생하며, 같은 방법으로 해결할 수 있다. 그러나 프로젝트 자체가 실행되는 데에는 문제가 없다. )
+
+Install-Package Microsoft.Aspnet.Mvc -version 5.0.0 -projectname UrlsAndRoutes.Tests
+
+헬퍼 메서드를 사용해서 나가는 URL을 생성하기 위해서는 MVC 5 패키지를 추가해야 한다. 이전 장에서는 System.Web 네임스페이스와 System.Web.Routing 네임스페이스를 사용해서 들어오는 URL을 처리했기 때문에 이 패키지를 설치할 필요가 없었다. 
+
+
+※ 나가는 URL을 생성하고 뷰에 추가하기
+거의 모든 MVC 프레임워크 응용프로그램에서는 사용자가 한 뷰에서 다른 뷰로 이동할수 있어야 한다. 이 동작은 대부분 첫 번째 뷰에 존재하는 링크를 클릭함으로써 이뤄지며, 이 링크는 두 번째 뷰를 생성하는 액션 메서드를 호출하게 된다. 
+
+물론 다음과 같이 액션 메서드로 연결되는 href 어트리뷰트를 갖고 있는 정적 a 요소를 추가해도 원하는 바를 이룰 수는 있다. 
+
+<a href="/Home/CustomVariable">This is an outgoing URL</a>
+
+표준 라우트 구성하에서 이 HTML a 요소는 Home 컨트롤러의 CustomVariable 액션 메서드를 호출하는 링크를 만들어내게 된다. 이 링크에서 볼 수 있는 것처럼 수동으로 정의된 URL을 만드는 것은 전혀 어려운 일이 아니다. 그러나 이런 URL 들은 극도로 위험해서 응용프로그램의 URL 스키마를 변경하기라도 하면 하드코드된 이런 URL들은 전부 엉망이 될 것이다. 결과적으로 이런 상황이 발생하면 응용프로그램의 모든 뷰들을 샅샅이 뒤져서 컨트롤러의 액션 메서드에 대한 참조들을 모조리 수정해야만 한다. 이 작업은 상당히 지루하며 오류를 발생시킬 확률도 높고 테스트를 더욱 어렵게 만든다. 더 좋은 대안은 나가는 URL을 만들 때도 라우팅 시스템을 사용하는 것이다. 이 방식을 사용하면 URL을 동적으로 생성하는 경우에도 URL 스키마가 사용될 뿐만 아니라 URL이 응용프로그램의 URL 스키마를 반영한다는 점을 확실하게 보장할 수 있다. 
+
+
+
+※ 라우팅 시스템을 이용해서 나가는 URL 생성하기
+
+뷰에서 나가는 URL을 만들어낼 수 있는 가장 손쉬운 방법은 목록16-2에서 볼 수 있는 것처럼 Html.ActionLink 헬퍼 메서드를 사용하는 것이다. 이 목록은 /Views/Shared/ActionName.cshtml 뷰의 내용을 보여주고 있다. 
+
+목록16-2 ActionName.cshtml 파일에서 Html.ActionLink 헬퍼 메서드 사용하기
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ActionName</title>
+</head>
+<body>
+    <div>The controller is: @ViewBag.Controller</div>    
+    <div>The action is: @ViewBag.Action</div>
+    <div><!-- 하단 헬퍼메서드추가 -->
+        @Html.ActionLink("This is an outgoing URL", "CustomVariable")
+    </div>
+</body>
+</html>
+
+이 ActionLink 메서드의 매개변수들은 링크에 표시될 문자열과 링크의 대상이 될 액션 메서드의 이름이다. 응용프로그램을 시작해서 루트 URL을 살펴보면 그림 16-1과 같은 이번 작업의 결과를 확인할 수 있을 것이다. 
+
+ActionLink 메서드가 만들어내는 HTML은 현재 라우트 구성을 기반으로 한다. 가령 이번예제에서는 목록16-1에 정의된 스키마가 반영되어(그리고 이 링크가 Home 컨트롤러에 대한 요청으로 렌더된 뷰에서 생성됐다고 가정할 경우)다음과 같은 HTML이 생성된다. 
+
+<a href="/Home/CustomVariable">This is an outgoing URL</a>
+
+마치 앞에서 수작업으로 직접 정의했던 URL을 다시 생성하기 위해서 먼 길을 돌아온 것처럼 느껴질 수도 있겠지만 이 접근 방식의 장점은 라우팅 구성이 변경되면 그 변경사항이 자동으로 반영된다는 점에 있다. 이 점을 증명하기 위해서 목록16-2처럼 RouteConfig.cs 파일에 새로운 라우트를 추가해보자. 
+
+목록16-3 RouteConfig.cs 파일에 라우트 추가하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Mvc.Routing.Constraints;
+using UrlsAndRoutes.Infrastructure;
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}"); 
+
+            routes.MapRoute("NewRoute", "App/Do{action}", new { controller = "Home" }); //추가
+
+            routes.MapRoute("MyRoute", "{controller}/{action}/{id}/{*catchall}", new { controller = "Home", action = "Index", id = UrlParameter.Optional });
+        
+        }
+    }
+}
+
+목록 16-3에 새로 추가된 라우트는 Home 컨트롤러를 대상으로 한 요청의 URL 스키마를 변경한다. 다시 응용프로그램을 실행시켜보면 이번 변경사항이 ActionLink HTML 헬퍼 메서드에 의해서 다음과 같이 HTML에 반영되는 것을 확인할 수 있을 것이다. 
+
+<a href="/App/DocustomVariable">This is an outgoing URL</a>
+
+이 결과에서 알 수 있는 것처럼 이런 방식을 사용해서 링크를 생성하면 유지보수 문제를 손쉽게 해결할 수 있다. 언제라도 라우팅 스키마를 변경할수 있으며, 그에 따라 뷰의 나가는 링크에도 자동으로 변경 내용이 반영되기 때문이다. 물론 사용자가 나가는 URL의 링크를 클릭할경우 일반적인 요청이 만들어지게 되므로 그림16-2에서 볼 수 있듯이 라우팅 시스템이 다시 사용되어 정확히 액션 메서드를 호출하게 된다. 
+
+
+※ 나가는 URL에 대한 라우트 매칭 이해하기
+이번 절에서는 URL 스키마를 정의하는 라우트를 변경하면 나가는 URL을 생성하는 방식도 변경된다는 점에 대해서 살펴봤다. 일반적으로 응용프로그램에 몇 가지 라우트들이 정의되기 마련인데, URL을 생성하기 위해서는 라우트가 선택되는 방식에 대해 자세하게 이해하고 있어야만 한다. 라우팅 시스템은 RegisterRoutes 메서드에 전달된 RouteConllection 개체에 추가된 순서대로 라우트를 처리한다. 각각의 라우트들은 차례대로 매치되는지 여부가 평가되는데, 이때 다음과 같은 세 가지 조건을 만족해야 한다. 
+
+* URL 패턴에 정의된 모든 세그먼트 변수들을 위해 값을 사용할 수 있어야 한다. 라우팅 시스템은 각각의 세그먼트 변수들에 대한 값을 찾기 위해서 먼저 여러분이 제공한 값들을(익명 형식의 속성들을 통해 제공한 값들을)찾아본 다음 현재 요청에 관한 변수 값들 중에서 찾아보고 마지막으로 라우트에 정의된 기본값들을 살펴본다(이번 장의 뒷부분에서 이 세 가지 값 중에 두 번째 값에 대해서 다시 살펴볼 것이다)
+
+* 세그먼트 변수로 지정하지 않은 값들 중 아무것도 라우트에 정의된 기본값 전용(default-only)변수들과 일치하지 않을 수도 있다. 기본값 전용 변수는 기본값이 제공된 변수지만 URL 패턴에서는 나타나지 않는 변수를 말한다. 예를 들어 다음 라우트 정의의 myVar가 바로 기본값 전용 변수다. 
+
+routes.MapRoute("MyRoute", "{controller}/{action}", new { myVar = "true" });
+
+이 라우트가 매치되려면 myVar에 대한 값을 제공하지 않거나 제공한 값이 기본값과 일치하도록 주의해야만 한다. 
+
+* 모든 세그먼트 변수들에 대한 값들은 라우트 제약조건들을 충족시켜야 한다. 다양한 종류의 제약조건들에 대한 예제들은 이전 장의 라우트 제약하기 절을 참고하기 바란다. 
+
+명심해야 할 점은 라우팅 시스템은 가장 잘 매칭되는 라우트를 찾으려고 시도하지는 않는다는 사실이다. 라우팅 시스템은 매치되는 첫 번째 라우트를 찾으면 그 라우트를 사용해서 URL을 생성한 다음 나머지 라우트들은 모두 무시해버린다. 이런 이유 때문에 가장 제한적인 라우트를 제일 먼저 정의해야만 하는 것이다. 나가는 URL을 생성하는 부분에 대한 테스트도 중요하다. 가령 매칭되는 라우트가 발견되지 않는 URL을 생성하면 다음과 같이 빈 href 어트리뷰트를 갖고 있는 링크가 만들어질 것이기 때문이다. 
+
+<a href="">About this application</a>
+
+결과적으로 뷰에 링크가 렌더되기는 하겠지만 사용자가 링크를 클릭할 경우 의도한 대로 동작하지 않을 것이다. 또한 그냥 URL만 생성하는 경우에도(그 방법에 대해서는 이번 장의 뒷부분에서 살펴볼 것이다)결과로 null이 반환될 것이므로 뷰에 빈 문자열이 렌더된다. 명명된 라우트를 사용해서 라우트 매칭을 제어할 수도 있는데 자세한 내용은 잠시 뒤에 살펴볼 특정 라우트로부터 URL 생성 하기 절에서 알아보도록 하자. 
+
+앞의 세 가지 조건을 만족하는 첫 번째 Route 개체는 null 대신 URL을 만들어내게 되고 그에 따라 URL 생성 과정이 종료된다. 선택된 매개변수 값들은 각 세그먼트 매개변수들을 대체하게 되며, 길게 나열된 모든 기본값들은 생략된다. 만약 세그먼트 매개변수나 기본 매개변수에 해당하지 않는 매개변수들을 명시적으로 전달하면 헬퍼 메서드가 이 매개변수들을 질의 문자열에 이름/값 쌍의 형태로 추가해준다. 
+
+
+※ 다른 컨트롤러 지정하기
+
+지금까지 살펴본 ActionLink 헬퍼 메서드의 기본 버전은 여러분이 현재 뷰를 렌더한 컨트롤러와 동일한 컨트롤러에 존재하는 액션 메서드를 대상으로 지정하고자 한다고 간주한다. 다른 컨트롤러를 대상으로 하는 나가는 URL을 생성하기 위해서는 목록16-4처럼 컨트롤러 이름을 지정할 수 있는 오버로드 버전을 사용해야 한다. 
+
+목록16-4 ActionName.cshtml 파일에서 다른 컨트롤러를 대상으로 지정하기 
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ActionName</title>
+</head>
+<body>
+    <div>The controller is: @ViewBag.Controller</div>    
+    <div>The action is: @ViewBag.Action</div>
+    <div>
+        @Html.ActionLink("This is an outgoing URL", "CustomVariable")
+    </div>
+    <div><!-- 추가 -->
+        @Html.ActionLink("This targets another controller", "Index", "Admin");
+    </div>
+</body>
+</html>
+
+
+주의:
+라우팅 시스템이 나가는 URL을 생성할 때는 들어오는 요청을 처리할 떄에 비해서 응용프로그램에 대한 정보들을 많이 알지 못한다. 이 얘기는 액션 메서드와 컨트롤러를 지정하기 위해서 전달한 값이 유효한 값인지를 검증되지 않는다는 뜻으로 존재하지 않는 액션 메서드나 컨트롤러를 지정하지 않도록 주의해야 한다. 
+
+
+이 뷰가 렌더되면 다음과 같은 HTML이 만들어지게 된다.
+
+<a href="/Admin")This targets another controller</a>
+
+목록 16-4에서는 URL을 생성하기 위해서 Admin 컨트롤러의 Index 액션 메서드를 지정해서 ActionLink 메서드를 호출하고 있으며, 그 결과로 /Admin이라는 URL이 렌더된 것이다. 라우팅 시스템은 매우 영리하기 때문에 응용프로그램에 정의된 라우트가 기본적으로 Index 액션 메서드를 사용할것이라는 점을 알고 URL에서 불필요한 세그먼트를 생략하고 있다. 
+
+라우팅 시스템은 사용할 대상 액션 메서드를 결정할 때 Route 어트리뷰트를 사용하여 정의된 라우트들까지 감안해서 결정한다. 목록16-5는 ActionLink 메서드에 전달하는 컨트롤러 이름을 변경해서 Customer 컨트롤러의 Index 액션 메서드를 대상으로 지정하는 방법을 보여주고 있다. 
+
+목록16-5 ActionName.cshtml 파일에서 Route 어트리뷰트가 적용된 액션을 대상으로 지정하기. 
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ActionName</title>
+</head>
+<body>
+    <div>The controller is: @ViewBag.Controller</div>    
+    <div>The action is: @ViewBag.Action</div>
+    <div>
+        @Html.ActionLink("This is an outgoing URL", "CustomVariable")
+    </div>
+    <div><!-- 추가 -->
+        @Html.ActionLink("This targets another controller", "Index", "Customer");
+    </div>
+</body>
+</html>
+
+이 결과로 생성된 링크는 다음과 같다
+
+<a href="/Test">This targets another controller</a>
+
+이 링크는 15장에서 Route 어트리뷰트를 적용했던 다음의 Customer 컨트롤러의 Index 액션 메서드에 대응된다. 
+
+...
+[Route("~/Test")]
+public ActionResult Index()
+{
+	ViewBag.Controller = "Customer";
+	ViewBag.Action = "Index";
+	return View("ActionName");
+}
+...
+
+
+※ 추가값 전달하기
+세그먼트들을 나타내는 속성들이 포함된 익명 형식을 사용하면 세그먼트 변수들에 대한 값들을 전달할 수 있다. 목록16-6은 ActionName.cshtml 뷰 파일에 추가한 관련 예제를 보여주고 있다. 
+
+목록16-6 ActionName.cshtml 파일에 추가된 세그먼트 변수들에 대한 값들을 제공하는 코드
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ActionName</title>
+</head>
+<body>
+    <div>The controller is: @ViewBag.Controller</div>    
+    <div>The action is: @ViewBag.Action</div>
+    <div>
+        @Html.ActionLink("This is an outgoing URL", "CustomVariable",new { id = "Hello" })
+    </div>    
+</body>
+</html>
+
+
+여기에서는 id라는 세그먼트 변수에 값을 제공하고 있다. 만약 응용프로그램이 목록16-3에 서 구성한 라우트를 사용하고 있다면 다음과 같은 HTML이 뷰에 렌더될 것이다. 
+
+<a href="/App/DoCustomVariable?id=Hello">This is an outgoing URL</a>
+
+즉 제공한 값이 라우트에 설정한 URL 패턴에 적합하게 질의 문자열로 추가된 것을 확인할수 있다. 이렇게 표현된 이유는라우트에 id에 해당하는 세그먼트 변수가 존재하지 않기 때문이다. 이번에는 목록16-7과 같이. RouteConfig.cs 파일의 라우트를 수정하여 id 세그먼트가 정의된 라우트만 남겨두었다. 
+
+목록16-7 RouteConfig.cs 파일의 라우트 편집하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Mvc.Routing.Constraints;
+using UrlsAndRoutes.Infrastructure;
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            //routes.MapRoute("NewRoute", "App/Do{action}", new { controller = "Home" });
+
+            routes.MapRoute("MyRoute", "{controller}/{action}/{id}/{*catchall}", new { controller = "Home", action = "Index", id = UrlParameter.Optional });
+        
+        }
+    }
+}
+
+그런 다음 응용프로그램을 다시 실행시켜보면 ActionName.cshtml 뷰의 ActionLink 헬퍼메서드가 다음과 같은 HTML 요소를 만들어내는 것을 확인할 수 있다. 
+
+<a href="/Home/CustomVariable/Hello">This is an outgoing URL</a>
+
+이번에는 id 속성에 할당된 값이 응용프로그램 구성의 라우트에 따라 URL 세그먼트로 추가된 것을 확인할 수 있다. 
+
+
+
+※ 세그먼트 변수의 재사용에 대한 이해
+
+앞에서 나가는 URL과 라우트가 매칭되는 방식을 설명하면서 라우팅 시스템이 라우트의 URL 패턴에 존재하는 각 세그먼트 변수들에 대한 값들을 현재 요청에서 찾는다고 설명했었다. 이는 많은 개발자들이 혼란스러워하는 동작이자. 지루하고 긴 디버깅을 초래하는 동작이기도 하다. 
+
+가령 응용프로그램이 다음과 같은 단일 라우트를 갖고 있다고 가정해보자. 
+
+...
+routes.MapRoute("MyRoute", "{controller}/{action}/{color}/{page}");
+..
+
+그리고 사용자가 /Catalog/List/Purple/123이라는 URL에서 다음과 같은 링크를 랜더한다고 가정해 보자. 
+
+...
+@Html.ActionLink("Click me", "List", "Catalog", new {page=789}, null)
+..
+
+메서드를 호출하면서 color 세그먼트 변수에 대한 값도 제공하지 않았고 기본값도 정의되어 있지 않기 때문에 라우팅 시스템이 라우트를 매치할 수 없을 것이라고 예상했을 수도 있다. 그러나 이는 잘못된 예상이다. 라우팅 시스템은 앞에서 정의한 라우트를 매치시킬 것이다. 결과적으로 이 ActionLink 메서드는 다음과 같은 링크를 만들어내게 된다. 
+
+<a href="/Catalog/List/Purple/789">Click me</a>
+
+라우팅 시스템은 들어오는 URL에 포함된 세그먼트 변수 값들을 재사용할 정도로 라우트를 면밀하게 매치시킨다. 이번 예제의 경우 결국 가상의 사용자가 페이지에 접근할 때 사용했던 URL로부터 얻어진 Purple이라는 값이 color 변수에 할당된 것이다. 
+
+물론 궁여직책으로 이렇게 동작하는 것은 아니다. 라우팅 시스템은 설령 현재 요청으로부터 값을 가져와서 재사용하지 않고도 매치되는 다음 라우트가 존재하더라도 이 기법을 일반적인 라우트 평가의 일부분으로 적용한다. 다만 라우팅 시스템은 URL 패턴에서 Html.ActionLink 메서드에 제공되는 어떤 매개변수들보다 더 먼저 나타나는 세그먼트 변수들에 대해서만 값을 재사용할 것이다. 다음 과 같은 링크를 만든다고 가정해보자. 
+..
+@Html.ActionLink("Click me", "List", "Catalog", new {color="Aqua"}, null)
+...
+
+이 코드에서는 color 변수에 대한 값은 제공했지만 page 변수에 대한 값은 제공하지 않았다. 그러나 URL 패턴에서 color 변수가 page 변수 앞쪽에 위치해 있으므로 라우팅 시스템은 들어오는 URL에 존재하는 값을 재사용하지 않는다. 따라서 라우트는 매칭되지 않을 것이다. 
+
+이 문제를 깔끔하게 해결할 수 있는 방법은 아예 이런 상황 자체가 발생하지 않도록 하는 것이다. 즉 이 동작 방식에 의존하지 말고 URL 패턴에 존재하는 모든 세그먼트 변수들에 대한 값들을 제공하는 것을 강력하게 권한다. 이 기능에 의존할 경우 코드를 이해하기가 점점 어려워질 뿐만 아니라 결과적으로 사용자가 만들어내는 요청들의 순서에 대해서 고민하게 되어 응용프로그램을 유지관리하는 데 많은 어려움이 발생하게 될 것이다. 
