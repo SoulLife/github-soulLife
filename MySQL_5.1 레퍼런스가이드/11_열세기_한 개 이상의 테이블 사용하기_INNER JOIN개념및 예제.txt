@@ -1,0 +1,111 @@
+3.3.4.8 열 세기
+데이터 베이스는 테이블에서 얼마나 자주 특정 데이터 타입이 발생 하는가? 와 같은 물음에 답하기 위해 사용된다. 예를 들면 얼마나 많은 동물을 가지고 있는지 또는 각각의 주인들이 몇 마리씩을 키우고 있는지를 알아볼 수 있는 여러 가지 다른 종류의 조사를 할 수 있다. 
+
+기르고 있는 동물의 수를 계산하는 것은 pet 테이블에는 몇 개의 열이 있는가?를 묻는 것과 같은 질문이다. 그 이유는 동물 별로 한 개의 레코드가 있기 때문이다. COUNT(*)는 열의 수를 계산하기 때문에 다음과 같이 쿼리를 작성하면 동물의 수를 계산하게 된다. 
+
+mysql>SELECT COUNT(*) FROM pet;
+
+각 동물의 주인 이름을 읽어올 수 있었다. 여기에서는 COUNT()를 사용해서 각 주인들이 얼마나 많은 수의 동물을 기르고 있는지를 계산할수 있다. 
+
+mysql>SELECT owner, COUNT(*) FROM pet GROUP BY owner;
+
+
+GROUP BY는 각 owner의 모든 기록을 그룹화 하기 위해 사용한다는 것을 알아두기 바란다. 이렇게 하지 않으면 에러가 발생한다. 
+
+COUNT()와 GROUP BY는 여러 가지 면에서 데이터를 특성화 시키는데 유용하게 사용할 수 있다. 아래의 예제들은 다양한 방법으로 동물의 특성을 알아 보는 방법을 알려주는 것이다. 종류별로 동물을 세어본다. 
+
+mysql>SELECT species, COUNT(*) FROM pet GROUP BY species;
+
+성별로 구분한다. 
+
+mysql>SELECT sex, COUNT(*) FROM pet GROUP BY sex;
+
+(결과 값 NULL은 성별을 모른다는 것을 의미한다)
+
+종류와 성별 조합으로 동물을 세어 본다. 
+
+mysql>SELECT species, sex, COUNT(*) FROM pet GROUP BY species,sex;
+
+COUNT()을 사용할 때에는 전체 테이블을 읽을 필요는 없다. 예를 들면 앞의 쿼리를 개와 고양이에서만 실행할 경우에는 다음과 같이 한다. 
+
+mysql>SELECT species, sex, COUNT(*) FROM pet WHERE species = 'dog' OR species = 'cat' GROUP BY species, sex;
+
+성별이 알려진 동물에 대해서만 성별로 숫자를 세고자 한다면 다음과 같이 실행한다. 
+
+mysql>SELECT species, sex, COUNT(*) FROM pet WHERE sex IS NOT NULL GROUP BY species, sex;
+
+
+
+3.3.4.9 한 개 이상의 테이블 사용하기
+
+pet 테이블은 기르는 동물의 기록을 관리하는 테이블이다. 이 동물들에 대한 다른 정보들을 기록하고 싶다면 다른 테이블이 필요하게 될 것이다. 이 테이블은 어떤 모양이 되어야 하는가? 다음의 것이 필요하게 된다. 
+
+* 각각의 이벤트가 어떤 동물에게 일어났는지 알기 위해서 동물의 이름을 가지고 있을 것
+
+* 이벤트가 일어난 날짜를 알기 위한 날짜 기록
+
+* 이벤트를 기록하기 위한 필드
+
+* 이벤트 타입 필드, 각각의 이벤트를 목록화 하고자 할 경우에 필요함
+
+이러한 고려 사항을 가지고서 event 테이블을 위한 CREATE TABLE 명령문을 작성할 경우에는 다음과 같이 될 것이다. 
+
+mysql>CREATE TABLE event(name VARCHAR(20), date DATE, type VARCHAR(15), remark VARCHAR(255));
+
+pet 테이블과 마찬가지로 각 정보를 가지고 있는 텍스트 파일에서 초기 데이터를 읽어오는 것은 매우 쉬운일이다. 
+
+
+name		date			type		remark
+Fluffy		1995-05-15		litter		4 kittens, 3 female, 1 male
+INSERT INTO event VALUES('Fluffy', '1995-05-15', 'litter', '4 kittens, 3 female, 1 male');
+
+Buffy		1993-06-23		litter		5 puppies, 2 female, 3 male
+INSERT INTO event VALUES('Buffy', '1993-06-23', 'litter', '5 puppies, 2 female, 3 male');
+
+Buffy		1994-06-19		litter		3 puppies, 3 female
+INSERT INTO event VALUES('Buffy', '1994-06-19', 'litter', '3 puppies, 3 female');
+
+Chirpy		1999-03-21		vet		needed beak straightened
+INSERT INTO event VALUES('Chirpy', '1999-03-21', 'vet', 'needed beak straightened');
+
+Slim		1997-08-03		vet		broken rib
+INSERT INTO event VALUES('Slim', '1997-08-03', 'vet', 'broken rib');
+
+Bowser	1991-10-12		kennel
+INSERT INTO event (name, date, type) VALUES('Bowser', '1991-10-12', 'kennel');
+
+Fang		1991-10-12		kennel
+INSERT INTO event (name, date, type) VALUES('Fang', '1991-10-12', 'kennel');
+
+Fang		1991-10-12		birthday	Gave him a new chew toy
+INSERT INTO event VALUES('Fang', '1991-10-12', 'birthday', 'Gave him a new chew toy');
+
+Claws		1998-03-17		birthday	Gave him a new flea collar
+INSERT INTO event VALUES('Claws', '1998-03-17', 'birthday', 'Gave him a new chew toy');
+
+Whistler	1998-12-09		birthday	First birthday
+INSERT INTO event VALUES('Whistler', '1998-12-09', 'birthday', 'First birthday');
+
+아래와 같이 레코드를 읽어온다. 
+
+mysql>LOAD DATA LOCAL INFILE 'event.txt' INTO TABLE event;
+
+pet 테이블에서 구동시킨 쿼리를 토대로 하면 event 테이블 안에 있는 레코드를 불러올 수 있을 것이다. 원리는 똑같다. 하지만 event 테이블 자체가 질문하는 것에 대해 불충분하게 답변을 할 경우에는 어떻게 해야 하는가?
+
+각 동물이 새끼를 낳았을 떄의 나이를 알고 싶다고 가정하자. 앞에서 우리는 두 개의 날짜를 가지고 나이를 계산하는 방법을 본적이 있다. 어미가 새끼를 낳은 날짜는 even 테이블에 있지만, 어미의 나이를 계산하기 위해서는 생일이 언제인지 알 필요가 있는데 이 날짜는 pet 테이블에 기록되어 있다. 이것은 쿼리가 두 테이블을 모두 필요로 한다는 것을 의미하는 것이다. 
+
+mysql> SELECT pet.name, (YEAR(date)-YEAR(birth))-(RIGHT(date, 5)<RIGHT(birth, 5)) AS age, remark FROM pet INNER JOIN event ON pet.name = event.name WHERE event.type = 'litter';
+
+이 쿼리에는 잘 알아두어야 할 점이 여러 가지 있다. 
+
+* 쿼리가 두 테이블 모두에서 정보를 불러와야 하기 때문에 FROM 구문은 두 테이블을 조인(join)한다. 
+
+* 다중 테이블에서 정보를 조합(combining)할 때에는 하나의 테이블에 있는 레코드가 어떤 방식으로 다른 테이블 레코드에 매치되는지를 지정해 주어야 한다. 이것은 쉬운 일인데, 그 이유는 두 테이블에 모두 name 컬럼이 있기 때문이다. 쿼리는 두 테이블에 있는 레코드를 name 값으로 매치 시키기 위해 ON 구문을 사용한다. 
+
+* 쿼리는 테이블을 조합하기 위해 INNER JOIN 구문을 사용한다. INNER JOIN은 ON 구문에서 지정하는 조건에 맞게 두 테이블이 매치되는 경우 및 그 경우에 한하여(if and only if)열이 나오도록 한다. 위의 예문에서 보면 ON 구문은 pet 테이블에 있는 name 컬럼이 event 테이블에 있는 name 컬럼에 반드시 매치가 되도록 하고 있다. 두 테이블 중 하나의 테이블에만 이름이 나온다면 ON 구문에서 지정한 조건에 맞지 않기 때문에 결과에는 열이 나오지 않게 되는 것이다. 
+
+* name 컬럼이 두 테이블에 모두 있기 때문에 참조하고자 하는 컬럼이 어떤 테이블에 있는 것인지를 분명히 지정해주어야 한다. 컬럼 이름 앞에 테이블 이름을 적어주면 된다. 
+
+두 개의 서로 다른 테이블을 조인(join)할 필요는 없다. 때로는 테이블 자체를 조인하는 것이 더 유용할 수 있는데 동일한 테이블에 있는 다른 레코드 간에 비교를 하는 경우가 이에 해당한다. 예를 들면 암수 한 쌍의 동물을 찾기 위해서 pet 테이블 자체를 조인해서 각 동물의 암수 쌍을 만들어 보도록 하자. 
+
+mysql>SELECT p1.name, p1.sex, p2.name, p2.sex, p1.species FROM pet AS p1 INNER JOIN pet AS p2 ON p1.species = p2.species AND p1.sex = 'f' AND p2.sex = 'm';
