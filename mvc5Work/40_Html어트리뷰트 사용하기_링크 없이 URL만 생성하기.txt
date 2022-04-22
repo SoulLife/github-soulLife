@@ -1,0 +1,399 @@
+※HTML 어트리뷰트 지정하기
+
+지금까지는 ActionLink 헬퍼 메서드가 만들어내는 URL에 대해서만 집중적으로 알아봤지만 이 메서드가 완전한 HTML 앵커(a) 요소를 만들어낸다는 점을 기억해둘 필요가 있다. 어트리뷰트들에 대응하는 속성들이 포함된 익명 형식을 전달하면 요소에 원하는 어트리뷰트들을 추가할 수 있다. 목록16-8은 ActionName.cshtml 뷰를 수정하여 HTML a 요소에 id 어트리뷰트를 설정하고 class를 설정하는 방법을 보여준다. 
+
+목록16-8 ActionName.cshtml 파일에 어트리뷰트들이 존재하는 앵커 요소 생성하기
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ActionName</title>
+</head>
+<body>
+    <div>The controller is: @ViewBag.Controller</div>    
+    <div>The action is: @ViewBag.Action</div>
+    <div>
+        @Html.ActionLink("This is an outgoing URL", "Index", "Home", null, new { id = "myAnchorID", @class = "myCSSClass" })
+    </div>    
+</body>
+</html>
+
+목록 16-8에서는 id 속성과 class 속성을 갖고 있는 익명 형식을 생성한 다음, 이를 ActionLink 메서드의 매개변수로 전달하고 있다. 또한 추가 세그먼트 변수 값으로는 null을 지정해서 제공할 값이 아무것도 없음을 나타냈다. 
+
+
+TIP:
+class 속성 앞에 @문자가 추가된 것에 주의하기 바란다. 이 문자는 클래스의 멤버 이름에 예약된 키워드를 사용할수 있게 해주는 C# 언어의 기능이다. 이 책의 1부에서 살펴본 SportsStore 응용프로그램에서 요소에 Bootstrap 클래스를 할당하기 위해서 사용했던 기법이기도 하다. 
+
+이렇게 ActionLink 메서드 를 호출해서 렌더된 HTML은 다음과 같다. 
+
+<a class="myCSSClass" href="/" id="myAnchorID')This is an outgoing URL"</a>
+
+※ 링크에 정규화된 URL 생성하기
+지금까지 만들어본 모든 링크들은 상태경로로 구성된 URL이 사용되었다. 그러나 목록16-9처럼 ActionLink 헬퍼 메서드를 사용해서 정규화된 URL을 만들수도 있다. 
+
+목록16-9 ActionName.cshtml 파일에서 정규화된 URL 생성하기
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ActionName</title>
+</head>
+<body>
+    <div>The controller is: @ViewBag.Controller</div>    
+    <div>The action is: @ViewBag.Action</div>
+    <div>
+        @Html.ActionLink("This is an outgoing URL", "Index", "Home","https","myserver.mydomain.com"," myFragmentName", new { id = "MyId" },
+                         new { id = "myAnchorID", @class = "myCSSClass" })
+    </div>    
+</body>
+</html>
+
+이 코드에서 사용된 ActionLink 메서드는 가장 많은 매개변수를 받는 ActionLink 의 오버로드로 지금까지 살펴본 다른 옵션들뿐만 아니라 프로토콜(이 목록에서는 https를 지정하고 있다)대상 서버의 이름(myserver.mydomain.com) URL의 일부분 (myFragmentName)을 매개변수로 받는다. 이 뷰가 렌더되면  ActionLink 헬퍼 메서드가 다음과 같은 HTML을 만들어내게 된다. 
+
+<a class="myCSSClass" href="https://myserver.mydomain.com/Home/Index/MyId#myFragmentName" id="myAnchorID">This is an outgoing</a>
+
+그러나 가급적이면 상대적인 URL을 사용할 것을 권하고 싶다. 정규화된 URL을 사용하면 응용프로그램의 기반구조가 사용자에게 표시되는 방식에 종속성을 갖게 되기 때문이다. 네트워크 인프라나 도메인 이름 정책에 대한 부주의한 변경으로 인해서 깨져버린 절대 URL을 사용하는 대규모 응용프로그램 목격한 적이 있는데, 이런 경우는 대부분 프로그래머가 어찌할 수 없는 경우가 많다. 
+
+
+※ 링크 없이 URL만 생성하기
+
+Html.ActionLink 헬퍼 메서드는 완전한 HTML <a> 요소를 생성해주는데, 이 결과는 뷰를 생성할 때 일반적으로 필요한 일이기도 하다. 그러나 때로는 HTML 로 감싸여 있지 않은 순수한 URL만 필요할 때도 있다. 그런 상황에서는 Url.Action 메서드를 사용하면서 HTML로 감싸여 있지 않은 순수한 URL만 만들어낼수 있다. 목록16-10은 Url.Action 헬퍼 메서드를 사용해서 URL을 만들어내도록 수정한 ActionName.cshtml 파일을 보여주고 있다. 
+
+목록16-10 ActionName.cshtml 파일에서 HTML로 감싸여 있지 않은 순수한 URL 생성하기
+
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ActionName</title>
+</head>
+<body>
+    <div>The controller is: @ViewBag.Controller</div>    
+    <div>The action is: @ViewBag.Action</div>
+    <div>
+        @Url.Action("Index", "Home",new { id = "MyId" })
+    </div>    
+</body>
+</html>
+
+이 Url.Action 메서드는 오직 URL만 만들어낸다는 것을 제외한다면 Html.ActionLink 메서드와 똑같은 방식으로 동작한다. 이 두 메서드의 오버로드 및 오버로드가 받아들이는 매개변수들은 모두 동일하며, 이전 절에서 살펴봤던 Html.ActionLink 메서드를 사용해서 수행할 수 있었던 모든 작업을 Url.Action 메서드로 모두 수행할 수 있다. 그림16-3은 목록16-10의 URL이 어떻게 렌더되는지를 보여주고 있다. 
+
+
+
+※ 액션 메서드에서 나가는 URL 생성하기
+
+대부분 뷰에서 나가는 URL을 생성하는 경우가 많겠지만 가끔은 액션 메서드 내부에서도 비슷한 작업들을 수행해야 할 필요가 있다 그런 경우에는 뷰에서 사용했던 헬퍼 메서드를 액션 메서드에서도 그대로 사용하면 된다. 목록16-11은 Home 컨트롤러에 추가된 새로운 액션 메서드를 보여주고 있다. 
+
+목록16-11 HomeController.cs 파일에서 나가는 URL 만들기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace UrlsAndRoutes.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public ActionResult Index()
+        {
+            ViewBag.Controller = "Home";
+            ViewBag.Action = "Index";
+            return View("ActionName");
+        }
+
+        public ActionResult CustomVariable(string id = "DefaultId")
+        {
+            ViewBag.Controller = "Home";
+            ViewBag.Action = "CustomVariable";
+            ViewBag.CustomVariable = id;
+            return View();
+        }
+	//추가된 메서드
+        public ViewResult MyActionMethod()
+        {
+            string myActionUrl = Url.Action("Index", new { id = "MyID" });
+            string myRouteUrl = Url.RouteUrl(new { controller = "Home", action = "Index" });
+            //위의 URL을 이용해서 원하는 작업을 수행한다. 
+            return View();
+        }
+    }
+}
+
+
+예제 응용프로그램의 라우팅 구성에서는 myActionUrl 변수에는 /Home/Index/MyID가 설정되고 myRouteUrl 변수에는 /가 설정될 것이다. 이 값들은 뷰에서 동일한 메서드를 호출해서 만들어진 결과와 같다. 
+
+보다 일반적인 요구사항은 클라이언트 브라우저를 다른 URL로 재전송시키는 것이다. 이 작업은 목록 16-12에서 볼 수 있는 것처럼 RedirectToAction 메서드를 호출한 결과를 반환하여 처리할 수 있다. 
+
+목록16-12 HomeController.cs 파일에서 다른 액션으로 재전송하기
+
+...
+public RedirectToRouteResult MyActionMethod()
+{
+	return RedirectToAction("Index");
+}
+..
+
+이 RedirectToAction 메서드의 결과는 MVC 프레임워크에 지정한 액션 메서드를 호출하게되는 URL에 대한 재전송 명령을 내리도록 지시하는 RedirectToRouteResult 형식이다. RedirectToAction 메서드에는 생성되는 URL의 컨트롤러와 세그먼트 변수들에 대한 값을 지정할 수 있는 일반적인 오버로드 버전도 존재한다. 
+
+만약 개체 속성들만 사용해서 생성된 URL로 재전송하고자 한다면 목록16-13에서 볼 수 있는 것처럼 RedirectToRoute 메서드를 사용하면 된다. 이 메서드 역시 RedirectToRouteResult 개체를 반환하며 그 결과는 RedirectToAction 메서드를 호출한 경우와 완전히 동일하다. 
+
+목록16-13 HomeController.cs 파일에서 URL 재전송하기
+
+....
+public RedirectToRouteResult MyActionMethod()
+{
+	return RedirectToRoute(new { controller = "Home", action = "Index", id = "MyID"});
+...
+
+
+
+※ 특정 라우트로부터 URL 생성하기
+지금까지 살펴본 예제들에서는 라우팅 시스템이 URL이나 링크를 만드는데 사용할 라우트를 직접 선택하게 했다. 그러나 이번 절에서는 이 처리 과정을 제어하여 특정 라우트를 선택하는 방법을 살펴볼 것이다. 이 기능을 보다 자세하게 살펴보려면 RouteConfig.cs 파일의 라우팅 정보를 변경해야 하는데, 목록16-14에서 필요한 변경사항을 확인할 수 있다. 
+
+목록16-14 RouteConfig.cs 파일의 라우팅 구성 변경하기
+
+...
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Mvc.Routing.Constraints;
+using UrlsAndRoutes.Infrastructure;
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.MapRoute("MyRoute", "{controller}/{action}");
+            routes.MapRoute("MyOtherRoute", "App/{action}", new { controller = "Home" }); 
+        }
+    }
+}
+
+이 구성에는 두 개의 라우트가 존재하며 두 라우트 모두 각각 이름을 MyRoute와 MyOtherRoute로 지정했다. 라우트에 이름을 지정한 두 가지 이유는 다음과 같다. 
+
+* 라우트의 목적을 상기시키기 위해서
+
+* 나가는 URL을 생성하는 데 사용되는 특정 라우트를 선택할 수 있게 하기 위해서
+
+그리고 이 구성에서는 의도적으로 덜 구체적인 라우트가 목록의 앞쪽에 오도록 라우트를 배치하고 있다. 결과적으로 ActionLink 메서드를 사용해서 링크를 생성하면. 
+
+...
+@Html.ActionLink("Click me", "Index", "Customer")
+...
+
+다음과 같이 항상 MyRoute를 이용해서 나가는 링크가 생성될 것이라는 뜻이다. 
+
+<a href="/Customer/Index">Click me</a>
+
+그러나 다음처럼 사용하고자 하는 라우트를 명시적으로 Html.RouteLink 메서드에 지정해서 기본적인 라우트 매칭 동작을 재정의할 수도 있다. 
+
+...
+@Html.RouteLink("Click me", "MyOtherRoute", "Index", "Customer")
+..
+
+그러면 헬퍼 메서드가 다음과 같은 링크를 생성하게 된다. 
+
+<a Length="8" href="/App/Index?Length=5">Click me</a>
+
+이 경우 직접 지정한 Customer 컨트롤러는 라우트에 의해서 재정의되고 , 대신 링크는 Home 컨트롤러를 대상으로 하게 된다. 
+
+또한 Route 어트리뷰트에 라우트 이름을 지정할 수도 있다. 목록 16-15는 Customer 컨트롤러에서 라우트에 이름을 지정하는 방법을 보여주고 있다.
+
+목록16-15 CustomerController.cs 파일에서 라우트 이름 지정하기
+
+[Route("Add/{user}/{id:int}",Name = "AddRoute")]
+        public string Create(string user, int id)
+        {
+            return string.Format("User: {0}, ID: {1}", user, id);
+        }
+
+이 예제에서는 15장에서 살펴봤던 Name 속성에 값을 설정하고 있다. 이에 따라 어트리뷰트가 생성하는 라우트에 AddRoute라는 이름이 할당되어 이름을 통해서 라우트를 생성할 수 있게 된다. 
+
+
+※ 명명된 라우트에 반대하는 경우
+
+라우트 이름에 의존해서 나가는 URL을 만드는 경우 MVC 디자인 패턴의 중추인 관심사의 분리가 훼손된다는 문제점이 있다. 뷰나 액션 메서드에서 링크나 URL을 생성할 때 사용하게 될 URL의 형태보다는 사용자가 가리키게 될 액션과 컨트롤러에 더 집중해야 한다. 여러 가지 라우트에 대한 정보를 뷰나 컨트롤러로 끌어들이게 되면 전혀 원하지 않았던 의존성까지 함께 만들어지게 된다. 필자는 가급적 라우트에 이름을 지정하는 일을 피하려고 노력하고 있으며(라우트의 name 매개변수에 null을 지정한다) 코드 주석을 이용해서 각 라우트가 어떤 의도를 갖고 만들어졌는지 기억하는 방식을 더 선호하는 편이다.
+
+
+
+※ 라우팅 시스템 사용자 지정하기
+지금까지 라우팅 시스템이 얼마나 유연하며 손쉽게 구성을 변경할수 있는지 살펴봤지만 그럼에도 불구하고 여러분의 요구사항을 만족시키지 못한다면 그 동작을 사용자 지정할 수도 있다. 이번 절에서는 라우팅 시스템의 기본 동작을 사용자 지정할수 있는 두 가지 방법에 대해 살펴볼 것이다. 
+
+※ 사용자 지정 RouteBase 구현 만들기
+표준 Route 개체가 URL을 매치하는 방식이 만족스럽지 않다거나 뭔가 특별한 구현을 원한다면 RouteBase로부터 대체 클래스를 파생하면 된다. 이 방식을 사용하면 URL이 매칭되는 방법, 매개변수들이 추출되는 방법 나가는 URL이 생성되는 방법을 직접 제어할수 있다. RouteBase로부터 클래스를 파생하기 위해서는 다음의 두 메서드를 구현해야 한다. 
+
+* GetRouteData(HttpContextBase httpContext): 이 메서드는 들어오는 URL 매칭에 의해서 수행되는 메커니즘이다. 프레임워크는 RouteTable.Routes의 각 항목들을 대상으로 이 메서드를 순서대로 호출하는데, 항목들 중 하나가 null이 아닌 값을 반환할 때까지 이 작업을 반복한다. 
+
+* GetVirtualPath(RequestContext requestContext, RouteValueDictionary values): 이 메서드는 나가는 URL을 생성하는 작업에 의해서 수행되는 메커니즘이다. 프레임워크는 RouteTable.Routes의 각 항목들을 대상으로 이 메서드를 순서대로 호출하는데, 항목들 중 하나가 null이 아닌 값을 반환할 때까지 이 작업을 반복한다. 
+
+
+이번 사용자 지정 작업을 자세히 살펴보기 위해서 레거시 URL 요청들을 처리하기 위한 RouteBase 클래스를 만들어보도록 하자. 기존 응용프로그램을 MVC 프레임워크로 이전했지만 일부 사용자들이 MVC 이전의 URL들을 즐겨 찾기에 추가해뒀거나 스크립트에 하드코드 해뒀다고 가정해보자. 그리고 이런 과거의 URL들도 지원하려고 한다고 가정해보자. 물론 일반적인 라우팅 시스템으로도 이런 URL 들을 처리할 수 있지만, 이 문제는 이번 절을 위한 아주 좋은 사례를 제공해준다. 
+
+시작하기 전에 먼저 레거시 요청을 수신할 컨트롤러를 만들어야 한다. 이 컨트롤러는 LegacyController라고 부를 것이며 그 내용은 목록 16-16과 같다. 
+
+
+
+목록16-16 LegacyController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace UrlsAndRoutes.Controllers
+{
+    public class LegacyController : Controller
+    {
+        // GET: Legacy
+        public ActionResult GetLegacyURL(string legacyURL)
+        {
+            return View((object)legacyURL);
+        }
+    }
+}
+
+매우 간단한 컨트롤러로, GetLegacyURL 액션 메서드는 매개변수를 받은 다음 이 매개변수를 뷰 모델로 뷰에 전달하고 있다. 만약 실제 프로젝트에서 이런 컨트롤러를 구현한다면 이 메서드를 이용해서 요청된 파일을 찾아서 처리해야 했겠지만 지금은 간단히 뷰에 URL을 출력하기만 할 것이다. 
+
+
+TIP:
+목록 16-16에서 View 메서드로 매개변수를 전달하면서 object 형식으로 캐스팅하고 있는 부분에 주목하자. View 메서드의 오버로드 버전 중 한가지는 렌더할 뷰의 이름을 문자열로 전달받는데 만약 캐스팅을 하지 않고 그대로 문자열로 전달한다면 컴파일러는 이 오버로드 버전을 호출하려는 의도로 이해할 것이다. 이런 상황을 막기 위해서 뷰 모델을 전달하고 기본 뷰를 사용하는 메서드의 오버로드 버전이 명확하게 호출되도록 매개변수를 object로 캐스팅하고 있는 것이다. 또는 뷰 이름과 뷰 모델을 모두 매개변수로 전달받는 오버로드 버전을 사용해서 이 문제를 해결할 수도 있지만, 가능하면 액션 메서드와 뷰 간에 명시적인 관계를 맺지 않는 것이 좋다. 
+
+계속해서 Views/Legacy 폴더에 GetLegacyURL.cshtml 이라는 뷰를 만들고, 이 파일의 내용을 목록16-17처럼 작성하자
+
+목록16-17 GetLegacyURL.cshtml 파일의 내용
+
+@model string
+
+@{
+    ViewBag.Title = "GetLegacyURL";
+    Layout = null;
+}
+
+<h2>GetLegacyURL</h2>
+
+The URL requested was: @Model
+
+
+이번 절의 목표는 사용자 지정 라우트의 동작을 살펴보는 것이다. 따라서 복잡한 액션과 뷰를 만드는 데 시간을 소모하는 대신 모델의 값만 출력하도록 할 것이다. 비로소 이제 RouteBase 클래스에서 파생된 사용자 지정 클래스를 만들수 있는 시점이 되었다. 
+
+
+
+※ 들어오는 URL 라우트하기
+Infrastructure 폴더에(다른 폴더들에 위치시키기 애매한 지원 클래스들을 위한 폴더다) LegacyRoute.cs 라는 클래스 파일을 추가한다. 이 파일에 작성해야 할 내용이 목록16-18에 나타나 있다. 
+
+목록16-18 LegacyRoute.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace UrlsAndRoutes.Infrastructure
+{
+    public class LegacyRoute : RouteBase
+    {
+        private string[] urls;
+
+        public LegacyRoute(params string[] targetUrls)
+        {
+            urls = targetUrls;
+        }
+
+        public override RouteData GetRouteData(HttpContextBase httpContext)
+        {
+            RouteData result = null;
+
+            string requestedURL = httpContext.Request.AppRelativeCurrentExecutionFilePath;
+            if(urls.Contains(requestedURL, StringComparer.OrdinalIgnoreCase))
+            {
+                result = new RouteData(this, new MvcRouteHandler());
+                result.Values.Add("controller", "Legacy");
+                result.Values.Add("action", "GetLegacyURL");
+                result.Values.Add("legacyURL", requestedURL);
+            }
+            return result;
+        }
+
+        public override VirtualPathData GetVirtualPath(RequestContext requestContext, RouteValueDictionary values)
+        {
+            return null;
+        }
+    }
+}
+
+이 클래스의 생성자는 이 라우팅 클래스가 지원하게 될 개별적인 URL을 나타내는 문자열 배열을 매개변수로 받는다. 이 값들을 이후 라우트를 등록할 때 지정하게 될 것이다. 이 클래스에서 주목해야 할 부분은 GetRouteData 메서드로 이 메서드는 LegacyRoute 클래스가 들어오는 URL과 매치될 수 있는지를 확인하기 위해서 라우팅 시스템이 호출하게 된다. 
+
+만약 이 클래스에서 요청을 매치할수 없다면 그냥 null을 반환하면 된다. 그러면 라우팅 시스템이 목록의 다음 라우트로 이동하게 되고, 이 처리 과정을 반복할 것이다. 반대로 이 클래스에서 요청을 매치할수 있다면 컨트롤러 및 액션 변수들에 대한 값들과 액션 메서드로 전달하고자 하는 그 밖의 모든 것을 포함한 RouteData 클래스의 인스턴스를 반환한다. 
+
+RouteData 개체를 생성할 때는 생성된 값들을 처리할 처리기를 전달해야 한다. 여기에서는 컨트롤러와 액션 값들에 의미를 부여하는 표준 MvcRouteHandler 클래스를 사용하고 있다. 
+
+...
+result = new RouteData(this, new MvcRouteHandler());
+...
+
+거의 대부분의 MVC 응용프로그램들에서는 라우팅 시스템을 MVC 응용프로그램의 컨트롤러/액션 모델과 연결해주는 이 클래스를 사용하면 된다. 그러나 MvcRouteHandler를 대신할 처리기를 직접 구현할 수도 있는데 그 방법에 대해서는 이번 장의 뒷부분의 사용자 지정 라우트 처리기 만들기 절에서 설명할 것이다. 
+
+이 사용자 지정 RouteBase 구현은 생성자로 전달된 URL들에 대해서 모든 요청을 매치하려고 시도한다. 매치되는 URL이 발견되면 컨트롤러와 액션 메서드에 대한 하드코드된 값들을 RouteValues 개체에 추가한다. 또한 요청된 URL 자체도 legacyURL 속성을 통해서 전달하고 있다. 
+
+이때 생성된 값이 이 매개변수를 통해서 액션 메서드에 전달될수 있도록 속성의 이름을 Legacy 컨트롤러의 액션 메서드의 매개변수의 이름과 동일하게 지정했다는 점에 주의하기 바란다. 
+
+마지막 단계는 사용자 지정 RouteBase 클래스를 사용하는 새로운 라우트를 등록하는 것이다. 변경된 RouteConfig.cs 파일의 내용을 보여주고 있는 목록16-19에서 그 방법을 확인할수 있다. 
+
+목록16-19 RouteConfig.cs 파일에 사용자 지정 RouteBase 구현 등록하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Mvc.Routing.Constraints;
+using UrlsAndRoutes.Infrastructure;
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+            routes.Add(new LegacyRoute("~/articles/Windows_3.1_Overview.html", "~/old/.NET_1.0_Class_Library")); //추가
+
+            routes.MapRoute("MyRoute", "{controller}/{action}");
+            routes.MapRoute("MyOtherRoute", "App/{action}", new { controller = "Home" });
+            //routes.MapRoute("MyRoute", "{controller}/{action}/{id}/{*catchall}", new { controller = "Home", action = "Index", id = UrlParameter.Optional });
+        
+        }
+    }
+}
+
+LegacyRoute 클래스의 새로운 인스턴스를 생성하고, 라우트하고자 하는 URL들을 전달한다. 그런 다음 Add 메서드를 사용해서 이 개체를 RouteCollection에 개체를 추가한다. 이 제 응용프로그램을 실행하고 지정한 레거시 URL들 중 하나를 요청해보면 그림16-4에서 볼수 있는 것처럼 LegacyRoute 클래스에 의해서 라우트되어 Legacy 컨트롤러로 전달된다. 
