@@ -1,0 +1,354 @@
+※나가는 URL 생성하기
+나가는 URL 생성을 지원하기 위해서는 LegacyRoute 클래스의 GetVirtualPath 메서드를 구현해야 한다. 만약 클래스가 지정한 URL을 생성할 수 없다면 null 값을 반환하여 라우팅 시스템에 알려줘야 한다. 그렇지 않다면 VirtualPathData 클래스의 인스턴스를 반환해야 한다. 목록16-20은 이 메서드를 구현한 내용을 보여주고 있다. 
+
+목록16-20 LegacyRoute.cs 파일의 GetVirtualPath 메서드 구현하기
+
+...
+
+public override VirtualPathData GetVirtualPath(RequestContext requestContext, RouteValueDictionary values)
+        {
+            VirtualPathData result = null;
+
+            if (values.ContainsKey("legacyURL") && urls.Contains((string)values["legacyURL"], StringComparer.OrdinalIgnoreCase))
+            {
+                result = new VirtualPathData(this, new UrlHelper(requestContext).Content((string)values["legacyURL"]).Substring(1));
+            }
+            return result;
+        }
+...
+
+지금까지 이전 장들에서는 익명 형식을 사용해서 세그먼트 변수들과 다른 상세 정보들을 전달 해왔다. 그러나 내부적으로는 라우팅 시스템이 이런 데이터들을 RouteValueDictionary 개체로 변환해주기 때문에 RouteBase 구현에 의해서 처리될 수 있는 것이다. 목록 16-21은 사용자 지정 라우팅 클래스를 이용해서 나가는 URL을 생성하고 있는 ActionName.cshtml 뷰파일을 보여주고 있다. 
+
+목록16-21 ActionName.cshtml 파일에서 사용자 지정 라우트를 통해 나가는 URL 만들기
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>ActionName</title>
+</head>
+<body>
+    <div>The controller is: @ViewBag.Controller</div>    
+    <div>The action is: @ViewBag.Action</div>
+    <div>
+        This is a URL:
+        @Html.ActionLink("Click me", "GetLegacyURL", new {legacyURL = "~/articles/Windows_3.1_Overview.html"})
+    </div>    
+</body>
+</html>
+
+만약 사용자가 /Home/Index같은 URL을 요청해서 이 뷰가 렌더되면 예상하고 있는 것처럼 ActionLink 헬퍼 메서드가 다음과 같은 HTML 을 만들어 낼 것이다. 
+
+<a href="/articles/Windows_3.1_Overview.html">Click me</a>
+
+헬퍼 메서드에 전달된 legacyURL 속성이 지정된 익명 형식은 동일한 이름의 키를 갖는 RouteValueDictionary 클래스로 변환된다. 이번 예제에서는 이름이 legacyURL인 키가 존재하고 그 값이 생성자로 전달된 URL들 중 하나인 경우 나가는 URL에 대한 요청을 처리할 수 있도록 구현했다. 컨트롤러와 액션 값들을 보다 자세하게 검사할 수도 있겠지만 이 정도 만으로도 간단한 예제로는 충분하므로 그렇게 하지는 않았다. 
+
+매치되는 URL이 발견되면 현재 개체에 대한 참조와 나가는 URL을 매개변수로 전달해서 새로운 VirtualPathData의 인스턴스를 만든다. 또한 응용프로그램에 상대적인 URL을 브라우저에 전달할 수 있는 URL로 변환하기 위해서 UrlHelper 클래스의 Content 메서드를 사용하고 있다. 라우팅 시스템이 추가적으로 URL의 앞쪽에 / 문자를 추가하므로 생성된 URL의 첫 번째 문자를 제거해야 한다는 점에 주의하기 바란다. 
+
+
+※ 사용자 지정 라우트 처리기 만들기
+
+이전 절에서 만들어본 라우트는 라우팅 시스템과 이 책의 주제인 MVC 프레임워크를 연결하기 위해서 MvcRouteHandler에 의존하고 있다. 그러나 라우팅 시스템은 별도의 라우트 처리기를 직접 구현할 수 있도록 IRouteHandler 인터페이스도 제공해준다. 목록 16-22은 예제 프로젝트의 Infrastructure 폴더에 추가한 CustomRouteHandler.cs 클래스 파일의 내용을 보여주고 있다. 
+
+목록16-22 CustomRouteHandler.cs 파일에서 구현하고 있는 IRouteHandler 인터페이스
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Routing;
+
+namespace UrlsAndRoutes.Infrastructure
+{
+    public class CustomRouteHandler : IRouteHandler
+    {
+        public IHttpHandler GetHttpHandler(RequestContext requestContext)
+        {
+            return new CustomHttpHandler();
+        }
+    }
+    public class CustomHttpHandler : IHttpHandler
+    {
+        public bool IsReusable
+        {
+            get { return false; }
+        }
+
+        public void ProcessRequest(HttpContext context)
+        {
+            context.Response.Write("Hello");
+        }
+    }
+
+    
+
+
+}
+
+이 IRouteHandler 인터페이스의 목적은 요청 처리를 담당하는 IHttpHandler 인터페이스의 구현을 생성할 수 있는 수단을 제공하는 것이다. 이 인터페이스들의 MVC 구현에서는 컨트롤러를 찾아서 액션 메서드를 호출하고 뷰를 렌더한 다음 그 결과가 응답으로 작성된다. 그러나 이번 예제의 구현은 훨씬 간단한데, 클라이언트에 간단히 Hello 라는 단어를 표시하기만 한다(이 단어가 포함된 HTML 문서가 아니라 단순히 텍스트로만 구성된다)
+
+
+Note:
+IHttpHandler 인터페이스는 ASP .NET 플랫폼에서 정의하고 있는 인터페이스로 표준 요청 처리 시스템의 일부분이다. 이 인터페이스에 관해서는 필자의 [Pro ASP .NET MVC5 Platform] 이라는 책에서 자세하게 설명하고 있다. MVC 프레임워크 응용프로그램을 작성하기 위해서 ASP .NET 이 요청을 처리하는 방식을 이해해야 할 필요는 없지만 복잡하거나 고급 기능을 사용하는 응용프로그램에 유용하게 적용할수 있는 사용자 지정 및 확장 작업에 도움이 되는 기능들이 많이 제공된다. 
+
+
+
+이제 목록6-23 에서 볼 수 있는 것처럼 RouteConfig.cs 파일에서 라우트를 정의하면서 사용자 지정 라우트 처리기를 등록한다. 
+
+목록16-23 RouteConfig.cs 파일에서 사용자 지정 라우트 처리기 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Mvc.Routing.Constraints;
+using UrlsAndRoutes.Infrastructure;
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.Add(new Route("SayHello", new CustomRouteHandler())); //추가
+
+            routes.Add(new LegacyRoute("~/articles/Windows_3.1_Overview.html", "~/old/.NET_1.0_Class_Library"));
+
+            routes.MapRoute("MyRoute", "{controller}/{action}");
+            routes.MapRoute("MyOtherRoute", "App/{action}", new { controller = "Home" });
+            
+        
+        }
+    }
+}
+
+다시 응용프로그램을 실행한 다음에 /SayHello URL로 이동해보면 이 요청을 처리하기 위해서 사용자 지정 라우트 처리기가 사용될 것이다. 그림16-5는 그 결과를 보여주고 있다. 
+
+
+이렇게 사용자 지정 라우트 처리기를 구현한다는 것의 의미는 컨트롤러나 액션을 결정하는 것처럼 통상적으로 처리되는 기능들에 대한 구현을 여러분이 직접 책임진다는 뜻이다. 반면 엄청난 유연성을 제공해주기도 한다. 가령 MVC 프레임워크의 특정 부분만 채택하고 다른 부분들은 무시해버릴 수도 있으며 심지어 전혀 새로운 아키텍처 패턴을 구현할 수도 있다. 
+
+
+※ 영역 사용하기
+MVC 프레임워크는 웹 응용프로그램을 영역(area)으로 구성할 수 있는 기능을 제공해주는데, 각각의 영역은 관리, 지불, 고객지원 등과 같은 응용프로그램의 기능별 단위를 나타낸다. 영역 기능은 모든 컨트롤러와 뷰, 그리고 모델들을 단일 폴더 집합으로 구성하는 것이 유지보수에 장애요소가 될 수도 있는 큰 프로젝트일수록 효과적이다. 
+
+각각의 MVC 영역들은 자체적인 폴더 구조를 갖기 때문에 모든 내용을 개별적으로 관리할 수 있다. 이는 응용프로그램의 각 기능 영역과 관련된 프로젝트 요소들을 더욱 명확하게 만들어주고 여러 개발자들이 서로 충돌 없이 프로젝트상에서 작업할 수 있게 해준다. 영역은 주로 라우팅 시스템을 통해서 지원되는 기능으로 바로 이 점 때문에 URL 및 라우트와 함께 이기능에 대해서 알아보려고 하는 것이다. 이번 절에서는 MVC 프로젝트에서 영역을 설정하고 사용하는 방법에 대해 알아보도록 하자. 
+
+
+※ 영역 만들기
+예제 MVC 응용프로그램에 영역을 추가하려면 [솔루션 탐색기(Solution Explorer)] 창에서 UrlsAndRoutes 프로젝트를 마우스 오른쪽 버튼으로 클릭한 다음 팝업 메뉴에서 [추가(Add)] > [영역(Area)]을 선택한다. 그러면 Visual Studio가 그림16-6 처럼 영역 이름을 입력하는 프롬프트를 띄워준다. 여기에서는 Admin 이라는 영역을 지정하고 있다. 많은 웹 응용프로그램들이 사용자 기능과 관리자 기능을 구분하므로 Admin 영역을 생성하는 것은 매우 보편적인 일이다 [추가(Add)] 버튼을 클릭해서 영역을 생성한다. 
+
+
+그러면 Visual Studio가 프로젝트에 Areas 폴더를 추가해주는데 이 폴더에는 방금 생성한 영역을 나타내는 Admin 이라는 폴더가 포함되어 있다. 만약 추가로 영역들을 더 만든다면 다른 폴더들도 여기에 생성될 것이다. 
+
+이 Areas/Admin 폴더를 살펴보면 소규모 MVC 프로젝트를 보게 될텐데, 폴더 안에는 Controllers, Models, Views 라는 폴더가 생성되어 있을 것이다. 그리고 Controllers 폴더와 Models 폴더는 비어있지만 Views 폴더에는 Shared 폴더가 생성되어 있을 것이다.(그리고 뷰 엔진을 구성하기 위한 web.config 파일도 존재하지만 20장 이전까지는 뷰 엔진에 관해서는 신경 쓰지 않을 것이다)
+
+또한 Areas/Admin 폴더에는 목록16-24 에서 볼 수 있는 AdminAreaRegistration 클래스가 정의된 AdminAreaRegistration.cs 라는 파일도 포함되어 있다. 
+
+목록16-24 AdminAreaRegistraction.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace UrlsAndRoutes.Areas.Admin
+{
+    public class AdminAreaRegistration : AreaRegistration
+    {
+        public override string AreaName => "Admin";
+
+        public override void RegisterArea(AreaRegistrationContext context)
+        {
+            context.MapRoute("Admin_default", "Admin/{controller}/{action}/{id}", new { action = "Index", id = UrlParameter.Optional });
+        }
+    }
+}
+
+이 클래스에서 주목해야 할 부분은 RegisterArea 메서드다. 목록16-24 에서 볼 수 있는 것처럼 이 메서드는 Admin/{controller}/{action}/{id}라는 URL 패턴을 갖고 있는 라우트를 등록한다. 이 메서드에서 이 영역에 특화된 라우트를 추가적으로 정의할 수 있다. 
+
+
+주의 :
+라우트에 이름을 할당하는 경우에는 해당 영역뿐만 아니라 전체 응용프로그램에서 이름이 중복되지 않고 유일한지 반드시 확인해야 한다. 
+
+
+이 등록 메서드를 호출하기 위해서 별도로 작업을 해야 할 필요는 없다. 목록16-25에서 볼 수 있는 것처럼 Visual Studio 가 프로젝트를 생성하면서 영역을 설정하기 위한 구문을 이미 Global.asax 파일에 추가해뒀기 때문이다. 
+
+
+목록16-25 Global.asax 파일의 Area 등록 설정 구문
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace UrlsAndRoutes
+{
+    public class MvcApplication : System.Web.HttpApplication
+    {
+        protected void Application_Start()
+        {
+            AreaRegistration.RegisterAllAreas(); //추가
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+        }
+    }
+}
+
+정적 메서드인 AreaRegistration.RegisterAllAreas가 호출되면 MVC 프레임워크가 응용프로그램에 존재하는 모든 클래스들을 살펴보고 AreaRegistration 클래스에서 파생된 클래스가 발견되면 해당 클래스의 RegisterArea 메서드를 호출한다. 
+
+
+주의:
+Application_Start 메서드에서 라우팅과 관련된 구문들의 순서를 변경하면 안 된다. 가령 AreaRegistration.RegisterAllAreas 가 호출되기 전에 RegisterRoutes가 먼저 호출되면 기본 라우트가 영역 라우트보다 먼저 정의될 것이다. 여러 차례 강조했던 것처럼 제공된 라우트는 순서대로 평가되므로 구문들의 순서를 바꾸면 영역 컨트롤러에 대한 요청이 잘못된 라우트와 매치될 수도 있다는 것을 의미한다. 
+
+
+각 영역의 RegisterArea 메서드로 전달되는 AreaRegistrationContext 클래스는 일련의 MapRoute 메서드들을 노출해주는데, Global.asax의 RegisterRoutes 메서드에서 주 응용프로그램이 라우트를 등록하는 방식과 동일한 방식으로 영역에 라우트를 등록하는 데 이 메서드들을 사용할 수 있다. 
+
+
+Note:
+AreaRegistrationContext 클래스의 MapRoute 메서드는 자동으로 여러분이 등록한 라우트의 네임스페이스를 해당 영역의 컨트롤러가 위치한 네임스페이스로 제한한다. 따라서 영역에서 컨트롤러를 생성할 때는 반드시 기본 네임스페이스를 유지해야만 한다. 그렇지 않으면 라우팅 시스템이 컨트롤러를찾지 못할 것이다. 
+
+
+※ 영역 채우기
+이전 예제들에서 살펴봤던 것처럼 영역 안에서 컨트롤러 * 뷰 * 모델을 생성할 수 있다. 컨트롤러를 생성하려면 Admin 영역의 Controllers 폴더를 마우스 오른쪽 버튼으로 클릭한 다음 팝업 메뉴에서 [추가(Add)] > [컨트롤러(Controller)]를 선택한다. 그리고 목록에서 [MVC5 컨트롤러 - 비어 있음(MVC 5 Controller - Empty)]을 선택하고 [추가(Add)] 버튼을 클릭한 다음 컨트롤러의 이름을 설정하고 다시 [추가 (Add)] 버튼을 클릭해서 새로운 컨트롤러 클래스를 생성한다. 
+
+이번 예제에서는 영역을 이용해서 응용프로그램의 구역을 나누는 방법을 살펴보기 위해서, Admin 영역에 Home 컨트롤러를 추가한다. 목록16-26에서 Areas/Admin/Controllers/HomeController.cs 파일의 내용을 확인할 수 있다. 
+
+목록16-26 Areas/Admin/Controllers/HomeController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace UrlsAndRoutes.Areas.Admin.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Admin/Home
+        public ActionResult Index()
+        {
+            return View();
+        }
+    }
+}
+
+이 컨트롤러의 코드를 변경하지는 않을 것이다 .Index 액션 메서드에 연결된 기본 뷰를 렌더해보는 것만으로도 이번 예제에서는 충분하다. 이번에는 솔루션 탐색기의 /Areas/Admin/Views/Home 폴더에서 마우스 오른쪽 버튼으로 클릭한 다음 [추가(Add)] > [MVC5 뷰 페이지(Razor)(MVC5 View Page(Razor))]를 선택한다. 뷰 파일의 이름을 index.cshtml로 지정하고 [확인] 버튼을 눌러서 파일을 만든 다음 파일 내용을 목록 16-27과 같이 편집한다. 
+
+목록16-27 Areas/Admin/Views/Home/Index.cshtml 파일의 내용
+
+@{
+    ViewBag.Title = "Index";
+    Layout = null;
+}
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+    <div>
+        <h2>Admin Area Index</h2>
+    </div>
+</body>
+</html>
+
+
+
+이번 예제의 핵심은 영역 내에서 동작하는 방식이 MVC 프로젝트의 메인 부분과 동일하게 동작한다는 것을 직접 보여주는 것이다. 응용프로그램을 실행하고 /Admin/Home/Index로 이동해보면 그림16-7처럼 방금 Admin 영역에 추가한 뷰가 나타날 것이다. 
+
+
+
+※ 모호한 컨트롤러 문제 해결하기
+
+그렇다 사실 약간 거짓말을 했는데, 영역은 기대했던 것처럼 완벽하게 독립적이지는 않다. 만약 /Home/Index URL로 이동해보면 그림 16-8과 같은 오류를 보게 될것이다. 
+
+이미 설명했던 것처럼 영역이 등록될 때 해당 영역에 정의된 모든 라우트들은 영역과 관련된 네임스페이스로 제한된다. 그렇기 때문에 /Admin/Home/index로 요청을 보내서 UrlsAndRoutes.Areas.Admin.Controllers 네임스페이스의 HomeController 클래스에 접근할 수 있었던 것이다. 
+
+그러나 RouteConfig.cs 의 RegisterRoutes 메서드에 정의된 라우트는 이런 방식으로 제한되지 않는다. 목록16-28은 현재 예제 응용프로그램에 작성되어 있는 라우팅 구성을 보여준다. 
+
+목록16-28 RouteConfig.cs 파일에서 MVC 예제 응용프로그램을 위한 라우팅 구성
+
+...
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Mvc.Routing.Constraints;
+using UrlsAndRoutes.Infrastructure;
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+
+            routes.MapMvcAttributeRoutes(); //추가
+
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.Add(new Route("SayHello", new CustomRouteHandler()));
+
+            routes.Add(new LegacyRoute("~/articles/Windows_3.1_Overview.html", "~/old/.NET_1.0_Class_Library"));
+
+            routes.MapRoute("MyRoute", "{controller}/{action}");
+            routes.MapRoute("MyOtherRoute", "App/{action}", new { controller = "Home" });
+            
+        
+        }
+    }
+}
+
+...
+
+MyRoute 라는 이름의 라우트는 브라우저에서 들어오는 URL을 Home 컨트롤러의 Index 액션 메서드로 변환한다. 바로 여기에서 오류가 발생하게 되는데 그 이유는 이 라우트에 네임스페이스에 제약조건이 지정되어 있지 않기 때문에 MVC 프레임워크가 두 개의 HomeController 클래스를 발견하게 되기 때문이다. 이 문제를 해결하기 위해서는 목록16-29에서 볼 수 있는 것처럼 충돌이 발생할 가능성이 존재하는 모든 라우트들에 메인 컨트롤러 네임스페이스에 대한 우선권을 지정하면 된다. 
+
+목록16-29 RouteConfig.cs 파일에서 영역 네임스페이스 충돌 해결하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web.Mvc.Routing.Constraints;
+using UrlsAndRoutes.Infrastructure;
+namespace UrlsAndRoutes
+{
+    public class RouteConfig
+    {
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+
+            routes.MapMvcAttributeRoutes();
+
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            routes.Add(new Route("SayHello", new CustomRouteHandler()));
+
+            routes.Add(new LegacyRoute("~/articles/Windows_3.1_Overview.html", "~/old/.NET_1.0_Class_Library"));
+
+            routes.MapRoute("MyRoute", "{controller}/{action}",null, new[] { "UrlsAndRoutes.Controllers" }); //수정
+
+            routes.MapRoute("MyOtherRoute", "App/{action}", new { controller = "Home" }, new[] { "UrlsAndRoutes.Controllers" }); //수정
+            
+        
+        }
+    }
+}
+
+이렇게 변경하고 나면 메인 프로젝트의 컨트롤러들이 요청을우선적으로 처리할 수 있게 된다. 물론 영역에 포함된 컨트롤러들에 우선순위를 주고자 한다면 그렇게 할 수도 있다. 
