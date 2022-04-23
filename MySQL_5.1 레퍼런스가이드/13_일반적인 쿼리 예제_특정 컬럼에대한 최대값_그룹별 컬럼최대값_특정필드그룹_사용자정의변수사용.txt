@@ -1,0 +1,82 @@
+3.6 일반적인 쿼리 예제
+
+지금부터는 MySQL에서 일반적으로 발생하는 문제점들을 해결할 수 있는 예제들을 보여주기로 한다. 
+
+어떤 예제들은 특정 판매자(dealer)의 상품(item number)값을 가지고 있도록 테이블 shop을 사용한다. 각 판매자는 상품 별로 정해진 단일 가격을 가지고 있고(article, dealer)는 레코드에 대한 프라이머리 키(primary key)라고 가정한다. 
+
+명령어 라인에서 mysql을 구동시키고 데이터베이스를 선택한다. 
+
+shell>mysql your-database-name
+
+아래의 명령어를 사용해서 예제 테이블을 생성하고 데이터를 그 안에 넣는다. 
+
+CREATE TABLE shop(
+article INT(4) UNSIGNED ZEROFILL DEFAULT '0000' NOT NULL,
+dealer CHAR(20)	DEFAULT '' NOT NULL,
+price DOUBLE(16,2)	DEFAULT '0.00' NOT NULL,
+PRIMARY KEY(article, dealer));
+
+INSERT INTO shop VALUES(1, 'A', 3.45), (1, 'B', 3.99), (2, 'A', 10.99), (3, 'B', 1.45), (3,'C', 1.69), (3, 'D', 1.25), (4, 'D', 19.95);
+
+명령문을 입력하면 테이블은 아래의 내용을 가제 될 것 이다. 
+
+
+
+3.6.1 컬럼에 대한 최대 값
+
+최고(highest)아이템 숫자는 어떤 것인가?
+
+SELECT MAX(article) AS article FROM shop;
+
+
+
+3.6.2 특정 컬럼에 대한 최대 값을 가지고 있는 열(Row)
+
+* Task : 가장 비싼 상품의 숫자, 판매자, 그리고 가격을 찾는다. 
+
+서브 쿼리를 사용하면 간단히 처리할 수 있다. 
+
+SELECT article, dealer, price FROM shop WHERE price = (SELECT MAX(price) FROM shop);
+
+다른 방법으로는 모든 열을 가격 내림 차순으로 정렬시킨 다음에 LIMIT 구문을 사용해서 처음 열만 가져오면 된다. 
+
+
+Note:
+가장 비싼 제품들이 여러 개가 있고 그 가격이 19.95라면 LIMIT 솔루션은 이들 중에 한 개만 보여주게 된다. 
+
+SELECT article, dealer, price FROM shop ORDER BY price DESC LIMIT 1;
+
+
+
+3.6.3 그룹별 컬럼 최대 값
+
+* Task : 상품별로 최고의 값을 찾는다. 
+
+SELECT article, MAX(price) AS price FROM shop GROUP BY article;
+
+3.6.4 특정 필드에 대한 그룹 방식(Group-wise) 최대 값을 가지고 있는 열(Row)
+
+* Task : 각 상품에 대해서 판매자를 찾거나 또는 최고의 값을 가지고 있는 판매자를 찾는다. 
+
+이 문제는 아래와 같은 서브 쿼리를 사용해서 해결할 수 있다. 
+
+SELECT article, dealer, price FROM shop s1 WHERE price = (SELECT MAX(s2.price) FROM shop s2 WHERE s1.article = s2.article);
+
+위의 예문은 서로 연관된 서브 쿼리를 사용하고 있는데, 사실 이것만으로는 부족하다. FROM 구문에 있는 서로 연관되지 않는 서브 쿼리를 사용하거나 또는 LEFT JOIN을 사용해서 이 문제를 풀도록 해본다. 
+
+SELECT s1.article, dealer, s1.price FROM shop s1 JOIN( SELECT article, MAX(price) AS price FROM shop GROUP BY article) AS s2 ON s1.article = s2.article AND s1.price = s2.price;
+
+
+SELECT s1.article, s1.dealer, s1.price FROM shop s1 LEFT JOIN shop s2 ON s1.article = s2.article AND s1.price < s2.price WHERE s2.article IS NULL;
+
+LEFT JOIN은 s1.price가 최고 값이고 이 보다 큰값을 가지고 있는 s2.price가 존재하지 않으며 s2열의 값이 NULL일 경우에 연산을 실행한다. 
+
+
+
+3.6.5 사용자 정의 변수 사용하기
+이 섹션에서는 결과값을 클라이언트에 있는 임시 변수에 저장하는 대신에 MySQL 사용자 변수에 기록하도록 만드는 방법을 설명한다. 
+
+예를 들면 최고 가격 및 최저 가격을 갖는 상품을 찾기 위해서 다음과 같이 실행할 수 있을 것이다. 
+
+mysql>SELECT @min_price:=MIN(price),@max_price:=MAX(price) FROM shop;
+mysql>SELECT * FROM shop WHERE price=@min_price OR price=@max_price;
