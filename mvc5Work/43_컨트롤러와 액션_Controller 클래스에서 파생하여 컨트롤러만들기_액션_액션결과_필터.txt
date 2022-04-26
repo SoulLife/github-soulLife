@@ -1,0 +1,445 @@
+CHAPTER 17장 : 컨트롤러와 액션
+응용프로그램으로 들어오는 모든 요청은 컨트롤러에 의해서 처리된다. 컨트롤러는 모델이나 뷰에서 다루어야 하는 작업을 제외한 모든 작업들을 처리하게 된다. 이는 컨트롤러에서는 데이터를 저장하거나 취급하지 않는다는 것을 의미할 뿐만 아니라 사용자 인터페이스를 만들거나 하지도 않는다는 것을 의미한다. 
+
+ASP .NET MVC 프레임워크의 경우 컨트롤러는 요청을 처리하기 위해서 필요한 로직들을 담고 있는 .NET 클래스다. 3장에서 필자는 컨트롤러의 역할이 응용프로그램의 로직을 캡슐화하는 것이라고 설명했었다. 이는 컨트롤러가 들어오는 요청을 처리하고, 도메인 모델의 동작들을 수행하고 사용자에게 렌더할 뷰를 선택하는 역할을 한다는 것을 의미한다. 이번 장에서는 컨트롤러를 구현하는 방법과 컨트롤러를 사용하여 출력을 만들어내는 다양한 방식들에 대해 알아볼 것이다. 표17-1은 이번 장에서 다루는 내용을 정리해서 보여주고 있다. 
+
+표17-1 17장 요약
+
+주제							내용																목록
+컨트롤러 만들기					IController 인터페이스를 구현하거나 Controller 클래스를 상속받는다.						1 - 4
+
+요청에 대한 정보 얻기				컨텍스트 개체들과 속성들을 사용하거나 또는 액션 메서드의 매개변수들을 정의한다.				5, 6
+
+IController 인터페이스를 구현하는		HttpResponse 컨텍스트 개체를 사용한다.										7 - 8
+컨트롤러에서 응답 생성하기
+
+Controller 클래스로부터 파생된 			액션 결과를 사용한다.													9 - 12
+컨트롤러에서 응답 생성하기
+
+MVC 프레임워크를 통해서 뷰 렌더하기		ViewResult를 사용한다.													13, 14
+
+컨트롤러에서 뷰로 데이터 전달하기		뷰 모델 개체나 ViewBag 기능을 사용한다.										15 - 19
+
+브라우저를 새로운 URL로 이동시키기		Redirect 혹은 RedirectPermanent 메서드를 사용한다.								20 - 21
+
+브라우저를 라우트를 이용해서 생성한		RedirectToRoute 혹은 RedirectToRoutePermanent 메서드를 사용한다.						22
+URL로 이동시키기
+
+브라우저를 또 다른 액션 메서드로 이동		RedirectToAction 메서드를 사용한다.											23
+시키기
+
+브라우저에 HTTP 결과 코드 전송하기		HttpStatusCodeResult 개체를 반환하거나 HttpNotFound 같은 편의 메서드들 중 하나를 사용한다.		24 - 26
+
+
+
+
+※ 예제 프로젝트 준비하기
+
+이번 장에서 사용할 예제를 준비하기 위해서 Empty 템플릿을 사용하여 ControllersAndActions라는 이름의 새로운 프로젝트를 만든다. 프로젝트 생성시 MVC 옵션을 체크해서 MVC에 관한 폴더들과 참조들을 추가하도록 지정하고 ControllersAndActions.Tests라는 이름의 단위 테스트 프로젝트가 함께 생성되도록 [단위 테스트 추가(Add Unit Test)] 옵션도 선택한다. 이번 장에서 만들어볼 단위 테스트 프로젝트에서는 Mock 구현이 필요 없으므로 Moq 패키지는 굳이 설치할 필요가 없다. 하지만 MVC 패키지는 설치해야 하는데 이는 이번 장의 테스트들이 기본 컨트롤러 클래스에 접근할 필요가 있기 때문이다. 따라서 Visual Studio 의 NuGet 패키지 관리자 콘솔에서 다음과 같은 명령어를 입력하도록 하자(만약 최신 버전의 Visual Studio를 사용하고 있다면 이 패키지를 추가하고 다시 빌드할 때 System.Web.Mvc 어셈블리 관련 오류가 발생할 수도 있다. 이는 ControllersAndActions 프로젝트가 참조하고 있는 해당 어셈블리의 버전이 여기서 추가한 어셈블리 버전과 일치하지 않기 때문이다. 가장 손쉬운 해결 방법은 NuGet 으로 일치하는 어셈블리 버전을 설치하거나 솔루션 전체의 어셈블리를 가장 최신 버전으로 업데이트하는 것이다. 버전이 일치하지 않으면 빌드되지 않거나 되더라도 테스트가 실패할 것이다)
+
+Install-Package Microsoft.Aspnet.Mvc -version 5.0.0 -projectname ControllersAndActions.Tests
+
+※ 시작 URL 설정하기
+
+일단 프로젝트가 생성되고 나면 Visual Studio의 [프로젝트(Project)] 메뉴에서 [ControllersAndActions 속성(ControllersAndActions Properties)]을 선택하자. 그런 다음[웹(Web)] 탭을 선택하고 [시작 작업(Start Action)] 영역에서 [특정 페이지(Specific Page)] 옵션을 선택하자. 값을 입력할 필요는 없다. 단지 선택만 해두면 된다.
+
+
+
+※ 컨트롤러 소개
+
+여러분은 지금까지 거의 모든 장들에서 컨트롤러가 사용되는 것을 보았을 것이다. 이제는 한걸음 물러나서 그 내부를 살펴볼 시간이다. 
+
+※ IController를 구현하는 컨트롤러 만들기
+
+MVC 프레임워크에서 컨트롤러 클래스는 목록 17-1 에서 볼 수 있는 System.Web.Mvc 네임스페이스에 정의되어 있는 IController 인터페이스를 구현해야만 한다. 
+
+목록17-1 System.Web.Mvc.IController 인터페이스
+
+public interface IController
+{
+	void Execute(RequestContext requestContext);
+}
+
+
+TIP:
+이러한 코드 정의는 MVC 프레임워크의 소스 코드를 다운로드 받아서 발췌한 것인데 MVC 프레임워크의 소스 코드를 살펴보면 프레임워크 내부에서 어떤 일들이 일어나는지를 알 수 있기에 대단히 유용하다. MVC 프레임워크의 소스 코드는 http://aspnet.codeplex.com에서 다운로드할 수 있다. 
+
+
+이는 매우 간단한 인터페이스다. 단독 메서드인 Execute는 요청이 컨트롤러 클래스에 도달하는 경우에 호출된다. MVC 프레임워크는 라우팅 데이터에 의해서 설정된 Controller 속성값을 살펴봄으로써 또는 15장과 16장에서 설명했던 것과 같이 사용자 지정 라우팅 클래스를 통해서 요청이 어떤 컨트롤러 클래스를 대상으로 하는지를 알아 낼 수 있다. 
+
+직접 IController 인터페이스를 구현해서 컨트롤러 클래스를 생성할 수도 있지만, 이는 매우 저수준의 인터페이스이기 때문에 도움이 될만한 수준의 컨트롤러를 만들기 위해서는 대단히 많은 작업들을 처리해야만 한다. 그렇기는 하지만 IController 인터페이스는 컨트롤러가 동작하는 방식을 살펴보기 위한 용도로 매우 유용하기 때문에 Controllers 폴더에 목록 17-2와 같은 내용으로 BasicController.cs 라는 이름의 새로운 클래스 파일을 작성했다. 
+
+목록17-2 BasicController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace ControllersAndActions.Controllers
+{
+    public class BasicController : IController
+    {
+        public void Execute(RequestContext requestContext)
+        {
+            string controller = (string)requestContext.RouteData.Values["controller"];
+            string action = (string)requestContext.RouteData.Values["action"];
+
+            requestContext.HttpContext.Response.Write(string.Format("Controller: {0}, Action: {1}",controller,action));
+        }
+        
+    }
+}
+
+
+IController 인터페이스의 Execute 메서드에는 현재의 요청과 그와 매치되는 라우트에 대한 정보를 제공해주는 System.Web.Routing.RequestContext 개체가 매개변수로 전달된다(그리고 이어서 요청을 처리하도록 컨트롤러가 호출되게 할 것이다) 이 RequestContext 클래스는 표17-2에서 기술하고 있는 두 개의 속성을 정의하고 있다. 
+
+표17-2 RequestContext 클래스에 정의된 속성
+
+이름				설명
+HttpContext			현재 요청에 대한 다양한 정보들을 제공해주는 HttpContextBase 개체를 반환한다. 
+
+RouteData			요청과 매치되는 라우트의 정보들을 제공해주는 RouteData 개체를 반환한다. 
+
+
+HttpContextBase 개체는 흔히 컨텍스트(context) 개체로 알려져 있는 현재 요청에 대한 정보들을 담고 있는 개체들의 집합에 접근할수 있게 해준다. 이 개체들에 대해서는 잠시 후에 다룰 예정이다. 그리고 RouteData 개체는 라우트를 나타내는데, 표17-3에 RouteData의 주요 속성들이 정리되어 있다. 
+
+표17-3 RouteData 클래스가 정의하고 있는 속성
+
+이름				설명
+Route				라우트와 매치되는 RouteBase 구현을 반환한다. 
+
+RouteHandler 		라우트를 처리하는 IRouteHandler를 반환한다. 
+
+Values				이름으로 색인되어 있는 세그먼트 값들의 컬렉션을 반환한다. 
+
+
+
+※ Base라는 글자로 끝나는 클래스 이름들:
+
+MVC 프레임워크는 사실 요청을 처리하기 위해서 ASP .NET 플랫폼을 사용하는데 이는 여러모로 탁월한 선택이다. 왜냐하면 ASP .NET이 이미 IIS 응용프로그램 서버와 훌륭하게 통합되어 있을 뿐만 아니라 풍부한 기능들을 제공해주고 있기 때문이다. 다만 한 가지 문제가 있다면 ASP .NET 플랫폼이 요청에 대한 정보를 제공하기 위해서 사용되는 클래스들이 단위 테스트를 수행하기에는 그다지 적합하지 않다는 점이다. (단위 테스트는 MVC 프레임워크를 도입하는 중요한 이유 중 하나다) Microsoft는 기존 ASP .NET Web Forms과의 호환성을 유지하면서도 테스트 용이성을 지원하기 위해서 Base 클래스들을 제공하고 있다. 이 클래스들은 핵심 ASP .NET 플랫폼 클래스와 동일한 이름을 가지면서 Base라는 단어로 끝난다. 예를 들면 ASP .NET 플랫폼은 현재 요청에 대한 컨텍스트 정보와 몇몇 핵심 응용프로그램 서비스들을 HttpContext 개체를 통해서 제공해주는데, 이에 대응하는 Base 클래스로 HttpContextBase를 제공해주고 있으며 이 클래스가 바로 IController 인터페이스에 정의되어 있는 Execute 메서드로 전달되는 인스턴스이기도 하다(이어지는 예제들에서 다른 Base 클래스들도 살펴볼수 있을 것이다) 원래의 클래스와 Base 클래스는 모두 동일한 속성과 메서드를 정의하고 있지만 Base 클래스는 언제나 추상 클래스이기에 단위 테스트에 사용하기 적합하다고 할수 있다. 
+
+그러나 가끔은 HttpContext 같이 기존의 ASP .NET 클래스들 중 한 개체를 받게 되는 경우도 있는데 그런 경우에는 HttpContextBase처럼 MVC에 친화적인 Base 클래스를 직접 생성할 필요가 있을 것이다. 그런 경우에는 래퍼(Wrapper) 클래스들 중 하나를 사용하면 된다. 래퍼 클래스는 기존 클래스와 동일한 이름을 갖지만 Wrapper라는 단어로 끝나는 클래스이며, 예를 들면 HttpContext의 래퍼 클래스는 HttpContextWrapper다. 래퍼 클래스는 Base 클래스에서 파생되었으며, 다음 코드와 같이 클래스 생성자가 원래의 클래스 인스턴스를 인자로 갖는다. 
+
+...
+HttpContext myContext = getOriginalObjectFromSomewhere();
+HttpContextBase myBase = new HttpContextWrapper(myContext);
+...
+
+
+이렇게 원래의 클래스와 Base 및 Wrapper 클래스 모두 System.Web 네임스페이스에 존재하므로 ASP .NET 은 MVC 프레임워크와 예전 Web Forms 응용프로그램을 매끄럽게 지원할 수 있다. 
+
+
+
+RouteBase와 IRouteHandler 형식을 사용하여 라우팅 시스템을 사용자 지정하는 방법에 대해서는 이미 16장에서 설명했었다. 이번 예제에서는 Values 속성을 사용하여 controller 와 action 세그먼트 변수의 값을 얻어오고 있으며, 얻어온 값들을 응답에 작성하고 있다. 
+
+
+
+Note:
+사용자 지정 컨트롤러를 만들 때 겪게되는 문제 중 하나는 뷰와 같은 기능들에 접근할 수 없다는 것이다. 이는 우리가 저수준에서 작업할 수밖에 없다는 것을 의미하며, 그렇기에 상기 코드에서 본 것과 같이 클라이언트에 전송할 내용(콘텐트)을 직접 작성할 수 밖에 없다. HttpContextBase.Response 속성은 HttpResponseBase 개체를 반환하는데 이를 사용하면 클라이언트에 보내질 응답에 무언가를 추가하거나 설정할 수 있다. 이는 ASP .NET 플랫폼과 MVC 프레임워크 사이에서 주의 깊게 살펴봐야 할 부분이며 [Pro ASP .NET MVC 5 Framework Platform] 책에서도 심도 있게 다루고 있는 부분이기도 하다. 
+
+
+
+응용프로그램을 실행하고 /Basic/Index로 접근해보면 그림17-1에서 보이는 것과 같이 사용자 지정 컨트롤러가 생성한 출력을 볼 수 있을 것이다. 
+
+IController 인터페이스를 구현하면 MVC 프레임워크가 컨트롤러로 인식할 수 있는 클래스를 만들수 있으며, 그 클래스에 요청을 보낼 수도 있다. 그리고 아무런 제약 없이 요청을 처리하고 응답할 수 있다. 이는 MVC 프레임워크가 얼마나 확장적인지를 컨트롤러와 같은 핵심요소에 빗대어 보여주는 훌륭한 예다. 하지만 복잡한 응용프로그램을 이와 같은 식으로 작성하기는 쉽지 않을 것이다. 
+
+
+
+※ Controller 클래스에서 파생하여 컨트롤러 만들기
+
+이전 예제에서 살펴봤듯이 MVC 프레임워크는 무한히 사용자 지정 가능하고 확장이 가능하다. 여러분은 IController 인터페이스를 구현하여 다양한 요청을 처리하고 원하는 결과를 만들어 낼 수 있다. 액션 메서드와 렌더링 될 뷰에 대해 고려할 필요가 없다면 직접 모든 것을 작성하여 더 훌륭하고 빠르고 세련되게 요청을 처리할 수도 있을 것이다. 하지만 좀 더 효과적인 다른 방안도 존재하는데 이는 MVC 프레임워크팀이 제공하는 기능을 사용하는 것으로 컨트롤러를 System.Web.Mvc.Controller 클래스로부터 파생하여 구현하는 것이다. 
+
+System.Web.Mvc.Controller는 요청의 처리를 지원하기 위해 제공되는 클래스이며 MVC 개발자에게 친숙한 기능들을 제공한다. 사실 이전 장들의 모든 예제에서 사용한 클래스가 바로 이 클래스이기도 하다. Controller 클래스는 세 가지 핵심 기능들을 제공한다. 
+
+* 액션 메서드 : 컨트롤러의 동작은 단일 Execute() 메서드로 수행되는 것이 아니라 여러 메서드로 분할되어 수행된다. 각각의 액션 메서드는 서로 다른 URL로 노출되며 들어오는 요청에서 추출된 매개변수들과 함께 호출된다. 
+
+* 액션 결과 : 여러분은 액션의 결과(예: 렌더할 뷰, 혹은 다른 URL이나 액션 메서드로의 재전송)를 나타내는 개체를 반환할 수 있으며, 이는 유형에 따라 적절하게 처리된다. 이렇게 결과의 지정과 실행을 분리하면 단위 테스트가 더 간단해진다. 
+
+* 필터: 재사용 가능한 동작(예 : 12장에서 살펴보았던 인증 기능)을 필터로 캡슐화시킬 수 있다. 그 다음 소스 코드에 어트리뷰트를 지정하여 하나 이상의 컨트롤러나 액션 메서드에 각각의 동작(behavior)을 설정할 수 있다. 
+
+
+아주 제한적인 요구사항을 가지는 경우가 아니라면 컨트롤러를 생성하는 가장 좋은 방법은 Controller 클래스로부터 상속을 하는 것이다. 그렇기에 Visual Studio에서 [추가(Add)] > [스캐폴드(Scaffold)]를 선택하여 새로운 컨트롤러를 생성하는 경우에도 마찬가지로 Controller 클래스를 상속받는다. 목록 17-3은 [MVC 5 컨트롤러 - 비어있음(MVC 5 Controller-Empty)]옵션을 선택하여 생성된 DerivedController 라는 이름의 간단한 컨트롤러를 보여주고 있는데 ViewBag 속성을 설정하는 코드와 뷰를 선택하는 코드가 일부 추가작성되어 있다. 
+
+목록17-3 DerivedController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class DerivedController : Controller
+    {
+        // GET: Derived
+        public ActionResult Index()
+        {
+            ViewBag.Message = "Hello from the DerivedController Index method";
+            return View("MyView");
+        }
+    }
+}
+
+또한 컨트롤러 클래스는 Razor 뷰 시스템으로의 연결고리이기도 하다. 목록 17-3에서는 View메서드에 매개변수로 클라이언트에 렌더할 뷰의 이름을 전달한 뒤 그 결과를 반환하고 있다. 뷰를 만들기 위해서는 우선 Views/Derived 폴더를 만든 다음(해당 폴더가 아직 존재하지 않는다면)해당 폴더에 마우스 오른쪽 클릭을 하고 메뉴에서 [추가(Add)] > [MVC 5 뷰 페이지(Razor)(MVC 5 View Page(Razor))]를 선택한 뒤 MyView.cshtml라고이름을 입력하고 [확인(OK)]버튼을 클릭하면 뷰 파일이 만들어질 것이다. 이제 뷰 파일의 본문을 목록 17-4처럼 작성하도록 하자
+
+목록17-4 MyView.cshtml 파일의 내용
+
+
+@{
+    ViewBag.Title = "MyView";
+}
+
+<h2>MyView</h2>
+
+Message: @ViewBag.Message
+
+응용프로그램을 실행하고 /Derived/Index로 탐색하게 되면 액션 메서드가 호출되어 앞서 작성했던 뷰가 그림17-2에서 보이는 것과 같이 나타날 것이다. 
+
+이제 Controller 클래스의 파생 클래스에서 해야할 일은 액션 메서드들 즉 요청을 처리하기 위해 필요한 입력을 얻어내고 적절한 응답을 생성하는 메서드들을 구현하는 것이다. 이를 구현하는 다양한 방법에 대해서는 이 장의 후반에서 살펴보도록 하겠다. 
+
+
+
+
+※ 요청 데이터 받기
+컨트롤러는 들어오는 데이터(예를 들면 질의 문자열이나 폼 값, URL에서 라우팅 시스템을 통해 추출된 매개변수들)에 상당히 빈번하게 접근할 필요가 있다. 이러한 데이터에 접근하는 방법으로는 크게 세 가지가 존재한다. 
+
+* Context 개체로부터 추출한다. 
+
+* 액션 메서드에 매개변수로 전달되는 데이터들을 사용한다. 
+
+* 프레임워크의 모델 바인딩 기능을 명시적으로 호출한다.
+
+
+이번 장에서는 액션 메서드의 매개변수를 사용하는 방법과 Context 개체를 사용하여 액션 메서드에서 입력 값을 얻어오는 방법에 대해서만 중점적으로 살펴보도록 하자. 모델 바인딩에 대해서는 24장에서 심도있게 다룰 예정이다. 
+
+
+※ Context 개체를 통해서 데이터 가져오기
+
+Controller 기본 클래스에서 파생하여 컨트롤러를 만들었다면 요청에 대한 정보를 가져오기 위해서 유용한 속성 집합을 활용할 수 있다. 즉 Request, Response, RouteData, HttpContext, Server 속성을 이용할 수 있다는 것이다. 각각의 속성은 요청의 다양한 부분에 대한 정보를 제공한다. 필자는 이들의 편의 속성(Convenience Properties)이라고 부를 것인데 이는 각각의 속성이 요청의 ControllerContext 인스턴스(Controller.Controller Context 속성을 통해서 접근할 수 있다)로부터 서로 다른 다양한 형식의 데이터를 가져올 수 있기 때문이다. 목록 17-4는 가장 자주 사용되는 컨텍스트 개체 및 속성들 중 일부를 나열하고 있다. 
+
+표17-4 보편적으로 사용되는 컨텍스트 개체와 속성
+
+속성					형식					설명
+Request.QueryString		NameValueCollection		요청과 함께 전송되어 오는 GET 변수들
+
+Request.Form			NameValueCollection		요청과 함께 전송되어 오는 POST 변수들
+
+Request.Cookies			HttpCookieCollection		브라우저가 요청과 함께 보내오는 쿠키
+
+Request.HttpMethod		string					요청에 사용된 HTTP 메서드(GET, POST 와 같은 동사)
+
+Request.Headers			NameValueCollection		요청과 함께 전송되어 오는 전체 HTTP 헤더
+
+Request.Url				Uri					요청 URL
+
+Request.UserHostAddress	string					요청을 한 사용자의 IP 주소
+
+RouteData.Route			RouteBase				요청에 대해 선택된 RouteTable.Routes 엔트리
+
+RouteData.Values			RouteValueDictionary		라우트 매개변수(URL로부터 추출된 값이나 기본값)
+
+HttpContext.Application		HttpApplicationStateBase		응용프로그램 상태 저장소
+
+HttpContext.Cache			Cache					응용프로그램 캐시 저장소
+
+HttpContext.Items			IDictionary				현재 요청에 대한 상태 저장소
+
+HttpContext.Session		HttpSessionStateBase		방문자의 세션에 대한 상태 저장소
+
+User					IPrincipal				로그인된 사용자에 대한 인증 정보
+
+TempData				TempDataDictionary		현재 사용자에 대하여 저장된 임시 데이터 항목들
+
+
+앞서 기술한 개별 속성들(즉 Request, HttpContext 등)도 context 개체들을 제공한다. 하지만 이 책에서는 context 그 자체에 대해서는 다루지 않을 예정이다.( 그 개체들은 사실 ASP .NET 플랫폼의 일부이니 말이다)다만 이러한 속성들을 통해 접근할 수 있는 몇몇 유용한 저보와 기능은 살펴볼만한 가치가 있을 것이다. 액션 메서드 내부에서도 요청에 대한 정보를 얻기 위해서 컨텍스트 개체들을 사용할 수 있다. 목록17-5는 가상의 액션 메서드를 통해서 그러한예를 보여주고 있다. 
+
+
+목록17-5 요청에 대한 정보를 얻기 위해서 컨텍스트 개체를 사용하는 액션 메서드
+
+
+...
+public ActionResult RenameProduct()
+        {
+            //컨텍스트 개체를 통해서 다양한 속성들에 접근한다. 
+
+            string userName = User.Identity.Name;
+            string serverName = Server.MachineName;
+            string clientIP = Request.UserHostAddress;
+            DateTime dateStamp = HttpContext.Timestamp;
+            AuditRequest(userName, serverName, clientIP, dateStamp, "Renaming product");
+
+            //Request.Form에서 데이터를 가져온다. 
+
+            string oldProductName = Request.Form["OldName"];
+            string newProductName = Request.Form["NewName"];
+
+            bool result = AttemptProductRename(oldProductName, newProductName);
+
+            ViewData["RenameResult"] = result;
+
+            return View("ProductRenamed");
+
+        }
+...
+
+인텔리 센스를 사용하면 사용 가능한 수많은 요청 컨텍스트 개체를 살펴볼 수 있으며(액션 메서드 안에서 this.을 입력하면 팝업이 뜰 것이다)MSDN(Microsoft Developer Network)에서도 관련 정보를 얻을 수 있다(System.Web.Mvc.Controller와 그의 기본 클래스 혹은 System.Web.Mvc.ControllerContext를 살펴보자)
+
+
+
+
+※ 액션 메서드 매개변수 사용하기
+
+이전 장에서 보았듯이 액션 메서드는 매개변수를 가질 수 있다. 그렇기에 컨텍스트 개체에서 수동으로 데이터를 추출하는 것보다는 매개변수를 이용하는 것이 더 깔끔한 방법이라 말할 수 있으며, 액션 메서드를 이해하기도 더욱 용이하다. 예를 들어 다음과 같이 컨텍스트 개체를 사용하는 액션 메서드가 있다고 가정해 보자. 
+
+...
+public ActionResult ShowWeatherForecast()
+{
+	string city = (string)RouteData.Values["city"];
+	DateTime forDate = DateTime.Parse(Request.Form["forDate"]);
+	//여기에 일기예보를 구현한다. 
+	return View();
+}
+..
+
+이 액션 메서드를 매개변수를 사용하도록 변경하면 다음과 같다. 
+
+...
+public ActionResult ShowWeatherForecast(string city, DateTime forDate)
+{
+	//여기에 일기예보를 구현한다. 
+	return View();
+}
+...
+
+읽기에도 용이할 뿐만 아니라 단위 테스트에도 도움이 된다. 즉 컨트롤러 클래스의 편의 속성에 관한 Mock을 만들지 않아도 액션 메서드를 단위 테스트 할 수 있다. 
+
+
+
+TIP:
+ 액션 메서드는 ref 매개변수를 수용하지 않는다는 부분에 주목할 필요가 있다. 사실 그렇게 한다는 것 자체가 말이 되지 않는다. ASP .NET MVC는 그러한 매개변수를 발견한다면 예외를 던질 것이다. 
+
+MVC 프레임워크는 우리를 대신하여 Request.QueryString, Request.Form, RouteData.Values 등과 같은 컨텍스트 개체 및 속성들을 자동으로 검사하여 각 매개변수들에 대한 값을 제공해줄 것이다. 매개변수의 이름은 대소문자를 구분하지 않으며, 그렇기에 예를 들면 city라는 액션 메서드 매개변수는 Request.Form["City"] 의 값으로 채워질 것이다. 
+
+
+
+
+※ 매개변수 개체의 인스턴스가 생성되는 방식 이해하기
+기본 Controller 클래스는 값 프로바이더와 모델 바인더라는 MVC 프레임워크 구성요소를 사용하여 액션 메서드 매개변수들에 대한 값을 얻어온다. 값 프로바이더는 컨트롤러에게 사용가능한 데이터 항목들을 제공하는 역할을 한다. Request.Form, Request.QueryString, Request.Files, RouteData.Values 에서 값을 가져오는 내장된 값 프로바이더들이 존재하며, 이러한 프로바이더들은 값을 모델 바인더에게 전달한다. 그러면 모델 바인더가 그 값들을 매개변수로서 액션 메서드가 요구하는 형식으로 제공한다. 
+
+기본 모델 바인더는 모든 .NET 형식의 개체를 만들고 사용할 수 있는데, 컬렉션뿐만 아니라 프로젝트에 추가한 사용자 지정 형식도 사용이 가능하다. 11장에서 이러한 예제를 살펴보았는데 관리자가 입력한 데이터가 HTML 안에서 여러 폼 요소로 나뉘어 있는 경우에도 액션 메서드에서는 단일 Product 개체로서 표현될 수 있었다. 값 프로바이더와 모델 바인더에 대해서는 24장에서 상세하게 다룰 예정이다. 
+
+
+
+※ 선택 매개변수와 필수 매개변수 이해하기
+
+만일 MVC 프레임워크가 참조 형식 매개변수(string이나 object와 같은)에 대한 값을 찾을 수 없다고 해도 액션 메서드는 여전히 호출될 것이며 매개변수에 대해서는 null값을 사용하게 될 것이다. 하지만 값 형식 매개변수(int나 double과 같은)에 대한 값을 찾을 수 없다면, 이 경우에는 예외가 발생하며 액션 메서드는 호출되지 않을 것이다. 그리고 각각의 경우 다음의 내용도 알아둘 필요가 있다. 
+
+* 값 형식 매개변수는 필수다. 이를 선택적으로 만들려면 기본값을 지정하거나(다음 절에서 설명한다)혹은 매개변수 형식을 nullable 형식(int? 혹은 DateTime?같은) 으로 변경해야 한다. 그러면 값을 사용할 수 없을 경우 MVC 프레임워크가 null을 전달해준다. 
+
+* 참조형식 매개변수는 선택적이다. 이를 필수적으로 만들려면(즉 null이 아닌 값이 전달되도록 보장하려면)액션 메서드의 상단에 null 값을 거부하는 약간의 코드를 추가해야 한다. 예를 들면 값이 null일 경우, ArgumentNullException 예외를 던지게 하는 것이다. 
+
+
+
+※ 기본 매개변수 값 지정하기
+만일 액션 메서드의 매개변수에 대한 값이 없는 요청을 처리하려 하지만 코드로 null 값을 검사한다거나 예외를 던진다거나 하고 싶지는 않다면 C#의 선택적 매개변수 기능을 사용할수 있다. 목록 17-6은 그 예를 보여주고 있다. 
+
+목록 17-6 액션 메서드에서 C#의 선택적 매개변수 기능 사용하기
+
+...
+public ActionResult Search(string query="all", int page=1)
+{
+	//요청 처리
+	return View();
+}
+
+매개변수를 정의하면서 값을 지정하여 해당 매개변수를 선택적인 것으로 표시할 수 있다. 목록 17-6의 경우 필자는 query 매개변수와 page 매개변수에 기본값을 제공하고 있다. MVC 프레임워크는 요청으로부터 이러한 매개변수들에 대한 값을 가져오려고 시도할 것이다. 하지만 사용 가능한 값이 존재하지 않는다면 앞서 지정한 기본값이 대신하여 사용될 것이다. 
+
+이는 문자열 매개변수인 query에 대해서 null 값을 검사할 필요가 없다는 것을 의미한다. 만일 우리가 처리하는 요청에 query가 지정되어 있지 않다면 액션 메서드는 all이라는 문자열로 호출될 것이다. int 매개변수의 경우에도 page 값이 존재하지 않는다고 해서 요청 결과로 오류가 발생하지 않을까 걱정할 필요가 없다. 메서드는 기본값으로 1을 가지고 호출될 것이다. 선택적 매개변수는 기본 형식 즉 string, int, double과 같이 new 키워드를 사용하지 않고 정의할 수 있는 모든 형식에 사용될 수 있다. 
+
+
+주의:
+만일 요청 매개변수에 대한 값을 포함하고 있지만 올바른 형식으로 변환될 수 없다면(예를 들어 사용자가 int 매개변수에 대해서 숫자 형식이 아닌 문자열을 지정한 경우) 프레임워크는 그 매개변수 형식에 대한 기본값을 전달할 것이고(예를 들면 int 매개변수의 경우 0을), ModelState라는 특별한 컨텍스트 개체 안에 유효성 검사 오류로서 잘못 지정된 값을 저장해둘 것이다. 그렇기에 ModelState 안에 있는 유효성 검사 오류는 반드시 확인할 필요가 있는데 만일 이를 검사하지 않는다면 사용자가 폼에 잘못된 데이터를 입력하는 경우에도 마치 아무런 데이터가 입력되지 않았거나 기본값이 입력된 것처럼 요청이 처리되는 당황스러운 상황이 연출될 수 있기 때문이다. 이러한 문제를 피하기 위해서 사용될 수 있는 ModelState 와 유효성 검사에 대한 자세한 내용은 25장에서 다룰 예정이다. 
+
+
+
+
+※ 출력 만들기
+컨트롤러가 요청을 처리하고 난 뒤에는 일반적으로 응답을 생성할 필요가 있다. IController 인터페이스를 직접 구현하여 컨트롤러를 생성한 경우에는 요청을 처리하는데 필요한 모든 기능들(클라이언트에 대한 응답을 생성하는 것을 포함하여)을 직접 만들어야 한다. 예를 들어 HTML 응답을 보내고자 한다면 우선 HTML 데이터를 만들고 이를 Response.Write 메서드를 사용하여 클라이언트에 보내야만 하며 마찬가지로 사용자의 브라우저가 다른 URL로 이동하게 하고 싶다면 Response.Redirect 메서드를 호출하면서 재전송할 URL을 지정해야만 한다. 목록 17-7은 이러한 방법 모두가 반영된 BasicController 클래스를 보여주고 있다. 
+
+목록17-7 BasicController.cs 파일에서 결과 생성하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace ControllersAndActions.Controllers
+{
+    public class BasicController : IController
+    {
+        public void Execute(RequestContext requestContext)
+        {
+            string controller = (string)requestContext.RouteData.Values["controller"];
+            string action = (string)requestContext.RouteData.Values["action"];
+
+            if(action.ToLower() == "redirect")
+            {
+                requestContext.HttpContext.Response.Redirect("/Derived/Index");
+            }else
+            {
+                requestContext.HttpContext.Response.Write(string.Format("Controller: {0}, Action: {1}", controller, action));
+            }            
+        }
+        
+    }
+}
+
+물론 Controller 클래스에서 상속받았을 때 사용했던 것과 동일한 방식을 사용할 수도 있다. Execute 메서드 안에서 requestContext.HttpContext.Response 속성을 읽을 경우 반환되는 HttpResponseBase 클래스는 Controller.Response 속성을 통해서도 접근 및 사용이 가능하다. 목록 17-8은 그렇게 바꾸어 작성된 DerivedController 클래스를 보여주고 있다. 
+
+목록17-8 DerivedController.cs 파일에서 출력을 생성하기 위해 Response 속성 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class DerivedController : Controller
+    {
+        // GET: Derived
+        public ActionResult Index()
+        {
+            ViewBag.Message = "Hello from the DerivedController Index method";
+            return View("MyView");
+        }
+
+        public void ProduceOutput()
+        {
+            if(Server.MachineName == "TINY")
+            {
+                Response.Redirect("/Basic/Index");
+            }else
+            {
+                Response.Write("Controller: Derived, Action: ProduceOutput");
+            }
+        }
+     }
+}
+
+ProduceOutput 메서드는 Server.MachineName 속성 값을 사용하여 어떤 응답이 클라이언트에 보내져야 하는지를 결정하고 있다(TINY는 필자의 개발 머신 이름이다) 물론 이 방식도 동작하기는 하지만 약간의 문제점이 있다. 
+
+* 컨트롤러 클래스들이 HTML 정보나 URL 구조를 담고 있을 수밖에 없다. 이는 클래스를 읽기 어렵게 만들뿐만 아니라 유지보수를 하기에도 힘들다. 
+
+* 컨트롤러의 응답이 직접적으로 출력을 생성하기에 컨트롤러를 단위 테스트하기가 어렵다. 따라서 Response 개체의 Mock을 구현할 필요가 있으며 그런 다음 컨트롤러에서 받은 출력을 처리하여 출력이 무엇을 의미하는것인지를 알아내야 할 수도 있다. 예를 들면 HTML 에서 키워드를 분석하는 작업을 수행해야 할 수도 있는데, 이는 지루하면서도 피곤한 작업이다. 
+
+* 이러한 방식으로 모든 응답을 구체적으로 다루는 것은 매우 장황하며, 예외를 일으키기도 쉬운편이다. 몇몇 프로그래머들은 컨트롤러를 맨 바닥부터 구축하여 완전하게 제어하는 것을 좋아하지만 일반적인 개발자들은 그렇게 하는 것을 원치 않을 것이다. 
+
+다행히도 MVC 프레임워크는 이러한 문제들 모두를 해결해 주는 액션 결과(Action Result)라는 훌륭한 기능을 제공해주고 있다. 다음 절에서는 액션 결과의 개념을 소개할 것이며, 이를 사용하여 컨트롤러로부터 응답을 생성하는 다양한 방법을 보여줄 것이다. 
