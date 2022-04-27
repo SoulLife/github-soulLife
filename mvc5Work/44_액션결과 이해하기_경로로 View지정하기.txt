@@ -1,0 +1,467 @@
+※ 액션 결과 이해하기 
+
+MVC 프레임워크는 목표를 결정하는 것과 그 목표를 실행하는 것을 분리하기 위해서 액션 결과를 사용한다. 이 개념은 일단 터득하고 나면 간단하지만 처음에 이 방식을 접할 때에는 약간 모호한 부분들이 존재하기 때문에 쉽지 않게 느껴질 수 있다. 
+
+Response 개체를 직접적으로 다루는 대신, 액션 메서드는 ActionResult 클래스로부터 파생된 개체를 반환한다. 이는 컨트롤러로부터의 응답을 의미하는 개체며, 뷰를 렌더한다거나 다른  URL이나 액션으로 재전송한다거나 하는 응답일 수 있다. 여러분이 직접 응답을 생성하면 안 된다(바로 여기가 애매한 부분이다) 대신 액션 메서드가 호출된 후 MVC 프레임워크가 우리를 대신하여 결과를 만들어내도록 ActionResult 개체를 생성해야 한다. 
+
+
+Note:
+액션 결과 시스템은 일종의 Command 패턴인데, 이 패턴은 수행될 동작을 의미하는 개체이를 어디에 저장하고 어디로 전달할 계획인지를 표현하는 패턴이다. 자세한 내용은 http://en.wikipedia.org/wiki/Command_pattern을 참고하도록 하자. 
+
+
+
+MVC 프레임워크는 액션 메서드로부터 ActionResult 개체를 얻을 경우 그 클래스에 정의되어 있는 ExecuteResult 메서드를 호출한다. 그러면 액션 결과를 Response 개체를 사용하여 우리의 목표에 해당하는 출력을 생성하는 것이다. 
+
+이 기능이 동작하는 방식을 직접 살펴보기 위해서 Infrastructure라는 폴더를 만들고 그 안에 CustomRedirectResult.cs 라는 새로운 클래스 파일을 추가하였다. 그런 다음 목록17-9와 같이 사용자 지정 ActionResult로 구현하였다. 
+
+목록17-9 CustomRedirectResult.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+namespace ControllersAndActions.Infrastructure
+{
+    public class CustomRedirectResult : ActionResult
+    {
+        public string Url { get; set; }
+
+        public override void ExecuteResult(ControllerContext context)
+        {
+            string fullUrl = UrlHelper.GenerateContentUrl(Url, context.HttpContext);
+            context.HttpContext.Response.Redirect(fullUrl);
+        }
+    }
+}
+
+
+이 클래스는 System.Web.Mvc.RedirectResult 클래스가 실제로 동작하는 방식을 참고하여 작성되었다. MVC 프레임워크가 오픈 소스가 되었기에 얻을 수 있는 혜택 중 하나는 내부에서 어떻게 동작하는지를 살펴볼 수 있다는 것이다. 이 CustomRedirectResult 클래스는 실제 MVC안에 들어있는 클래스보다는 비교도 안될 정도로 단순하지만 이번 장에서 알아야할만한 내용은 모두 들어있다. 
+
+CustomRedirectResult 클래스의 인스턴스를 생성하면서 사용자를 재전송하고자 하는 URL도 건네주고 있다. 액션 메서드가 수행을 완료하게 되면 MVC 프레임워크에 의해 실행되는 ExecuteResult 메서드는 프레임워크가 제공하는 ControllerContext 개체를 통해 서 Response 개체를 가져오고 Redirect 메서드를 호출한다. 이는 목록 17-7에서 우리가 직접 IController를 구현했던 것과 같은 방식이다. 목록17-10 에서는 파생 클래스에서 어떻게 CustomRedirectResult 클래스를 사용할 수 있는지를 보여주고 있다. 
+
+목록17-10 DerivedController.cs 파일에서 CustomRedirectResult 클래스 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using ControllersAndActions.Infrastructure; //추가
+namespace ControllersAndActions.Controllers
+{
+    public class DerivedController : Controller
+    {
+        // GET: Derived
+        public ActionResult Index()
+        {
+            ViewBag.Message = "Hello from the DerivedController Index method";
+            return View("MyView");
+        }
+	//아래 메서드 수정
+        public ActionResult ProduceOutput()
+        {
+            if(Server.MachineName == "TINY")
+            {
+                return new CustomRedirectResult { Url = "/Basic/Index" };
+            }else
+            {
+                Response.Write("Controller: Derived, Action: ProduceOutput");
+                return null;
+            }
+        }
+
+        
+    }
+}
+
+
+ActionResult 를 반환하도록 액션 메서드의 반환 형식을 바꾸었다는 점에 주목하자. 또한 액션 메서드가 실행된 후에는 MVC 프레임워크가 아무런 일도 하지 않게 null을 반환하고 있는데 이는 CustomRedirectResult 인스턴스를 반환하지 않는 경우에 수행되도록 하기 위해 작성한 것이다. 
+
+
+※ 컨트롤러와 액션을 단위 테스트하기
+MVC 프레임워크의 많은 부분들이 단위 테스트를 원활하게 수행할 수 있도록 설계되었는데, 특히 액션 및 컨트롤러와 관련된 부분이 그러하다. 테스트가 원활하도록 지원하는 이유는 다음과 같다. 
+
+* 웹 서버 외부에서도 액션과 컨트롤러를 테스트할 수 있다. 컨텍스트 개체는 Mock을 구성하기가 쉬운 기반 클래스(예:HttpRequestBase)를 통해서 접근이 가능하다. 
+
+* 액션 메서드의 결과를 테스트하기 위해서 HTML을 분석할 필요가 없다. 반환되는 ActionResult 개체를 검사하여 예상되는 결과를 가져오는지 확인할 수 있다. 
+
+* 클라이언트 요청을 가정하여 테스트할 필요가 없다. MVC 프레임워크 모델 바인딩 시스템을 이용하면 메서드 매개변수를 통해서 입력을 얻어낼 수 있는 액션 메서드를 작성할 수 있다. 액션 메서드를 테스트하려면 단지 액션 메서드를 직접 호출하면서 필요한 매개변수 값을 제공하면 된다. 
+
+
+이번 장에서는 다양한 종류의 액션 결과를 단위 테스트하는 방법들을 다룰 예정이다. 
+
+단위 테스트만으로는 완벽하지 않다는 사실을 잊지 말자. 액션 메서드가 연속적으로 호출되는 경우에는 응용프로그램 안에서 복잡한 동작이 생겨나게 될 테니 말이다. 단위 테스트는 다른 테스팅 기법들과 함께 쓰일때 더욱 빛을 발한다는 것을 기억하자. 
+
+
+사용자 지정 재전송 액션 결과가 어떻게 동작하는지를 살펴보았으니 이번에는 MVC 프레임워크에서 제공하는 관련 기능은 어떠한지 살펴보도록 하자. 이는 훨씬 많은 기능을 가지고 있을 뿐만 아니라 Microsoft 에 의해 철저하게 테스트되었다. 목록 17-11은 DerivedController를 변경한 코드다. 
+
+목록17-11 DerivedController.cs 파일안에서 RedirectResult 내장 개체 사용하기. 
+
+...
+public ActionResult ProduceOutput()
+        {
+            return new RedirectResult("/Basic/Index");
+        }
+...
+
+액션 메서드에서 조건문이 제거되었기에 응용프로그램을 실행하고 /Derived/ProduceOutput 로 탐색한다면 브라우저는 항상 /Basic/Index URL로 재전송될것이다. 코드를 좀 더 줄일 수 있도록 Controller 클래스는 다양한 종류의 ActionResult 개체들을 생성해주는 편의 메서드도 제공하고 있다. 예를 들면 목록 17-12에서 보이는 것처럼 Redirect 메서드의 결과를 반환하면 목록17-11과 동일한 효과를 얻을 수 있다. 
+
+목록17-12 DerivedController.cs 파일에서 컨트롤러 편의 메서드 사용하기. 
+
+...
+public ActionResult ProduceOutput()
+        {
+            return Redirect("/Basic/Index");
+        }
+...
+
+액션 결과 시스템은 전혀 복잡하지 않으며, 이를 이용하면 좀 더 간단하고 깔끔하고 일관적인 코드를 만들 수 있다. 또한 액션 메서드는 매우 쉽게 단위 테스트할 수 있다는 장점도 있다. 
+
+재전송의 경우에는 액션 메서드가 RedirectResult 의 인스턴스를 반환하는지 여부와 Url 속성이 올바른 예상 경로를 대상으로 하는지를 확인하기만 하면 된다. 
+
+MVC 프레임워크는 표 17-5에서 보이는 것과 같이 수많은 액션 결과 형식들을 내장하고 있다. 이러한 모든 형식들은 ActionResult 에서 파생된 것이며, 이들 중 많은 형식들이 Controller 클래스 안에 관련 헬퍼 메서드들을 가지고 있기도 하다. 다음 절에서는 이러한 결과 형식들 중에서 가장 중요한 형식을 사용하는 방법을 다룰 예정이다. 
+
+표17-5 내장된 ActionResult 형식
+
+
+형식						설명														헬퍼 메서드
+ViewResult					기본 뷰 템플릿이나 특정 뷰 템플릿을렌더한다.							View
+
+PartialViewResult				기본 부분 뷰(partial view)템플릿이나 특정 부분 뷰 템플릿을 렌더한다.				PartialView
+
+RedirectToRouteResult			라우팅 구성에 따라 URL을 생성하여, 액션 메서드나 특정 라우트 엔트리로 HTTP		RedirectToAction
+						301 혹은 302재전송을 수행한다.										RedirectToActionPermanent
+																				RedirectToRoute
+																				RedirectToRoutePermanent
+
+RedirectResult				특정 URL로 HTTP 301혹은 302 재전송을 수행한다. 							Redirect
+
+ContentResult				텍스트 형식의 원본 데이터를 브라우저로 반환한다. 선택적으로 content-type 헤더를 		RedirectPermanent
+						설정한다.													Content
+
+FileResult					이진 데이터(디스크에 있는 파일이나 메모리상의 바이트 배열)를 브라우저로 직접 전송한다.	File
+
+JsonResult					.NET 개체를 JSON 형식으로 직렬화하고 그 결과를 응답으로 전송한다. 이러한 형식의 응	Json
+						답은 Web API를 사용할 경우 좀 더 보편적으로 사용된다. 이에 대해서는 27장에서 다루지만
+						23장에서도이러한 액션 형식이 사용되는 것을 볼 수 있다. 
+
+JavaScriptResult				브라우저에서 실행될 수 있는 JavaScript 소스 코드를 전송한다.					JavaScript
+
+HttpUnauthorizedResult			HTTP 응답 상태 코드를 401(인증되지 않음)로 설정한다. 이는 방문자의 로그인을 처리		None
+						하는 인증 메커니즘(폼 인증이나 윈동 인증)을 수행하게 만든다. 
+
+HttpNotFoundResult			HTTP 404-찾을 수 없음 오류를 반환한다. 								HttpNotFound
+
+HttpStatusCodeResult			특정 HTTP 코드를 반환한다.										None
+
+EmptyResult					아무것도 하지 않는다.											None
+
+
+
+
+※ 뷰를 렌더하기 위한 HTML 반환하기
+
+액션 메서드에서의 가장 일반적인 응답은 HTML 을 생성하여 이를 브라우저로 전송하는 것이다. 뷰를 렌더하는 방법을 살펴보기 위해서 필자는 프로젝트에 Example이라는 컨트롤러를 추가하였다. ExampleController.cs 클래스 파일의 내용은 목록 17-13에서 확인할 수 있다. 
+
+목록17-13 ExampleController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class ExampleController : Controller
+    {        
+        public ViewResult Index()
+        {
+            return View("Homepage");
+        }
+    }
+}
+
+액션 결과 시스템을 사용할 경우에는 ViewResult 클래스의 인스턴스를 사용하여 MVC 프레임워크가 렌더할 뷰를 지정할 수 있다. 이렇게 하는 가장 쉬운 방법은 컨트롤러의 View 메서드를 호출하면서 인자로 렌더할 뷰의 이름을 전달하는 것이다. 
+
+
+Note:
+이번 예제의 액션 메서드의 반환 형식이 ViewResult 인 것에 주목하자. 좀 더 일반적인 형식인 ActionResult 를 지정해도 메서드는 올바로 컴파일되고 동작할 것이다. 사실 몇몇 MVC 프로그래머들은 메서드가 좀 더 제한적인 형식을 반환할 수 있음에도 불구하고 모든 액션 메서드의 결과로서 ActionResult 를 지정하곤 한다. 
+
+
+
+MVC 프레임워크는 ViewResult 개체의 ExecuteResult 메서드를 내부적으로 호출할 때 지정한 뷰에 대한 검색을 수행하기 시작한다. 만일 프로젝트에서 Area를 사용하고 있다면 프레임워크는 다음의 위치들을 살펴볼 것이다. 
+
+* /Areas/<AreaName>/Views/<ControllerName>/<ViewName>.aspx
+
+* /Areas/<AreaName>/Views/<ControllerName>/<ViewName>.ascx
+
+* /Areas/<AreaName>/Views/Shared/<ViewName>.aspx
+
+* /Areas/<AreaName>/Views/Shared/<ViewName>.ascx
+
+* /Areas/<AreaName>/Views/<ControllerName>/<ViewName>.cshtml
+
+* /Areas/<AreaName>/Views/<ControllerName>/<ViewName>.vbhtml
+
+* /Areas/<AreaName>/Views/Shared/<ViewName>.cshtml
+
+* /Areas/<AreaName>/Views/Shared/<ViewName>.vbhtml
+
+목록을 살펴보면 프레임워크가 기존의 ASPX 뷰 엔진을 사용하는 뷰들(.aspx 파일이나 .ascx 파일)도 살펴본다는 사실을 알 수 있을 것이다. 심지어 MVC 프레임워크가 Razor를 사용한다 하더라도 말이다. 이는 ASP .NET Web Forms의 렌더링 기능을 사용했던 이전 버전의 MVC 프레임워크에 대해서도 호환성을 유지하기 위해서다.
+
+프레임워크는 C# Razor 템플릿과 Visual Basic .NET Razor 템플릿들도 모두 살펴본다. (.cshtml은 C#용 파일이고 .vbhtml은 Visual Basic 용 파일이다. 두 파일모두 Razor 구문은 동일하지만 코드는 서로 다른 언어로 작성된다)MVC 프레임워크는 이러한 각각의 파일이 존재하는지 차례대로 검사를 하며 일치하는 것을 발견하는 즉시 그 뷰를 사용하여 액션 메서드의 결과를 렌더한다. 
+
+만일 Area를 사용하지 않거나 혹은 사용하더라도 이전 목록에서 일치하는 파일을 찾지 못한 경우에는 다음의 위치를 사용하여 계속적으로 검색을 수행하게 된다. 
+
+
+* /Areas/<AreaName>/Views/<ControllerName>/<ViewName>.aspx
+
+* /Areas/<AreaName>/Views/<ControllerName>/<ViewName>.ascx
+
+* /Areas/<AreaName>/Views/Shared/<ViewName>.aspx
+
+* /Areas/<AreaName>/Views/Shared/<ViewName>.ascx
+
+* /Areas/<AreaName>/Views/<ControllerName>/<ViewName>.cshtml
+
+* /Areas/<AreaName>/Views/<ControllerName>/<ViewName>.vbhtml
+
+* /Areas/<AreaName>/Views/Shared/<ViewName>.cshtml
+
+* /Areas/<AreaName>/Views/Shared/<ViewName>.vbhtml
+
+
+MVC 프레임워크는 다시금 상기 위치에서 차례로 파일을 찾기 시작하며, 찾는 즉시 검색을 멈추고 찾아진 뷰는 클라이언트에 응답을 렌더하기 위해서 사용된다. 
+
+이번 예제 응용프로그램에서는 Area를 사용하고 있지 않기에 프레임워크가 첫 번째로 살펴보는 위치는 /Views/Example/Index/aspx가 될 것이다. 클래스 이름에서 Controller 라는 부분이 빠져있는 것에 주목하자 이는 ExampleController 에서 ViewResult를 생성하면 Example라는 디렉터리를 검색하도록 되어 있기 때문이다. 
+
+
+
+※ 단위 테스트 : 뷰 렌더하기
+
+액션 메서드가 렌더하는 뷰를 테스트하려면 액션 메서드가 반환하는 ViewResult 개체를 검사하면 된다. ViewResult 개체가 뷰와 완전히 동일하지는 않지만(즉 생성되는 최종 HTML 까지 검사하는 것은 아니기에) 이를 검사하는 것만으로도 충분하다. MVC 프레임워크의 뷰 시스템이 올바르게 동작할 것이라고 신뢰한다면 말이다. 이번 장에서 사용할 단위 테스트들을 위해서 테스트 프로젝트에 ActionTests.cs라는 새로운 단위 테스트 파일을 추가한다. 
+
+테스트할 첫 번째 부분은 다음과 같이 액션 메서드가 특정 뷰를 선택한 경우다. 
+
+...
+public ViewResult Index()
+{
+	return View("Homepage");
+}
+...
+
+다음의 테스트 메서드에서 보이는 것과 같이 ViewResult 개체의 ViewName 속성을 확인해봄으로써 어떤 뷰가 선택되었는지를 확인할 수 있다. 
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Web.Mvc;
+using ControllersAndActions.Controllers;
+
+namespace ControllersAndActions.Tests
+{
+    [TestClass]
+    public class ActionTests
+    {
+        [TestMethod]
+        public void ControllerTest()
+        {
+            //Arrange - 컨트롤러를 생성한다
+            ExampleController target = new ExampleController();
+
+            //Act -- 액션 메서드를 호출한다. 
+
+            ViewResult result = target.Index();
+
+            //Assert - 결과를 검증한다. 
+
+            Assert.AreEqual("Homepage", result.ViewName);
+        }
+    }
+}
+
+
+다만 다음과 같이 기본 뷰를 선택하는 액션 메서드를 테스트하는 경우에는 약간 다르다. 
+
+...
+public ViewResult Index()
+{
+	return View();
+}
+...
+
+이러한 상황에서는 다음과 같이 뷰 이름으로 빈 문자열("")을 사용해야 한다. 
+
+...
+Assert.AreEqual("", result.ViewName);
+..
+
+
+빈 문자열을 지정하면 액션 메서드와 연계되어 있는 기본 뷰가 선택되었다고 ViewResult 개체가 Razor 뷰 엔진에 알려주게 된다. 
+
+
+MVC 프레임워크가 뷰를 검색하는 디렉터리의 순서는 설정보다 규약 우선(Convention overConfiguration, CoC)의 또 다른 예다. 뷰를 프레임워크에 등록할 필요는 없으며 단지 알려진 위치 중 한 군데에 파일을 놓아두기만 하면 된다. 그러면 프레임워크가 알아서 파일을 찾을 것이다. 필자는 이러한 규약을 적극 활용하려는 취지로 목록 17-14에서 보이는 것처럼 View 메서드를 호출하면서 렌더하려는 뷰의 이름도 생략 하였다. 
+
+목록 17-14 ExampleController.cs 파일에서 뷰를 지정하지 않고 ViewResult 생성하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class ExampleController : Controller
+    {        
+        public ViewResult Index()
+        {
+            return View();
+        }
+    }
+}
+
+이 경우 MVC 프레임워크는 액션 메서드와 동일한 이름을 갖는 뷰를 렌더한다고 가정한다. 이는 목록 17-14의 View 메서드를 호출할 경우 Index라는 뷰를 검색한다는 의미다. 
+
+
+
+Note:
+15장과 16장에서 라우팅 시스템을 설명하면서 언급했듯이 MVC 프레임워크는 사실 RouteData.Values["action"] 값을 통해서 액션 메서드의 이름을 얻어온다. 하지만 여러분이 MVC 프레임워크 규약을 따르지 않는 사용자 지정 라우팅 클래스를 구현해 놓은 경우라면 이야기가 다를 수도 있을 것이다. 
+
+
+
+View 메서드에는 수많은 오버로드 버전들이 존재하는데 그들은 생성되는 ViewResult 개체의 다양한 속성들을 설정하는 것과 관련되어 있다. 예를 들면 다음과 같이 명시적으로 특정 레이아웃 명칭을 지정하면 뷰에 의해 사용되는 레이아웃을 재정의할 수가 있다. 
+
+...
+public ViewResult Index()
+{
+	return View("Index", "_AlternateLayoutPage");
+}
+...
+
+
+
+※ 경로로 View 지정하기
+명명규약 방식은 편리하고 간단하긴 하지만 렌더할 수 있는 뷰가 제한적이라는 문제도 존재한다. 만일 특정한 뷰를 렌더하고자 한다면 명시적인 경로를 지정하여 검색 단계를 건너뛰고 지정된 뷰를 렌더하게 할 수도 있다. 다음은 그 예다. 
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class ExampleController : Controller
+    {        
+        public ViewResult Index()
+        {
+            return View("~/Views/Other/Index.cshtml");
+        }
+    }
+}
+
+
+이와 같이 뷰를 지정할 경우 경로는 반드시 /혹은 ~/로 시작해야 하며 파일명의 확장자 (C# 코드를 사용하는 Razor의 뷰 의 경우 .cshtml )도 포함해야만 한다. 
+
+만일 여러분이 직접 경로를 지정하는 방식을 사용하고자 한다면 어떠한 이유로 이 방식을 사용하려 하는지 스스로에게 한번 진지하게 물어볼 것을 추천한다. 다른 컨트롤러에 속해있는 뷰를 렌더하고자 한다면 그 컨트롤러의 액션 메서드로 사용자를 재전송하는 것이 훨씬 나을 수 있기 때문이다(이장 후반에서 설명할 액션 메서드로재전송하기 절을 참고하자) 만일 명명 스키마가 여러분이 프로젝트를 구성한 방식과 어울리지 않아서 조정하기 위함이라면 20장을 참고하도록 하자. 20장은 사용자 지정 검색 순서를 구현하는 방법에 대해서 설명한다. 
+
+
+
+※ 액션 메서드에서 뷰로 데이터 전달하기
+
+MVC 프레임워크는 액션 메서드에서 뷰로 데이터를 전달하기 위한 다양한 방법을 제공하고 있는데, 이 내용은 잠시 후 다룰 예정이다. 더불어 뷰에 대한 내용은 20장에서 깊이 있게 살펴볼 예정이며 이번 장에서는 컨트롤러의 기능을 설명하기 위해서 필요한 뷰의 기능들 정도만을 다루고자 한다. 
+
+
+※ 뷰 모델 개체 제공하기
+뷰에 개체를 전달하려면 목록 17-15에서 보이는 것과 같이 View 메서드에 매개변수로서 개체를 전달하면 된다.
+
+목록17-15 ExampleController.cs 파일에서 뷰 모델 개체 지정하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class ExampleController : Controller
+    {        
+        public ViewResult Index()
+        {
+            DateTime date = DateTime.Now;
+            return View(date);
+        }
+    }
+}
+
+이번 예제에서는 뷰 모델로서 DateTime 개체를 전달하고 있는데,이 개체는 뷰에서 Razor의 Model 키워드를 사용하여 접근할 수 있다. Model 키워드의 사용 예를 살펴보기 위해서 Index.cshtml이라는 뷰를 Views/Example 폴더에 추가했으며 파일의 본문은 목록 17-16에서 보이는 것과 같다. 
+
+
+목록17-16 Index.cshtml 파일에서 뷰 모델 접근하기
+
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+The day is: @(((DateTime)Model).DayOfWeek)
+
+이 뷰는 무형식(Untyped)뷰 혹은 약한 형식(Weakly Typed)의 뷰다. 이러한 뷰는 뷰 모델 개체에 대해 아는 것이 없으며, 뷰 모델을 object의 인스턴스로 취급한다. 그렇기에 DayOfWeek 속성의 값을 얻기 위해서는 개체를 DateTime 의 인스턴스로 형 변환을 할 필요가 있다. 이 방식은 잘 동작하긴 하지만 뷰가 다소 지저분해지는 단점이 있다. 이를 깔끔하게 하려면 뷰에게 어떤 형식의 뷰 모델을 사용할 것인지 알려주는 강력한 형식(Strongly Typed)의 뷰를 사용하면 된다. 목록 17-17은 그 예를 보여주고 있다. 
+
+목록17-17 Index.cshtml 파일에 강력한 형식 추가하기
+
+@model DateTime
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+The day is: @Model.DayOfWeek
+
+
+이번에는 Razor의 model 키워드를 사용하여 뷰 모델의 형식을 지정하고 있다. 모델 형식을 지정할 경우에는 소문자 m을 사용하고 있으며 값을 읽어올 때는 대문자 M을 사용한다는 점에 주의하자. 강력한 형식의 뷰를 사용하면 뷰 자체를 깔끔하게 만들 수 있을 뿐만 아니라 그림 17-3과 같이 Visual Studio의 인텔리센스 기능도 활용할 수 있다는 장점이 있다. 
+
+
+
+※ 단위 테스트 : 뷰 모델 개체
+
+ViewResult.ViewData.Model 속성을 통해서 액션 메서드에서 뷰로 전달되는 뷰 모델 개체에 접근할 수 있다. 다음은 목록 17-17의 액션 메서드에 대한 테스트인데 Assert.IsInstanceOfType 메서드를 사용하여 뷰 모델 개체가 DateTime의 인스턴스인지를 확인하고 있다. 
+
+...
+ [TestMethod]
+        public void ViewSelectionTest()
+        {
+            //Arrange - 컨트롤러를 생성한다
+            ExampleController target = new ExampleController();
+
+            // Act - 액션 메서드를 호출한다
+            ViewResult result = target.Index();
+
+            //Assert - 결과를 검증한다. 
+            Assert.AreEqual("", result.ViewName);
+            Assert.IsInstanceOfType(result.ViewData.Model, typeof(System.DateTime));
+        }
+...
+
+그리고 앞에서 단위 테스트를 작성했던 이후에 액션 메서드에서 변경된 사항들을 반영하기 위해서 검사할 뷰의 이름도 다음과 같이 변경해야 한다. 
+
+[TestMethod]
+        public void ControllerTest()
+        {
+            //Arrange - 컨트롤러를 생성한다
+            ExampleController target = new ExampleController();
+
+            //Act -- 액션 메서드를 호출한다. 
+
+            ViewResult result = target.Index();
+
+            //Assert - 결과를 검증한다. 
+
+            Assert.AreEqual("", result.ViewName);
+        }
+....
