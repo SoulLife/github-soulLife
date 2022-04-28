@@ -1,0 +1,423 @@
+※ ViewBag 을 사용하여 데이터 전달하기
+ViewBag 기능에 대해서는 2장에서 소개했었다. 이 기능은 동적(Dynamic)개체에 임의의 속성을 정의할 수 있게 하며, 뷰에서 그 속성에 접근할 수 있게 하는 기능이다. 동적 개체는 목록 17-18에서 보이는 것과 같이 Controller.ViewBag 속성을 통해서 접근할 수 있다. 
+
+목록 17-18 ExampleController.cs 파일에서 ViewBag 기능 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class ExampleController : Controller
+    {        
+        public ViewResult Index()
+        {
+            ViewBag.Message = "Hello";
+            ViewBag.Data = DateTime.Now;
+            return View();
+        }
+    }
+}
+
+목록 17-18에서는 Message와 Date라는 ViewBag 속성을 정의하고 그 값을 할당하고 있다. 이 속성들은 기존에 존재하고 있지 않지만 그들을 생성하기 위해 사전에 어떤 준비를 하거나 할 필요도 없다. 단지 그냥 지정하기만 하면 된다. 뷰에서 데이터를 다시 읽기 위해서는 목록 17-19에서 보이는 것과 같이 액션 메서드 안에서 설정된 동일한 속성을 단순히 읽어오기만 하면 된다. 
+
+목록17-19 Index.cshtml 파일에서 ViewBag 으로부터 데이터 읽기
+
+@model DateTime
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+The day is: @ViewBag.Date.DayOfWeek
+<p />
+The message is: @ViewBag.Message
+
+
+ViewBag을 사용할 경우에는 뷰에 여러 개체를 전달할 수도 있기에, 뷰 모델 개체를 사용하는 것보다 훨씬 유용하다. 만일 뷰 모델만을 사용하도록 제한한다면 동일한 효과를 얻기 위해서는 string과 DateTime 멤버를 갖는 새로운 형식을 만들어야 할 필요가 있을 것이다. 
+
+동적 개체를 다루는 경우에는 다음과 같이 뷰 안에서 메서드와 속성을 연속적으로 호출할 수도 있다. 
+
+...
+The day is: @ViewBag.Date.DayOfWeek.Blah.Blah.Blah
+...
+
+Visual Studio는 ViewBag과 같은 동적 개체와 오류들(뷰가 렌더되기 전까지는 드러나지 않는 오류들) 에 대해서는 인텔리센스를 지원하지 않는다. 
+
+
+
+※ 단위테스트 : ViewBag
+
+ViewResult.ViewBag 속성을 통해서 ViewBag에 있는 값들을 읽어올 수 있다. 다음은 목록 17-18에 있는 액션 메서드를 테스트하는 메서드다(이 상태로 테스트 탐색기에서 모든 테스트들을 실행해보면 목록17-18에서 변경된 코드로 인해서 ViewSelectionTest 테스트가 실패할 것이다. 앞으로 이 테스트는 사용되지 않으므로 제거하도록 하자. )
+
+[TestMethod]
+        public void ControllerTest()
+        {
+            //Arrange - 컨트롤러를 생성한다
+            ExampleController target = new ExampleController();
+
+            //Act -- 액션 메서드를 호출한다. 
+
+            ViewResult result = target.Index();
+
+            //Assert - 결과를 검증한다. 
+
+            Assert.AreEqual("Hello", result.ViewBag.Message);
+        }
+...
+
+
+※ 재전송하기
+액션 메서드의 결과로 직접 적인 어떠한 출력을 만드는 것이 아니라 사용자의 브라우저를 다른 URL로 재전송해야 하는 경우도 있다. 대부분의 경우 이러한 URL은 사용자에게 제공할 출력을 제공하는 또 다른 액션 메서드인 편이다. 
+
+
+※ POST / REDIRECT / GET 패턴
+재전송이 가장 많이 쓰이는 곳은 HTTP , POST 요청을 처리하는 액션 메서드 안에서다. 이전 장에서 언급했듯이 POST 요청은 응용프로그램의 상태를 변경하고자 할 때 사용된다. 만일 요청을 처리한 후에(즉 변경을 수행한 후)바로 HTML을 반환한다면, 사용자가 브라우저의 새로고침 버튼을 클릭할 경우 폼이 다시 제출되는 문제가 생길 수 있으며, 이는 우리가 원하는 모습은 아닐 것이다. 
+
+이런 문제를 피하기 위해서는 Post/Redirect/Get이라는 패턴을 사용하면 된다. 이 패턴은 POST 요청을 받아서 이를 처리한 뒤 재전송을 수행하여 브라우저가 또다른 URL로 GET 요청을 수행하도록 하는 것이다. GET 요청은 응용프로그램의 상태를 변경하지 않기에 실수로 재 요청을 여러 번 하더라도 아무런 문제가 없다. 
+
+
+
+재전송을 수행하는 경우에는 브라우저로 다음의 두 HTTP 코드 중 하나를 전송해야 한다. 
+
+* HTTP 코드 302를 전송한다. 이는 임시적인 재전송을 의미한다. 이는 가장 빈번하게 사용되는 재전송 유형이다. 그리고 Post / Redirect / Get 패턴을 사용할 경우에는 이 코드를 전송해야 한다 
+
+* HTTP 코드 301을 전송한다. 이는 영구적인 재전송을 의미한다. 이는 경고와 함께 사용되어야 하는데 그 이유는 HTTP 코드를 받는 사용자에게 원본 URL이 다시는 요청되지 않을 것이고 재전송 코드가 포함된 새로운 URL을 앞으로 사용하게 될 것임을 알려주어야 하기 때문이다. 
+
+
+※ 문자열로 작성된 URL로 재전송하기
+
+브라우저를 재전송하는 가장 기본적인 방법은 목록17-20에서 보이는 것과 같이 Redirect Result 클래스의 인스턴스를 반환하는 Redirect 메서드를 호출하는 것이다. 
+
+목록17-20 ExampleController.cs 파일에서 문자열로 작성된 URL로 재전송하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class ExampleController : Controller
+    {        
+        public ViewResult Index()
+        {
+            ViewBag.Message = "Hello";
+            ViewBag.Data = DateTime.Now;
+            return View();
+        }
+	//추가
+        public RedirectResult Redirect()
+        {
+            return Redirect("/Example/Index");
+        }
+    }
+}
+
+재전송 URL은 문자열로 작성하여 Redirect 메서드에 매개변수로 전달하면 된다. Redirect 메서드는 임시적인 재전송을 수행한다. 영구적인 재전송을 전송하려면 목록 17-21에서 보이는 것과 같이 RedirectPermanent를 사용하면 된다. 
+
+목록17-21 ExampleController.cs 파일에서 문자열로 작성된 URL로 영구적인 재전송하기
+
+...
+        public RedirectResult Redirect()
+        {
+            return RedirectPermanent("/Example/Index");
+        }
+....
+
+
+TIP:
+원한다면 bool 매개변수를 갖는 Redirect 메서드의 오버로드 버전을 사용할 수도 있다. 이 bool 매개변수는 재전송이 영구적인 것인지 아닌지를 설정하기 위한 것이다. 
+
+
+
+※ 단위 테스트 : 문자열로 작성된 재전송
+
+문자열로 작성된 재전송은 테스트하기에 용이하다. RedirectResult 클래스의 Url 속성과 Permanent 속성을 통해서 URL과 재전송이 영구적인 것인지 임시적인 것인지를 알아낼 수 있기 때문이다. 다음은 목록 17-21에서 보여준 재전송을 테스트하기 위한 메서드다(만약 이 테스트가 실패한다면 Assert.IsTrue(result.Permanent); 구문 때문일 것이다. 이 구문을 주석 처리하거나 Redirect 액션 메서드가 영구적인 재전송을 수행하도록 코드를 변경한다)
+
+...
+[TestMethod]
+        public void ControllerTest()
+        {
+            //Arrange - 컨트롤러를 생성한다
+            ExampleController target = new ExampleController();
+
+            //Act -- 액션 메서드를 호출한다. 
+
+            RedirectResult result = target.Index();
+
+            //Assert - 결과를 검증한다. 
+
+            Assert.IsTrue(result.Permanent);
+            Assert.AreEqual("/Example/Index", result.Url);
+        }
+
+
+액션 메서드를 호출하는 경우 RedirectResult를 받게끔 테스트를 변경한 부분에 주목하자. 
+
+
+
+※라우팅 시스템 URL로 재전송하기
+
+만일 응용프로그램 안의 다른 부분으로 재전송해야 한다면 전송 URL이 URL 스키마와 일치하는지 확인해야 할 필요가 있다. 문자열로 작성된 URL을 사용하여 재전송하는 경우의 문제 점은 라우팅 스키마를 변경하는 경우 그에 맞게 전체적으로 URL 코드들을 변경해야만 한다. 는 것이다. 다행스럽게도 RedirectToRoute 메서드를 사용하면 라우팅 시스템을 통해서 유효한 URL을 생성해낼 수 있다. RedirectToRoute 메서드는 목록 17-22에서 보이는 것처럼 RedirectToRouteResult 의 인스턴스를 생성한다. 
+
+목록17-22 ExampleController.cs 파일에서 라우팅 시스템 URL로 재전송하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class ExampleController : Controller
+    {        
+        public ViewResult Index()
+        {
+            ViewBag.Message = "Hello";
+            ViewBag.Data = DateTime.Now;
+            return View();
+        }
+	//추가
+        public RedirectToRouteResult Redirect()
+        {
+            return RedirectToRoute(new { controller = "Example", action = "Index", ID = "MyID" });
+        }
+    }
+}
+
+
+RedirectToRoute 메서드는 임시 재전송을 수행한다. 만일 영구적인 재전송을 하고 싶다면 RedirectToRoutePermanent 메서드를 사용하면 된다. 두 메서드 모두 매개변수로 익명 형식을 받는데 이 형식은 URL을 생성하기 위해 라우팅 시스템에게로 전달될 정보들을 속성으로 갖는다. 이러한 처리 과정에 대한 상세한 내용은 15장과 16장을 참고하기바란다. 
+
+
+TIP:
+RedirectToRoute 메서드는 RedirectToRouteResult 개체를 반환하기에 액션 메서드가 그형식을 반환하도록 변경되었음에 주목하자. 
+
+
+
+※ 단위 테스트 :라우팅 재전송
+다음은 목록 17-22에 있는 액션 메서드에 대한 단위 테스트다.
+
+...
+[TestMethod]
+        public void ControllerTest()
+        {
+            //Arrange - 컨트롤러를 생성한다
+            ExampleController target = new ExampleController();
+
+            //Act -- 액션 메서드를 호출한다. 
+
+            RedirectToRouteResult result = target.Redirect();
+
+            //Assert - 결과를 검증한다. 
+
+            Assert.IsFalse(result.Permanent);
+            Assert.AreEqual("Example", result.RouteValues["controller"]);
+            Assert.AreEqual("Index", result.RouteValues["action"]);
+            Assert.AreEqual("MyID", result.RouteValues["ID"]);
+        }
+...
+
+RedirectToRouteResult 개체가 제공하는 라우팅 정보를 살펴봄으로써 간접적으로 결과를 테스트하고 있는 것을 볼 수 있다. 이는 URL을 굳이 파싱할 필요가 없다는 것을 의미한다. 
+
+
+
+
+※ 액션 메서드로 재전송하기
+RedirectToAction 메서드(임시 재전송) 및 RedirectToActionPermanent(영구적인 재전송)를 사용하면 좀 더 부드럽게 액션 메서드로재전송할 수 있다. 이는 RedirectToRoute 메서드에 대한 래퍼이며, 목록 17-23에서 보이는 것과 같이 익명 형식을 만들 필요 없이 컨트롤러와 액션 메서드에 대한 값을 지정할수 있는 메서드다. 
+
+목록17-23 ExampleController.cs 파일에서 RedirectToAction 메서드를 사용하여 재전송하기
+
+...
+        public RedirectToRouteResult Redirect()
+        {
+            return RedirectToAction("Index");
+        }
+...
+
+만일 액션 메서드만을 지정한다면 이는 현재 컨트롤러 안에 있는 액션 메서드를 참조하는 것으로 가정한다. 다른 컨트롤러로 재전송하고자 한다면 다음과 같이 매개변수로 컨트롤러의 이름을 제공할 필요가 있다. 
+
+...
+        public RedirectToRouteResult Redirect()
+        {
+            return RedirectToAction("Index", "Basic");
+        }
+...
+
+이 메서드의 오버로드 버전에는 URL 생성과 관련하여 추가적인 값들을 제공할 수 있는 메서드들도 존재한다. 이들은 익명 형식을 사용하여 추가적인 값들을 지정하기에 편의 메서드를 사용하는 경우보다는 작성하기에 번거롭지만 코드를 읽기 쉽다는 장점이 있다.
+
+
+Note:
+액션 메서드와 컨트롤러 인자에 대해 지정한 값은 그들이 라우팅 시스템으로 전달되기 전까지는 검증되지 않는다. 그렇기에 지정한 대상이 실제로 존재하는지를 보장하는 것은 여러분의 몫이다. 
+
+
+
+
+
+※ 재전송 시 데이터 보존하기
+재전송은 브라우저로 하여금 완전히 새로운 HTTP 요청을 보내오게 하기에 기존 요청의 상세 정보에 대해서는 전혀 알 수가 없다. 만일 하나의 요청에서 다음 요청으로 데이터를 전달하고 싶다면 임시 데이터(TempData)기능을 사용해야 한다. 
+
+TempData는 Session 데이터와 유사하다. 다만 TempData 값은 그 값을 읽을 경우 삭제된 것으로 표시되고 요청이 처리되고 난 뒤 제거된다는 차이가 있다. 그렇기에 이는 재전송 사이에 유지되길 원하는 임시 데이터에 매우 적합한 장치다. 다음은 RedirectToAction 메서드를 사용하는 액션 메서드 안에서 이를 사용하는 간단한 예다. 
+
+        public RedirectToRouteResult RedirectToRoute()
+        {
+            TempData["Message"] = "Hello";
+            TempData["Date"] = DateTime.Now;
+            return RedirectToAction("Index");
+        }
+....
+
+상기 메서드는 TempData 컬렉션에 값들을 설정한 뒤 동일한 컨트롤러의 Index 액션 메서드로 사용자 브라우저를 재전송하고 있다. 그런 다음 다음과 같이 대상 액션 메서드 안에서 TempData값을 읽어올 수 있으며 그 읽어온 값을 뷰로 다시 전달할 수도 있다. 
+
+...
+        public ViewResult Index()
+        {
+            ViewBag.Message = TempData["Message"];
+            ViewBag.Data = TempData["Date"];
+            return View();
+        }
+....
+
+좀더 직접적인 방법은 다음과 같이 뷰 안에서 값을 직접 읽어오는 것이다. 
+
+@model DateTime
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+The day is: @(((DateTime)TempData["Date"]).DayOfWeek
+<p />
+The message is: @TempData["Message"]
+
+
+뷰에서 값을 직접 읽는 방법을 선택한다면 액션 메서드에서 굳이 ViewBag 기능을 사용하여 값을 재전달할 필요가 없다. 하지만 이 경우 TempData 결과를 적절한 형식으로 형 변환해야만 한다는 번거로움이 있다. 
+
+TempDate에서 값은 가져오지만 제거된 것으로 표기하지 않으려면 다음과 같이 Peek 메서드를 사용하면 된다 
+
+...
+DateTime time = (DateTime)TempData.Peek("Date");
+..
+
+더불어 다음과 같이 Keep 메서드를 사용하면 값이 삭제되지 않고 유지되도록 할수도 있다. 
+
+...
+TempData.Keep("Date");
+...
+
+Keep 메서드가 값을 영원히 보존하는 것은 아니다. 만일 값을 다시 한번 읽어온다면 이는 다시금 제거된 것으로 표기될 것이다. 요청이 처리될 때 항목들 자동으로 제거되지 않도록 저장해두고 싶다면 세션 데이터를 대신하여 사용하면 된다. 
+
+
+
+※ HTTP 코드와 오류 반환하기
+
+이번 장에서 살펴볼 ActionResult 클래스의 마지막 유형은 클라이언트에 HTTP 결과 코드와 특정 오류 메시지를 전달하기 위한 것이다. 대부분의 응용프로그램은 이러한 기능을 필요로 하지 않는데 그 이유는 MVC 프레임워크가 자동으로 이러한 종류의 결과들을 제어하기 때문이다. 하지만 여러분이 클라이언트로 전달되는 응답을 좀 더 직접적으로 제어할 필요가 있다면 이 기능은 유용할 것이다. 
+
+
+※ 특정 HTTP 결과 코드 전송하기
+
+특정 HTTP 상태 코드를 브라우저로 전송하려면 HttpStatusCodeResult 클래스를 사용하면 된다. 다만 이를 위한 컨트롤러 헬퍼 메서드는 제공되지 않기 때문에 목록17-24에서 보이는 것과 같이 클래스의 인스턴스를 직접 생성해서 반환해야 한다. 
+
+목록17-24 ExampleController.cs 파일에서 특정 상태 코드전송하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace ControllersAndActions.Controllers
+{
+    public class ExampleController : Controller
+    {        
+        public ViewResult Index()
+        {
+            ViewBag.Message = "Hello";
+            ViewBag.Data = DateTime.Now;
+            return View();
+        }
+
+        public RedirectToRouteResult Redirect()
+        {
+            return RedirectToAction("Index", "Basic");
+        }
+
+        public RedirectToRouteResult RedirectToRoute()
+        {
+            TempData["Message"] = "Hello";
+            TempData["Date"] = DateTime.Now;
+            return RedirectToAction("Index");
+        }
+	//추가
+        public HttpStatusCodeResult StatusCode()
+        {
+            return new HttpStatusCodeResult(404, "URL cannot be serviced");
+        }
+    }
+}
+
+HttpStatusCodeResult 의 생성자 매개변수는 숫자로 된 상태 코드와 선택적으로 지정가능한 설명 메시지다. 이번 예제의 경우 요청된 리소스가 존재하지 않는다는 것을 의미하는 404코드를 반환하고 있다. 
+
+
+404 결과 전송하기
+
+좀더 편리한 클래스인 HttpNotFoundResult를 사용해도 목록 17-24와 동일한 효과를 얻을 수 있다. 이 클래스는 HttpStatusCodeResult 클래스로부터 파생되었으며 목록 17-25에서 보이는 것과 같이 컨트롤러의 HttpNotFound 메서드를 사용하여 생성할 수 있다.
+
+목록17-25 ExampleController.cs 파일에서 404 결과 생성하기
+
+...
+        public HttpStatusCodeResult StatusCode()
+        {
+            return HttpNotFound();
+        }
+...
+
+401 결과 전송하기
+특정 HTTP 상태 코드를 위한 또 다른 래퍼 클래스로 HttpUnauthorizedResult도 존재한다. 이는 401 코드를 반환하며 요청이 권한 허가를 받지 않았다는 것을 나타내기 위해서 사용된다. 목록 17-26는 사용예를 보여주고 있다. 
+
+목록17-26 ExampleController.cs 파일에서 401 결과 생성하기
+
+...
+        public HttpStatusCodeResult StatusCode()
+        {
+            return new HttpUnauthorizedResult();
+        }
+...
+
+HttpUnauthorizedResult의 인스턴스를 생성해주는 헬퍼 메서드는 아쉽게도 제공되고 있지 않다. 그렇기에 직접 생성해야만 한다. 이 클래스의 인스턴스를 반환하는 것은 12장에서 본 것과 같이 일반적으로는 인증 페이지로 사용자를 재전송하는 효과가 있다. 
+
+
+
+
+※ 단위 테스트 : HTTP 상태 코드
+HttpStatusCodeResult 클래스는 다른 결과 형식들에서 살펴보았던 패턴을 동일하게 따르며, 속성을 통해서 상태를 확인할 수 있다. 예를 들면 StatusCode 속성은 숫자로 된 HTTP 상태 코드를 반환하며, StatusDescription 속성은 관련된 설명 문자열을 반환한다. 다음은 목록 17-26에 있는 액션 메서드에 대한 테스트 메서드다. 
+
+...
+        [TestMethod]
+        public void ControllerTest()
+        {
+            //Arrange - 컨트롤러를 생성한다
+            ExampleController target = new ExampleController();
+
+            //Act -- 액션 메서드를 호출한다. 
+
+            HttpStatusCodeResult result = target.StatusCode();
+
+            //Assert - 결과를 검증한다. 
+
+            Assert.AreEqual(401, result.StatusCode);
+        }
+...
+
+
+
+
+※ 요약
+컨트롤러는 MVC 디자인 패턴에 있어 핵심적인 구성요소 중 하나다. 이번 장에서는 IController 를 구현하여 컨트롤러를 맨 바닥부터 만드는 방법을 살펴보았으며, Controller 클래스를 상속하여 좀 더 편리하게 컨트롤러를 작성하는 방법도 살펴보았다. MVC 프레임워크 컨트롤러 안에서 액션 메서드가 수행하는 역할들을 살펴보았으며 단위 테스트를 쉽게 하는 방법에 대해서도 알아보았다. 액션 메서드에서 입력값을 받고 출력을 생성하는 다양한 방법을 살펴보았으며 이러한 과정을 좀 더 간단하고 유연하게 만들어주는 ActionResult에 대해서도 다양한 유형들을 살펴보았다. 다음 장에서는 컨트롤러의 기반구조 속으로 좀 더 깊게 파고들어 필터(filter)라는 기능에 대해 설명할 예정인데 이를 활용하면 요청이 처리되는 방식을 변경할 수 있다. 
