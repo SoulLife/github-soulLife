@@ -1,0 +1,425 @@
+CHAPTER 18장 : 필터
+필터는 MVC 프레임워크 요청 처리 파이프라인에 추가적인 로직을 삽입하기 위한 기능으로 횡단 관심사(Cross-Cutting Concerns)를 구현하기 위한 간단하고도 세련된 방법을 제공해준다. 이 용어는 어떤 특정 영역에 적합한 기능을 의미하기보다는 응용 프로그램에서 전반적으로 사용될 수 있는 기능을 의미하는 것이기에 사실상 관계의 분리 패턴과는 맞지 않는다고 말할 수도 있다. 횡단 관심사의 일반적인 예로는 로깅, 인증, 캐싱이 있다. 
+
+이번 장에서는 MVC 프레임워크가 제공하는 다양한 종류의 필터들을 살펴볼 예정이다. 더불어 사용자 지정 필터를 만들고 사용하는 방법과 필터들의 실행을 제어하는 방법에 대해서도 다룰 예정이다. 표 18-1은 이번 장에서 설명할 내용들을 간략하게 정리하여 보여주고 있다. 
+
+표 18-1 18장 요약
+
+주제								내용									목록
+요청 처리 과정에 추가적인 로직 삽입하기		컨트롤러나 액션 메서드에 필터를 적용한다.			1 - 8
+
+특정 사용자 및 그룹만 액션 메서드를 사용할 수	권한부여 필터를 사용한다.					9 - 12
+있도록 제한하기
+
+인증 요청하기						인증 필터를 사용한다.						13 - 19
+
+요청을 실행하는 중 발생하는 오류 처리하기		예외 필터를 사용한다.						20 - 30
+
+범용적으로 적용해야 하는 로직을 요청 처리 과정에	액션 필터를 사용한다.						31 - 35
+삽입하기
+
+액션 메서드가 생성한 결과를 검사하거나 변경하기	결과 필터를 사용한다.						36 - 41
+
+어트리뷰트 없이 필터 사용하기				내장 컨트롤러 메서드를 사용한다.				42
+
+응용프로그램에 존재하는 모든 액션 메서드에		전역 필터를 정의한다.						43 - 46
+적용할 필터 정의하기
+
+필터가 어떤 순서로 실행되어야 하는지 제어하기	Order 매개변수를 사용한다.					47 - 49
+
+액션 메서드에 대한 전역 필터나 컨트롤러 필터	재정의 필터를 사용한다.						50 - 54
+재정의 하기
+
+
+※ 예제 프로젝트 준비하기
+
+이번 장에서 사용할 예제를 준비하기 위해서 Empty 템플릿을 사용하여 Filters라는 이름으로 새로운 프로젝트를 만들고 MVC 옵션을 체크해서 MVC에 관한 폴더들과 참조들을 추가하도록 지정한다. 또한 목록 18-1과 같은 액션 메서드를 정의하고 있는 Home 컨트롤러도 만든다. 이번 장에서는 컨트롤러에 대해서만 집중적으로 다룰 것이기에 Index 액션 메서드를 ActionResult 개체 대신 문자열 값을 직접 반환하도록 만들었다. 이렇게 하면 MVC 프레임워크가 문자열 값을 Razor 뷰 엔진을 통해서 브라우저로 직접 전송하도록 만드는 효과가 있다. 
+
+목록 18-1 HomeController.cs 파일의 내용using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace Filters.Controllers
+{
+    public class HomeController : Controller
+    {
+        // GET: Home
+        public string Index()
+        {
+            return "This is the Index action on the Home controller";
+        }
+    }
+}
+
+또한 이번 장에서는 인증 필터라는 MVC의 새로운 기능을 사용하는 방법에 대해서 자세하게 살펴보고, 직접 간단한 사용자 인증도 수행해볼 예정이다. 이를 위해서 12장에서 사용했던 것과 동일한 방식을 적용해볼 예정이기에 목록 18-2와 같이 Web.config 파일에 MVC 프레임워크의 일부인 인증 필터 기능을 설명하기 위한 정적 사용자 자격 증명(credentials)도 정의했다. 
+
+목록 18-2 Web.config 파일에 사용자 자격 증명 정의하기
+
+  <system.web>
+    <compilation debug="true" targetFramework="4.8" />
+    <httpRuntime targetFramework="4.8" />
+	  <authentication mode="Forms">
+		  <forms loginUrl="~/Account/Login" timeout="2880">
+			  <credentials passwordFormat="Clear">
+				  <user name="user" password="secret" />
+				  <user name="admin" password="secret"/>
+			  </credentials>
+		  </forms>
+	  </authentication>
+  </system.web>
+
+
+여기에서는 Web.config 파일 내부에 user와 admin 이라는 두 명의 사용자를 정의하고 있으며 기억하기 쉽도록 비밀번호를 모두 secret으로 지정하고 있다. 또한 이번에도 폼 인증을 다시 한번 사용하고 있으며 인증되지 않은 요청은 /Account/Login URL로 재전송되도록 loginUrl 어트리뷰트도 설정했다. 목록 18-3은 프로젝트에 추가된 Account 컨트롤러의 내용을 보여주고 있는데 이 컨트롤러에 정의된 Login 액션은 기본 라우팅 구성에 의해서 URL과 매핑되게 된다
+
+
+목록 18-3 AccountController.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Security;
+namespace Filters.Controllers
+{
+    public class AccountController : Controller
+    {
+        public ActionResult Login()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult Login(string username, string password, string returnUrl)
+        {
+            bool result = FormsAuthentication.Authenticate(username, password);
+
+            if (result)
+            {
+                FormsAuthentication.SetAuthCookie(username, false);
+                return Redirect(returnUrl ?? Url.Action("Index", "Admin"));
+            }
+            else
+            {
+                ModelState.AddModelError("", "Incorrect username or password");
+                return View();
+            }
+        }
+    }
+}
+
+
+
+이번에는 사용자로부터 자격 증명을 입력 받기 위한 뷰를 만들어보자. 우선 Views/Shared 폴더를 만들고 이 폴더를 마우스 오른쪽 버튼으로 클릭한 다음 [추가(Add)] > [MVC 5 뷰 페이지(Razor)(MVC 5 View Page (Razor))]를 선택한 뒤 뷰의 이름을 Login.cshtml 이라고 입력하고 [확인(OK)]버튼을 클릭한다. 그런 다음 이 뷰의 내용을 목록 18-4와 같이 변경한다. 
+
+
+Note:
+로그인 뷰를 공유할 수 있는 뷰로 만드는 이유는 이번 장의 중반부에서 두 번째 인증 컨트롤러를 추가할 때 이 뷰를 재사용할 예정이기 때문이다. 
+
+
+목록18-4 Login.cshtml 파일의 내용
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title></title>
+</head>
+<body>
+    @using (Html.BeginForm())
+    {
+        @Html.ValidationSummary()
+        <p><label>Username:</label><input name="username" /></p>
+        <p><label>Password:</label><input name="password" type="password" /></p>
+        <input type="submit" value="Log in" />
+    }
+</body>
+</html>
+
+
+
+※ 시작 URL 설정 및 응용프로그램 테스트하기
+
+지금까지 살펴본 다른 모든 예제 프로젝트들과 마찬가지로 이번에도 응용프로그램에 대한 루트 URL이 지정된 상태로 Visual Studio를 시작하고자 한다. 그렇게 하는 것이 현재 수정하고 있는 파일을 기반으로 실행해야 할 URL을 생각해내는 것보다 효율적이니 말이다. 따라서 Visual Studio 의 [프로젝트(Project)] 메뉴에서 [Filters 속성(Filters Properties)]을 선택하고 [웹(Web)] 탭으로 이동한 다음 [시작 작업(Start Action)] 영역에 위치한 [특정 페이지(Specific Page)] 옵션을 체크하도록 하자. 값을 입력할 필요는 없다. 단지 옵션을 체크하기만 하면 된다. 이제 예제 응용프로그램을 실행시켜보면 그림 18-1과 같은 결과를 얻을 수 있을 것이다. 
+
+
+
+※ 필터 사용하기
+이미 12장에서 SportsStore 관리 컨트롤러의 액션 메서드들에 권한 부여 기능을 적용해보면서, 필터를 사용하는 방법에 대한 간단한 사례를 살펴봤다. 즉 인증된 사용자들만 액션 메서드를 사용할 수 있도록 구현해야 하는 상황에서 몇 가지 방식들 중 한 가지 방식을 선택할 수 있었는데, 가령 목록 18-5에서 볼 수 있는 것처럼 모든 액션 메서드 내부에서 각각 요청의 인증 상태를 검사할 수 있다. 
+
+목록 18-5 액션 메서드 내부에서 명시적으로 인증 상태 검사하기
+
+namespace SportsStore.WebUI.Controllers
+{
+	public class AdminController : Controller
+	{
+		// ... 인스턴스 변수들과 생성자
+
+		public ViewResult Index()
+		{
+			if(!Request.IsAuthenticated)
+			{
+				FormsAuthentication.RedirectToLoginPage();
+			}
+			// 그밖의 액션 메서드 코드
+		}
+
+		public ViewResult Create()
+		{
+			if(!Request.IsAuthenticated)
+			{
+				FormsAuthentication.RedirectToLoginPage();
+			}
+			//그밖의 액션 메서드 코드
+		}
+
+		public ViewResult Edit(int productId)
+		{
+			if(!Request.IsAuthenticated)
+			{
+				FormsAuthentication.RedirectToLoginPage();
+			}
+			// 그밖의 액션 메서드 코드
+		}
+
+		//.. 그밖의 액션 메서드들 
+	}
+}
+
+
+다만 이 방식을 사용할 경우 동일한 코드가 대단히 많이 반복되는 것을 확인할 수 있는데 필터를 사용하면 이 문제점을 개선할 수 있다. 목록 18-6은 그 예를 보여주고 있다. 
+
+목록 18-6 필터 적용하기
+
+namespace SportsStore.WebUI.Controllers
+{
+	[Authrorize]
+	public class AdminController : Controller
+	{
+		// .. 인스턴스 변수들과 생성자
+	
+		public ViewResult Index()
+		{
+			//그밖의 액션 메서드 코드
+		}
+
+		public ViewResult Create()
+		{
+			//그밖의 액션 메서드 코드
+		}
+
+		public ViewResult Edit(int productId)
+		{
+			//그밖의 액션 메서드 코드
+		}
+
+		//그밖의 액션 메서드들
+	}
+}
+
+
+필터는 요청 처리 파이프라인에 특별한 단계들을 추가할 수 있는 .NET 어트리뷰트다. 예를 들어 목록 18-6에서는 Authorize 필터를 사용하고 있으며 이는 목록 18-5에서 반복해서 검사했던 코드들과 동일한 효과를 낸다. 
+
+
+
+※ 필터 형식에 대한 소개
+
+MVC 프레임워크는 모두 다섯 가지 필터 형식을 지원해준다. 표 18-2에 정리된 이러한 서로 다른 필터 형식들은 요청이 처리되는 동안 각기 다른 위치에 로직을 끼워 넣을 수 있게 해준다. 
+
+표18-2 MVC 프레임워크의 필터 형식
+
+필터 형식				인터페이스			기본 구현				설명
+Authentication			IAuthentication		N/A					다른 필터들이나 액션 메서드가 실행되기 전에 가장 먼저 실행되지만
+					Filter									권한 부여 필터가 수행된 후에 다시 실행될 수도 있다. 
+
+Authorization			IAuthorization		Authorize				인증 필터가 수행된 후, 다른 필터들이나 액션 메서드가 실행되기 전
+					Filter				Attribute				에 실행된다. 
+
+Action				IActionFilter			ActionFilter				액션 메서드가 실행되기 전과 후에 실행된다. 
+									Attribute
+
+Result					IResultFilter			ActionFilter				액션 결과가 실행되기 전과 후에 실행된다. 
+									Attribute
+
+Exception				IExceptionFilter		HandleError				다른 필터들이나 액션 메서드, 액션 결과가 예외를 던지는 경우에만
+									Attribute				실행된다. 
+
+MVC 프레임워크는 액션을 호출하기에 앞서 액션의 메서드 정의를 검사하여 표 18-2에 나열된 인터페이스를 구현한 어트리뷰트들이 적용되어 있는지 확인한다. 만일 그렇다면 요청 처리프로세스의 적절한 시점에 인터페이스에 정의되어 있는 특정 메서드들이 호출된다. 물론 프레임워크 자체적으로도 이 필터 인터페이스들을 구현하고 있는 기본적인 내장 어트리뷰트 클래스들을 제공해주고 있다. 이 기본 클래스들을 사용하는 방법에 대해서도 이번 장에서 함께 살펴볼 것이다. 
+
+
+TIP:
+MVC 5는 새로운 IOverrideFilter 인터페이스도 제공해주는데 이 인터페이스에 대해서는 뒤에서 재정의 필터를 다룰 때 설명할 예정이다. 
+
+
+
+이 필터 클래스들 중에서 ActionFilterAttribute 클래스는 IActionFilter 인터페이스와 IResultFilter 인터페이스를 모두 구현하고 있으며, 추상 클래스이기 때문에 사용하려면 반드시 하위 구현을 제공해야만 한다. 반면 유용한 기능들을 갖고 있는 AuthrizeAttribute 클래스와 HandleErrorAttribute 클래스는 파생 클래스를 생성하지 않고도 자유롭게 사용할 수 있다. 
+
+
+
+※ 컨트롤러 및 액션 메서드에 필터 적용하기
+
+필터는 각각의 액션 메서드에 개별적으로 적용하거나 컨트롤러 전체에 일괄 적용할 수 있다. 예를 들어 목록 18-6에서는 AdminController 클래스에 Authorize 필터를 적용하고 있는데 이는 목록 18-7 에서 볼 수 있는 것과 같이 컨트롤러에 존재하는 모든 액션 메서드들에 각각 어트리뷰트를 적용한 것과 동일한 효과를 갖는다. 
+
+
+목록 18-7 액션 메서드에 각각 필터 적용하기
+
+namespace SportsStore.WebUI.Controllers
+{
+	public class AdminController : Controller
+	{
+		// 인스턴스 변수들과 생성자
+		[Authorize]
+		public ViewResult Index()
+		{
+			//그밖의 액션 메서드 코드
+		}
+
+		[Authorize]
+		public ViewResult Create()
+		{
+			//그밖의 액션 메서드 코드
+		}
+
+		//그밖의 액션 메서드들
+	}
+}
+
+
+여러가지 필터들을 동시에 적용할 수도 있으며 적용되는 수준들을 섞어서 적용할 수도 있다. 즉 컨트롤러에 적용하거나 혹은 개별 액션 메서드에 적용하거나 하는 식으로 섞어서 사용할수 있다는 뜻이다. 목록 18-8은 세 가지 다른 필터들이 적용된 모습을 보여주고 있다. 
+
+목록 18-8 컨트롤러 클래스에 다양한 필터 적용하기
+
+[Authorize(Roles="trader")] //모든 액션 에 적용된다. 
+public class ExampleController : Controller
+{
+	[ShowMessage]	//이 액션 에만 적용된다
+	[OutputCache(Duration=60)] // 이 액션에만 적용된다
+	public ActionResult Index()
+	{
+		//액션 메서드 본문
+	}
+}
+
+
+목록 18-8에 사용된 필터들 중 일부는 매개변수도 전달받고 있다. 그러면 지금부터 다양한 종류의 필터들을 살펴보면서 필터들이 어떻게 동작하는지 알아보도록 하자. 
+
+
+Note:
+만일 컨트롤러를 사용자 지정 기본 클래스로부터 파생했다면 그 기본 클래스에 적용된 모든 필터들이 파생된 컨트롤러 클래스에도 영향을 줄 것이다. 
+
+
+
+※ 권한 부여 필터 사용하기
+권한 부여(Authorization)필터는 인증 필터가 수행된 이후에 액션 필터 및 액션 메서드가 호출되기에 앞서 실행된다. 이 필터는 그 이름이 의미하고 있는 것처럼 액션 메서드가 오직 인증된 사용자에 의해서만 호출될 수 있도록 권한 부여 정책을 강제하는 필터다. 
+
+인증 필터와 권한 부여 필터, 이 둘 간의 관계가 다소 혼란스럽게 느껴질 수도 있겠지만 일단 권한 부여 필터가 동작하는 방법을 파악하고 나면 이 부분은 쉽게 이해할 수 있을 것이다. 이러한 관계에 대해서는 추후 인증 필터 사용하기 절에서 다시 자세하게 살펴볼 예정이다. 권한 부여 필터는 목록 18-9에서 볼 수 있는 IAuthorizationFilter 인터페이스를 구현하고 있다. 
+
+
+목록 18-9 IAuthorizationFilter 인터페이스
+
+namespace System.Web.Mvc
+{
+	public interface IAuthorizationFilter
+	{
+		void OnAuthorization(AuthorizationContext filterContext);
+	}
+}
+
+
+만약 원한다면 IAuthorizationFilter 인터페이스를 구현하는 클래스를 직접 만들어서 자체적인 보안 로직을 구현할 수도 있다. 하지만 사실 이는 그다지 바람직한 생각이 아닌데 그 이유는 다음의 경고 부분을 참고하기 바란다. 
+
+
+
+※ 경고 : 보안 코드를 작성하는 것은 위험한 작업이다. 
+프로그래밍의 역사는 신뢰할 수 있는 보안 코드를 작성할 수 있다고 과신한 프로그래머들로 인해서 문제에 직면한 수많은 응용프로그램들로 점철되어 있다. 테스트를 제대로 하지 않거나 보안 대책을 깜박해서 응용프로그램의 보안에 치명적인 결함을 남기게 되는 경우는 매우 흔한 일이다. 이 말을 믿지 못하겠다면 Google에서 Security Bug라는 단어로 검색한 다음 그 결과를 하나씩 꼼꼼하게 살펴보기 바란다. 
+
+개인적으로 필자는 폭넓게 테스트되고 입증된 보안 코드를 사용하는 쪽을 선호한다. MVC 프레임워크 역시 완전한 기능을 갖춘 권한 부여 필터를 제공해주고 있다. 그렇기에 이 책의 예제에서도 이를 파생하여 사용자 지정 권한 부여 정책을 구현하고 있는 것이다. 가능하다면 항상 이런 방식을 사용하는 편이며, 여러분도 그렇게 하기를 권한다. 여러분의 보안 응용프로그램 데이터가 인터넷상으로 공개되어 퍼질 경우 마이크로소프트에 책임을 일부 전가할 수 있을 테니 말이다. 
+
+
+
+보다 안전한 방법은 모든 복잡한 부분들을 대신 책임져주는 AuthorizeAttribute 클래스의 하위 클래스를 만드는 것이다. 이렇게 하면 사용자 지정 권한 부여 코드를 작성하기도 훨씬 수월하다. 지금부터 직접 사용자 지정 필터를 작성해보면서 자세한 내용들을 살펴보도록 하자. 우선 예제 프로젝트에 Infrastructure라는 폴더를 만들고 여기에 CustomAuthAttribute.cs라는 새로운 클래스 파일을 추가하도록 하자. 이 파일의 내용은 목록 18-10과 같다.
+
+목록 18-10 CustomAuthAttribute.cs 파일의 내용
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+namespace Filters.Infrastructure
+{
+    public class CustomAuthAttribute : AuthorizeAttribute
+    {
+        private bool localAllowed;
+
+        public CustomAuthAttribute(bool allowedParam)
+        {
+            this.localAllowed = allowedParam;
+        }
+
+        protected override bool AuthorizeCore(HttpContextBase httpContext)
+        {
+            if (httpContext.Request.IsLocal)
+            {
+                return localAllowed;
+            }
+            else
+            {
+                return true;
+            }
+        }
+    }
+}
+
+
+이 사용자 지정 필터는 간단한 권한 부여 필터로 로컬 요청을 거부하는 역할을 수행한다(로컬 요청이란 개발 PC처럼 응용프로그램 서버와 동일한 디바이스에서 실행되는 브라우저에서 만들어진 요청을 말한다)
+
+여기에서는 가장 간단한 방식으로 권한 부여 필터를 구현하고 있는데, 바로 AuthorizeAttribute 클래스의 하위 클래스를 만든 다음 AuthorizeCore 메서드를 재정의하는 방식을 사용해서 내장 AuthorizeAttribute 클래스가 제공해주는 기능들의 이점을 활용하고 있다. 이 필터의 생성자는 bool 값을 매개변수로 받는데 이는 로컬 요청을 허용할지 여부를 지정하게 된다. 
+
+이 필터 클래스에서 흥미로운 부분은 AuthorizeCore 메서드를 구현하고 있는 방식으로 특히 필터가 요청에 대한 접근을 허용할 것인지 말 것인지 여부를 MVC 프레임워크가 검사하는 방법을 눈여겨봐야 한다. 이 메서드에 전달되는 인자는 HttpContextBase 개체로, 이 개체를 통해서 처리 중인 요청에 대한 정보를 얻을 수 있다. 이처럼 AuthorizeAttribute 클래스가 제공해주는 내장 기능들을 사용하면 권한 부여 로직에만 집중할 수 있으며, 요청에 대해 허가를 할 경우에는 AuthorizeCore 메서드로 하여금 true를 반환하게 하고 거부할 경우에는 false를 반환하도록 구현하면 된다. 
+
+
+
+※ 권한 부여 어트리뷰트를 간결하게 유지하기
+AuthorizeCore 메서드는 HttpContextBase 개체를 전달받으며, 이 개체를 통해서 요청에 대한 각종 정보들을 얻을 수 있다. 그러나 이 개체는 권한 부여 어트리뷰트가 적용된 대상 컨트롤러나 액션 메서드 자체에 대한 정보까지는 제공해주지 않는다. 바로 이 점이 개발자가 IAuthorizationFilter 인터페이스를 직접 구현하게 되는 주된 이유로 이 방식을 사용할 경우 OnAuthorization 메서드에 전달되는 AuthorizationContext 개체를 통해서 훨씬 더 많은 정보 예를 들면 라우팅에 관한 상세 정보뿐만 아니라 현재 컨트롤러나 액션 메서드에 대한 정보들까지도 얻을 수 있다. 
+
+그러나 개인적으로는 이 방식을 그다지 권장하지 않는데 그 이유는 단지 보안 코드를 자체적으로 작성하는 것이 위험하다고 믿기 때문만이 아니다. 권한 부여라는 개념이 횡단 관심사에 속하는 개념임에도 불구하고 컨트롤러의 구조와 밀접하게 결합되어 있는 로직을 권한 부여 어트리뷰트에 구현하는 것은 관심사의 분리를 훼손시킬 뿐만 아니라 테스트와 유지보수까지도 어렵게 만들기 때문이다. 권한 부여 어트리뷰트는 간결하게 유지하고 요청에 대한 권한 부여 처리에만 집중해야 한다. 권한 부여의 컨텍스트는 어트리뷰트가 적용된 곳에서 알 수 있게 만들면 된다. 
+
+
+
+
+※ 사용자 지정 권한 부여 필터 적용하기
+
+사용자 지정 권한 부여 필터를 사용하려면 보호하고자 하는 컨트롤러나 액션 메서드에 이 어트리뷰트를 적용하기만 하면 된다. 목록 18-11은 Home 컨트롤러에 정의된 Index 액션 메서드에 이 필터를 적용한 예를 보여주고 있다. 
+
+목록 18-11 HomeController.cs 파일에 권한 부여 필터 적용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure;
+namespace Filters.Controllers
+{
+    public class HomeController : Controller
+    {
+        [CustomAuth(false)]
+        public string Index()
+        {
+            return "This is the Index action on the Home controller";
+        }
+    }
+}
+
+
+이번 예제에서 필터의 생성자 인자는 false로 지정되었으며 이는 Index 액션 에 대한 로컬요청이 거부될 것임을 의미한다. 이제 응용프로그램을 실행하고 브라우저로 루트 URL을 요청해보면 라우팅 설정에 의해 Index 액션 메서드로 이동하게 될 텐데 만일 Visual Studio가 실행 중인 머신에서 브라우저로 요청을 했다면 그림18-2와 같은 결과를 보게 될 것이다. 즉 필터가 로컬 요청에 대한 접근을 거부하고 그에 따라 MVC 프레임워크가 사용자에게 로그인 정보를 입력하도록 응답하는 것이다. 물론 사용자 이름이나 비밀번호를 입력한다고 해도 마찬가지로 로컬 머신에서 다시 요청된다는 사실은 변함이 없기 때문에 다시 로그인 창이 나타날 것이며 인증 요구를 피할수 있는 방법은 사실상 현재로서는 없다. 
+
+반면 필터 생성자의 인자를 true로 변경하고 응용프로그램을 다시 시작하면 이번에는 필터가 요청을 수용할 것이다(응용 프로그램을 구동하고 있는 IIS Express는 로컬이 아닌 어떠한 연결도 거부하도록 구성되어 있기에 로컬 머신이 아닌 다른 머신에서 요청하는 상황은 테스트가 불가능하다)
