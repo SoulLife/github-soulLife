@@ -1,0 +1,424 @@
+※ 내장 권한 부여 필터 사용하기
+이전 절에서는 AuthorizeAttribute 클래스를 사용자 지정 필터에 대한 기반 클래스로 사용했지만 이 클래스는 자체적으로도 범용적인 목적의 권한 부여 업무를 수행하는 데 있어 유용한 AuthorizeCore 메서드의 구현을 갖고 있다. 이 AuthorizeAttribute 클래스를 직접 적으로 사용하는 경우에는 이클래스가 갖 고 있는 두 가지 public 속성(표 18-3 참조)을 사용하여 권한 부여 정책을 지정할 수 있다. 
+
+표18-3 AuthorizeAttribute 클래스의 속성
+
+이름		형식			설명
+Users		string			해당 액션 메서드에 접근이 허용되는, 콤마로 연결된 사용자들의 이름 목록
+Roles		string			콤마로 연결된 역할 이름들의 목록, 사용자가 액션 메서드에 접근하기 위해서는 이 역할들 중 적어도 하나 이상에 속해 있어야만
+					한다
+
+목록 18-12는 이러한 속성들 중 하나를 갖는 내장 필터를 사용하여 액션 메서드를 보호하는 방법을 보여준다. 
+
+목록 18-12 내장 권한 부여 필터 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure;
+namespace Filters.Controllers
+{
+    public class HomeController : Controller
+    {
+        [Authorize(Users = "admin")]
+        public string Index()
+        {
+            return "This is the Index action on the Home controller";
+        }
+    }
+}
+
+이 예제에서는 admin 사용자만 Index 액션 메서드를 호출할 수 있도록 지정하고 있다. 물론 이는 요청이 먼저 인증되어야 한다는 암시적인 조건도 포함하고 있다고 간주할 수 있다. 만일 어떠한 사용자나 역할(role)도 지정되지 않았다면 모든 인증된 사용자가 이 액션 메서드를 사용할 수 있을 것이다. 대부분의 응용프로그램들은 AuthorizeAttribute 클래스가 제공해주는 인증 정책만으로도 충분하다. 만일 뭔가 특별한 정책을 구현하고자 한다면 이번 장의 앞 부분에서 살펴봤던 것처럼 이 클래스를 파생하여 필요한 로직을 구현할 수도 있고 또는 다음 절에서 다룰 인증 필터를 사용하여 여러분의 구성 설정을 보완할 수도 있다. 
+
+
+
+※ 인증 필터 사용하기
+
+인증 필터(Authentication)는 MVC5에서 새롭게 등장했으며 응용프로그램에 존재하는 컨트롤러와 액션에 대해 사용자가 인증되는 방식을 세밀하게 제어할 수 있는 방안을 제공해준다. 
+
+인증 필터는 상대적으로 복잡한 수명주기를 갖는다. 인증 필터는 다른 필터들보다 앞서 실행되기에 다른 모든 필터 형식들이 사용되기 전에 적용될 인증 정책을 정의할 수 있다. 또한 권한 부여 정책에 따르지 않는 요청에 대해 인증을 요구하기 위해서 권한 부여 필터와 결합하여 사용될 수도 있다. 또한 인증 필터는 액션 메서드가 실행된 이후이자 ActionResult가 처리되기 이전에도 실행된다. 이런 모든 상황에서 인증 필터가 동작하는 방식을 예제와 함께 살펴 보도록 하자. 
+
+
+※ IAuthenticationFilter 인터페이스 이해하기
+
+인증 필터는 목록 18-13 에서 볼 수 있는 IAuthenticationFilter 인터페이스를 구현하고 있다. 
+
+목록18-13 IAuthenticationFilter 인터페이스
+
+namespace System.Web.Mvc.Filters
+{
+	public interface IAuthenticationFilter
+	{
+		void OnAuthentication (AuthenticationContext context);
+		void OnAuthenticationChallenge(AuthenticationChallengeContext context);
+	}
+}
+
+
+OnAuthenticationChallenge 메서드는 요청이 액션 메서드의 인증 및 권한 부여 정책에 부합하지 않을 때마다 MVC 프레임워크에 의해서 호출된다. OnAuthenticationChallenge 메서드에는 AuthenticationChallengeContext 개체가 인자로 전달되는데 이 개체는 17장에서 설명했던 ControllerContext 클래스로부터 파생된 개체로 표 18-4에 정리된 추가 적인 속성들을 정의하고 있다. 
+
+표18-4 AuthenticationChallengeContext 클래스에 정의된 속성
+
+이름				설명
+ActionDescriptor		필터가 적용되어 있는 액션 메서드를 설명하는 ActionDescriptor를 반환한다. 
+Result				인증 시도의 결과를 나타내는 ActionResult를 설정한다. 
+
+이 중 가장 중요한 속성은 Result인데 이 속성을 사용하여 인증 필터가 MVC 프레임워크에게 ActionResult를 전달할 수 있기 때문이다. 이 과정을 짧은 순환(short-circuiting)이라고 하며, 이에 대해서는 잠시 후에 설명할 예정이다. 인증 필터의 동작 방식을 이해하기 위한 가장 좋은 방법은 관련 예제를 살펴보는 것이다. 개인적인 생각으로는 인증 필터에서 가장 흥미로운 부분은 인증 필터를 사용하면 단일 컨트롤러에서 다양한 방식으로 인증되는 액션 메서드들을 정의할 수 있다는 점이다. 이를 위해서 이번에는 우선 Google 로그인을 모방하는 새로운 컨트롤러를 추가해보려고 한다. 목록 18-14는 그러한 GoogleAccountController의 정의를 보여주고 있다. 
+
+목록 18-14 GoogleAccountController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Security;
+namespace Filters.Controllers
+{
+    public class GoogleAccountController : Controller
+    {
+
+        public ActionResult Login()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult Login(string username, string password, string returnUrl)
+        {
+            if (username.EndsWith("@google.com") && password == "secret")
+            {
+                FormsAuthentication.SetAuthCookie(username, false);
+                return Redirect(returnUrl ?? Url.Action("Index", "Home"));
+            }
+            else
+            {
+                ModelState.AddModelError("", "Incorrect username or password");
+                return View();
+            }
+        }
+        
+    }
+}
+
+물론 Google 로그인을 실제로 구현하려는 것은 아닌데, 이는 그 자체가 하나의 주제이며 서드파티 인증이라는 어두운(?) 세계로 뛰어드는 행동이기 때문이다. 그렇기에 그보다는 @google.com으로 끝나는 사용자 이름과 secret라는 비밀번호가 제공되기만 하면 어떤 사용자라도 인증되도록 만들고 있다. 
+
+목록 18-14의 Google 인증 컨트롤러는 아직 응용프로그램에 연결되지 않은 상태이기에 이번에는 인증 필터가 필요해진다. 이제 Infrastructure 폴더에 목록 18-15와 같은 내용으로 GoogleAuthAttribute.cs라는 새로운 클래스 파일을 생성하도록 하자. GoogleAuth 필터가 상속받고 있는 FilterAttribute 클래스는 모든 필터 클래스에 대한 기반 클래스다. 
+
+목록 18-15 GoogleAuthAttribute.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Mvc.Filters;
+using System.Web.Routing;
+namespace Filters.Infrastructure
+{
+    public class GoogleAuthAttribute : FilterAttribute, IAuthenticationFilter
+    {
+        public void OnAuthentication(AuthenticationContext context)
+        {
+            //아직 구현되지 않음
+        }
+
+        public void OnAuthenticationChallenge(AuthenticationChallengeContext context)
+        {
+            if (context.Result == null)
+            {
+                context.Result = new RedirectToRouteResult(new RouteValueDictionary
+                {
+                    { "controller", "GoogleAccount" },
+                    { "action", "Login" },
+                    { "returnUrl", context.HttpContext.Request.RawUrl }
+                });
+            }
+        }
+    }
+}
+
+OnAuthenticationChallenge 메서드는 AuthenticationChallengeContext 인자의 Result 속성이 설정되어 있는지를 검사하도록 구현되어 있으며, 이는 액션 메서드가 실행되고 난 뒤에 필터가 실행될 때 사용자에게 인증 요구를 하지 않게 하기 위함이다. 이 부분에 대해서는 일단은 신경 쓰지 말자. 이 부분이 왜 중요한지에 대해서는 이번 장의 마지막 인증 요청 처리하기 절에서 설명할 예정이다. 
+
+이번 절에서 중요한 부분은 OnAuthenticationChallenge 메서드를 사용하여 사용자에게 자격 증명을 요구하는 부분으로 이를 구현하기 위해서 RedirectToRouteResult 클래스를 사용하여 브라우저가 GoogleAccount 컨트롤러로 재전송되도록 하고 있다. 인증 필터는 17장에서 언급했던 모든 유형의 ActionResult 개체를 사용할 수 있지만 그 개체를 생성하기 위한 별도의 컨트롤러 편의 메서드는 제공되지 않기 때문에 직접 RouteValueDictionary 개체를 사용해서 세그먼트 값들을 지정하고 있으며 Login 액션 메서드로의 라우트가 생성되도록 하고 있다. 
+
+
+※ 인증 검사 구현하기
+
+앞서 작성한 인증 필터를 통해서 사용자에게 가짜 구글 계정을 요구할 준비를 마쳤으므로, 이번에는 남아있는 부분들을 마무리하도록 하자. 컨트롤러는 다른 종류의 필터를 실행하기에 앞서 OnAuthentication 메서드를 호출하게 되는데 이 메서드는 폭 넓게 인증 검사를 수행할 수 있는 기회를 제공해주는 메서드다. 사실 반드시 OnAuthentication 메서드를 구현해야만 하는 것은 아니지만 이번 예제에서는 Google 계정을 사용하고 있는지를 확인하기 위한 용도로 이 메서드를 구현하려고 한다. 
+
+OnAuthentication 메서드는 AuthenticationChallengeContext 클래스와 마찬가지로 ControllerContext 클래스에서 파생된 AuthenticationContext 개체를 인자로 받는데 이 개체를 통해서 17장에서 설명했던 모든 정보들에 접근할 수 있다. 또한 AuthenticationContext 클래스는 표 18-5에 정리된 속성들도 정의하고 있다. 
+
+
+표 18-5 AuthenticationContext 클래스에 정의된 속성
+
+이름				설명
+ActionDescriptor		필터가 적용된 액션 메서드를 설명하는 ActionDescriptor를 반환한다. 
+
+Principal			만약 사용자가 이미 인증되어 있다면 현재 사용자를 식별하는 IPrincipal 인터페이스의 구현을 반환한다. 
+
+Result				인증 검사의 결과를 나타내는 ActionResult 를 설정한다. 
+
+만약 OnAuthentication 메서드에서 컨텍스트 개체의 Result 속성에 값을 설정하면 MVC 프레임워크가 OnAuthenticationChallenge 메서드를호출하게 된다. 그리고 OnAuthenticationChallenge 메서드가 자신의 컨텍스트 개체의 Result 속성에 값을 설정하지 않는다면 OnAuthentication 메서드에서 설정한 값이 그대로 실행될 것이다. 
+
+이번 예제에서는 OnAuthentication 메서드를 사용하여 사용자에게 인증 오류를 보고하도록 결과를 생성하고 있는데 원한다면 OnAuthenticationChallenge 메서드를 재정의하여 사용자에게 자격 증명을 요구하도록 변경할 수도 있을 것이다. 어쨌거나 사용자들이 의미 있는 응답을 보게 될 것임은 확실하다. 목록 18-16은 요청이  Google 자격 증명을 사용하여 인증되었는지를 검사하기 위해서 구현된 OnAuthentication 메서드를 보여주고 있다. 
+
+목록 18-16 GoogleAuthAttribute.cs 파일에 OnAuthentication 메서드 구현하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Security.Principal; //추가
+using System.Web.Mvc;
+using System.Web.Mvc.Filters;
+using System.Web.Routing;
+namespace Filters.Infrastructure
+{
+    public class GoogleAuthAttribute : FilterAttribute, IAuthenticationFilter
+    {
+        public void OnAuthentication(AuthenticationContext context)
+        {
+            IIdentity ident = context.Principal.Identity;
+            if (!ident.IsAuthenticated || !ident.Name.EndsWith("@google.com"))
+            {
+                context.Result = new HttpUnauthorizedResult();
+            }
+        }
+
+        public void OnAuthenticationChallenge(AuthenticationChallengeContext context)
+        {
+            if (context.Result == null)
+            {
+                context.Result = new RedirectToRouteResult(new RouteValueDictionary
+                {
+                    { "controller", "GoogleAccount" },
+                    { "action", "Login" },
+                    { "returnUrl", context.HttpContext.Request.RawUrl }
+                });
+            }
+        }
+    }
+}
+
+
+목록 18-16에 구현된 OnAuthentication 메서드는 요청이 @google.com 으로 끝나는 사용자 이름을 사용하여 인증되었는지를 검사하고 있다. 만일 현재 요청이 인증되지 않았거나 다른 형태의 자격 증명을 통해서 인증되었다면 AuthenticationContext 개체의 Result 속성을 새로운 HttpUnauthorizedResult 개체로 설정한다. 
+
+이 HttpUnauthorizedResult 개체는 OnAuthenticationChallenge 메서드에 전달되는 AuthenticationChallengeContext 개체의 Result 값으로 설정된다. 이제 여러분은 필터 내부에 정의된 두 가지 액션 메서드들이 상호 보완적으로 구성되어 있으며 인증 문제가 발생할 경우 사용자에게 인증을 요구하도록 변경된 것을 볼 수 있을 것이다. 다음 단계는 목록  18-17에서 볼 수 있는 것처럼 이 필터를 컨트롤러에 적용하는 것이다. 
+
+
+목록 18-17 HomeController.cs파일에서 인증 필터 적용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure;
+namespace Filters.Controllers
+{
+    public class HomeController : Controller
+    {
+        [Authorize(Users = "admin")]
+        public string Index()
+        {
+            return "This is the Index action on the Home controller";
+        }
+
+        [GoogleAuth]
+        public string List()
+        {
+            return "This is the List action on the Home controller";
+        }
+    }
+}
+
+목록 18-17에서는 List라는 새로운 액션 메서드를 정의하고 이 메서드에 GoogleAuth 필터를 적용하였다. 그 결과 Index 메서드에 대한 접근은 폼 인증을 통해서 보안이 적용되지만 List 액션 메서드로의 접근은 필자가 제작한 가짜 Google 인증 시스템을 통해서 보안이 적용된다. 
+
+응용프로그램을 실행시켜보면 이런 내용이 반영되어 동작하는 것을 볼 수 있다. 기본적으로 브라우저는 Index 액션 메서드로 접근하게 되며, 그 결과로 표준 인증이 수행되어 web.config 파일에 정의했던 사용자 자격 증명들 중 admin 계정을 사용하여 로그인을 하도록 요구할 것이다. 일단 로그인을 한 다음 다시 /Home/List URL을 요청해보면 기존 자격 증명은 거부되고 Google 사용자 이름을 사용해야만 인증할 수 있을 것이다. 
+
+
+※ 인증 필터와 권한 부여 필터 함께 사용하기
+
+보안 정책의 범위를 제한하기 위해서 동일한 액션 메서드에 인증 필터와 권한 부여 필터를 결합하여 사용할 수도 있다. MVC 프레임워크는 이전 예제에서와 마찬가지로 인증 필터의 OnAuthentication 메서드를 호출할 것이며 요청이 인증 검사를 통과한 경우에만 권한 부여 필터를 실행시킬 것이다. 만일 요청이 권한 부여 필터를 통과하지 못한다면 인증 필터의 OnAuthenticationChallenge 메서드가 호출되어 사용자에게 자격 증명을 요구하게 된다. 목록 18-18은 Home 컨트롤러의 List 액션 메서드에 대한 접근을 제한하기 위해서 GoogleAuth 필터와 Authorize 필터를 결합해서 사용한 모습을 보여주고 있다. 
+
+목록 18-18 HomeController.cs 파일에서 인증 필터와 권한 부여 필터를 함께 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure;
+namespace Filters.Controllers
+{
+    public class HomeController : Controller
+    {
+        [Authorize(Users = "admin")]
+        public string Index()
+        {
+            return "This is the Index action on the Home controller";
+        }
+
+        [GoogleAuth]
+        [Authorize(Users = "bob@google.com")]
+        public string List()
+        {
+            return "This is the List action on the Home controller";
+        }
+    }
+}
+
+이 Authorize 필터는 bob@google.com 계정을 사용해서만 List 액션 메서드에 접근할 수있도록 제한하고 있다. 만일 액션 메서드가 다른 Google 계정으로 호출된다면 인증 필터의 OnAuthenticationChallenge 메서드가 전달받게 될 AuthenticationChallengeContext 개체의 Result 속성 값이 HttpUnauthorizedResult 클래스의 인스턴스로 설정될 것이다(이것이 OnAuthentication 메서드에서 동일 형식의 클래스를 사용했던 이유다)
+
+결과적으로 Home 컨트롤러 내부에 적용된 필터들은 Index 액션 메서드에 대해서는 Account 컨트롤러를 사용하여 인증되는 admin 사용자만 접근 가능하도록 제한하고 있으며 List 액션 메서드에 대해서는 GoogleAccount 컨트롤러를 통해서 인증되는 bob@google.com 사용자만 접근 가능하도록 제한하고 있다. 
+
+
+
+
+※ 마지막 인증 요청 처리하기
+MVC 프레임워크는 액션 메서드가 실행된 후이자 ActionResult 가 반환 및 실행되기 전에 마지막으로 한 번 더 OnAuthenticationChallenge 메서드를 호출한다. 이는 인증 필터에 액션이 완료되었거나 결과가 변경되었다는 사실을 알리기 위한 마지막 기회를 제공해준다(이는 이번 장 후반에 설명할 결과 필터에서도 마찬가지다)
+
+이전 예제의 onAuthenticationChallenge 메서드 내부에서 AuthenticationChallengeContext 개체의 Result 속성을 검사했던 것은 바로 이러한 이유 때문이다. 만일 그렇게 하지 않으면 사용자에게 자격 증명을 한 번 더 요청하게 될 텐데 이미 이 시점에는 액션 메서드가 실행되고 난 상태라는 점을 감안해본다면 뭔가 말이 되지 않기 때문이다. 
+
+사실 이러한 마지막 메서드 호출에 대한 응답을 살펴보는 이유는 요청에 대한 인증을 명확하게 하기 위함인데 일시적으로 높은 권한의 자격 증명을 요구하는 중요한 액션 메서드(심지어 그 자격 증명이 메서드가 실행될 때마다 매번 제공되어야 하는)가 필요한 경우에는 꽤 유용할수도 있다. 목록 18-19 는 이러한 기능이 구현된 사례를 보여주고 있다. 
+
+목록 18-19 GoogleAuthAttribute.cs 파일에서 마지막 요구 호출 처리하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Security.Principal;
+using System.Web.Mvc;
+using System.Web.Mvc.Filters;
+using System.Web.Routing;
+using System.Web.Security; //추가
+namespace Filters.Infrastructure
+{
+    public class GoogleAuthAttribute : FilterAttribute, IAuthenticationFilter
+    {
+        public void OnAuthentication(AuthenticationContext context)
+        {
+            IIdentity ident = context.Principal.Identity;
+            if (!ident.IsAuthenticated || !ident.Name.EndsWith("@google.com"))
+            {
+                context.Result = new HttpUnauthorizedResult();
+            }
+        }
+
+        public void OnAuthenticationChallenge(AuthenticationChallengeContext context)
+        {
+            if (context.Result == null)
+            {
+                context.Result = new RedirectToRouteResult(new RouteValueDictionary
+                {
+                    { "controller", "GoogleAccount" },
+                    { "action", "Login" },
+                    { "returnUrl", context.HttpContext.Request.RawUrl }
+                });
+            }//아래의 else 구현
+            else
+            {
+                FormsAuthentication.SignOut();
+            }
+        }
+    }
+}
+
+
+응용프로그램을 실행하고 Home/List URL로 이동해보면 이런 내용이 반영되어 동작하는 것을 확인할 수 있을 것이다. 즉 자격 증명의 입력을 요구하는 화면이 나타나면, 이전 예제에서 처럼 bob@google.com 계정으로 인증해서 액션 메서드를 실행할 수 있을 것이다. 하지만 다시 한번 List 메서드를 브라우저로 요청해보면 else 구역이 호출되어 자격 증명을 다시 물어 오게된다(즉 이제 메서드는 호출할 때마다 인증을 해야 하는 중대한 메서드가 된 것이다)
+
+
+※ 예외 필터 사용하기
+예외 필터는 액션 메서드가 호출된 이후 처리되지 않은 예외가 발생하는 경우에만 실행된다. 
+예외는 다음과 같은 위치에서 발생할 수 있다. 
+
+* 다른 종류의 필터(권한 부여 필터, 액션 필터, 결과 필터)
+
+* 액션 메서드 자체
+
+* 액션 결과가 실행될 때(액션 결과에 대한 자세한 내용은 17장을 참고하기 바란다)
+
+
+※ 예외 필터 만들기
+예외 필터는 목록 18-20과 같은 IExceptionFilter 인터페이스를 구현해야 한다. 
+
+목록 18-20 IExceptionFilter 인터페이스
+
+namespace System.Web.Mvc
+{
+	public interface IExceptionFilter
+	{
+		void OnException(ExceptionContext filterContext);
+	}
+}
+
+처리되지 않은 예외가 발생하면 OnException 메서드가 호출된다. 이 메서드의 매개변수는 ExceptionContext 개체인데 이는 ControllerContext 클래스에서 파생되었으며 요청에 대한 정보를 얻어오기 위해서 사용할 수 있는 유용한 속성들(표 18-6참고)도 제공한다. 
+
+표18-6 유용한 ControllerContext 클래스의 속성
+
+이름				형식				설명
+Controller			ControllerBase		현재 요청에 대한 컨트롤러 개체를 반환한다
+
+HttpContext			HttpContextBase		이 속성 개체를 통해서 요청의 상세 정보 및 응답에 접근할 수 있다. 
+
+IsChildAction		bool				필터가 적용된 액션이 자식 액션이라면 true를 반환한다(20장 참고)
+
+RequestContext		RequestContext		이를 통해서 HttpContext와 라우팅 데이터에 접근할 수 있다. 물론 이 정보들은 다른 속성들을 통해서도 
+								접근이 가능하다. 
+
+RouteData			RouteData			현재 요청에 대한 라우팅 데이터를 반환한다. 
+
+ExceptionContext 클래스는 ControllerContext 클래스에서 상속된 속성들에 더해서 예외를 다룰 때 유용한 추가적인 속성들(표 18-7 참고)도 제공해준다. 
+
+
+표18-7 ExceptionContext 클래스의 추가적인 속성
+
+이름				형식				설명
+ActionDescriptor		ActionDescriptor		액션 메서드에 대한 상세 정보를 제공한다. 
+
+Result				ActionResult			액션 메서드에 대한 결과로 필터는 이 속성을 null이 아닌 값으로 설정하여 요청을 취소할 수 있다. 
+
+Exception			Exception			처리되지 않은 예외
+
+ExceptionHandled		bool				다른 필터가 예외를 처리한 것으로 표시했을 경우 true 를 반환한다. 
+
+
+표 18-7에서 설명하고 있는 것처럼 발생된 예외는 Exception 속성을 통해서 접근이 가능하다. 그리고 예외 필터는 ExceptionHandled 속성을 true로 설정하여 다른 필터들에 예외가 처리되었음을 알릴 수도 있다. 물론 이 속성이 true로 설정됐다고 하더라도 액션에 적용되어 있는 다른 모든 예외 필터들은 여전히 동작할 것이다. 그렇기에 다른 필터가 이미 문제를 해결했는지 여부를 확인하는 것은 매우 좋은 습관이라 할 수 있다. 다른 필터가 이미 해결한 문제를 불필요하게 다시 복구할 필요는 없으니 말이다. 
+
+
+Note:
+액션 메서드에 적용된 예외 필터들 중 어떤 필터도 ExceptionHandled 속성을 true로 설정하지 않았다면 MVC 프레임워크는 기본적인 ASP .NET 예외 처리 절차를 적용하여 공포의 노란색 오류 화면을 나타낼 것이다. 
+
+
+
+예외 필터의 Result 속성은 MVC 프레임워크에 무엇을 해야 할지를 알려주기 위해서 사용된다. 예외 필터의 주된 쓰임새 두 가지는예외 로그를 남기는 것과 사용자에게 메시지를 보여주는 것이다. 이 필터가 얼마나 부드럽게 동작하는지 직접 살펴보기 위해서 Infrastructure폴더에 RangeExceptionAttribute.cs라는 새로운 클래스 파일을 만들어보자. 이 파일의 내용은 목록 18-21과 같다. 
+
+목록 18-21 RangeExceptionAttribute.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+namespace Filters.Infrastructure
+{
+    public class RangeExceptionAttribute : FilterAttribute, IExceptionFilter
+    {
+        public void OnException(ExceptionContext filterContext)
+        {
+            if (!filterContext.ExceptionHandled && filterContext.Exception is ArgumentOutOfRangeException)
+            {
+                filterContext.Result = new RedirectResult("~/Content/RangeErrorPage.html");
+                filterContext.ExceptionHandled = true;
+            }
+        }
+    }
+}
+
+
+이 예외 필터는 ArgumentOutOfRangeException 인스턴스를 확인하고 사용자의 브라우저를 Content 폴더에 위치한 RangeErrorpage.html 이라는 파일로 재전송하고 있다. RangeExceptionAttribute 클래스가 FilterAttribute 클래스로부터 파생되었으며, IExceptionFilter 인터페이스를 구현하고 있다는 점에 주목하자. .NET 어트리뷰트 클래스를 MVC 필터로 동작하도록 만들기 위해서는 클래스가 IMvcFilter 인터페이스를 구현해야만 한다. 이를 위해서 직접 IMvcFilter 인터페이스를 구현할 수도 있겠지만 그보다는 여러분의 클래스를 FIlterAttribute로부터 상속받는 것이 더욱 쉽고 간단하다. 이 FilterAttribute는 필요한 인터페이스를 구현하고 있으며
+그 밖에도  몇몇 유용한 기본 기능들(예를 들면 필터가 처리되는 기본 순서를 바꿀 수 있는 기능 등)도 제공하고 있기 때문이다.
