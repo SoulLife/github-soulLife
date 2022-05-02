@@ -1,0 +1,405 @@
+※ OnActionExecuted 메서드 구현하기
+
+액션 메서드의 실행에 덧붙여 특정 작업을 수행하기 위한 용도로도 필터를 사용할 수 있다. 간단한 예제를 살펴보기 위해서 Infrastructure 폴더에 ProfileActionAttribute.cs라는 클래스 파일을 만들고 이 클래스에 목록 18-34와 같이 코드를 작성해보도록 하자. 이 필터는 액션 메서드가 실행하는 데 걸리는 시간을 측정하는 역할을 한다. 
+
+목록 18-34 ProfileActionAttribute.cs파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Diagnostics;
+
+namespace Filters.Infrastructure
+{
+    public class ProfileActionAttribute : FilterAttribute, IActionFilter
+    {
+        private Stopwatch timer;
+
+        public void OnActionExecuting(ActionExecutingContext filterContext)
+        {
+            timer = Stopwatch.StartNew();
+        }
+
+        public void OnActionExecuted(ActionExecutedContext filterContext)
+        {
+            timer.Stop();
+            if (filterContext.Exception == null)
+            {
+                filterContext.HttpContext.Response.Write(string.Format("<div>Action method elapsed time: {0:F6}</div>", timer.Elapsed.TotalSeconds));
+            }
+        }
+    }
+}
+
+
+이번 예제에서는 OnActionExecuting 메서드에서 타이머(System.Diagnostics 네임스페이스에서 제공되는 고품질의 StopWatch 타이머)를 시작하고 있다. 그리고 OnActionExecuted 메서드는 액션 메서드가 완료되는 시점에 호출된다. 목록 18-35는 Home 컨트롤러에 이 어트리뷰트를 적용한 모습을 보여준다(이전 절에서 작성했던 필터는 제거해서 로컬 요청이 재전송되지 않도록 하자)
+
+목록 18-35 HomeController.cs 파일에 액션 필터 적용하기
+
+        [ProfileAction]
+        public string FilterTest()
+        {
+            return "This is the FilterTest action";
+        }
+
+이제 응용프로그램을 실행하고 /Home/FilterTest URL로 이동해보면 그림 18-8과 같은 결과를 확인할 수 있을 것이다. 
+
+
+
+TIP:
+브라우저에 프로파일 정보가 액션 메서드의 결과보다 앞부분에 나타나고 있다는 점에 주목하자. 이는 액션 필터가 실행되는 시점이 액션 메서드가 완료된 후이기는 하지만 결과가 아직 처리되기 전에 실행되기 때문이다. 
+
+
+OnActionExecuted 메서드에 전달되는 매개변수는 ActionExecutedContext 개체다. 이 클래스는 표 18-11에 정리된 것과 같은 몇몇 유용한 속성들을 갖고 있다. 가령 Exception 속성은 액션 메서드가 던지는 예외를 반환해주고, ExceptionHandled 속성은 다른 필터에서 예외가 처리되었는지 여부를 알려준다. 
+
+표18-11 ActionExecutedContext 클래스의 속성
+
+이름					형식					설명
+ActionDescriptor			ActionDescriptor			액션 메서드의 상세 정보를 제공한다. 
+
+Canceled				bool					액션이 다른 필터에 의해 취소되었을 경우 true를 반환한다. 
+
+Exception				Exception				액션 메서드에 의해 또는 다른 필터에 의해 던져진 예외를 반환한다. 
+
+ExceptionHandled			bool					예외가 처리되었을 경우 true를 반환한다
+
+Result					ActionResult				액션 메서드에 대한 결과로 필터는 이 속성을 null이 아닌 값으로 설정하여 요청을 취소할 수 있										다
+
+이 중에서 Canceled 속성은 필터의 OnActionExecuting 메서드가 호출된 이후 다른 필터가 요청을 취소했다면(Result 속성에 값을 설정하여) true값을 반환할 것이다. OnActionExecuted는 이와 무관하게 여전히 호출되며 사용하고 있는 특정 리소스를 해제하거나 정리하기 위한 목적으로 사용될 수 있다. 
+
+
+
+
+※ 결과 필터 적용하기
+결과(Result) 필터는 범용적인 용도의 필터로 액션 메서드가 만들어낸 결과에 적용되는 필터다. 결과 필터들은 목록 18-36에서 볼 수 있는 IResultFilter 인터페이스를 구현하고 있다. 
+
+
+목록 18-36 IResultFilter 인터페이스
+
+namespace System.Web.Mvc
+{
+	public interface IResultFilter
+	{
+		void OnResultExecuting(ResultExecutingContext filterContext);
+		void OnResultExecuted(ResultExecutedContext filterContext);
+	}
+}
+
+앞서 17장에서는 액션 메서드가 어떻게 액션 결과를 반환하는지 자세하게 살펴봤었다. 액션 결과는 액션 메서드의 목적과 그 실행을 분리하여 다룰 수 있게 해주는 역할을 한다. 결과 필터를 액션 메서드에 적용하면 액션 메서드가 액션 결과를 반환하는 시점에(하지만 아직 액션 결과가 실행되기 전인 시점에)OnResultExecuting 메서드가 호출된다. 그리고 OnResultExecuted 메서드는 액션 결과가 실행된 후에 호출된다. 
+
+이 메서드들은 매개변수로 각각 ResultExecutingContext 개체와 ResultExecutedContext 개체를 전달받는다. 이 매개변수 개체들은 액션 필터의 매개변수 개체들과 대단히 비슷한데 이는 동일한 효과를 갖는 동일한 속성들을 갖고 있기 때문이다(표 18-11을 참고하기 바란다)결과 필터에 대해서 간단하게 살펴보기 위해서 Infrastructure 폴더에 ProfileResultAttribute.cs라는 새로운 파일을 추가하고 목록 18-37과 같이 클래스를 작성해보도록 하자. 
+
+목록 18-37 ProfileResultAttribute.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Diagnostics;
+namespace Filters.Infrastructure
+{
+    public class ProfileResultAttribute : FilterAttribute, IResultFilter
+    {
+        private Stopwatch timer;
+
+        public void OnResultExecuting(ResultExecutingContext filterContext)
+        {
+            timer = Stopwatch.StartNew();
+        }
+
+        public void OnResultExecuted(ResultExecutedContext filterContext)
+        {
+            timer.Stop();
+            filterContext.HttpContext.Response.Write(string.Format("<div>Result elapsed time: {0:F6}</div>", timer.Elapsed.TotalSeconds));
+        }
+    }
+}
+
+이 결과 필터는 이전 절에서 만들었던 액션 필터를 보완해주는 역할을 수행해서 결과를 실행하는데 걸리는 시간을 측정하는 역할을 한다. 목록 18-38은 Home 컨트롤러에 이 필터를 적용한 모습을 보여주고 있다. 
+
+
+
+목록 18-38 HomeController.cs 파일에 결과 필터 적용하기
+
+        [ProfileAction]
+        [ProfileResult]
+        public string FilterTest()
+        {
+            return "This is the FilterTest action";
+        }
+
+응용프로그램을 실행하고 /Home/FilterTest URL로 이동해보면 그림 18-9와 같은 결과를 확인할 수 있을 것이다. 두 가지 필터 모두 브라우저에 데이터를 출력하는 것을 볼 수 있는데 액션 필터의 출력과는 달리 결과 필터의 출력은 액션 메서드의 결과 출력 이후에 나타나는 것을 볼 수 있다. 당연한 얘기겠지만, OnResultExecuted메서드는 결과가 적절하게 처리되기 전까지는(이번 예제의 경우에는 결과에 문자열 값을 추가하기 전까지는) 실행되지 않기 때문이다. 
+
+
+
+
+
+※ 내장 액션 필터 및 결과 필터 클래스 사용하기
+MVC 프레임워크는 액션 필터와 결과 필터를 동시에 상속받는 클래스를 생성할 수 있는 내장 클래스도 제공해준다. 이 클래스는 ActionFilterAttribute라는 클래스로 목록 18-39에서 보는 것과 같다. 
+
+
+목록 18-39 ActionFilterAttribute 클래스
+
+public abstract class ActionFilterAttribute : FilterAttribute, IActionFilter, IResultFilter
+{
+	public virtual void OnActionExecuting(ActionExecutingContext filterContext){}
+	public virtual void OnActionExecuted(ActionExecutedContext filterContext){}
+	public virtual void OnResultExecuting(ResultExecutingContext filterContext) {}
+	public virtual void OnResultExecuted(ResultExecutedContext filterContext) {}
+}
+
+
+이 클래스를 사용해서 얻을 수 있는 유일한 이점은 사용할 필요가 없는 메서드를 재정의하거나 구현할 필요가 없다는 것이다. 그 외에는 필터 인터페이스를 직접 구현하는 것과 비교했을 때 그다지 큰 장점은 없다. ActionFilterAttribute 클래스의 사용 예를 살펴보기 위해서 예제 프로젝트의 Infrastructure 폴더에 ProfileAllAttribute.cs라는 파일을 추가하고 목록 18-40과 같이 클래스를 정의하도록 하자. 
+
+목록 18-40 ProfileAllAttribute.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Diagnostics;
+namespace Filters.Infrastructure
+{
+    public class ProfileAllAttribute : ActionFilterAttribute
+    {
+        private Stopwatch timer;
+
+        public override void OnActionExecuting(ActionExecutingContext filterContext)
+        {
+            timer = Stopwatch.StartNew();
+
+        }
+
+        public override void OnResultExecuted(ResultExecutedContext filterContext)
+        {
+            timer.Stop();
+            filterContext.HttpContext.Response.Write(string.Format("<div>Total elapsed time: {0:F6}</div>", timer.Elapsed.TotalSeconds));
+        }
+    }
+}
+
+ActionFilterAttribute 클래스는 IActionFilter 인터페이스와 IResultFilter 인터페이스 모두를 구현하고 있으므로 MVC 프레임워크는 이 클래스를 두 필터 형식 모두인 것처럼 취급할 것이다. 설령 모든 메서드가 재정의되지 않았다 하더라도 말이다. 이번 예제에서는 IActionFilter 인터페이스의 OnActionExecuting 메서드와 IResultFilter 인터페이스의 OnResultExecuted 메서드만을 구현하고 있으며, 이 메서드들을 통해서 액션 메서드가 실행되는 데 걸린 시간을 측정하고 결과 처리를 수행하고 있다. 목록 18-41은 Home 컨트롤러에 이번 필터를 적용한 모습을 보여주고 있다. 
+
+
+
+목록 18-41 HomeController.cs 파일에 필터 적용하기
+
+        [ProfileAction]
+        [ProfileResult]
+        [ProfileAll]
+        public string FilterTest()
+        {
+            return "This is the FilterTest action";
+        }
+
+응용프로그램을 실행하고 /Home/FilterTest URL로 이동해보면 이 필터들이 모두 적용된 결과를 확인할 수 있다. 그림18-10은 그 결과다.
+
+
+
+
+
+
+※ 그 밖의 필터 기능들 사용하기
+
+이전 예제들을 통해서 필터를 효과적으로 다루는 데 필요한 모든 정보를 다루었다. 이번 절에서는 흥미로운 기능이기는 하지만 그다지 폭 넓게 사용되지는 않는 MVC 프레임워크의 진보된 필터 기능들 중 일부를 살펴보려 한다. 
+
+
+
+※ 어트리뷰트 없이 필터 적용하기
+필터를 적용하는 통상적인 방법은 이전 절들에서 살펴봤듯이 어트리뷰트를 사용하는 것이다. 하지만 또 다른 방법도 존재한다. Controller 클래스는이미 IAuthenticationFilter, IAuthorizationFilter, IActionFilter, IResultFilter, IExceptionFilter 인터페이스를 구현하고 있으며, OnAuthorization 및 OnException과 같이 우리가 이미 살펴본 OnXXX 메서드들의 비어있는 가상 구현을 제공하고 있기 때문에 이를 통해서도 필터 기능을 마찬가지로 구현할 수 있다. 목록 18-42는 이러한 기능을 Home 컨트롤러에 적용하여 스스로 프로파일링하는 컨트롤러 클래스로 만들어본 코드다. 
+
+
+목록 18-42 HomeController.cs 파일에서 컨트롤러 필터 메서드 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure;
+using System.Diagnostics; //추가
+namespace Filters.Controllers
+{
+    public class HomeController : Controller
+    {
+
+        private Stopwatch timer; //추가
+
+        [Authorize(Users = "admin")]
+        public string Index()
+        {
+            return "This is the Index action on the Home controller";
+        }
+
+        [GoogleAuth]
+        [Authorize(Users = "bob@google.com")]
+        public string List()
+        {
+            return "This is the List action on the Home controller";
+        }
+
+        [HandleError(ExceptionType = typeof(ArgumentOutOfRangeException),View = "RangeError")]
+        public string RangeTest(int id)
+        {
+            if (id > 100)
+            {
+                return String.Format("The id value is: {0}", id);
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException("id",id,"");
+            }
+        }
+
+
+        public string FilterTest()
+        {
+            return "This is the FilterTest action";
+        }
+	//하단 protected 메서드 2개 추가
+        protected override void OnActionExecuting(ActionExecutingContext filterContext)
+        {
+            timer = Stopwatch.StartNew();
+        }
+
+        protected override void OnResultExecuted(ResultExecutedContext filterContext)
+        {
+            timer.Stop();
+            filterContext.HttpContext.Response.Write(string.Format("<div>Total elapsed time: {0}</div>", timer.Elapsed.TotalSeconds));
+        }
+    }
+}
+
+
+이 상태에서는 FilterTest 액션 메서드에 기존에 적용했던 필터들은 필요가 없기에 모두 제거하였다. 이렇게 수정된 Home 컨트롤러는 모든 액션 메서드의 응답에 프로파일 정보를 추가할 것이다. 응용프로그램을 실행하고 /Home/RangeTest/200 URL을 요청하면 RangeTest 액션을 요청하게 되고 그림18-11과 같은 결과를 나타낼 것이다(RangeTest 액션 메서드에 HandleError 필터가 설정되어 있지만 ID 값으로 200이 요청되었기에 예외는 발생하지 않는다)
+
+
+이 기법은 프로젝트에 여러 컨트롤러들이 상속받는 기반(base) 클래스가 존재하는 경우에 대단히 유용하다. 필터 기법의 중요한 요점은 응용프로그램 전반적으로 필요한 코드를 재사용가능한 단일 위치에 두는 것이다. 따라서 다른 컨트롤러들의 기반 클래스로 사용되지 않는 클래스에서 이러한 메서드들을 사용하는 것은 전혀 바람직하지 않다. 
+
+
+
+TIP:
+개인적으로 필자는 어트리뷰트를 사용하는 방식을 선호한다. 컨트롤러 로직과 필터 로직을 분리하는 것을 좋아하기 때문이다. 만일 모든 컨트롤러에 필터를 적용하는 방법이 궁금하다면 바로 이어서 설명할 전역 필터에 주목하자. 
+
+
+
+
+※ 전역 필터 사용하기
+
+전역 필터는 응용프로그램에 존재하는 모든 컨트롤러의 모든 액션 메서드에 적용된다. 전역필터는 프로젝트 템플릿으로 MVC 프로젝트 템플릿을 사용하는 경우에는 Visual Studio가 자동으로 만들어주지만 Empty 템플릿을 사용할 경우에는 직접 만들어서 설정해야만 한다. 
+
+응용프로그램 수준의 구성 설정들은 App_Start 폴더에 추가되는 클래스들에서 설정하는 것이 관례다. 그런 이유로 15장과 16장에서도 라우트들을 App_Start/RouteConfig.cs 파일에 정의했던 것이다. 필터에 대해서도 같은 수준의 구성 설정을 만들기 위해서 App_Start 폴더에 FilterConfig.cs 라는 새로운 클래스 파일을 추가하고 목록 18-43과 같이 코드를 작성해 보자. 
+
+
+목록 18-43 FilterConfig.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+namespace Filters.App_Start
+{
+    public class FilterConfig
+    {
+        public static void RegisterGlobalFilters(GlobalFilterCollection filters)
+        {
+            filters.Add(new HandleErrorAttribute());
+        }
+    }
+}
+
+
+이 코드는 Visual Studio에서 MVC 템플릿을 사용하여 프로젝트를 생성하는 경우에 만들어지는 코드와 동일한 코드다. FilterConfig 클래스는 RegisterGlobalFilters라는 정적 메서드를 가지고 있는데 이 메서드는 인자로서 GlobalFilterCollection 개체 형식의 전역 필터 컬렉션을 가지며 등록하고자 하는 새로운 필터들은 이 컬렉션에 추가하면된다. 
+
+이 파일에는 기억해야 할 규약이 두 가지 있는데 첫 번째 규약은 FilterConfig 클래스가 반드시 Filters 네임스페이스에 정의되어야 한다는 것이다. 즉 Visual Studio가 파일을 생성할때 기본적으로 작성해주는 Filters.App_Start 네임스페이스를 그대로 놔두어서는 안 된다는 것이다. 두 번째 규약은 이번 장의 앞부분에서 살펴봤던 HandleError 필터가 항상 전역필터로 정의되어야 한다는 것인데 이렇게 하려면 GlobalFilterCollection 개체의 Add 메서드를 호출하여 등록하면된다. 
+
+
+Note:
+사실 HandleError 필터를 반드시 전역적으로 설정해야만 하는 것은 아니지만, 이 필터는 기본적인 MVC의 예외 처리 정책을 정의하고 있기에 가급적 그렇게 하는 것이 좋다. 이 필터는 처리되지 않은 예외가 일어나는 경우 Views/Shared/Error.cshtml 뷰를 렌더한다. 이 예외 처리 정책은 기본적으로 개발시에는 동작하지 않도록 설정되어 있지만 Web.config 파일을 수정하여 이를 구동하도록 변경할 수 있으며 그 구체적인 방법은 이번 장의 예외 필터 만들기 절을 참고하도록 하자. 
+
+
+
+
+이번 예제에서는 ProfileAll 필터를 전역적으로 적용해보려고 하므로 목록 18-44와 같이 HandleError 필터를 등록할 때와 마찬가지 메서드를 사용하여 이 필터를 등록하도록 하자. 
+
+
+목록 18-44 FilterConfig.cs 파일에 전역 필터 추가하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure; //추가
+namespace Filters.App_Start
+{
+    public class FilterConfig
+    {
+        public static void RegisterGlobalFilters(GlobalFilterCollection filters)
+        {
+            filters.Add(new HandleErrorAttribute());
+            filters.Add(new ProfileAllAttribute()); //추가
+        }
+    }
+}
+
+
+
+TIP:
+목록 18-44에서 필터 클래스의 인스턴스를 생성한 다음에 그 필터를 전역적으로 등록하고 있음에 주목하자. 이는 클래스의 이름이 Attribute 접두사를 포함한 상태로 참조되어야 함을 의미한다. 필터를 어트리뷰트로 적용할 때는 Attribute 를 생략해야 한다는 규칙이 있지만 직접 이 클래스의 인스턴스를 만들 경우에는 이를 포함시켜야 한다. 
+
+다음 단계는 응용프로그램이 시작될 때 FilterConfig.RegisterGlobalFilters 메서드가 Global.asax 파일에서 호출되도록 만드는 것이다. 이를 위해서 목록 18-45와 같이 Global.asax파일에 코드를 추가한다. 
+
+
+목록 18-45 Global.asax 파일에서 전역 필터 설정하기
+using Filters.App_Start; //추가
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+
+namespace Filters
+{
+    public class MvcApplication : System.Web.HttpApplication
+    {
+        protected void Application_Start()
+        {
+            AreaRegistration.RegisterAllAreas();
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+            FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters); //추가
+        }
+    }
+}
+
+
+전역 필터를 살펴보기 위해서 목록 18-46과 같이 Customer라는 새로운 컨트롤러를 만들어보자. 굳이 새로운 컨트롤러를 만드는 이유는 앞서 작성한 필터들이 적용되지 않은 깨끗한 코드를 사용하고 싶기 때문이다. 
+
+
+목록 18-46 CustomerController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace Filters.Controllers
+{
+    public class CustomerController : Controller
+    {
+        
+        public string Index()
+        {
+            return "This is the Customer controller";
+        }
+    }
+}
+
+이 컨트롤러는 문자열을 반환하는 Index 액션 메서드 하나만 갖고 있다. 응용프로그램을 실행하고 /Customer URL로 이동해보면 그림 18-12와 같이 전역 필터가 적용된 모습을 볼 수 있는데, 컨트롤러에 필터를 직접적으로 적용하지 않았음에도 전역 필터에 의해 프로파일링 정보가 추가되고 있음을 볼 수 있다. 
