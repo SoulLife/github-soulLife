@@ -1,0 +1,257 @@
+※ 필터 실행 순서 지정하기
+
+필터는 형식별로 실행된다고 이미 설명했었다. 즉 인증 필터, 권한 부여 필터, 액션 필터, 결과 필터의 순서로 실행된다. 그리고 예외 필터의 경우에는 처리되지 않은 예외가 발생하는 경우에만 실행된다. 하지만 각각의 형식 카테고리 안에서 개별적인 필터가 사용되는 순서를 제어할 수도 있다. 목록 18-47은 Infrastructure 폴더에 추가한 SimpleMessageAttribute.cs 라는 클래스 파일인데, 이 클래스는 필터의 실행 순서를 살펴보기 위한 용도로 작성한 간단한 필터다. 
+
+
+
+목록 18-47 SimpleMessageAttribute.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace Filters.Infrastructure
+{
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public class SimpleMessageAttribute : FilterAttribute, IActionFilter
+    {
+        public string Message { get; set; }
+
+        public void OnActionExecuting(ActionExecutingContext filterContext)
+        {
+            filterContext.HttpContext.Response.Write(string.Format("<div>[Before Action: {0}]</div>", Message));
+        }
+
+        public void OnActionExecuted(ActionExecutedContext filterContext)
+        {
+            filterContext.HttpContext.Response.Write(string.Format("<div>[After Action: {0}]</div>", Message));
+        }
+    
+    }
+}
+
+
+이 필터는 OnActionExecuting 메서드와 OnActionExecuted 메서드가 호출되는 경우, 응답에 메시지를 작성하고 있으며 이 메시지의 일부는 Message 속성을 사용하여 지정할 수도 있다(필터를 적용할 때 설정할 예정이다) 목록 18-48에서 볼 수 있는 것처럼 액션 메서드에 이필터의 인스턴스를 여러 개 적용할 수도 있다(이를 지원하기 위해서 목록 18-47에서 AttributeUsage 어트리뷰트의 AllowMultiple 속성을 true로 지정하고 있음에 주목하자)
+
+
+목록 18-48 CustomerController.cs 파일에서 액션에 여러 개의 필터 적용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure; //추가
+namespace Filters.Controllers
+{
+    public class CustomerController : Controller
+    {
+        [SimpleMessage(Message = "A")] //추가
+        [SimpleMessage(Message = "B")] //추가
+        
+        public string Index()
+        {
+            return "This is the Customer controller";
+        }
+    }
+}
+
+이번 예제에서는 서로 다른 메시지를 갖는 두 가지 필터를 적용하고 있는데 첫 번째 필터는 A라는 메시지를 가지며 두 번째 필터는 B라는 메시지를 갖고 있다. 물론 서로 다른 두 가지 필터를 사용할 수도 있었겠지만 이번 예제에서는 속성들을 통해서도 전역 필터들을 구분하여 적용할 수 있음을 보여주기 위해서 이렇게 구성해보았다. 응용프로그램을 실행하고 / Customer URL로 이동해보면 그림 18-13과 같은 결과를 확인할 수 있다. 
+
+
+이 그림에서는 MVC 프레임워크가 A 필터를 실행하기에 앞서 B 필터를 실행하고 있지만 여러분이 직접 테스트를 해보면 반대 순서로 실행될 수도 있다. MVC 프레임워크는 어떤 특정한 순서나 실행을 보장하지 않는다. 대부분의 경우 이 순서는 그다지 중요하지 않지만 만일 순서가 중요한 경우라면 목록 18-49와 같이 Order 속성을 사용하면 된다. 
+
+
+
+목록 18-49 필터에 Order 속성 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure;
+namespace Filters.Controllers
+{
+    public class CustomerController : Controller
+    {
+        [SimpleMessage(Message = "A", Order = 1)]
+        [SimpleMessage(Message = "B", Order = 2)]
+        
+        public string Index()
+        {
+            return "This is the Customer controller";
+        }
+    }
+}
+
+Order 매개변수는 int 값을 전달받으며 MVC 프레임워크는 오름차순으로 필터를 실행한다. 가령 이번예제의 경우에는 A 필터에 낮은 값을 주었기에 프레임워크는 그림 18-14에서 볼 수 있는 것처럼 A를 먼저 실행할 것이다. 
+
+
+
+Note:
+OnActionExecuting 메서드는 우리가 지정한 순서대로 실행되지만 OnActionExecuted 메서드는 반대 순서로 실행된다는 점에 주목하자. MVC 프레임워크는 액션 메서드에 앞서 실행될 필터들을 순서대로 쌓으며 메서드 실행 후에는 그 순서에 반대로 풀어나간다. 이렇게 풀어나가는 동작은 변경될 수 없다. 
+
+
+
+만약 Order 속성 값을 지정하지 않는다면 기본값으로 -1이 할당된다. 따라서 Order 값을 갖는 필터와 갖지 않는 필터를 모두 사용한다면 값이 지정되지 않은 필터가 먼저 실행될 것이다. 왜냐하면 값이 지정되지 않은 필터가 더 낮은 Order 값을 갖게 될 것이기 때문이다. 
+
+또한 여러 개의 동일한 형식의 필터들(예 : 액션 필터)이 동일한 Order 값(예 : 1)을 갖고 있는 경우 MVC 프레임워크는 필터가 어디에 적용되는지에 따라 실행 순서를 결정한다. 즉 전역 필터가 우선적으로 실행되고 그 다음에 컨트롤러 클래스에 적용된 필터가 적용되며 마지막으로 액션 메서드에 적용된 필터가 실행된다. 
+
+
+
+Note:
+예외 필터의 경우에는 이 실행 순서가 반대다. 즉 컨트롤러와 액션 메서드 모두에 동일한 Order 값을 갖는 예외 필터를 적용한다면 액션 메서드에 적용된 필터가 우선적으로 실행되고 동일한 Order 값을 갖는 전역 예외 필터가 마지막에 실행될 것이다. 
+
+
+
+
+※ 필터 오버로딩 하기
+
+상황에 따라서 특정 필터를 전역으로나 컨트롤러 수준에서 적용하고자 하지만 특정 액션 메서드에는 다른 필터를 적용하고 싶은 경우도 있을 수 있다. 이러한 예를 직접 살펴보기 위해서 일단 목록 18-50과 같이 SimpleMessage 필터를 수정하여 컨트롤러에 전체 적용할수 있도록 만들어 보자. 
+
+
+목록 18-50 컨트롤러 수준에서 사용할 수 있도록 SimpleMessageAttribute.cs 파일 변경하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace Filters.Infrastructure
+{
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)] //수정
+    public class SimpleMessageAttribute : FilterAttribute, IActionFilter
+    {
+        public string Message { get; set; }
+
+        public void OnActionExecuting(ActionExecutingContext filterContext)
+        {
+            filterContext.HttpContext.Response.Write(string.Format("<div>[Before Action: {0}]</div>", Message));
+        }
+
+        public void OnActionExecuted(ActionExecutedContext filterContext)
+        {
+            filterContext.HttpContext.Response.Write(string.Format("<div>[After Action: {0}]</div>", Message));
+        }
+    
+    }
+}
+
+이제 이 필터는 개별적인 액션 메서드뿐만 아니라 전체 컨트롤러 클래스에도 적용할 수 있도록 변경되었다. 목록 18-51은 이 필터를 Customer 컨트롤러에 적용한 모습을 보여주고 있다. 
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure;
+namespace Filters.Controllers
+{
+    [SimpleMessage(Message = "A")] //추가
+    public class CustomerController : Controller
+    {
+        
+        public string Index()
+        {
+            return "This is the Customer controller";
+        }
+
+        [SimpleMessage(Message = "B")] //추가
+        public string OtherAction()
+        {
+            return "This is the Other Action in the Customer controller";
+        }
+    }
+}
+
+
+이번 예제에서는 컨트롤러 클래스에 SimpleMessage 필터를 적용해서 어떤 액션 메서드가 호출되더라도 A라는 메시지가 응답에 추가되도록 만들고 있다. 또한 새로운 OtherAction메서드도 추가되어 있으며 이 메서드에는 B라는 메시지가 지정된 SImpleMessage 필터가 적용되어 있다. 
+
+바로 이런 경우가 문제인데, 기본적으로 OtherAction 메서드는 두 개의 필터, 즉 컨트롤러와 메서드 수준의 필터 모두의 영향을 받게 된다. 따라서 응용프로그램을 실행하고 /Customer/OtherAction URL로 이동해보면 그림 18-15와 같은 결과를 확인할수 있다. 
+
+
+이제 원래의 이야기로 돌아와서 만일 액션 메서드에 직접 적용된 필터의 영향만 받도록 제한하고 싶다면 어떻게 해야 할까? 이런 경우에는 필터 재정의(filter override)기능을 사용하면 된다. 필터 재정의 기능을 사용하면 MVC 프레임워크는 상위 수준(즉 컨트롤러 수준이나 전역 수준)에서 정의된 모든 필터들을 무시하게 된다. 필터 재정의는 목록 18-32에서 보여지는 IOverrideFilter 인터페이스를 구현하고 있는 어트리뷰트다. 
+
+
+목록 19-52 IOverrideFilter 인터페이스
+
+namespace System.Web.Http.Filters
+{
+	public interface IOverrideFilter : IFilter
+	{
+		Type FiltersToOverride{ get; }
+	}
+}
+
+
+FiltersToOverride 메서드는 재정의될 필터의 형식을 반환한다. 이번 예제에서는 액션 필터에 이러한 부분을 적용해보려고 하므로 Infrastructure 폴더에 CustomOverrideActionFilterAttribute.cs 라는 파일을 새로 만들고 목록 18-53과 같이 작성해보도록 하자. 목록 18-53에서 볼 수 있듯이 이번에 작성하는 새로운 어트리뷰트는 IActionFilter 형식을 재정의하도록 FiltersToOverride 메서드를 구현하고 있다. 
+
+
+
+주의:
+MVC 프레임워크는 System.Web.Mvc.Filters 네임스페이스에 몇 가지 내장 필터 재정의들(OverrideAuthenticationAttribute, OverrideActionFiltersAttribute 등)을 보유하고 있기는 하지만 아쉽게도 이 필터들은 동작하지 않는다. 그 이유는 이 클래스들이 FilterAttribute가 아닌 Attribute에서 파생되었기 때문이다. 필자는 이러한 문제가 향후에는 해결딜 것이라 생각하며 그전까지는 앞서 작성한 것과 같이 사용자 지정 필터 재정의를 만들어서 사용해야 한다. 
+
+
+
+목록 18-53 CustomOverrideActionFiltersAttribute.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Mvc.Filters;
+namespace Filters.Infrastructure
+{
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method,
+        Inherited = true, AllowMultiple = false)]
+    public class CustomOverrideActionFiltersAttribute : FilterAttribute, IOverrideFilter
+    {
+        public Type FiltersToOverride
+        {
+            get { return typeof(IActionFilter); }
+        }
+    }
+}
+
+이제 이 필터를 목록 18-54와 같이 컨트롤러에 적용하여 전역 수준이나 컨트롤러 수준의 액션 필터가 동작하지 않도록 만들어 보자. 
+
+
+목록 18-54 CustomerController.cs 파일에 필터 재정의 적용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using Filters.Infrastructure;
+namespace Filters.Controllers
+{
+    [SimpleMessage(Message = "A")]
+    public class CustomerController : Controller
+    {
+        
+        public string Index()
+        {
+            return "This is the Customer controller";
+        }
+
+        [CustomOverrideActionFilters]
+        [SimpleMessage(Message = "B")]
+        public string OtherAction()
+        {
+            return "This is the Other Action in the Customer controller";
+        }
+    }
+}
+
+그러면 이제는 그림 18-16에서 보이는 것과 같이 OtherAction 메서드에 직접 적용한 SimpleMessage 어트리뷰트만 동작할 것이다. 
+
+
+
+요약 : 
+이번 장에서는 필터를 이용해서 횡단 관심사를 풀어내는 방법에 대해서 살펴봤다. 우선 사용가능한 다양한 종류의 필터들에 대해서 알아봤으며 각각의 필터들을 직접 구현하는 방법도 살펴봤다. 또한 필터를 컨트롤러와 액션 메서드에 어트리뷰트로 적용하는 방법에 대해서 알아봤으며 전역 필터로 적용하는 방법도 살펴보았다. 필터는 요청이 처리될 때 적용되어야 할 로직을 액션 메서드의 내부가 아닌 외부에서 확장할 수 있도록 만들어주는 방법이다. 다음 장에서는 MVC 프레임워크가 컨트롤러를 다루는 방법을 변경하고 확장하는 방법에 대해서 살펴보고자 한다. 
