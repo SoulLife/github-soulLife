@@ -1,0 +1,944 @@
+CHAPTER 10 닷넷 클래스
+
+
+
+01 루트 클래스
+
+
+
+1.1 object
+
+
+
+C/C++, 파스칼 같은 고전언어들은 언어와 라이브러리가 따로 분리되어 있다. 언어는 어디까지나 문법만 정의할 뿐이고 라이브러리는 이 문법을 활용한 여러 가지 표준 함수들을 제공한다. 이에 비해 C#은 닷넷 라이브러리(BCL)와 긴밀하게 연관되어 있어 언어의 많은 기능이 라이브러리에 의해 제공된다. 심지어 가장 기본적인 타입인 정수(int)형 조차도 라이브러리에 정의된 클래스이다. 언어의 기능만큼이나 라이브러리의 기능이 중요하며 그래서 닷넷 프로그래밍을 잘 하기 위해서는 라이브러리의 구조에 대해 잘 알아야 한다.
+
+
+
+닷넷 라이브러리는 객체 지향적이며 거대한 클래스들의 계층으로 구성되어 있다. 이 계층의 제일 위에는 object 라는 루트 클래스가 있는데 루트는 그야 말로 가장 기본이 되는 뿌리이므로 이 클래스에 대한 이해는 닷넷 클래스 계층 이해에 큰 비중을 차지한다. 닷넷의 모든 클래스는 선언문에 명시적인 상속 지정이 없더라도 암시적으로 object 를 상속받도록 되어 있다. 그래서 닷넷의 모든 클래스는 object의 후손이며 object 타입은 모든 객체를 대표하는 타입이다. 임의의 타입을 인수로 받거나 임의의 객체 배열을 구성할때 object 타입을 사용한다.
+
+
+
+닷넷의 루트 클래스는 System 네임스페이스의 Object라는 이름으로 정의되어 있으며 C#은 이클래스에 대해 object라는 별칭을 제공한다. 오브젝트라는 것은 이름 그대로 객체, 즉 세상의 모든 것을 칭하는 용어이므로 루트 클래스의 이름으로 적절하다. 라이브러리에는 첫 자가 대문자로 정의되어 있지만 C# 언어의 별칭은 모두 소문자로 되어 있다. 원칙적으로 System.Object 라고 쓰는것이 가장 정확하지만 소스 선두에 보통 using System 선언문이 있으므로 소속 네임스페이스는 제외하고 Object로 쓸 수도 있다. 또는 C# 의 별칭인 object로 간단히 쓸 수도 있다. 그러나 System.object라는 표현은 맞지 않다.
+
+
+
+System.Object Obj;             //가장 정확한 표현
+
+Object obj;                        // 네임스페이스 생략
+
+object obj;                        // 언어의 별칭 사용
+
+System.object obj;             // 틀린 표현
+
+
+
+C#은 대소문자를 구분하므로 Object와 object는 다른 표현이지만 using 선언문이 있을 때 두표현은 같다. 하지만 클래스명을 쓰는 것은 using 선언이 되어 있어야 한다는 제약이 있으므로 가급적이면 언어의 별칭을 쓰는것이 소스 관리에 유리하다. System.Int32보다 int가 바람직한 것처럼 말이다. 문자열을 표현하는 System.String과 string의 관계도 동일하다.
+
+
+
+object도 일종의 클래스이므로 내부에 멤버를 가진다. 생성자는 아무 것도 하지 않는 디폴트 생성자만 정의되어 있으며 필드, 상수, 프로퍼티, 인덱서, 이벤트 등은 가지지 않는다. 루트 클래스의 멤버는 모든 후손에게 상속되므로 메모리를 소모하는 멤버는 포함하기 어렵다. 만약 object에 40바이트의 필드가 있다면 닷넷의 모든 객체는 최소40바이트이상이 되어야 하므로 메모리 낭비가 너무 심해질 것이다. 그래서 객체를 관리하는 일반적인 메서드만을 가진다. object로부터 파생된 모든 클래스의 객체들은 이 메서드들을 가지는 셈이다.
+
+
+
+ 메서드
+
+ 속성
+
+ 설명
+
+ ToString
+
+ public virtual
+
+ 객체를 문자열 형태로 표현한다. 디폴트로 클래스 이름을 리턴하는데 필요시 재정의할수 있다.
+
+ GetType
+
+ public
+
+ 객체의 타입 정보를 제공하는 System.Type 객체를 리턴한다.
+
+ MemberwiseClone
+
+ protected
+
+ 객체의 멤버끼리 일대일 복사한다. 얕은 복사이다.
+
+ GetHashCode
+
+ public virtual
+
+ 객체를 검색하기 위한 해시값을 리턴한다.
+
+ Equals
+
+ public virtual
+
+ public static
+
+ 두 객체를 비교하여 같은 객체인지 판별한다. 널 객체와 비교할수 있는 정적 버전도 중복 정의되어 있다.
+
+ ReferenceEquals
+
+ public static
+
+ 객체가 같은 대상을 가리키고 있는지 비교한다.
+
+ Finalize 또는 ~Object();
+
+ protected virtual
+
+ 정리 작업을 수행하는 파괴자이다. Finalize라는 이름을 쓰는 대신 클래스명 앞에 ~를 붙인다.
+
+
+
+속성에 virtual이 포함된 가상 메서드들은 파생 클래스에서 필요에 따라 재정의할 수 있으며 재정의하라고 만들어 놓은 것들이다. 특히 객체를 문자열로 변환하는 ToString 메서드가 자주 재정의된다. 다음 예제는 Time 객체를 문자열로 변환한다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Time
+    {
+        public int hour, min, sec;
+        public Time(int h, int m, int s) { hour = h; min = m; sec = s; }
+        public void OutTime()
+        {
+            Console.WriteLine("현재 시간은 {0}시 {1}분 {2}초이다.", hour, min, sec);
+        }
+        public override string ToString()
+        {
+            return hour + "시 " + min + "분 " + sec + "초";
+        }
+    }
+   
+    class Program
+    {       
+        static void Main()
+        {
+            Time now = new Time(18, 25, 55);
+            now.OutTime();
+            Console.WriteLine(now.ToString());
+        }
+
+    }
+   
+   
+   
+
+​
+
+   
+}
+
+
+
+WriteLine 메서드는 여러 버전이 오버로딩되어 있어 정수, 실수, 문자열 등을 가리지 않고 모두 출력할 수 있다. 그러나 사용자가 직접 정의한 Time을 인수로 받아들이는 WriteLine은 정의되어 있지않다. 그럼에도 불구하고 Time 객체를 WriteLine으로 출력하는 것이 가능하다. 실행 결과는 다음과 같은데 첫 줄은 OutTime 메서드가 출력한 것이고 두번째 줄은 WriteLine이 출력한 것이다.
+
+
+
+실행 결과 : 현재 시간은 18시 25분 55초이다.
+
+18시 25분 55초
+
+
+
+WriteLine 메서드는 Time 클래스가 어떤 사물을 표현하는 클래스인지도 모르며 Time형 객체를 출력할 수 있는 능력도 없다. 이 코드가 동작하는 이유는 Time 클래스가 자신을 시분초의 문자열로 변환하는 ToString 메서드를 정의하고 있기 때문이다. WriteLine은 object 타입의 인수를 받아 이객체의 ToString을 호출하여 문자열로 변환한 후 그 결과를 출력한다. Time 클래스도 object의 후손이므로 object 타입의 인수로 전달될수 있는 것이다.
+
+
+
+ToString 메서드는 object에 가상으로 선언되어 있으므로 파생 클래스에서 ToString을 정의하지 않더라도 이 메서드는 항상 존재한다. object의 ToString은 기본적으로 클래스의 이름만 출력하도록 되어 있다. Time 클래스에서 재정의된 ToString 메서드를 제외하면 시분초 문자열 대신 Time 이라는 클래스 이름이 출력될 것이다. 클래스 이름보다는 객체의 실제 내용을 출력하는 것이 더 보기 좋으며 이럴때 ToString 메서드를 재정의한다.
+
+
+
+루트 클래스가 ToString 메서드를 제공함으로써 닷넷의 모든 객체들은 문자열로 변환 가능한 셈이다. 디폴트는 클래스 이름을 리턴하지만 재정의하기에 따라서는 객체의 내용이나 현재 상태, 기타 참고 정보들을 얼마든지 상세하게 출력할 수 있다. 어떤 객체든지 문자열로 변환화여 화면에 찍어 보거나 로그로 남길수 있어 특히 디버깅할때 아주 유용한 기능이다.
+
+
+
+
+
+
+
+1.2 객체의 비교
+
+object 클래스에는 객체의 동일성을 비교하는 세 개의 메서드가 포함되어 있다. 닷넷 라이브러리는 내부적으로 객체 비교가 필요할 때 이 메서드들을 호출하여 두 객체가 같은지 아닌지를 판단한다. 이 중 Equals 메서드는 재정의 가능하여 클래스에 따라 고유한 비교 방법을 정의할 수 있다.
+
+
+
+* public virtual bool Equals(Object obj)
+
+
+
+가상메서드로 선언되어 있으며 A.Equals(B) 형식으로 사용한다. A와 B가 같은 객체인지를 비교하는데 같으면 true, 다르면 false를 리턴한다. object의 디폴트 구현은 참조가 같은지, 즉 두객체가 가리키는 번지가 같은지를 비교하도록 되어 있다. 파생 클래스에서 참조가 아닌 실제 클래스의 내용을 비교하고 싶다면 이 메서드를 재정의한다.
+
+
+
+* public static bool Equals(Object objA, Object objB)
+
+
+
+정적 메서드로 선언되어 있으며 object.Equals(A,B)형식으로 사용한다. 두 객체를 참조로 비교한다는 것은 동일하지만 둘중 하나가 null일경우에도 비교할 수 있다는 점이 다르다. B가 null인 경우는 가상 메서드로도 A.Equals(null)로 비교할 수 있지만 반대의 경우라면 null.Equals(B) 식으로 호출할 수 없다. null은 실제 객체가 아니므로 메서드를 호출하지 못한다. 이런 경우를 위해 정적 메서드가 필요하며 object.Equals(null, b)식으로 호출할 수 있다. 만약 둘 다 null이면 이때는 true를 리턴하고 둘중 하나만 null이면 flase를 리턴한다. 둘중 하나라도 null이 아니면 가상 Equals를 호출하므로 가상 Equals를 재정의하면 이 메서드도 재정의되는 효과가 있다.
+
+
+
+* public static bool ReferenceEquals(Object objA, Object objB)
+
+
+
+정적 Equals와 마찬가지로 참조 대상을 비교한다. 즉 주소가 같은지만을 평가하며 객체의 실제 내용을 비교하지는 않는다. 정적 Equals와 기본 동작은 같지만 재정의할 수 없고 평가 방법이 고정되어 있다는 점이 다르다. Equals의 재정의 여부와는 상관없이 참조 비교를 하고 싶다면 이 메서드를 호출한다.
+
+
+
+정적 Equals는 비교 객체중 하나가 null인 특수한 경우를 위해 존재하므로 실제로는 두 개의 비교 메서드가 있는 셈이다. 이 둘은 기본적으로 참조를 비교한다는 면에서 동일하지만 재정의를 할 수 있는가 없는가가 다르다. Equals 가상 메서드는 클래스 타입에 따라 고유한 비교 동작을 정의하기 위해 재정의될수 있다. 다음 예제는 Time 클래스의 객체들을 두 메서드로 비교해 본다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+
+namespace FirstCon
+{
+    class Time
+    {
+        public int hour, min, sec;
+        public Time(int h, int m, int s) { hour = h; min = m; sec = s; }
+        public void OutTime()
+        {
+            Console.WriteLine("현재 시간은 {0}시 {1}분 {2}초이다.", hour, min, sec);
+        }
+        public override bool Equals(object obj)
+        {
+            bool check = false;
+            if (obj is Time)
+            {
+                Time other;
+                other = obj as Time;
+                check =  (other.hour == hour && other.min == min && other.sec == sec);
+            }
+            return check;
+
+           
+        }
+    }
+   
+    class Program
+    {       
+        static void Main()
+        {
+            Time A = new Time(1, 2, 3);
+            Time B = new Time(1, 2, 3);
+            Time C = A;
+            Console.WriteLine("Equals(A,B) = " + Equals(A, B));
+            Console.WriteLine("Equals(A,C) = " + Equals(A, C));
+            Console.WriteLine("ReferenceEquals(A,B) = " + ReferenceEquals(A, B));
+            Console.WriteLine("ReferenceEquals(A,C) = " + ReferenceEquals(A, C));
+            Console.WriteLine("ReferenceEquals(null,null) = " + ReferenceEquals(null, null));
+        }
+
+    }
+   
+   
+   
+
+​
+
+   
+}
+
+
+
+Time은 object로부터 상속받은 가상 Equals메서드를 재정의하여 참조가 아닌 객체의 내용을 비교하도록 했다. 시분초 필드가 모두 일치하면 같은 것이고 셋 중 하나라도 틀리면 다른 것이다. Main에서는 A와 B를 똑같은 시간으로 초기화했고 C에는 A를 대입하여 같은 대상을 참조하도록 초기화했다. 이 상태에서 A,B와 A,C를 각 메서드로 비교해 보았다.
+
+
+
+실행 결과 : Equals(A, B) = True
+
+Equals(A, C) = True
+
+ReferenceEquals(A, B) = False
+
+ReferenceEquals(A, C) = True
+
+
+
+객체의 실제 내용을 비교하도록 Equals를 재정의했으므로 A,C뿐만 아니라 A,B도 동일한 것으로 판단한다. 하지만 ReferenceEquals는 A,C는 같다고 평가하지만 A,B는 다르다고 평가한다. 두객체 모두 1시 2분 3초라는 똑같은 시간값을 가지고 있지만 힙상의 번지가 다르기 때문에 틀린 것으로 평가하는 것이다. A,B에 대한 비교 결과가 이렇게 틀린 이유는 참조를 비교하느냐 값을 비교하느냐의 차이이다.
+
+
+
+가상 Equals도 원래는 참조를 비교하지만 Time에서 재정의하여 내용을 비교하도록 했기 때문에 A,B를 같다고 평가한 것이다. 위 예제에서 TIme 클래스의 Equals 메서드 재정의문을 삭제해 버리면 Equals(A,B)도 false가 리턴된다. Equals(A,B)는 정적 메서드 호출문이지만 이 메서드의 내부에서 A.Equals(B)또는 B.Equals(A)를 호출하므로 재정의의 영향을 받는다.
+
+
+
+객체를 비교할때 비교 메서드 대신 == 연산자를 사용할 수도 있는데 사용자 입장에서는 == 연산자가 훨씬 더 직관적이고 쉽다. 아무래도 Equals(A,B)보다는 A==B가 더 보기에도 좋다. == 연산자는 타입에 따라 비교하는 방법이 달라지는데 값 타입은 내용을 비교하고 참조 타입은 번지를 비교한다. 물론 == 연산자도 오버로딩할 수 있으므로 클래스 타입에 대해 참조가 아닌 내용을 비교할 수 있다.
+
+
+
+이때 == 연산자를 오버로딩했으면 Equals 메서드도 같이 재정의해야 하며 그렇지 않으면 경고가 발생한다. 반대의 경우도 마찬가지이며 Equals와 == 연산자는 항상 쌍으로 재정의해야 한다. 또 ==이 재정의되면 !=도 당연히 같이 재정의되어야 한다. 어떤 방법으로 비교를 하더라도 결과가 같아야 하며 비교의 일관성이 확보되어야 하기 때문이다. 위 예제의 Time 클래스가 좀 더 완벽해지려면 다음 두 연산자가 필요하다.
+
+
+
+public static bool operator  ==(Time A,Time B)
+
+{
+
+     return (A.hour == B.hour && A.min == B.min && A.sec == B.sec);
+
+}
+
+public static bool operator !=(Time A,Time B)
+
+{
+
+    return !(A == B);
+
+}
+
+
+
+
+
+그렇다면 객체 비교를 위한 수단으로 == 이라는 편리하고도 직관적인 방법이 있는데 왜 object는 굳이 Equals니 ReferenceEquals니 하는 메서드를 ==과 함께 재정의하도록 해 놓았을까? 사실 == 만 오버로딩해도 객체를 내용으로 정확하게 비교할 수 있으므로 object가 굳이 비교 메서드를 멤버로 포함해야 할 마땅한 이유는 없으며 연산자만으로 비교하는 것이 구문으로 보나 구조적으로  보나 더 명쾌하고 간결하다.
+
+
+
+비교 방법이 이렇게 다양하고 번거로운 이유는 연산자 오버로딩을 지원하지 못하는 언어가 있기 때문인데 좀 더 구체적으로 얘기하자면 비주얼 베이직과의 호환성을 확보하기 위해서이다. 닷넷 공통 언어 규약(CLS)에 연산자 오버로딩이 의무 사항이 아니므로 닷넷 라이브러리는 == 연산자를 활용하지 못하며 그래서 루트 클래스가 비교 메서드를 가질 수 밖에 없다. C#만을 쓴다면 Equals메서드는 전혀 필요치 않은 존재이며 닷넷의 언어 독립성 확보를 위한 비용이라고 볼수 있다.
+
+
+
+위 예제를 컴파일하면 GetHashCode 메서드도 재정의하는 것이 좋다는 경고가 발생한다. 이 메서드는 객체를 맵에 저장할 떄 저장위치를 찾기 위한 해시 코드를 제공하는데 비교 방법이 바뀌면 해시 코드가 영향을 받으므로 같이 재정의하라는 권고이다.  맵에 저장할 계획이 없다면 일단은 무시해도 상관없는데 자세한 것은 맵에서 연구해 보자.
+
+
+
+
+
+
+
+1.3 리플렉션
+
+리플렉션(Reflection)이란 실행 중에 클래스나 객체의 타입 정보를 조사하는 기능이다. 타입 정보는 보통 컴파일 중에만 사용되며 컴파일러에 의해 기계어로 바뀌고 나면 사라지는 것이 일반적이다. 그러나 C#은 컴파일된 결과 코드뿐만 아니라 타입에 대한 메타 데이터를 실행 파일에 같이 기록해 놓기 때문에 실행 중에도 정보를 조사할 수 있다. 이기능을 사용하면 실행 중에 다른 모듈에 선언된 인스턴스를생성할 수 있고 메서드를 호출할 수도 있다.
+
+
+
+클래스에 대한 타입 정보는 Type이라는 클래스 또는 그 파생 클래스로 표현한다. 모든 것이 객체여야 하므로 클래스의 정보를 표현하는 것도 클래스이다. Type은 추상 클래스로서 타입을 표현하는 대표 클래스 역할을 하며 실제 정보는 Type 파생 클래스들이 가진다. 이 클래스들이 제공하는 정보는 모두 읽기 전용이므로 정보를 조사할수만 있으며 실행 중에 변경할 수는 없다. 특정 클래스나 객체의 타입 정보를 조사하고 싶을 때는 Type 객체를 먼저 얻어야 하는데 다음 세 가지 방법으로 얻는다.
+
+
+
+1. 루트 클래스인 object의 GetType 메서드를 호출한다. 정적 메서드가 아니므로 객체가 있어야만 이 메서드를 호출할 수 있다. Time형의 now 객체가 있을때 now.GetType()을 호출하면 Type 객체가 리턴되며 이 객체로부터 now의 타입 정보를 조사한다.
+
+
+
+2. Type의 정적 메서드인 GetType을 사용한다. 인수로 문자열 형식의 타입 이름을 전달하며 대소문자 구분 여부와 타입이 발견되지 않을 때 예외 처리 여부를 추가로 지정할 수 있다. 타입의 이름만 전달하면 대소문자를 구분하며 예외를 던지지는 않는다. Time 클래스의 정보를 읽고 싶다면 Type.GetType("Time")을 호출한다. 클래스명으로부터 정보를 조사하므로 객체가 없어도 호출할 수 있다.
+
+
+
+3. typeof연산자를 사용하며 인수로 클래스명을 전달하는데 문자열이 아니므로 클래스명을 바로 전달하면 된다. Time 클래스의 경우라면 typeof(Time)으로 Type 객체를 얻는다. 언어가 제공하는 연산자이므로 가장 간단하다.
+
+
+
+어떤 방법을 쓰든 리턴되는 객체는 Type의 파생 클래스 객체이므로 Type형의 객체를 선언한 후 리턴값을 대입 받으면 된다. Type 클래스에는 타입에 대한 정보를 제공하는 여러가지 프로퍼티와 메서드들이 제공된다. 먼저 프로퍼티 목록부터 보되 자주 사용하는 몇 가지만 정리했다. 완전한 목록은 레퍼런스를 참고하기 바란다.
+
+
+
+ 프로퍼티
+
+ 타입
+
+ 설 명
+
+ Name
+
+ string
+
+ 타입의 이름
+
+ NameSpace
+
+ string
+
+ 포함된 네임스페이스의 이름
+
+ FullName
+
+ string
+
+ 네임스페이스를 포함한 이름
+
+ BaseType
+
+ Type
+
+ 부모 클래스의 타입
+
+ UnderlyingSystemType
+
+ Type
+
+ CLR이 제공하는 내부 시스템 타입의 이름
+
+ IsAbstract
+
+ bool
+
+ 추상 클래스 여부
+
+ IsArray
+
+ bool
+
+ 배열 여부
+
+ IsEnum
+
+ bool
+
+ 열거형 여부
+
+ IsNested
+
+ bool
+
+ 포함된 내부 타입인지를 조사한다.
+
+ IsGeneric
+
+ bool
+
+ 제네릭 타입인지 조사한다.
+
+ IsInterface
+
+ bool
+
+ 인터페이스 여부
+
+ IsPrimitive
+
+ bool
+
+ 기본 타입중 하나인지를 조사한다.
+
+ IsSealed
+
+ bool
+
+ 봉인 여부
+
+ IsValueType
+
+ bool
+
+ 값 타입 여부
+
+
+
+타입의 이름과 소속된 네임스페이스는 물론이고 부모 클래스와 내부 타입의 이름까지 조사할수 있다. Is로 시작되는 프로퍼티는 타입이 특정 속성을 가지고 있는지를 조사하는데 이름이 아주 설명적이다. 메서드도 수십개나 정의되어 있는데 이 메서드를 사용하면 클래스에 어떤 멤버들이 포함되어 있는지 상세하게조사할 수 있다. 너무 수가 많으므로 일일이 설명할 수는 없고 대표적으로 GetFields 메서드에 대해서만 알아보자.
+
+
+
+public FieldInfo[] GetFields()
+
+
+
+이 메서드는 클래스에 포함된 필드의 목록을 조사한다. 개별 필드 하나에 대한 정보는 FieldInfo 클래스로 표현하므로 FieldInfo의 배열을 통해 모든 필드에 대한 정보를 리턴할 수 있다. FieldInfo는 또 다른 클래스인데 필드의 여러 가지 정보를 조사하는 프로퍼티와 메서드들이 멤버로 포함되어 있다.
+
+목록은 직접 레퍼런스를 참조하되 몇 가지 예만 들면 Name은 필드의 이름이고 IsPublic, IsPrivate, IsStatic은 필드에 어떤 지정자가 적용되었는지를 조사한다.
+
+
+
+FieldType 프로퍼티는 필드의 타입인데 이 프로퍼티가 리턴하는 것은 또 다른 Type 객체이다. 클래스의 타입 정보로부터 필드 목록을 구했는데 필드의 타입이 또 다른 타입 정보를 가지므로 재귀적이다. 클래스의 객체가 다른 클래스에 포함될 수 있고 이 클래스를 포함하는 또 다른 외부 클래스가 있을 수도 있기 때문이다. 그래서 타입을 조사하는 과정도 여러단계로 중첩될 수밖에 없다. 개별 필드를 조사할 때는 다음 메서드를 호출한다.
+
+
+
+public abstract FieldInfo GetField(string name,BindingFlags bindingAttr)
+
+
+
+첫번째 인수는 필드의 이름이며 두번째 인수는 필드를 검색하는 방법을 지정하는데 생략할 수도 있다. 두번째 인수로 대소문자 구분 여부와 속성을 지정하는데 공개된 필드만 조사한다든가 정적 필드만 조사한다든가 할 수 있다. 필드를 조사하는 메서드 외에도 GetEvent(s), GetProperty(ies), GetInterface(s), GetConstructor(s), GetMember(s) 등의 메서드들이 있는데 리턴하는 타입만 다를뿐 GetField(s)와 사용 방법은 동일하다.
+
+
+
+타입정보로부터 모든 멤버의 정보를 시시콜콜하게 조사할수 있으므로 실행 중에 클래스 선언문을 복원해낼수 있을 정도다. 다음 예제는 Time 클래스의 정보를 조사하여 화면으로 출력한다. Time 클래스는 지금까지 줄곧 사용해왔으므로 늘 봐오던 그대로이되 단 네임스페이스를 조사할수 있다는 것을 보이기 위해 네임스페이스 안에 선언했다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+using System.Reflection;
+namespace FirstCon
+{
+    namespace MySpace
+    {
+        class Time
+        {
+            public int hour, min, sec;
+            public Time(int h, int m, int s) { hour = h; min = m; sec = s; }
+            public void OutTime()
+            {
+                Console.WriteLine("현재 시간은 {0}시 {1}분 {2}초이다.", hour, min, sec);
+            }
+
+        }
+    }
+   
+    class Program
+    {       
+        static void Main()
+        {
+            MySpace.Time now = new MySpace.Time(1, 2, 3);
+            Type timeType = now.GetType();
+            //Type timeType = Type.GetType("MySpace.Time");
+            //Type timeType = typeof(MySpace.Time);
+
+            Console.WriteLine(timeType.Name);
+            Console.WriteLine(timeType.Namespace);
+            Console.WriteLine(timeType.FullName);
+            Console.WriteLine(timeType.BaseType.Name);
+            Console.WriteLine(timeType.UnderlyingSystemType.Name);
+            if (timeType.IsValueType) { Console.WriteLine("값 타입입니다."); }
+            FieldInfo[] timeField = timeType.GetFields();
+            for (int i = 0; i < timeField.Length; i++)
+            {
+                Console.WriteLine("{0}번째 필드 = {1}", i, timeField[i].Name);
+            }
+            MethodInfo[] timeMethod = timeType.GetMethods();
+            for (int i = 0; i < timeMethod.Length; i++)
+            {
+                Console.WriteLine("{0}번째 메서드 = {1}", i, timeMethod[i].Name);
+            }
+        }
+
+    }
+   
+}
+
+
+
+리플렉션 관련 클래스들은 System.Reflection 네임스페이스에 정의되어 있으므로 이 기느을 사용하려면 using 선언을 먼저 해야한다. Main에서 Time 객체 Now를 하나 선언하고 Now의 GetType 메서드를 호출하여 Type 객체 TimeType을 조사했다. 아래쪽의 주석 처리된 두 행도 똑같은 동작을 하는데 클래스의 이름을 전달할 때는 소속된 네임스페이스의 이름도 같이 밝혀야 한다. 조사된 TimeType 으로 클래스 자체와 필드, 메서드의 정보를 조사해 출력했다.
+
+
+
+실행 결과 : TIme
+
+ForstCon.MySpace
+
+FirstCon.MySpace.Time
+
+Object
+
+Time
+
+0번쨰 필드 = hour
+
+1번째 필드 = min
+
+2번째 필드 = sec
+
+0번째 메서드 = OutTime
+
+1번째 메서드 = ToString
+
+2번째 메서드 = Equals
+
+3번째 메서드 = GetHashCode
+
+4번째 메서드 = GetType
+
+
+
+TimeType 객체의 프로퍼티를 읽어 이름, 네임스페이스, 부모 클래스 등을 조사해 보았다. 그리고 GetFields와 GetMethods 메서드를 호출하여 필드와 메서드의 목록을 조사해 보았다. 필드는 직접 선언한 것들만 출력되지만 메서드는 object로부터 상속받은 것들도 출력된다. 상속받은 멤버도 모두 조사되는데 object에는 필드가 하나도 없다. Time 클래스는 구조가 간단해서 이정도만 출력되지만 내부 타입을 중첩하고 있다거나 포함된 객체를 가지고 있다면 훨씬 더 복잡해질 것이다.
+
+
+
+리플렉션 기술은 우리가 직접 사용한다기보다는 시스템에 의해 사용되는 것이므로 세부적인 사항에 대해서 당장 상세하게 연구할 필요까지는 없다. 물론 가끔은 리플렉션을 직접해야할 경우도 있는데 필요할때 연구해보아라. 관련클래스들이 워낙 많고 방대해서 레퍼런스를 참고하면서 사용해야 한다. 중요한 것은 닷넷에서는 실행 중에 타입의 정보를 조사할수 있다는것이며 이로 인해 여러 가지 안정적인 타입 관련 작업이 가능 하다는 것이다.
+
+
+
+어떤 작업이 가능한지 앞 항의 TimeEquals 예제를 통해 알아보자. 이 예제는 Equals를 재정의하여 시간 객체의 내용끼리 비교하는데 Equals의 본체 코드가 너무 대충 작성되어 있어 위험하다. Main을 다음과 같이 수정한 후 테스트 해보자.
+
+
+
+class CSTest
+
+{
+
+    static void Main()
+
+    {
+
+            Time A = new Time(1,2,3);
+
+            Time B = null;
+
+            A.Equals(B);
+
+     }
+
+}
+
+
+
+비교 대상 객체인 B를 제대로 초기화하지 않고 null로 초기화한후 Equals로 전달했다. 이렇게 하면 다운되어 버리는데 왜냐하면 Equals는 인수로 받은 obj를(Time)으로 무조건 캐스팅함으로써 null에 대한 처리를 하지 않기 때문이다. 또한 A.Equals("언제든지")처럼 Time 객체가 아닌 엉뚱한 객체를 전달해도 마찬가지로 다운된다. Equals는 object 타입을 인수로 취하므로 임의의 객체를 다대입받을 수 있기 때문에 컴파일 에러는 아니다.
+
+
+
+하지만 문자열에 hour, min, sec같은 멤버가 있을리가 없으므로 다운되어 버리는 것이다. 문제는 전달받은 인수를 강제 캐스팅한다는데 있다. Time Other = (Time)obj문에서 obj가 반드시 Time 의 객체이며 null이 아니라는 보장이 없는 것이다. 어떤 경우라도 다운되지 않도록 하려면 obj의 타입정보를 실행 중에 조사해야 한다. Equals의 선두에 다음 문장을 추가해 보자.
+
+
+
+public override bool Equals(object obj)
+            {
+                if (obj == null || obj.GetType() != this.GetType()) return false;
+                Time Other = (Time)obj;
+                return (Other.hour == hour && Other.min == min && Other.sec == sec);
+            }
+
+
+
+
+
+
+
+
+
+02 string
+
+2.1 string의 멤버
+
+닷넷에는 문자열을 표현하기 위한 별도의 클래스가 있어서 라이브러리 차원에서 문자열 타입을 지원한다. System 네임스페이스에 String이라는 이름으로 정의되어 있는데 #은 이 타입을 위해 string이라는 별칭을 제공한다. 이 절에서는 문자열 관련 클래스의 사용 방법을 요약적으로정리하되 생각보다 함정이 ㅁ낳으므로 쉽다고 가벼이 보지말고 정확한 사용법을 익혀둘 필요가 있다.
+
+
+
+string 클래스에는 검색, 분리, 비교 등 문자열을 관리하기 위한 많은 메서드와 프로퍼티들이 포함 되어있다. Length 프로퍼티는 문자열의 길이를 나타내는데 str.Length 식으로 길이를 쉽게 조사할수 있다. 문자열을 구성하는 개별 문자를 읽을 수 있는 인덱서도 정의되어 있어 str[n] 표현식으로 n번째 문자를 조사한다. Length프로퍼티와 인덱서는 둘 다 읽기 전용이다. 다음 코드는 프로퍼티와 인덱서로 개별 문자를 출력한다.
+
+
+
+string str = "우리나라 대한민국";
+
+for(int i=0; i<str.Length; i++)
+
+{
+
+       Console.Write(str[i]);
+
+}
+
+
+
+물론 WriteLine 메서드로 문자열 전체를 출력할 수있으므로 굳이 이렇게 출력해야 할 이유는 없지만 루프를 돌리면 개별 문자에 대해서 처리할 수 있다는 것을 보여주는 것이다. 다음은 string에 포함된 문자열 관리 메서드들이다. 삽입, 삭제, 대체, 검색, 조립, 공백 정리, 변환 등 웬만한 메서드들이 다 포함되어 있다.
+
+
+
+ 메서드
+
+ 설 명
+
+ Insert
+
+ 지정한 위치에 문자열을 삽입한다.
+
+ Remove
+
+ 지정한 범위의 문자를 삭제한다.
+
+ Replace
+
+ 지정한 문자를 다른 문자로 대체한다.
+
+ Compare
+
+ 문자열 객체끼리 비교한다. 대 소문자 구분, 언어 정보들을 지정할수 있으며 부분 문자열만 비교할수도 있다.
+
+ IndexOf
+
+ 문자, 또는 부분 문자열을 검색하여 그 인덱스를 리턴한다. 발견되지 않으면 -1을 리턴한다.
+
+ IndexOfAny
+
+ 주어진 문자 집합중 최초로 검색되는 위치를 검색하여 그 인덱스를 리턴한다.
+
+ LastIndexOf
+
+ IndexOf와 같되 역검색한다.
+
+ LastIndexOfAny
+
+ IndexOfAny와 같되 역검색한다.
+
+ Contains
+
+ 부분 문자열이 있는지를 조사한다.
+
+ SubString
+
+ 지정한 위치부터 끝까지 부분 문자열을 만들어 리턴한다.
+
+ Trim
+
+ 앞뒤의 불필요한 공백 문자를 제거한다.
+
+ TrimStart
+
+ 문자열 앞쪽에 있는 지정한 문자들을 제거한다.
+
+ TrimEnd
+
+ 문자열 뒤쪽에 있는 지정한 문자들을 제거한다.
+
+ ToLower
+
+ 소문자로 변환한 문자열을 리턴한다
+
+ ToUpper
+
+ 대문자로 변환한 문자열을 리턴한다.
+
+ PadLeft
+
+ 지정한 폭으로 늘리고 왼쪽에 공백을 삽입한다.
+
+ PadRight
+
+ 지정한 폭으로 늘리고 오른쪽에 공백을 삽입한다.
+
+ Split
+
+ 문자열을 특정 문자를 기준으로 한 부분 문자열 배열로 나눈다.
+
+ Format
+
+ 서식을 조립한다.
+
+
+
+문자열 클래스에 이런 메서드들이 제공된다는 것은 지극히 상식적이지만 내부 동작은 다소 비상식적이므로 주의할 필요가 있다. 이 메서드들은 문자열 객체 자체를 변경하는 것이 아니라 힙에 새로운 문자열을 만들어 리턴한다. string이 가리키는 문자열 자체는 읽기 전용이기 때문에 어떤 수를 쓰더라도 문자열 자체를 변경할수는 없으며 다만 새로운 문자열을 만들어 바꿔치기 하는 것만 가능하다. 예를 들어 ToUpper 메서드는 문자열 내의 알파벳을 대문자로 변환하는데 다음과 같이 호출해서는 안된다.
+
+
+
+string str ="abcd";
+
+str.ToUpper();
+
+
+
+"abcd"로 초기화된 str 객체에 대해 ToUpper를 호출하면 str이 "ABCD"가 될것 같지만 그렇지 않으며 이 호출후에도 str은 여전히 "abcd"이다. ToUpper는  str의 내용을 대문자로 변경하는 것이 아니라 str의 내용을 읽어 대문자로 된 새로운 문자열을 만들어 리턴할 뿐이다. 그래서 str을 대문자로 변경하려면 리턴되는 값을 자신이 다시 대입받아야 한다. 다음 코드는 잘 동작한다.
+
+
+
+string str = "abcd";
+
+str = str.ToUpper();
+
+
+
+ToUpper 뿐만 아니라 문자열을 변경하는 모든 메서드를 이런식으로 사용해야 한다. 특히 C언어에 익숙한 사람들은 함수가 문자열을 변경해줄 것으로 기대하는데 그렇지 않으므로 주의할 필요가 있다. 다시 한번 분명히 강조하건데 string 객체의 문자열은 죽었다 꺠어나도 읽기 전용이다. 다음 예제는 문자열 조작중 가장 흔한 동작들은 삽입, 삭제, 대체 메서드를 테스트한다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+using System.Reflection;
+namespace FirstCon
+{
+    class Program
+    {       
+        static void Main()
+        {
+            string str = "123456789";
+            Console.WriteLine("최초 :" + str);
+            str = str.Insert(3, "abcd");
+            Console.WriteLine("삽입 :" + str);
+            str = str.Remove(5, 4);
+            Console.WriteLine("삭제 :" + str);
+            str = str.Replace('8', '팔');
+            Console.WriteLine("대체 :" + str);
+        }
+
+    }
+   
+}
+
+
+
+str을 1~9까지의 숫자들로 초기화해놓고 문자열 중간에 다른 문자열을 삽입해 보기도 하고 삭제 및 대체도 해보았다. 각 동작에 대해 Insert, Remove, Replace 메서드를 호출하며 조작한 결과를 str에 다시 대입해야 한다. 각 메서드의 인수에 대해서는 굳이 따로 설명하지 않아도 알수 있도록 되어있다. 실행 결과는 다음과 같다.
+
+
+
+실행 결과 : 최초 : 123456789
+
+삽입 : 123abcd456789
+
+삭제 : 123ab6789
+
+대체 : 123ab67팔9
+
+
+
+str 문자열은 다음 과정을 거쳐 여러번 변경된다. 중간에 끼워 넣거나 일부를 빼거나 다른 문자열로 바꾸거나 메서드만 호출하면 잘 변경된다.
+
+
+
+주의할 것은 str의 최초 문자열 자체가 이런 식으로 변경되는 것이 아니라 매번 새로운 문자열이 만들어지고 이전 문자열이 삭제되는 과정을 거친다는 것이다. 즉 위 그림의 각 문자열은 모두 힙상의 번지가 다르다. 그러다보니 문자열 조작은 굉장히 비효율적이며 그래서 문자열 조작을 할 때는 string보다는 다음 항에서 배울 StringBuilder 클래스를 사용하는 것이 더 좋다. 다음은 문자열 내의 특정 문자나 문자열을 검색하는 메서드들을 테스트해 보자.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+using System.Reflection;
+namespace FirstCon
+{
+    class Program
+    {       
+        static void Main()
+        {
+            string str = "나랏 말싸미 듕귁에 달아 문짜와로 서로 사맛디 아니할쌔";
+            Console.WriteLine(str.IndexOf("문짜"));
+            Console.WriteLine(str.IndexOf("미국"));
+            Console.WriteLine(str.IndexOf('아'));
+            Console.WriteLine(str.LastIndexOf('아'));
+            Console.WriteLine(str.IndexOfAny(new char[] { '강', '아', '지' }));
+        }
+
+    }
+   
+}
+
+
+
+가장 기본적인 검색 메서드는 IndexOf이다. 이 메서드는 문자나 문자열을 검색하는데 검색 대상외에도 검색 범위를 지정할 수 있는 버전이 중복 정의되어 있다. 모든 검색 메서드들은 검색된 위치를 리턴하며 검색에 실패할 경우 -1을 리턴한다. str에 적당한 길이의 문자열을 대입해 놓고 부분 문자열과 문자를 검색하여 그 결과 위치를 출력해 보았다.
+
+
+
+실행 결과 : 14
+
+-1
+
+12
+
+26
+
+12
+
+
+
+첫번째 출력인 14는 "문짜"라는 부분 문자열이 str의 14번쨰 위치에 있다는 뜻이다. 유니코드이므로 한글이나 공백이 모두 한문자로 취급되며 첫 번째 위치는0 부터 시작한다. "미국은"은 str에 없는 문자열이므로 실패했다는 의미로 -1이 리턴되었다. IndexOf는 시작 위치에서부터 검색을 하는데 비해 LastIndexOf는 끝에서부터 역방향으로 검색한다. 그래서 똑같은 '아'문자를 찾았지만 검색 결과가 다르게 나타난다.
+
+
+
+IndexOfAny 메서드는 문자의 배열을 인수로 전달하여 이 배열에 속한 문자중 가장 먼저 발견되는 위치를 리턴한다. '강','아','지' 세 개의 문자를 넘겼는데 '강','지' 자는 str에 없지만 '아'자가 있으므로 이 위치가 리턴되었다. 이 메서드는 문자열에서 특정 문자 그룹중 하나를 검색하고자 할 떄 사용한다. 예를 들어 문자열에 숫자가 포함되어 있는지 알파벳이 있는지를 알고 싶을 때 숫자나 알파벳으로 구성된 배열을 전달하면 된다.
+
+
+
+Trim으로 시작되는 메서드는 문자열 앞 뒤의 불 필요한 공백을 제거하며 Pad로 시작되는 메서드는 문자열의 폭을 강제로 조정한다. 사용자가 입력한 문자열을 일정한 형태로 가공할 필요가 있을때 이 메서드를 사용한다. 예를 들어 이름을 입력받는다고 할떄 "김상형"이라고 입력하면 아무 문제가 없지만 " 김상형 " 이렇게 입력하면 불필요한 공백으로 인해 메모리가 낭비되고 정확한 비교도 어려워 지므로 입력받은 후 아예 앞뒤의 공백을 제거해 버리는 것이 좋다.
+
+
+
+Split 메서드도 상당히 실용적인데 특정 문자들을 경계로 하여 문자열을 여러 개의 토막으로 분리한다. 이 메서드를 사용하면 공백이나 마침표, 쉼표들을 구분자로 하여 단어 단위로 문자열을 잘라낼수 있다. 인수로 구분자 문자 배열을 전달하면 잘라낸 토막 문자열들을 배열 형태로 리턴한다.
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+using System.Reflection;
+namespace FirstCon
+{
+    class Program
+    {       
+        static void Main()
+        {
+            string str = "This is a book. Good Moring";
+            string[] word = str.Split(new char[] { ' ', '.' });
+            foreach (string w in word)
+            {
+                Console.WriteLine(w);
+            }
+        }
+
+    }
+   
+}
+
+
+
+이 예제는 구분자로 공백과 마침표를 지정하여 This is a book.Good Moring이라는 문장을 단어 단위로 분해한다. 잘라낸 문자열이 배열로 리턴되므로 리턴된 배열을 순회하면 각 단어를 얻을 수 있다.
+
+
+
+실행 결과 : This
+
+is
+
+a
+
+book
+
+Good
+
+Moring
+
+
+
+마지막으로 문자열을 서식화하여 조립하는 Format 메서드에 대한 예제를 만들어 보자.
+
+using System;
+using System.Collections.Generic;
+using System.Collections;
+using System.Linq;
+using System.Text;
+using System.Reflection;
+namespace FirstCon
+{
+    class Program
+    {       
+        static void Main()
+        {
+            string str;
+            int i = 1234;
+            double d = 3.14;
+            str = string.Format("정수는 {0}이고 실수는 {1}이다",i, d);
+            Console.WriteLine(str);
+        }
+
+    }
+   
+}
+
+
+
+정수형 변수 i와 실수형 변수 d의 값을 문자열 내에 포함하여 조립하고 싶을때 Format 메서드를 호출한다. 정적 메서드이므로 객체로 호출하는 것이 아니라 string 클래스명으로 호출하며 리턴되는 값을 객체가 대입받아야 한다. 사용하는 방법과 문자열 내의 서식은 WriteLine과 동일하다. 조립된 문자열을 WriteLine 으로 출력해 보았다.
+
+
+
+실행 결과 : 정수는 1234이고 실수는 3.14이다.
+
+
+
+이런 출력을 얻으려면 사실 Format 메서드로 문자열을 조립할 필요 없이 WriteLine을 호출하는 것이 더 빠를 것이다. 그러나 WriteLine은 조립 결과를 화면으로만 출력할 수 있는데 비해 Format메서드로 조립한 문자열은 파일로 저장한다거나 네트워크로 전송할수도 있다는 면에서 훨씬 더 범용적이다. 사실 WriteLine 은 콘솔에서나 예제 제작용으로 사용할 뿐 그래픽 환경에서는 사용할 일이 거의 없다.
+
+
+
+이상으로 string의 여러 메서드를 소개하고 간단하나마 에제로 기능을 확인해 보았는데 메서드의 시그니처와 개별 인수의 의미에 대해서는 일일이 소개하지 않았다. 워낙 많은 메서드들이 있고 또한 메서드도 여러 가지 버전으로 오버로딩되어 있어 양이 너무 많기 때문이다. IndexOf는 9개의 버전이 있고 Format은 5개의 버전이 있는데 이런 것들을 지면에서 다 설명하는 것은 일종의 낭비이다.
+
+
+
+레퍼런스에 모든 오버로드와 인수에 대한 자세한 설명, 심지어 예제까지 제공되므로 기본동작을 익힌 후 레퍼런스를 통해 상세한 정보를 얻기 바란다. 또한 객체 지향 라이브러리는 워낙 직관적이기 때문에 쓸데없는 잔소리를 늘어놓을 필요가 없다. 앞으로 개별 클래스를 공부할 때는 가급적 레퍼런스를 열어 놓고 참고하기 바란다.
