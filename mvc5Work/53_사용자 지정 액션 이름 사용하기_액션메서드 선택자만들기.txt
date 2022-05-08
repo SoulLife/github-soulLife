@@ -1,0 +1,282 @@
+
+※ 사용자 지정 액션 이름 사용하기
+일반적으로 액션 메서드의 이름은 그가 수행해야 할 액션을 의미한다. 그렇기에 Index 액션 메서드는 Index 액션에 대한 요청을 처리하게 되는 것이다. 하지만 ActionName 어트리뷰트를 사용해야 이러한 동작을 재정의할 수도 있는데 목록 19-15는 Customer 컨트롤러에 이를 적용해본 것이다. 
+
+
+목록 19-15 CustomerController.cs 파일에서 사용자 지정 액션 이름 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using ControllerExtensibility.Models;
+namespace ControllerExtensibility.Controllers
+{
+    public class CustomerController : Controller
+    {
+        
+        public ViewResult Index()
+        {
+            return View("Result", new Result{ ControllerName = "Customer", ActionName = "Index" });
+        }
+
+        [ActionName("Enumerate")] //추가
+        public ViewResult List()
+        {
+            return View("Result", new Result { ControllerName = "Customer", ActionName = "List" });
+        }
+    }
+}
+
+
+목록 19-15에서는 List 메서드에 ActionName 어트리뷰트를 적용하면서 매개변수 값으로 Enumerate를 전달하고 있다. 그 결과로 액션 호출자가 Enumerate 액션에 대한 요청을 받을 경우 List 메서드를 사용하게 된다. 응용프로그램을 다시 시작하고 /Customer/Enumerate URL로 이동해보면 ActionName 어트리뷰트가 적용된 결과를 확인할 수 있는데, 그림 19-5와 같이 브라우저에서 보여지는 결과가 List 메서드를 실행한 결과임을 알수 있을 것이다. 
+
+이렇게 어트리뷰트를 적용하면 액션의 이름은 재정의된다. 이는 그림 19-6과 같이 List 메서드로 직접 향하는 URL은 더 이상 동작하지 않는다는 의미다. 
+
+이러한 방식으로 메서드 이름을 재정의하게 되는 상황에는 크게 두 가지 경우가 있다. 
+
+* C# 메서드 이름으로는 적합하지 않은 액션명(예를 들면 [ActionName("User-Registration")]을 사용할 수 있다. 
+
+* 동일한 매개변수 집합과 동일한 액션 이름을 가져야 하지만 응답으로는 서로 다른 HTTP 요청 형식(예를 들면 하나는 [HttpGet], 다른 하나는 [HttpPost])을 사용해야 하는 서로 다른 두 개의 C# 메서드가 필요한 경우가 있을 수 있다. 이러한 경우 컴파일러를 충족시키기 위해서는 메서드에서로 다른 C# 이름을 부여해야 하지만 [ActionName] 어트리뷰트를 사용하여두 메서드를 모두 동일한 액션 이름으로 매핑할 수 있다. 
+
+
+
+
+※ 액션 메서드 선택 기능 사용하기
+
+컨트롤러가 동일한 이름의 액션을 여러 개 갖는 것은 종종 있는 일이다. 서로 다른 매개변수를 갖고 있는 여러 개의 메서드가 존재할 수도 있고 여러 메서드가 동일한 액션을 처리하도록 ActionName 어트리뷰트를 사용할 수도 있기 때문이다. 
+
+이러한 경우 MVC 프레임워크는 요청을 처리하는 액션을 올바르게 선택하기 위한 별도의 메커니즘을 필요로 하게 되는데, 바로 이런 역할을 수행하는 것이 액션 메서드 선택(actionmethod selection)기능이다. 즉 이는 액션이 처리해야 할 요청들을 정의할 수 있게 해주는 기능이다. 우리는 SportsStore 응용프로그램을 구축하면서 HttpPost 어트리뷰트를 사용하여 액션을 제한하는 예제를 통해서 이미 액션 메서드 선택 기능을 경험해봤다. 그 예제에서는 Cart 컨트롤러 내부에 Checkout 이라는 이름을 갖는 두 개의 메서드가 존재하고 있었는데, 그 중 하나에 HttpPost 어트리뷰트를 사용함으로써 두 메서드 중 하나는 오직 HTTP POST 요청에 만 사용되도록 지정했었다. 바로 목록 19-16에서 보여지는 것과 같이 말이다. 
+
+
+목록 19-16 HttpPost 어트리뷰트 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using SportsStore.Domain.Abstract;
+using SportsStore.Domain.Entities;
+using SportsStore.WebUI.Models;
+namespace SportsStore.WebUI.Controllers
+{
+    public class CartController : Controller
+    {
+        private IProductRepository repository;
+        private IOrderProcessor orderProcessor;
+        public CartController(IProductRepository repo, IOrderProcessor proc)
+        {
+            repository = repo;
+            orderProcessor = proc;
+        }
+
+      // ... 간결한 코드를 위해서 다른 메서드들은 생략한다...
+
+        public ViewResult Checkout()
+        {
+            return View(new ShippingDetails());
+        }
+
+        [HttpPost] //<<<여기를 중점
+        public ViewResult Checkout(Cart cart, ShippingDetails shippingDetails)
+        {
+            if(cart.Lines.Count() == 0)
+            {
+                ModelState.AddModelError("", "Sorry, your cart is empty!");
+            }
+
+            if(ModelState.IsValid)
+            {
+                orderProcessor.ProcessOrder(cart, shippingDetails);
+                cart.Clear();
+                return View("Completed");
+            }else
+            {
+                return View(shippingDetails);
+            }
+        }
+
+    }
+}
+
+
+액션 호출자는 액션을 선택할 때 모호함을 제거하기 위해서 액션 메서드 선택자를 사용한다. 가령 19-16에는 두 개의 Checkout 액션이 존재하고 있는데, 호출자는 선택자를 갖고 있는 액션부터 우선적으로 살펴보게 된다. 그렇기에 HttpPost 선택자를 먼저 검사하여 요청을 처리할 수 있는지 확인하게 되는데 만일 사용이 가능하다면 그 메서드가 사용될 것이고 그렇지 않다면 다른 메서드 즉 어트리뷰트를 갖지 않는 쪽이 사용될 것이다. 
+
+다양한 종류의 HTTP 요청들에 대해 선택자로 사용할 수 있는 내장 어트리뷰트들이 제공되는데 POST 요청에 대해서는 HttpPost를 Get 요청에 대해서는 HttpGet을 PUT 요청에 대해서는 HttpPut 등을 사용할 수 있다. 또 다른 어트리뷰트로는 NonAction이 있는데 이는 메서드가 액션 메서드로 인식되지 않도록 만들기 위해서 사용된다. 목록 19-17은 Customer 컨트롤러에 새로운 액션 메서드를 추가하고 NonAction어트리뷰트를 적용한 모습을 보여주고 있다. 
+
+
+목록 19-17 CustomerController.cs 파일에서 NonAction 어트리뷰트 사용하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using ControllerExtensibility.Models;
+namespace ControllerExtensibility.Controllers
+{
+    public class CustomerController : Controller
+    {
+        
+        public ViewResult Index()
+        {
+            return View("Result", new Result{ ControllerName = "Customer", ActionName = "Index" });
+        }
+
+        [ActionName("Enumerate")]
+        public ViewResult List()
+        {
+            return View("Result", new Result { ControllerName = "Customer", ActionName = "List" });
+        }
+	// 추가
+        [NonAction]
+        public ActionResult MyAction()
+        {
+            return View();
+        }
+    }
+}
+
+
+이 목록에 추가된 MyAction 메서드는 액션 메서드로 인식되지 않을 것이다. 심지어 호출자가 검사하는 모든 조건에 부합한다고 할지라도 말이다. 이 기능은 컨트롤러 클래스의 동작을 액션으로 노출하고 싶지 않은 경우에 유용하다. 물론 일반적으로는 메서드를 private으로 표기해서 액션으로 노출되지 않게 만드는 방식이 많이 사용된다. 하지만 [NonAction]은 메서드를 public으로 표기해야만 하는 특별한 상황에서 대단히 유용하다. NonAction 메서드에 대한 요청은 그림 19-7과같이 404-찾을수 없음 오류를 생성할 것이다. 
+
+
+
+※ 사용자 지정 액션 메서드 선택자 만들기
+
+액션 메서드 선택자는 목록 19-18과 같은 ActionMethodSelectorAttribute 클래스로부터 파생된다. 
+
+
+
+목록 19-18 ActionMethodSelectorAttribute 클래스
+
+using System.Reflection;
+
+namespace System.Web.Mvc
+{
+	[AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+	public abstract class ActionMethodSelectorAttribute : Attribute
+	{
+		public abstract bool IsValidForRequest(ControllerContext controllerContext, MethodInfo methodInfo);
+	}
+}
+
+
+추상 클래스인 ActionMethodSelectorAttribute는 추상 메서드인 IsValidForRequest단 하나만 정의하고 있다. 이 메서드의 매개변수로는 요청을 조사하기 위해 사용할 수 있는 ControllerContext 개체와 선택자가 적용된 메서드에 대한 정보를 얻기 위해서 사용할 수 있는 MethodInfo 개체가 제공된다. 만일 메서드가 요청을 처리할수 있다면 IsValidForRequest는 true를 반환하고 그렇지 않으면 false를 반환하면 된다. 예제 프로젝트의 Infrastructure폴더에 LocalAttribute.cs라는 클래스 파일을 추가하고 목록 19-19와 같이 간단한 사용자 지정 액션 메서드 선택자를 작성해 보자. 
+
+
+
+목록 19-19 LocalAttribute.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Reflection;
+namespace ControllerExtensibility.Infrastructure
+{
+    public class LocalAttribute : ActionMethodSelectorAttribute
+    {
+        public override bool IsValidForRequest(ControllerContext controllerContext, MethodInfo methodInfo)
+        {
+            return controllerContext.HttpContext.Request.IsLocal;
+        }
+    }
+}
+
+이번 예제의 IsValidForRequest 메서드는 요청이 로컬 머신에서 전달된 경우 true를 반환하도록 오버로드하였다. 이제 사용자 지정 액션 메서드 선택자를 사용해보기 위해서 목록 19-20과 같이 예제 프로젝트에 Home 컨트롤러를 작성해보도록 하자. 
+
+목록 19-20 HomeController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using ControllerExtensibility.Infrastructure;
+using ControllerExtensibility.Models;
+namespace ControllerExtensibility.Controllers
+{
+    public class HomeController : Controller
+    {
+        
+        public ActionResult Index()
+        {
+            return View("Result", new Result {ControllerName = "Home", ActionName = "Index"});
+        }
+
+        [ActionName("Index")]
+        public ActionResult LocalIndex()
+        {
+            return View("Result", new Result { ControllerName = "Home", ActionName = "LocalIndex" });
+        }
+    }
+}
+
+이번 예제에서는 컨트롤러에 두 개의 Index 액션 메서드가 존재하는 상황을 연출하기 위해서 ActionName 어트리뷰트를 사용하고 있다. 이제 액션 호출자는 /Home/Index라는 URL에 대한 요청을 받는 경우 어떤 액션 메서드를 사용해야 하는지 전혀 알 수 없을 것이며, 따라서 그 림 19-8과 같은 오류를 생성하게 될 것이다. 
+
+이 문제를 해결하려면 목록 19-21과 같이 두 메서드 중 하나에 사용자 지정 메서드 선택자를 적용하면 된다. 
+
+
+목록 19-21 HomeController.cs 파일에 메서드 선택 어트리뷰트를 적용하기
+
+        [Local]
+        [ActionName("Index")]
+        public ActionResult LocalIndex()
+        {
+            return View("Result", new Result { ControllerName = "Home", ActionName = "LocalIndex" });
+        }
+
+이제 응용프로그램을 시작하고 로컬 머신에서 브라우저를 이용하여 루트 URL로 이동해보면 MVC 프레임워크가 컨트롤러 클래스 안에 있는 메서드들 간의 모호함을 해결하기 위해서 메서드 선택자 어트리뷰트를 사용한 모습을 그림 19-9와 같이 확인할 수 있을 것이다. 
+
+
+
+
+※ 액션 메서드 명확화 처리
+
+앞서 액션 메서드 선택자의 기본 클래스 내부를 살펴보았으며 액션 호출자가 어떻게 액션 메서드를 선택하는지도 알게 되었다. 호출자는 액션 메서드 조건에 부합하는 컨트롤러 메서드 목록을 가지고 처리를 시작한다. 그리고는 다음의 과정을 거친다. 
+
+
+* 우선 호출자는 이름을 기반으로 메서드들을 배제한다. 대상 액션과 동일한 이름을 가지고 있거나 적절한 ActionName 어트리뷰트를 가진 메서드들만 목록에 유지한다. 
+
+* 호출자는 현재 요청에 대해서 false를 반환하는 액션 메서드 선택자 어트리뷰트를 갖는 모든 메서드를 배제한다. 
+
+* 만일 선택자가 적용된 액션 메서드가 목록에 하나만 남아있다면 이 메서드가 사용된다. 하지만 선택자가 적용된 메서드가 하나 이상 존재한다면 예외가 던져지는데 이는 액션 호출자가 사용가능한 메서드들을 식별할 수 없기 때문이다. 
+
+* 만일 목록에 선택자가 적용된 액션 메서드가 존재하지 않는다면 호출자는 선택자가 적용되지 않은 메서드들을 살펴본다. 만일 그러한 메서드가 하나만 존재한다면 그 메서드가 호출된다. 하지만 선택자가 적용되지 않은 메서드가 하나 이상 존재한다면 예외가 던져지는데 이는 호출자가 그들 중 어떤 것을 선택해야 할지 알 수 없기 때문이다. 
+
+
+
+
+
+※ 알수 없는 액션 다루기
+만일 호출할 액션 메서드를 찾을 수 없다면 액션 호출자는 InvokeAction 메서드에서 false를 반환하게 된다. 그리고 이때 컨트롤러 클래스는 HandleUnknownAction 메서드를 호출하게 되는데 기본적으로 이 메서드는 클라이언트에 404-찾을수 없음 이란 응답을 반환한다. 일반적인 상황에서는 이렇게 작동하는 것이 매우 유용하지만 뭔가 특별한 상황에서는 컨트롤러에서 이 메서드를 재정의하는 것도 가능하다. 목록 19-22는 Home 컨트롤러에서 HandleUnknownAction 메서드를 오버로딩하고 있는 예를 보여주고 있다. 
+
+
+목록 19-22 HomeController.cs 파일에서 HandleUnknownAction 메서드 오버로드하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using ControllerExtensibility.Infrastructure;
+using ControllerExtensibility.Models;
+namespace ControllerExtensibility.Controllers
+{
+    public class HomeController : Controller
+    {
+        
+        //... 간결한 코드를 위해서 다른 메서드들은 생략한다. 
+
+        protected override void HandleUnknownAction(string actionName)
+        {
+            Response.Write(string.Format("You requested the {0} action", actionName));
+        }
+    }
+}
+
+응용프로그램을 시작하고 존재하지 않는 액션 메서드를 요청해보면 그림 19-10과 같은 결과를 볼 수 있을 것이다. 
