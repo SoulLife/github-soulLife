@@ -1,0 +1,409 @@
+CHAPTER 20장 : 뷰
+
+17장에서는 액션 메서드가 ActionResult 개체를 반환하는 방법을 살펴봤다. 이를 통해서 알게 된 것처럼 가장 일반적으로 사용하는 액션 결과(action result)는 ViewResult로 MVC 프레임워크에서 뷰를 렌더하고 클라이언트로 반환하도록 한다. 또한 지금까지 많은 예제들을 통해서 뷰를 사용하는 방식을 직접 살펴봤으므로 뷰가 어떤 역할을 하는지 어느 정도 알게 되었을 것이다. 이번 장에서는 그 지식에 중점을 두고 보다 명확하게 알아보도록 하자. 먼저 직접 사용자 지정 뷰 엔진을 구현해보고 MVC 프레임워크가 뷰 엔진을 이용해서 ViewResult를 처리하는 방법을 살펴볼 것이다. 그런 다음 내장 Razor 뷰 엔진을 사용해서 효율적으로 작업하기 위한 기법들에 대해서 설명할 것이다. 그리고 부분 뷰(partial views) 자식 액션(child actions), Razor 섹션(Razor sections)을 만들고 사용하는 방법들을 알아볼 텐데 이런 기능들은 효율적인 MVC 개발에 있어서 핵심적인 주제들이다. 표 20-1은 이번 장에서 다루는 내용을 정리해서 보여주고 있다. 
+
+
+표 20-1 20장 요약
+
+주제							내용																목록
+사용자 지정 뷰 엔진 만들기			IViewEngine 인터페이스와 IView 인터페이스를 구현한다.								1 - 8
+
+Razor 뷰 엔진 사용자 지정하기			RazorViewEngine클래스를 상속받는다.											9 - 15
+
+레이아웃에서 사용하기 위한 콘텐트 영역	Razor 섹션을 사용한다.													16
+정의하기
+
+레이아웃에 섹션 적용하기				RenderSection 헬퍼 메서드와 RenderBody 헬퍼 메서드를 사용한다.						17 - 22
+
+재사용 가능한 마크업 조각 정의하기		부분 뷰를 사용한다.													23 - 26
+
+재사용 가능한 업무 로직 정의하기		자식 액션을 사용한다.													27 - 29
+
+
+
+※ 사용자 지정 뷰 엔진 만들기
+
+이제 본격적인 내용으로 들어가서 사용자 지정 뷰 엔진을 만들어보도록 하자. 다만 MVC 프레임워크에는 지금까지 이 책의 모든 예제들에서 사용해온 Razor 뷰 엔진이 포함되어 있기 때문에 대부분의 프로젝트에서는 이 작업을 직접 수행할 필요는 없다. Razor 뷰 엔진의 문법에 관해서는 5장에서 살펴봤다. 
+
+
+TIP:
+이전 버전의 MVC 프레임워크에서는 ASP .NET Web Forms과 같은 마크업과 뷰 엔진을 사용하는 뷰를 지원했기 때문에 때때로 디버깅 메시지나 오류 메시지에서 .aspx 파일에 대한 참조를 보게 될 수도 있다. 
+
+
+직접 사용자 지정 뷰 엔진을 만들어보면 요청 처리 파이프라인이 동작하는 방식이나 MVC 프레임워크가 동작하는 방식에 대해서 보다 정확하게 파악할 수 있다. 또한 이를 통해서 뷰 엔진이 얼마나 자유롭게 ViewResult 를 클라이언트에 대한 응답으로 변환할수 있는지도 이해할수 있다. 뷰 엔진은 목록 20-1에서 볼 수 있는 것과 같은 IViewEngine 인터페이스를 구현한다. 
+
+
+목록 20-1 MVC 프레임워크의 IViewEngine 인터페이스
+
+namespace System.Web.Mvc
+{
+	public interface IViewEngine
+	{
+		ViewEngineResult FindPartialView(ControllerContext controllerContext, string partialViewName, bool useCache);
+
+		ViewEngineResult FindView(ControllerContext controllerContext, string viewName, string masterName, bool useCache);
+
+		void ReleaseView(ControllerContext controllerContext, IView view);
+	}
+}
+
+
+뷰 엔진의 역할은 뷰에 대한 요청을 ViewEngineResult 개체로 변환하는 것이다. 이 인터페이스의 처음 두 메서드인 FindView 메서드와 FindPartialView 메서드는 요청과 그 요청을 처리한 컨트롤러에 대한 정보(ControllerContext 개체)뷰와 뷰의 레이아웃의 이름, 그리고 뷰 엔진이 캐시에서 이전의 결과를 재사용해도 되는지 여부를 매개변수로 전달받는다. 
+
+이 메서드들은 ViewResult를 처리하는 과정에서 호출된다. 마지막 메서드인 ReleaseView는 뷰가 더 이상 필요하지 않을 때 호출된다. 
+
+
+
+Note:
+MVC 프레임워크는 ControllerActionInvoker 클래스를 이용해서 구현한 뷰 엔진을 지원해주는데, 이 클래스는 19장에서 살펴봤던 것처럼 IActionInvoker 인터페이스의 내장 구현이다. 
+만약 여러분이 독자적으로 IActionInvoker 인터페이스나 IControllerFactory 인터페이스를 이용해서 직접 액션 호출자나 컨트롤러 팩토리를 구현했다면 프레임워크가 뷰 엔진의 기능들을 자동으로 사용하지 않게 된다는 점에 유의해야 한다. 
+
+
+
+뷰 엔진은 뷰가 요청됐을 때 ViewEngineResult 클래스를 이용해서 MVC 프레임워크에 응답할수 있다. 목록 20-2는 ViewEngineResult 클래스를 보여주고 있다. 
+
+
+목록 20-2 MVC 프레임워크의 ViewEngineResult 클래스
+
+using System.Collections.Generic;
+
+namespace System.Web.Mvc
+{
+	public class ViewEngineResult
+	{
+		public ViewEngineResult(IEnumerable<string> searchedLocations)
+		{
+			if(searchedLocations == null)
+			{
+				throw new ArgumentNullException("searchedLocations");
+			}
+			SearchedLocations = searchedLocations;
+		}
+
+		public ViewEngineResult(IView view, IViewEngine viewEngine)
+		{
+			if(view == null) { throw new ArgumentNullException("view"); }
+			if(viewEngine == null) { throw new ArgumentNullException("viewEngine"); }
+			View = view;
+			ViewEngine = viewEngine;
+		}
+
+		public IEnumerable<string> SearchedLocations { get; private set; }
+		public IView View { get; private set;	}
+		public IViewEngine ViewEngine { get; private set; }
+	}
+}
+
+
+두 가지 생성자 중 하나를 선택하여 뷰 엔진이 뷰 요청을 처리할 수 있는지를 나타낼수 있다. 직접 구현한 뷰 엔진이 요청에 대한 뷰를 제공할수 있다면 다음의 생성자를 통해서 반환할 ViewEngineResult의 인스턴스를 생성하면 된다. 
+
+...
+public ViewEngineResult(IView view, IViewEngine viewEngine)
+...
+
+이 생성자의 매개변수들은 IView 인터페이스의 구현과 뷰 엔진, 즉 IViewEngine 인터페이스의 구현(이를 통해서 이후에 ReleaseView 메서드를 호출할 수 있다) 만약 뷰 엔진이 요청에 대한 뷰를 제공할 수 없다면 다음 생성자를 사용하면 된다. 
+
+
+...
+public ViewEngineResult(IEnumerable<string> searchedLocations)
+..
+
+
+이 생성자의 매개변수는 뷰를 찾기 위해서 확인했던 위치들에 대한 열거형(enumeration)이다. 이 정보는 뷰 엔진에서 뷰를 처리 할수 없을 때 사용자에게 제공하기 위한 용도로 사용되며, 잠시 후에 예제를 통해서 직접 확인해볼 것이다.
+
+
+
+
+Note:
+ViewEngineResult 클래스가 약간 이상하게 생각된다면 여러분만 그런것이 아니다. 두 가지 다른 버전의 클래스 생성자를 통해서 결과물을 구현하는 것은 일반적이지 않은 접근 방식일 뿐만 아니라, MVC 프레임워크의 나머지 부분들의 설계와도 맞지 않는 구석이 있다. 
+
+
+
+뷰 엔진 시스템의 마지막 구성요소는 IView 인터페이스로 목록 20-3에서 확인할 수 있다. 
+
+목록 20-3 MVC 프레임워크의 IView 인터페이스
+
+using System.IO;
+
+namespace System.Web.Mvc;
+{
+	public interface IView
+	{
+		void Render(ViewContext viewContext, TextWriter writer);	
+	}
+}
+
+IView 인터페이스의 구현이 ViewEngineResult 개체의 생성자에 전달되어 ViewEngineResult 개체가 생성되면 이 ViewEngineResult 개체는 뷰 엔진의 메서드에서 MVC 프레임워크로 반환된다.  그러면 MVC 프레임워크는 반환 받은 ViewEngineResult 개체의 View 속성을 통해서 얻을 수 있는 IView 인터페이스 구현을 얻고 그 구현의 Render 메서드를 호출한다 이 Render 메서드에 전달되는 ViewContext 매개변수는 클라이언트로부터 전달된 요청과 액션 메서드로부터 얻은 결과에 대한 정보를 제공해준다. 그리고 TextWriter 매개변수는 클라이언트에 결과를 기록하기 위한 용도로 사용한다. 
+
+매개변수로 전달된 ViewContext 개체에 정의된 몇 가지 속성을 통해서 요청 자체와 MVC 프레임워크가 지금까지 요청을 처리한 방법에 대한 상세한 정보들에 접근할 수 있다. 표 20-2에 이 속성들 중에서 가장 유용한 속성들을 정리해봤다. 
+
+
+
+표 20-2 ViewContext 클래스의 유용한 속성
+
+이름				설명
+Controller			현재 요청을 처리한 IController 인터페이스의 구현을 반환한다. 
+
+RequestContext		현재 요청의 상세 정보를 반환한다. 
+
+RouteData			현재 요청의 라우팅 데이터를 반환한다. 
+
+TempData			요청과 관련된 임시 데이터를 반환한다. 
+
+View				요청을 처리할 IView 인터페이스의 구현을 반환한다. 사용자 지정 뷰 구현을 만들고 있는 중이라면 당연히 현재의 클래스가 반환될 것이				다. 
+
+ViewBag			ViewBag 개체를 반환한다. 
+
+ViewData			사전형식의 뷰 모델 데이터를 반환하는데 여기에는 ViewBag과 모델에 대한 메타데이터도 포함되어 있다. 표 20-3에서 자세한 
+				내용들을 확인할 수 있다. 
+
+
+이 표의 속성들 중에서 가장 흥미로운 속성은 ViewData로 이속성은 ViewDataDictionary개체를 반환한다. 이 ViewDataDictionary 클래스에는 수많은 유용한 속성들이 정의되어 있는데, 이 속성들을 통해서 뷰 모델, ViewBag , 뷰 모델 메타데이터들에 접근할 수 있다. 표 20-3에 이 속성들 중에서 가장 유용한 속성들을 정리해 봤다. 
+
+
+
+표 20-3 ViewDataDictionary 클래스의 유용한 속성
+
+이름				설명
+Keys				사전에 담겨 있는 데이터들에 대한 키 값들의 컬렉션을 반환한다. 이 값들을 이용해서 ViewData의 속성들에 접근할 수 있다. 
+
+Model			요청에 대한 뷰 모델 개체를 반환한다. 
+
+ModelMetadata		모델의 형식을 유추할수 있는 ModelMetadata 개체를 반환한다. 
+
+ModelState			모델의 상태에 대한 정보를 반환한다. 이에 대해서는 25장에서 다시 살펴본다. 
+
+
+
+이미 얘기한 것처럼 이런 과정들 즉 IViewEngine 인터페이스와 IView 인터페이스 그리고 ViewEngineResult 개체가 서로 어떻게 어울려 동작하는지를 알 수 있는 가장 간단한 방법은 실제로 뷰 엔진을 만들어보는 것이다. 따라서 이어지는 절들에서는 한 가지 종류의 뷰를 반환하는 간단한 뷰 엔진을 직접 만들어보도록 하겠다 이 뷰는 요청에 대한 정보와 액션 메서드에 의해 생성된 뷰 데이터를 포함하는 결과를 렌더하게 될 것이다. 이러한 접근 방식을 통해서 뷰 템플릿을 파싱하는 복잡한 부분을 고려하지 않고서도 뷰 엔진의 동작 방식을 확인할 수 있다. 
+
+
+
+※ 예제 프로젝트 준비하기
+
+먼저 Empty 템플릿을 이용해서 Views 라는 이름으로 사용자 지정 뷰 엔진을 직접 만들어보기 위한 예제 프로젝트를 생성한다. 이때 MVC 옵션을 체크해서 핵심적인 MVC 참조 및 관련 폴더들을 추가하도록 지정한다. 그런 다음 Home 컨트롤러를 생성하는데, 목록 20-4에서 그 내용을 확인할 수 있다. 
+
+
+목록 20-4 HomeController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace Views.Controllers
+{
+    public class HomeController : Controller
+    {        
+        public ActionResult Index()
+        {
+            ViewBag.Message = "Hello, World";
+            ViewBag.Time = DateTime.Now.ToShortTimeString();
+            return View("DebugData");
+        }
+
+        public ActionResult List()
+        {
+            return View();
+        }
+    }
+}
+
+
+이 프로젝트에는 아무런 뷰도 생성하지 않았는데 그 이유는 Razor 뷰 엔진을 이용하지 않고 사용자 지정 뷰 엔진을 직접 구현할 것이기 때문이다. 
+
+
+
+
+※ 사용자 지정 IView 구현 만들기
+
+IView 인터페이스의 구현부터 만들어보도록 하자. 예제 프로젝트에 Infrastructure라는 폴더를 추가하고 이 폴더에 목록 20-5에서 볼 수 있는 것과 같은 내용으로 DebugDataView.cs라는 새 클래스 파일을 생성한다. 
+
+
+목록 20-5 DebugDataView.cs의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.IO;
+using System.Web.Mvc;
+namespace Views.Infrastructure
+{
+    public class DebugDataView : IView
+    {
+        public void Render(ViewContext viewContext, TextWriter writer)
+        {
+            Write(writer, "---Routing Data---");
+            foreach (string key in viewContext.RouteData.Values.Keys)
+            {
+                Write(writer, "Key: {0}, Value: {1}", key, viewContext.RouteData.Values[key]);
+            }
+
+            Write(writer, "---View Data---");
+            foreach (string key in viewContext.ViewData.Keys)
+            {
+                Write(writer, "Key: {0}, Value: {1}", key, viewContext.ViewData[key]);
+            }
+        }
+
+        private void Write(TextWriter writer, string template, params object[] values)
+        {
+            writer.Write(string.Format(template, values) + "</>");
+        }
+    }
+}
+
+
+이 뷰는 Render 메서드에 전달되는 두 가지의 매개변수의 사용 방법을 보여주고 있다. 즉 ViewContext 를 이용해서 여러 가지 값을 얻을 수 있고 TextWriter를 사용해서 클라이언트에 전달할 응답을 작성할 수 있다. 이번 예제에서는 먼저 라우팅 데이터 정보를 출력한 다음 ViewBag 데이터를 출력하고 있다. 
+
+
+
+
+TIP:
+뷰 데이터 기능은 구 버전의 MVC 프레임워크로부터 남아있는 것으로 C#이 동적 개체를 지원하기 이전부터 존재하던 기능이다. 뷰 데이터는 ViewBag 보다 덜 유연한 전신으로 ViewBag 개체에 정의된 속성들에 쉽게 접근하기 위해서 IView 인터페이스의 사용자 지정 구현을 작성할 때 외에는 더 이상 사용되지 않는다. 
+
+
+
+
+
+※ IViewEngine 인터페이스 구현 만들기
+
+뷰 엔진의 역할이 IView 인터페이스의 구현을 담고 있는 ViewEngineResult 개체나 적합한 뷰를 찾아봤던 위치들의 목록을 담고 있는 ViewEngineResult 개체를 만들어내는 것임을 기억하기 바란다. 이제 사용할 수 있는 IView 인터페이스의 구현이 준비되었으므로 뷰 엔진을 만들수 있게 됐다. 이번에는 Infrastructure 폴더에 DebugDataViewEngine.cs라는 파일을 추가하고 그 내용을 목록 20-6과 같이 작성한다. 
+
+
+목록 20-6 DebugDataViewEngine.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+namespace Views.Infrastructure
+{
+    public class DebugDataViewEngine : IViewEngine
+    {
+        public ViewEngineResult FindView(ControllerContext controllerContext, string viewName, string masterName, bool useCache)
+        {
+            if (viewName == "DebugData")
+            {
+                return new ViewEngineResult(new DebugDataView(), this);
+            }
+            else
+            {
+                return new ViewEngineResult(new string[] { "No view (Debug Data View Engine)" });
+            }
+        }
+
+        public ViewEngineResult FindPartialView(ControllerContext controllerContext, string partialViewName, bool useCache)
+        {
+            return new ViewEngineResult(new string[] { "No view (Debug Data View Engine)" });
+        }
+
+        public void ReleaseView(ControllerContext controllerContext, IView view)
+        {
+            //아무런 작업도 하지 않는다. 
+        }
+    }
+}
+
+
+이번 예제에서는 DebugData라는 이름의 뷰 하나만 지원할 것이다. 이 뷰에 대한 요청을 받으면 다음과 같이 IView 인터페이스의 사용자 지정 구현의 새로운 인스턴스를 반환한다. 
+
+...
+return new ViewEngineResult(new DebugDataView(), this);
+...
+
+더 복잡한 뷰 엔진을 구현할 때는 바로 새 인스턴스를 반환하는 대신, 이 단계에서 템플릿을 검색하고 레이아웃을 반영하거나 제공된 캐시 설정을 감안한 처리를 해야 할 것이다. 그러나 간단한 이번 예제에서는 DebugDataView 클래스의 새 인스턴스만 반환해주면 된다. 반면, DebugData 이외의 뷰에 대한 요청을 받으면 다음과 같은 ViewEngineResult 개체를 반환하게 된다. 
+
+...
+return new ViewEngineResult(new string[] { "No view (Debug Data View Engine)" });
+...
+
+
+IViewEngine 인터페이스는 뷰 엔진이 뷰를 찾기 위해서 필요한 위치들에 대한 정보를 갖고 있다고 가정한다. 이는 타당한 추정으로 일반적으로 뷰들은 프로젝트에 파일로 저장된 템플릿 파일들이기 때문이다. 하지만 이번 예제에서는 템플릿 파일들을 찾아볼 위치가 존재하지 않기 때문에 뷰 엔진이 서비스 할수 없는 뷰를 요청받았음을 표시하기 위한 모의 위치만 반환할 뿐이다. 
+
+이 사용자 지정 뷰 엔진에서 부분 뷰는 지원하지 않을 계획이므로 FindPartialView 메서드에서는 제공할 뷰가 없음을 표시하는 결과만 반환하고 있다. 이번 장의 뒷부분에서는 다시 부분 뷰에 대해서 알아보고 Razor 엔진이 부분 뷰를 처리하는 방법에 대해서 살펴볼 것이다. 그리고 ReleaseView 메서드는 구현하지 않았는데 그 이유는 이번 사용자 지정 IView 구현에서 해제할 필요가 있는 리소스를 전혀 사용하지 않았기 때문이다. ReleaseView 메서드의 일반적인 구현 목적은 바로 리소스 해제다. 
+
+
+
+
+※ 사용자 지정 뷰 엔진 등록하기
+
+이제 목록 20-7에서 볼 수 있는 것처럼 Global.asax 파일의 Application_Start 메서드에 뷰 엔진을 등록해야 한다. 
+
+
+
+목록 20-7 Global.asax를 사용하여 사용자 지정 뷰 엔진 등록하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using Views.Infrastructure; //추가
+namespace Views
+{
+    public class MvcApplication : System.Web.HttpApplication
+    {
+        protected void Application_Start()
+        {
+            AreaRegistration.RegisterAllAreas();
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+
+            ViewEngines.Engines.Add(new DebugDataViewEngine()); //추가
+        }
+    }
+}
+
+
+목록 20-7에 사용된 정적 ViewEngines.Engines 컬렉션에는 응용프로그램에 설치된 뷰 엔진들이 등록되어 있다. MVC 프레임워크는 단일 응용프로그램에 여러 가지 엔진이 설치되어 있을 수 있다는 개념을 지원한다. 따라서 액션 호출자는 ViewResult 를 처리할 때 설치된 뷰 엔진들의 목록을 얻은 뒤 각각의 FindView 메서드를 차례대로 호출하게 된다. 
+
+액션 호출자는 IView 구현 개체를 포함하고 있는 ViewEngineResult 개체를 전달받는 즉시 FindView 메서드 호출 작업을 중단한다. 결과적으로 동일한 이름을 갖고 있는 뷰에 대한 호출을 처리할 수 있는 뷰 엔진이 하나 이상 존재하는 경우, ViewEngines.Engines 컬렉션에 뷰 엔진들이 추가된 순서가 중요함을 알 수 있다. 다른 엔진보다 먼저 뷰에 대한 요청을 처리하도록 하고 싶다면 다음과 같이 컬렉션의 시작점에 뷰 엔진을 추가하면 된다. 
+
+
+...
+ViewEngines.Engines.Insert(0, new DebugDataViewEngine());
+...
+
+
+
+
+※ 뷰 엔진 테스트하기
+
+이제 사용자 지정 뷰 엔진을 테스트해보도록 하자. 예제 응용프로그램이 시작되면 브라우저 가 자동으로 프로젝트의 루트 URL로 이동하게 되는데 이 경로는 Home 컨트롤러의 Index 액션에 매핑되어 있을 것이다. 그리고 이 액션 메서드는 View 메서드를 이용하여 DebugData뷰를 지정하는 ViewResult를 반환한다. 그림 20-1에서 그 결과를 확인할수 있다. 
+
+
+이는 뷰 엔진이 처리할수 있는 뷰를 요청한 경우 호출된 FindView 메서드가 반환해주는 결과다. 만약 /Home/List URL로 이동하게 되면 MVC 프레임워크는 List 액션 메서드를 호출하게 된다. 이 액션 메서드에서는 View 메서드를 호출하여 List 액션에 대한 기본 뷰를 얻고자 하지만 사용자 지정 뷰 엔진은 List 뷰를 지원하지 않으므로 그림 20-2와 같은 결과를 얻게 된다. 
+
+
+그림 20-2를 살펴보면 뷰를 찾기 위해서 검색했던 위치들의 목록 중 하나가 우리가 지정했던 메시지임을 확인할 수 있다. 또한 Razor 엔진과 ASPX 엔진의 뷰들도 목록에 존재하는 것을 확인할 수 있는데 이는 이 뷰 엔진들도 여전히 사용되고 있기 때문이다. 만약 여러분의 사용자 지정 뷰 엔진만 사용하기를 원한다면 목록 20-8과 같이 Global.asax 파일에서 뷰 엔진을 등록하기 전에 먼저 Clear 메서드를 호출해야 한다. 
+
+
+목록 20-8 Global.asax에서 다른 뷰 엔진 제거하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using Views.Infrastructure;
+namespace Views
+{
+    public class MvcApplication : System.Web.HttpApplication
+    {
+        protected void Application_Start()
+        {
+            AreaRegistration.RegisterAllAreas();
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+
+            ViewEngines.Engines.Clear(); //추가
+            ViewEngines.Engines.Add(new DebugDataViewEngine());
+        }
+    }
+}
+
+이제 응용프로그램을 다시 실행시킨 다음 다시 /Home/List로 이동해보면 그림 20-3과같이 사용자 지정 뷰 엔진만 사용되고 있음을 확인할 수 있다. 
