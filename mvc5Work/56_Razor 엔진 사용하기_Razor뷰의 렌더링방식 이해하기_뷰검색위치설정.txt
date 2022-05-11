@@ -1,0 +1,474 @@
+※ Razor 엔진 사용하기
+
+이전 절에서는 단 두 가지 인터페이스만 구현해서 사용자 지정 뷰 엔진을 구현해봤다. 물론 간단하게만 구현했기 때문에 뷰들이 엉성하게 보일 수는 있겠지만 요청 처리 파이프라인 전반에 걸쳐 MVC 확장성의 개념이 어떻게 이어지고 있는지를 확인할 수 있었을 것이다. 
+
+뷰 엔진의 복잡성은 대부분 뷰 템플릿 시스템으로부터 비롯되는데, 뷰 템플릿 시스템은 코드 조각들을 포함할 뿐만 아니라, 레이아웃을 지원해야 하고 또한 성능 최적화를 위한 컴파일도 되어있어야 하기 때문이다. 이전 절에서 구현했던 간단한 사용자 지정 뷰 엔진에서는 이런 작업들 전혀 처리하지 않았는데, 그럴 필요도 없었으며 내장 Razor 엔진이 이런 작업들을 모두 처리해주기 때문이었다. MVC 응용프로그램에 필요한 대부분의 기능들은 Razor 엔진에서 제공해준다. 극히 일부의 프로젝트에서만 사용자 지정 뷰 엔진을 구현해야만 하는 상황에 봉착하게 될 뿐이다. 이미 5장에서 Razor 문법에 대한 기본적인 내용들을 살펴봤다. 이번 장에서는 Razor 뷰를 만들고 렌더하기 위한 다른 기능들을 사용하는 방법을 살펴볼 것이다. 또한 Razor 엔진을 사용자 지정하는 방법도 알아보도록 하자. 
+
+
+
+
+※ 예제 프로젝트 준비하기
+
+이번 예제를 직접 살펴보기 위해서 사용할 새로운 MVC 프로젝트를 Empty 템플릿을 선택하고 MVC 옵션을 체크해서 핵심적인 MVC 참조 및 관련 폴더들을 추가하여 생성한다. 프로젝트 이름은 WorkingWithRazor로 지정하고 목록 20-9와 같은 내용으로 Home 컨트롤러를 추가한다. 
+
+
+
+목록 20-9 HomeController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace WorkingWithRazor.Controllers
+{
+    public class HomeController : Controller
+    {        
+        public ActionResult Index()
+        {
+            string[] names = { "Apple", "Orange", "Pear" };
+            return View(names);
+        }
+    }
+}
+
+
+또한 Views/Home 폴더에 Index.cshtml 이라는 뷰도 생성한다. 목록 20-10에서 이 뷰 파일의 내용을 확인할 수 있다. 
+
+
+
+목록 20-10 Index.cshtml 의 내용
+
+@model string[]
+@{
+    ViewBag.Title = "Index";
+}
+
+This is a list of fruit names:
+
+@foreach (string name in Model)
+{
+    <span><b>@name</b></span>
+}
+
+
+
+
+※ Razor 뷰의 렌더링 방식 이해하기
+
+Razor 뷰 엔진은 응용프로그램의 성능 향상을 위해서 뷰를 컴파일한다. 이 작업은 우선 뷰를 C# 클래스로 변환한 다음 해당 클래스 파일을 컴파일 하는 방식으로 진행한다. 바로 그렇기 때문에 C# 코드 조각을 뷰에 손쉽게 포함시킬수 있다. 이런 식으로 Razor 뷰가 변환된 C# 소스를 살펴보면 많은 것들을 배울 수 있는데 해당 소스를 통해서 Razor 엔진의 다양한 기능들을 살펴볼수 있기 때문이다. 
+
+
+MVC 응용프로그램의 뷰들은 응용프로그램이 시작된 뒤에야 컴파일 되므로 Razor 엔진에 의해 생성된 클래스들을 확인하기 위해서는 응용프로그램을 실행한 다음 브라우저에서 /Home/Index URL을 열어봐야 한다. MVC 응용프로그램에 대한 첫 번째 요청이 이루어지면 모든 뷰들에 대한 컴파일 작업이 시작된다. 그림 20-4에서 요청에 대한 결과를 확인할 수 있다. 
+
+편리하게도 뷰 파일들로부터 생성된 클래스들은 C# 코드 파일의 형태로 디스크에 기록된 뒤에 컴파일되기 떄문에 뷰를 표현하는 C# 구문들을 직접 확인할 수 있다. Windows 7이나 Windows8 을 사용하고 있다면 c:\Users\<yourLoginName>\AppData\Local\Temp\Temporary ASP .NET Files 폴더에서 생성된 파일들을 살펴볼수 있다. 
+
+특정 뷰로부터 만들어진 코드 파일을 찾기 위해서는 여기저기를 찾아봐야 할 수도 있다. 보통 이 파일들은 암호화된 여러 개의 폴더에 자신이 포함된 클래스 이름과는 전혀 상관없는 이름의 .cs 파일들로 생성되기 때문이다. 예를 들어서 필자의 경우에는 목록 20-10의 뷰로부터 생성된 클래스를 root\7bbfc2bc\bd7485cd 폴더의 App_Web_ihpp0d01.0.cs 파일에서 찾을수 있었다. 목록 20-11에서 읽기 쉽도록 깔끔하게 정리된 이 클래스의 코드를 확인할수 있다. 
+
+
+
+목록 20-11 Razor 뷰에 대해서 생성된 C# 클래스
+
+namespace ASP
+{
+	using System;
+	using System.Collections.Generic;
+	using System.IO;
+	using System.Linq;
+	using System.Net;
+	using System.Web;
+	using System.Web.Helpers;
+	using System.Web.Security;
+	using System.Web.UI;
+	using System.Web.WebPages;
+	using System.Web.Mvc;
+	using System.Web.Mvc.Ajax;
+	using System.Web.Mvc.Html;
+	using System.Web.Optimization;
+	using System.Web.Routing;
+
+
+	public class _Page_Views_Home_Index_cshtml : System.Web.Mvc.WebViewPage<string[]>
+	{
+		public _Page_Views_Home_Index_cshtml() 
+		{
+		}
+
+		public override void Execute()
+		{
+			ViewBag.Title = "Index";
+			WriteLiteral("\r\n\r\nThis is a list of fruit names:\r\n\r\n");
+
+			foreach(string name in Model)
+			{
+				WriteLiteral("	<span><b>");
+				Write(name);
+				WriteLiteral("</b></span>\r\n");
+			}
+		}
+	}
+}
+
+
+우선 이 클래스가 WebViewPage<T> 클래스를 상속하고 있다는 점에 주목하도록 하자. 여기서 T는 모델의 형식으로 이번 예제의 경우 WebViewPage<string[]>임을 알 수 있다. 이것이 강력한 형식의 뷰가 처리되는 방식이다. 또한 클래스의 이름이 _Page_Views_Home_Index_cshtml라는 점에도 주목하자. 이 이름을 통해서 뷰 파일의 경로가 클래스의 이름으로 변환되는 방식을 이해할 수 있다. Razor 엔진은 이런 방식으로 각 뷰에 대한 요청들을 컴파일된 클래스들의 인스턴스와 연결해준다. 
+
+계속해서 Execute 메서드를 살펴보면 뷰 내의 구문들과 요소들이 처리되는 방식을 알 수 있다. @기호가 앞에 추가된 코드 조각들은 그대로 변경 없이 C# 구문으로 표현된다. HTML 요소들은 WriteLiteral 메서드를 통해서 처리되고 있는데 이 메서드는 매개변수로 전달된 콘텐츠를 있는 그대로 기록한다. 반면 Write 메서드의 경우에는 조금 다른데, 이 메서드는 C# 변수를 매개변수로 전달받아서 이를 HTML 페이지에서 안전하게 사용할 수 있는 문자열로 인코딩하여 기록한다. 
+
+
+이 Write 메서드와 WriteLiteral 메서드는 모두 TextWriter 개체에 콘텐트를 출력한다. 이 TextWriter 개체는 이번 장의 시작 부분에서 살펴봤던 IView.Render 메서드에 전달된 것과 동일한 개체다. 컴파일된 Razor 뷰의 목적은 정적/동적 콘텐트를 생성하고 이를 TextWriter 개체를 통해서 클라이언트에 전송하는 것이다. 이 점을 염두에 두고 있으면 이후의 다른 장들에서 HTML 헬퍼 메서드들을 살펴볼 때 많은 도움이 될 것이다. 
+
+
+
+※뷰 검색 위치 설정하기
+
+Razor 뷰 엔진은 표준 규약에 따라 뷰를 검색한다. 예를 들어 Home 컨트롤러에 연관된 Index 뷰를 요청하는 경우 Razor 는 다음과 같은 뷰들을 확인하게 된다. 
+
+* ~/Views/Home/Index.cshtml
+
+* ~/Views/Home/Index.vbhtml
+
+* ~/Views/Shared/Index.cshtml
+
+* ~/Views/Shared/Index.vbhtml
+
+앞에서 살펴봤던 것처럼 Razor 엔진이 실제 디스크상에 위치한 뷰 파일들을 찾는 것은 아닌데 이미 해당 뷰 파일들이 C# 클래스로 컴파일됐기 때문이다. 따라서 Razor 엔진은 이런 뷰들이 컴파일된 클래스들을 찾게 된다. 여기서 .cshtml 파일들은 C# 구문들로 작성된 템플릿 파일이고(이 책에서 사용하고 있는), .vbhtml 파일은 Visual Basic 구문들로 작성된 템플릿 파일이다. 
+
+
+필요하다면 RazorViewEngine의 서브 클래스를 생성해서 Razor 엔진이 찾는 뷰 파일들을 변경할 수도 있다. 이 클래스는 IViewEngine 인터페이스에 대한 Razor 엔진의 구현으로 일련의 기본 클래스들로 이루어져 있는데 여기에 정의된 속성들에서 뷰 파일을 찾기 위한 위치를 지정하고 있다. 이 속성들에 대해서는 표 20-4에 설명되어 있다. 
+
+
+표20-4 Razor 뷰 엔진의 검색 관련 속성
+
+
+속성							설명										기본값
+ViewLocationFormats				뷰, 부분 뷰, 레이아웃 파일들을 찾기 위한 위치			~/Views/{1}/{0}.cshtml,
+MasterLocationFormats														~/Views/{1}/{0}.vbhtml,
+PartialViewLocationFormats													~/Views/Shared/{0}.cshtml,
+																	~/Views/Shared/{0}.vbhtml
+
+AreaViewLocationFormats				Area를 위한 뷰, 부분 뷰, 레이아웃 파일들을 찾기 위한 위치	~/Areas/{2}/Views/{1}/{0}.cshtml,
+AreaMasterLocationFormats													~/Areas/{2}/Views/{1}/{0}.vbhtml,
+AreaPartialViewLocationFormats													~/Areas/{2}/Views/Shared/{0}.cshtml,
+																	~/Areas/{2}/Views/Shared/{0}.vbhtml
+
+
+이 속성들은 Razor 엔진보다 먼저 도입된 속성들이기 때문에 각각 세 가지 속성이 서로 같은 값들을 갖고 있다. 각 속성의 형식은 문자열 배열로 복합적 문자열 표기법을 따른다. 다음은 각각의 자리 표시자(placeholder)와 관련된 매개변수의 값들에 대한 설명이다. 
+
+* {0}은 뷰의 이름을 뜻한다. 
+
+* {1} 은 컨트롤러의 이름을 뜻한다. 
+
+* {2} 는 영역의 이름을 뜻한다. 
+
+
+검색 위치를 변경하기 위해서는 RazorViewEngine 클래스를 상속받는 새로운 클래스를 만들어야 하며 표 20-4에서 설명하고 있는 속성들 중 일부의 값들을 변경해야 한다. 
+
+검색되는 위치를 변경하는 방법을 직접 살펴보기 위해서 프로젝트에 Infrastructure 폴더를 추가하고 목록 20-12와 같은 내용으로 CustomLocationViewEngine.cs라는 새로운 클래스 파일을 만든다. 
+
+
+
+목록 20-12 CustomLocationViewEngine.cs 파일의 내용
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+namespace WorkingWithRazor.Insrastructure
+{
+    public class CustomLocationViewEngine : RazorViewEngine
+    {
+        public CustomLocationViewEngine()
+        {
+            ViewLocationFormats = new string[] { "~/Views/{1}/{0}.cshtml", "~/Views/Common/{0}.cshtml" };
+        }
+    }
+}
+
+
+목록 20-12와 같이 ViewLocationFormats 속성에 새로운 값들을 설정하였다. 새로운 배열에는 .cshtml 파일들에 대한 위치들만 포함시켰다. 또한 공유되는 뷰들을 찾는 위치를 Views/Shared에서 Views/Common 으로 변경하였다. 
+
+이제 목록 20-13과 같이 파생한 뷰 엔진을 Global.asax의 Application_Start 메서드에서 ViewEngines.Engines 컬렉션을 이용해서 등록한다. 
+
+
+
+
+목록 20-13 Global.asax 에서 사용자 지정 뷰 엔진 등록하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using WorkingWithRazor.Insrastructure; //추가
+namespace WorkingWithRazor
+{
+    public class MvcApplication : System.Web.HttpApplication
+    {
+        protected void Application_Start()
+        {
+            AreaRegistration.RegisterAllAreas();
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+	    //아래 추가
+            ViewEngines.Engines.Clear();
+            ViewEngines.Engines.Add(new CustomLocationViewEngine());
+        }
+    }
+}
+
+
+액션 호출자가 등록된 각각의 뷰 엔진들을 차례대로 확인하여 뷰를 찾는다는 점을 다시 한번 기억하도록 하자. 컬렉션에 새로운 뷰 엔진을 추가하는 시점에는 이미 기본 Razor 뷰 엔진이 추가되어 있을 것이다. 따라서 기존에 등록되어 있는 기본 Razor 뷰 엔진과 같은 다른 뷰 엔진들과의 경쟁 상황을 방지하기 위해서는 미리 등록된 다른 뷰 엔진들을 컬렉션에서 제거하는 Clear 메서드를 호출한 뒤에 사용자 지정 구현 뷰 엔진을 Add 메서드로 추가해야 한다. 
+
+검색 위치가 실제로 변경되었는지 확인해보기 위해 /Views/Common 폴더를 만들고 List.cshtml이라는 파일을 추가하도록 하자 목록 20-14에서 이 파일의 내용을 확인할수 있다. 
+
+
+
+목록 20-14 /Views/Common/List.cshtml 파일의 내용
+
+@{
+    ViewBag.Title = "List";
+}
+
+<h3>This is the /Views/Common/List.cshtml View</h3>
+
+그리고 이 뷰를 출력하기 위해 목록 20-15와 같이 Home 컨트롤러에 새로운 액션 메서드를 추가한다. 
+
+
+
+목록 20-15 HomeController.cs 파일에 새로운 액션 메서드 추가하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace WorkingWithRazor.Controllers
+{
+    public class HomeController : Controller
+    {        
+        public ActionResult Index()
+        {
+            string[] names = { "Apple", "Orange", "Pear" };
+            return View(names);
+        }
+	//추가
+        public ActionResult List()
+        {
+            return View();
+        }
+    }
+}
+
+
+이제 응용프로그램을 실행하고 /Home/List URL로 이동해보면 사용자 지정 위치인 /View/Common 폴더에 위치한 List.cshtml 뷰 파일이 사용되어 그림 20-5와 같은 결과가 나타나는 것을 확인할 수 있을 것이다. 
+
+
+
+
+
+
+※ Razor 뷰에 동적 내용 추가하기
+
+뷰의 가장 근본적인 목적은 사용자 인터페이스로서 도메인 모델의 일부분을 렌더하는 것이다. 이 목적을 위해서는 뷰에 동적 콘텐트를 추가할 수 있어야만 한다. 동적 콘텐트는 런타임에 생성되며 각각의 모든 요청마다 매번 달라질 수 있다. 이는 응용프로그램을 작성할 때 만들어지고 모든 요청에 대해서 항상 동일한 결과를 반환하는 HTML 같은 정적 콘텐트와는 반대되는 특징이다. 표20-5에서 살펴볼수 있는 다양한 방법들을 이용해서 뷰에 동적 콘텐트를 추가할수 있다. 
+
+
+표20-5 뷰에 동적 내용 추가하기
+
+기술			사용처
+인라인 코드		if나  foreach 구문처럼 그 자체로 완결되는 소규모 뷰 로직 부분을 위해서 사용한다. 뷰에서 동적 콘텐트를 생성하는 가장 기초적인 도구로 다			른 접근 방식들은 모두 이 기술을 바탕으로 하고 있다. 이 기술에 관해서는 5장에서 자세하게 살펴봤으며 지금까지의 모든 장들에서 수많은 
+			예제들을 통해서 살펴봤다. 
+
+HTML 헬퍼 메서드	단일 HTML 요소나 적은 수의 HTML 요소들을 만들 때 사용되며, 보통 뷰 모델이나 뷰 데이터의 값들을 기반으로 한다. MVC 프레임워크에서는
+			다양한 유용한 HTML 헬퍼메서드들을 제공해주며 직접 만들기도 쉽다. HTML 헬퍼 메서드에 관해서는 21장에서 자세하게 살펴본다. 
+
+섹션			레이아웃의 특정 위치에 삽입되는 콘텐트 섹션을 만들때 사용한다. 
+
+부분 뷰		여러 뷰에서 공유하기 위한 뷰 마크업의 일부 영역을 만들기 위해서 사용한다. 부분 뷰는 인라인 코드, HTML 헬퍼 메서드, 또는 다른 부분 뷰에 
+			대한 참조를 포함할 수도 있다. 부분뷰는 액션 메서드를 호출하지 않기 때문에, 업무 로직을 실행하기 위한 목적으로는 사용할 수 없다. 
+
+자식 액션		업무 로직을 포함하는 재사용 가능한 UI 컨트롤이나 위젯을 만들 때 사용한다. 자식 액션은 액션 메서드를 호출하고 뷰를 렌더링하며 응답 스트
+			림에 결과를 주입한다. 
+
+
+
+이 기술들 중 두 가지 기술, 즉 인라인 코드와 HTML 헬퍼 메서드는 이 책의 예제들을 통해서 살펴봤으며, 다른 기술들에 대해서는 이어지는 절들에서 살펴볼 것이다. 
+
+
+
+
+
+※ 레이아웃 섹션 사용하기
+
+Razor 엔진은 레이아웃 내부에 콘텐트 영역을 설정할 수 있는 섹션이라는 개념을 지원해준다. Razor의 섹션 기능을 이용하면 뷰의 어떤 부분이 레이아웃에 삽입되어야 하고 어디에 위치해야 하는지 보다 정확하게 제어할 수 있다. 섹션 기능을 살펴보기 위해서 목록 20-16과 같이 /Views/Home/Index.cshtml 파일을 수정해보도록 하자. 
+
+
+목록 20-16 Index.cshtml 파일에 섹션 정의하기
+
+@model string[]
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Header
+{
+    <div class="view">
+        @foreach (string str in new[] { "Home", "List", "Edit" })
+        {
+            @Html.ActionLink(str, str, null, new { style = "margin: 5px" })
+        }
+    </div>
+}
+<div class="view">
+    This is a list of fruit names:
+
+    @foreach (string name in Model)
+    {
+        <span><b>@name</b></span>
+    }
+</div>
+
+@section Footer
+{
+    <div class="view">
+        This is the footer
+    </div>
+}
+
+목록 20-16에서 볼 수 있는 것처럼 섹션은 Razor의 @section 태그와 그 뒤에 붙이는 섹션 이름으로 정의할 수 있다. 이번 예제에서는 Header와 Footer라는 이름의 섹션을 생성하고 있는데 섹션의 콘텐트는 일반적인 HTML 마크업과 Razor 태그들로 구성된다. 이처럼 섹션 자체는 뷰에 정의되지만 결과는 @RenderSection 헬퍼 메서드를 통해서 레이아웃에 적용된다. 실제로 동작하는 모습을 확인하기 위해서 목록 20-17과 같은 내용으로 /Views/Shared/_Layout.cshtml 파일을 생성한다.
+
+
+목록 20-17 _Layout.cshtml에서 섹션 사용하기
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <style type="text/css">
+        div.layout { background-color: lightgray; }
+        div.view {
+            border: thin solid black;            margin: 10px 0;        }
+    </style>
+    <title>@ViewBag.Title</title>
+</head>
+<body>
+    @RenderSection("Header")
+    <div class="layout">
+        This is part of the layout    
+    </div>
+    @RenderBody()
+
+    <div class="layout" >
+        This is part of the layout
+    </div>
+    @RenderSection("Footer")
+
+    <div class="layout">
+        This is part of the layout
+    </div>
+</body>
+</html>
+
+
+
+TIP:
+이번 예제에서도 이번 장의 앞부분에서 사용자 지정 뷰 엔진에 정의했던 파일 위치들이 여전히 사용되고 있기 때문에 Index.cshtml 파일 내에서 명시적으로 사용할 레이아웃 파일을 지정하고 있다. 결과적으로 공유되는 뷰들은 /Views/Common 폴더에 위치하더라도 이번 예제에서는 /Views/Shared 폴더에서 레이아웃 파일을 가져오게 된다. 
+
+
+
+Razor 엔진이 레이아웃을 파싱할 때 RenderSection 헬퍼 메서드 호출 부분은 메서드 호출시에 전달한 이름과 동일한 이름을 가지는 섹션의 콘텐트로 대체된다 (@RenderSection("Header") --> @section Header {...) 뷰 내에서 섹션으로 지정하지 않은 다른 부분들은 RenderBody 헬퍼 메서드를 통해서 레이아웃에 삽입된다. 
+
+다시 응용프로그램을 실행시켜보면 그림 20-6에서 볼 수 있는 것과 같이 섹션들이 적용된 결과를 확인할 수 있다. 레이아웃 파일에 몇 가지 기초적인 CSS 스타일들을 추가해서 결과의 어떤 부분이 뷰로부터 비롯되었으며 어떤 부분이 레이아웃으로부터 비롯되었는지를 명확히 구분할 수 있도록 만들었다. 결과물이 그럴 듯 하지는 않지만 뷰로부터 생성된 특정 콘텐트의 영역을 레이아웃의 특정 위치에 나타나게 만드는 방법을 깔끔하게 보여준다. 
+
+
+Note:
+뷰에서는 오직 레이아웃에서 참조하는 섹션들만 정의할 수 있다. 레이아웃에 관련된 @RenderSection 헬퍼 메서드에 대한 호출 없이 뷰에 임의의 섹션을 정의하면 MVC 프레임워크가 예외를 던질 것이다. 
+
+
+
+섹션들과 뷰의 나머지 부분을 섞어놓는 방식은 잘 사용되지 않는다. 일반적으로 섹션들은 뷰의 시작 부분이나 끝부분에 정의하는 것이 관례인데, 이는 콘텐트의 어떤 부분들이 섹션으로 사용되고, 어떤 부분이 RenderBody 헬퍼 메서드를 통해서 사용되는지를 명확하게 구분하기 위한 목적 때문이다. 필자가 선호하는 다른 접근 방식으로 아예 본문까지 섹션으로 구성하는 방법도 있는데, 목록 20-18에서 이를 확인할 수 있다. 
+
+
+
+목록 20-18 Index.cshtml 파일에서 Razor 섹션 기능을 사용하여 뷰 정의하기. 
+
+@model string[]
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Header
+{
+    <div class="view">
+        @foreach (string str in new[] { "Home", "List", "Edit" })
+        {
+            @Html.ActionLink(str, str, null, new { style = "margin: 5px" })
+        }
+    </div>
+}
+<div class="view">
+    This is a list of fruit names:
+
+    @foreach (string name in Model)
+    {
+        <span><b>@name</b></span>
+    }
+</div>
+
+@section Body
+{
+    <div class="view">
+        This is a list of fruit names:
+
+        @foreach (string name in Model)
+        {
+            <span><b>@name</b></span>
+        }
+    </div>
+}
+
+@section Footer
+{
+    <div class="view">
+        This is the footer
+    </div>
+}
+
+이 방식을 사용하면 뷰를 보다 명확하게 만들 수 있고 RenderBody 헬퍼 메서드에 의해서 의도하지 않은 콘텐트가 포함될 가능성도 줄일 수 있다. 그러나 이 접근 방식을 사용하려면 목록 20-19와 같이 레이아웃의 RenderBody 헬퍼 메서드 호출을 RenderSection("Body") 헬퍼 메서드 호출로 변경해야 한다. 
+
+
+목록 20-19 _Layout.cshtml 파일에서 RenderSection("Body") 헬퍼 메서드 사용하기. 
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <style type="text/css">
+        div.layout { background-color: lightgray; }
+        div.view {
+            border: thin solid black;            margin: 10px 0;        }
+    </style>
+    <title>@ViewBag.Title</title>
+</head>
+<body>
+    @RenderSection("Header")
+    <div class="layout">
+        This is part of the layout    
+    </div>
+    @RenderSection("Body")
+
+    <div class="layout" >
+        This is part of the layout
+    </div>
+    @RenderSection("Footer")
+
+    <div class="layout">
+        This is part of the layout
+    </div>
+</body>
+</html>
