@@ -1,0 +1,301 @@
+※ 섹션 테스트 하기
+
+뷰에서 레이아웃상의 특정 섹션을 정의하고 있는지를 확인할 수도 있다. 이 기법은 섹션에 대한 기본 콘텐트를 제공하기 위한 유용한 방법으로 뷰에서 지정한 콘텐트를 제공할 필요가 없거나 제공하길 원치 않는 경우에 편리하게 사용할 수 있다. 목록 20-20과 같이 뷰에서 Footer 섹션을 정의하고 있는지 확인하도록 _Layout.cshtml 파일을 변경해보도록 하자. 
+
+
+목록 20-20 _Layout.cshtml 파일에서 특정 섹션이 정의되었는지 확인하기
+
+...
+@if (IsSectionDefined("Footer"))
+{
+	@RenderSection("Footer")
+}else
+{
+	<h4>This is the default footer</h4>
+}
+...
+
+이 IsSectionDefined 헬퍼 메서드에 확인하고자 하는 섹션의 이름을 전달하면 뷰에서 해당 영역을 정의하고 있는 경우 true를 반환한다. 이번 예제에서는 이 헬퍼 메서드를 사용해서 뷰에서 Footer 섹션을 정의하고 있지 않은 경우 기본 콘텐트를 렌더하도록 만들었다. 
+
+
+
+※ 선택적 섹션 렌더링하기
+
+기본적으로 뷰는 레이아웃에서 RenderSection 헬퍼 메서드가 호출하는 모든 섹션들을 정의하고 있어야 한다. 만약 누락된 섹션이 존재한다면 MVC 프레임워크가 사용자에게 예외를 던질 것이다. 이를 직접 확인해보기 위해서 목록 20-21과 같이 _Layout.cshtml 파일에 scripts라는 섹션에 대한 RenderSection 헬퍼 메서드 호출을 추가해보도록 하자. 이 섹션은 MVC 템플릿을 선택해서 MVC 프로젝트를 만들 때 Visual Studio 가 레이아웃에 기본적으로 추가해주는 섹션이다. 
+
+
+
+
+목록 20-21 _Layout.cshtml 파일에서 관련 섹션이 존재하지 않는 RenderSection 헬퍼 메서드 호출하기
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <style type="text/css">
+        div.layout { background-color: lightgray; }
+        div.view {
+            border: thin solid black;            margin: 10px 0;        }
+    </style>
+    <title>@ViewBag.Title</title>
+</head>
+<body>
+    @RenderSection("Header")
+    <div class="layout">
+        This is part of the layout    
+    </div>
+    @RenderSection("Body")
+
+    <div class="layout" >
+        This is part of the layout
+    </div>
+    @if (IsSectionDefined("Footer"))
+    {
+        @RenderSection("Footer")
+    }
+    else
+    {
+        <h4>This is the default footer</h4>
+    }
+
+    @RenderSection("scripts")
+    <div class="layout">
+        This is part of the layout
+    </div>
+
+</body>
+</html>
+
+
+이제 응용 프로그램을 실행해보면 Razor 엔진이 레이아웃과 뷰를 렌더하려고 시도할 때 그림 20-7과 같은 오류가 발생하는 것을 확인할 수 있을 것이다. 
+
+물론 IsSectionDefined 헬퍼 메서드를 이용해서 뷰가 정의하지 않는 섹션에 대한 RenderSection 호출을 피하는 방법도 있겠지만 조금 더 우아한 접근 방식은 목록 20-22에 서 볼 수 있는 것처럼 RenderSection 메서드에 추가적인 false값을 전달해서 선택적 섹션 기능을 사용하는 것이다. 
+
+
+
+목록 20-22 섹션을 선택적으로 만들기
+
+...
+@RenderSection("scripts", false)
+...
+
+
+이 방법은 선택적 섹션을 만들어 뷰에서 해당 섹션을 정의하고 있다면 결과에 그 콘텐트가 삽입되고, 섹션이 정의되어 있지 않다고 하더라도 예외가 발생하지는 않는다. 
+
+
+
+※ 부분 뷰 사용하기
+
+MVC 프레임워크를 이용해서 개발 작업을 수행하다 보면 응용프로그램의 여러 다른 부분들에서 Razor 태그들과 HTML 마크업으로 이뤄진 동일한 코드 조각을 반복적으로 사용해야 하는 경우를빈번하게 접하게 될 것이다. 이런 경우에는 단순히 콘텐트를 복사하기보다는 부분 뷰를 사용하는 것이 바람직하다. 부분 뷰는 태그들과 마크업으로 구성된 코드 조각들을 포함하고 있는 별도의 뷰 파일로서 다른 뷰에 포함해서 사용하는 것이 가능하다. 이번 절에서는 부분뷰를 만들고 사용하는 방법을 살펴보고 부분 뷰가 동작하는 방법과 뷰 데이터를 부분 뷰에 전달하기 위한 기법들에 대해서도 알아볼 것이다. 
+
+
+
+※ 부분 뷰 만들기
+
+먼저 MyPartial 이라는 이름의 부분 뷰를 만들어보도록 하자. Views/Shared 폴더를 마우스오른쪽 버튼으로 클릭한 다음  팝업 메뉴에서 [추가(Add)] > [뷰 (View)]를 선택한다. 그러면 Visual Studio 가 지금까지 이전 장들에서 계속 봐왔던 [뷰추가(Add View)] 대화상자를 띄워줄 것이다. 그림 20-8과 같이 뷰의 이름을 MyPartial로 지정하고 [템플릿(Template)]으로는 [Empty(모델 없음)(Empty (withhout model))]을 선택한 다음 [부분 뷰로 만들기(Create as partial view)] 옵션을 선택한다. 
+
+
+마지막으로 [추가(Add)] 버튼을 클릭하면 Visual Studio 가 비어있는 부분 뷰를 만들어 준다. 이 부분 뷰의 내용을 목록 20-23과 같이 추가한다. 
+
+
+목록 20-23 MyPartial.cshtml 파일의 내용
+<div>
+    This is the message from the partial view.
+    @Html.ActionLink("This is a link to the Index action", "Index")
+</div>
+
+
+
+
+TIP:
+스캐폴딩(scaffolding) 기능은 파일에 대한 초기 콘텐트만 설정해줄 뿐이다. 즉 뷰를 실제로 부분 뷰로 동작하게 만드는 것은 그 콘텐트(완전한 HTML 문서로 구성되거나 레이아웃을 참조하지않아야 하며, HTML 코드 조각만 담고 있어야 한다)와 사용되는 방식(잠시 뒤에 살펴볼 것이다) 자체다. 여러분이 다양한 종류의 뷰에 익숙해지고 나면 항상 [추가(Add)] > [MVC 5 뷰 페이지(Razor)(MVC 5 View Page(Razor))] 메뉴를 사용해서 일단 뷰를 추가한 뒤에 직접 콘텐트를 작성해서 원하는 유형의 뷰로 변경해도 전혀 문제 될것이 없다. 
+
+
+
+목록 20-23의 부분 뷰에서는 HTML 마크업과 Razor 태그들을 함께 섞어서 사용할 수 있다는 점을 보여주기 위해서 간단한 메시지를 정의하고 ActionLink 헬퍼 메서드에 대한 호출을 추가했다. 부분 뷰는 다른 뷰에서 Html.Partial 헬퍼 메서드를 호출해서 사용할 수 있다. 목록 20-24와 같이 ~/Views/Common/List.cshtml 뷰를 수정해서 실제로 부분 뷰를 사용해보도록 하자. 
+
+
+
+목록 20-24 List.cshtml 파일에서 부분 뷰 사용하기
+@{
+    ViewBag.Title = "List";
+    Layout = null;
+}
+
+<h3>This is the /Views/Common/List.cshtml View</h3>
+
+@Html.Partial("MyPartial");
+
+
+목록 20-24에서 볼 수 있는 것처럼 부분 뷰 파일의 이름을 지정할 때는 파일 확장자를 생략한다. 뷰 엔진은 일반적인 검색 위치로 지정된 위치들에서 부분 뷰를 찾는데 가령 이번 예제에서는 /Views/Home 폴더와 /Views/Shared 폴더에서 부분 뷰를 찾게 된다. 그 이유는 Html.Partial 메서드가 Home 컨트롤러에 정의된 액션 메서드에 대해서 렌더된 뷰로부터 호출됐기 때문이다(이 뷰에서는 Layout 변수를 null로 지정해서 이번 장의 앞부분에서 사용했던 _Layout.cshtml 파일에 정의된 섹션을 지정할 필요가 없게 만들었다)
+
+
+TIP:
+Razor 뷰 엔진은 부분 뷰를 찾을 때도, 일반적인 뷰를 찾을 때 사용하는 방법과 동일한 방식을 사용한다(즉 ~/Views/<컨트롤러> 폴더와 ~/Views/Shared 폴더를 찾는다) 이는 특정 컨트롤러에 특화된 특별한 부분 뷰를 생성하거나, Shared 폴더에 존재하는 부분 뷰와 동일한 이름의 부분뷰를 재정의해서 대체할 수도 있다는 뜻이다. 일견 이상하게 보일 수도 있지만 부분 뷰의 가장 일반적인 사용 용도중 하나가 레이아웃에 콘텐트를 렌더하는 것이라는 점을 감안해보면 이 기능은 유용하게 사용될 수 있다. 
+
+
+
+응용프로그램을 실행시킨 다음 /Home/List URL로 이동해보면 그림 20-9에서 볼 수 있는 것처럼 부분뷰가 적용된 결과를 확인할 수 있다. 
+
+
+
+TIP:
+부분 뷰에서 ActionLink 헬퍼 메서드를 호출하면 현재 처리되고 있는 요청으로부터 컨트롤러에 대한 정보를 얻게 된다. 즉 이얘기는 Index 메서드를 요청한 경우 부분 뷰의 a 요소도 Home 컨트롤러를 참조하게 된다는 뜻인데, 그렇게 되는 이유는 바로 Home 컨트롤러가 부분뷰를 렌더한 컨트롤러이기 때문이다. 따라서 만약 다른 컨트롤러에 대해서 렌더하고 있는 뷰 내부에서 이 부분뷰를 사용한다면 대신 ActionLink 메서드도 해당 컨트롤러에 대한 참조를 사용하게 될 것이다. 
+HTML 헬퍼 메서드에 대해서는 21장에서 다시 자세하게 살펴보도록 하겠다. 
+
+
+
+
+
+※ 강력한 형식의 부분 뷰 사용하기
+강력한 형식의 부분 뷰를 만든 다음, 부분 뷰를 렌더할 때 사용할 뷰 모델 개체를 전달할 수 도 있다. 이 기능을 살펴보기 위해서 /Views/Shared 폴더에 MyStronglyTypedPartial.cshtml 라는 이름으로 강력한 형식의 부분 뷰를 만들어보도록 하자. 대신 이번에는 스캐폴드 옵션을 사용하는 것이 아니라 [추가(Add)] > [MVC 5 뷰 페이지(Razor)(MVC 5 View Page(Razor))] 를 선택한 다음 이름을 MyStronglyTypedPartial이라고 지정하고 [확인(OK)] 버튼을 클릭해서 뷰를 만든다. 이전 절에서 설명했던 것처럼뷰 파일 자체에는 해당 뷰가 부분 뷰라고 지정하는 부분은 딱히 없으며 뷰의 내용과 뷰가 응용프로그램에서 사용되는 방식에 따라서 뷰의 성격이 결정된다. Visual Studio가 새로운 뷰 파일에 추가해주는 기본 내용을 제거하고 목록 20-25 에서 확인할 수 있는 것과 같은 마크업으로 대체한다. 
+
+
+
+
+목록 20-25 MyStronglyTypedPartial.cshtml 파일의 내용
+
+@model IEnumerable<string>
+<div>
+    This is the message from the partial view.
+    <ul>
+        @foreach (string str in Model)
+        {
+            <li>@str</li>
+        }
+    </ul>
+</div>
+
+목록 20-25에서는 Razor의 @foreach루프를 사용하여 HTML 목록에 뷰 모델 개체의 콘텐트를 나열하고 있다. 이 부분 뷰를 직접 사용해보려면 목록 20-26과 같이 /Views/Common/List.cshtml 파일의 내용을 수정하면 된다. 
+
+
+
+
+
+목록 20-26 List.cshtml 파일에서 강력한 형식의 부분 뷰 사용하기
+
+@{
+    ViewBag.Title = "List";
+    Layout = null;
+}
+
+<h3>This is the /Views/Common/List.cshtml View</h3>
+
+@Html.Partial("MyStronglyTypedPartial",new[] { "Apple", "Orange", "Pear" })
+
+
+이전 예제와의 차이점은 Partial 헬퍼 메서드에 뷰 모델 개체를 정의하는 추가적인 인자를 전달하고 있는 부분밖에 없다. 응용프로그램을 시작하고 /Home/List URL로 이동해보면 그림 20-10과 같이 강력한 형식의 부분 뷰가 사용된 결과를 확인할 수 있다. 
+
+
+
+
+
+※ 자식 액션 사용하기
+
+자식 액션은 뷰 내부에서 호출되는 액션 메서드다. 자식 액션을 활용하면 응용프로그램의 여러 부분에서 빈번하게 사용되는 컨트롤러 로직을 매번 반복하지 않을 수 있다. 자식 액션과 액션의 관계는 부분 뷰와 뷰의 관계와 비슷하다. 데이터 기반의 위젯을 출력하기를 원할 때는 언제나 자식 액션을 사용할 수 있는데 여기서 데이터 기반의 위젯이란 여러 페이지들에서 반복적으로 사용되고 현재 실행되고 있는 주 액션과 관련 없는 데이터를 포함하고 있는 위젯을 말한다. 예를 들어 SportsStore 예제 응용프로그램에서는 이 기술을 사용해서 모든 액션 메서드에 네비게이션 데이터를 일일이 추가하지 않고도 모든 페이지에 데이터 기반의 네비게이션 메뉴를 포함시킬 수 있었다. 이는 네비게이션에 대한 데이터가 자식 액션에 의해서 독립적으로 공급되기 때문이다. 
+
+
+※ 자식 액션 만들기
+모든 액션을 자식 액션으로 사용할 수 있다. 자식 액션 기능을 살펴보기 위해서 Home 컨트롤러에 목록 20-27와 같이 새로운 액션 메서드를 추가하도록 하자. 
+
+
+
+목록 20-27 HomeController.cs 파일에 자식 액션 추가하기
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace WorkingWithRazor.Controllers
+{
+    public class HomeController : Controller
+    {        
+        public ActionResult Index()
+        {
+            string[] names = { "Apple", "Orange", "Pear" };
+            return View(names);
+        }
+
+        public ActionResult List()
+        {
+            return View();
+        }
+	//추가
+        [ChildActionOnly]
+        public ActionResult Time()
+        {
+            return PartialView(DateTime.Now);
+        }
+
+    }
+}
+
+
+목록 20-27 에서는 Time이라는 액션 메서드를 추가하고 PartialView 헬퍼 메서드를 (이 메서드에 관해서는 17장에서 살펴봤다)호출해서 부분 뷰를 렌더하고 있다. 또한 ChildActionOnly 어트리뷰트를 적용함으로써 이 액션 메서드를 뷰 내부에서 자식 액션 메서드로 호출하는 경우에만 정상적으로 응답하도록 제한하고 있다. 일반적으로 액션 메서드를 자식 액션으로 사용하기 위해서 반드시 이 어트리뷰트를 지정해야만 하는 것은 아니지만 이번 예제에서처럼 사용자 요청의 결과로 액션 메서드가 호출되지 않도록 방지하는 것도 나쁘지 않은 방법이다. 
+
+자식 액션 메서드를 정의했으므로 이번에는 이 액션 메서드가 호출될 때 렌더될 부분 뷰를 생성해보도록 하자. 일반적으로 자식 액션은 부분 뷰와 연관되는 경우가 대부분이지만 반드시 그래야만 하는 것은 아니다. 목록 20-28 은 이번 예제를 위해서 생성한 /Views/Home/Time.cshtml뷰를 보여주고 있다. 이 뷰는 강력한 형식의 부분 뷰로서 DateTime 개체를 뷰 모델로 사용하고 있다. 
+
+
+
+목록 20-28 Time.cshtml 파일의 내용
+@model DateTime
+
+<p>The time is: @Model.ToShortTimeString()</p>
+
+
+
+※ 자식 액션 렌더링하기
+자식 액션은 Html.Action 헬퍼 메서드를 이용해서 호출한다. 이 헬퍼 메서드를 호출하면 액션 메서드가 실행되고 ViewResult 가 처리되어 그 출력이 클라이언트에 대한 응답에 삽입된다. 목록 20-29은 자식 액션을 렌더하도록 수정한 /Views/Common/List.cshtml 파일을 보여주고 있다. 
+
+
+
+
+목록 20-29 List.cshtml 파일에서 자식 액션 호출하기
+@{
+    ViewBag.Title = "List";
+    Layout = null;
+}
+
+<h3>This is the /Views/Common/List.cshtml View</h3>
+
+@Html.Partial("MyStronglyTypedPartial",new[] { "Apple", "Orange", "Pear" })
+
+@Html.Action("Time") <!-- 추가-->
+
+이제 응용 프로그램을 실행하고 /Home/List URL로 이동해보면 그림 20-11에서 볼 수 있는 것과 같이 자식 액션을 호출한 결과를 확인할 수 있다. 
+
+
+목록 20-29에서는 Action 헬퍼 메서드를 호출하면서 단일 매개변수를 전달하고 있는데 이 매개변수를 통해서 호출하고자 하는 액션 메서드의 이름을 지정할 수 있다. 이렇게 매개변수를 하나만 전달하면 MVC 프레임워크가 현재 요청을 처리하고 있는 컨트롤러에서 액션 메서드를 찾게 된다. 다른 컨트롤러에 정의된 액션 메서드를 호출하려면 다음과 같이 컨트롤러 이름을 함께 제공하면 된다. 
+
+...
+@Html.Action("Time", "MyController")
+...
+
+
+그리고 헬퍼 메서드에 익명 형식의 개체를 제공해서 액션 메서드에 매개변수들을 전달할 수도 있다. 이때 제공하는 개체의 속성들이 자식 액션 메서드의 매개변수들의 이름과 같아야 한다. 
+
+예를 들어 다음은 자식 액션이 존재하는 경우다
+
+...
+        [ChildActionOnly]
+        public ActionResult Time()
+        {
+            return PartialView(DateTime.Now);
+        }
+....
+
+뷰에서 다음과 같이 호출할 수 있다. 
+
+...
+@Html.Action("Time", new {time = DateTime.Now})
+...
+
+
+
+
+※ 요약
+이번 장에서는 MVC의 뷰 시스템과 Razor 뷰 엔진에 관한 자세한 내용들을 살펴봤다. 사용자 지정 뷰 엔진 구현하는 방법과 기본 Razor 엔진의 동작을 사용자 지정하는 방법, 그리고 뷰에 동적 콘텐트를 삽입하기 위한 다양한 기법들에 대해서도 알아봤다. 다음 장에서는 뷰에 삽입 할 수 있는 콘텐트 생성을 도와주는 헬퍼 메서드에 관해서 살펴보도록 하겠다. 
