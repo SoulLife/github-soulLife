@@ -1,0 +1,490 @@
+CHAPTER 21장 : 헬퍼 메서드
+
+이번 장에서는 코드 및 마크업들의 묶음을 MVC 프레임워크 응용프로그램의 전반에서 재사용할 수 있게 해주는 헬퍼 메서드에 대해서 살펴본다. 먼저 필요한 자신만의 헬퍼 메서드를 직접 만드는 방법을 살펴보고 MVC 프레임워크가 제공해주는 광범위한 내장 헬퍼 메서드들 중에서 HTML form과 input 및 select 요소들을 만드는데 사용할 수 있는 헬퍼 메서드들을 시작으로 이번장과 다음 두 장에 걸쳐서 헬퍼 메서드에 관해서 탐구해볼 것이다. 표 21-1은 이번 장의 개요를 요약해서 보여주고 있다. 
+
+
+
+표 21-1 21장 요약
+
+주제							내용																목록
+뷰에서 재사용 할수 있는 마크업 영역		인라인 헬퍼 메서드를 생성한다.												1 - 4
+만들기
+
+여러 개의 뷰에서 사용할 수 있는 마크업	외부 헬퍼 메서드를 생성한다.												5 - 11
+만들기
+
+form 요소 생성하기					Html.BeginFomr과 Html.EndForm 헬퍼 메서드를 사용한다.								12 - 19
+
+form 요소 생성하기(특정 라우트 사용)		Html.BeginRouteForm 헬퍼 메서드를 사용한다.									20 - 21
+
+input 요소 생성하기				input 헬퍼 메서드를 사용한다.												22 - 24
+
+모델 개체를 이용해서 input 요소 생성하기	강력한 형식의 input 헬퍼 메서드를 사용한다.										25
+
+select 요소 생성하기				DropDownList와 ListBox 헬퍼 메서드 및 이에대한 강력한 형식의 헬퍼 메서드를 사용한다.			26 - 27
+
+
+
+※ 예제 프로젝트 준비하기
+
+먼저 Empty 템플릿을 사용해서 HelperMethods란 이름으로 이번 장에서 사용할 새로운 Visual Studio MVC 프로젝트를 생성한다. 이때 MVC 옵션을 체크해서 MVC에 관한 핵심 폴더들과 참조들이 함께 추가되도록 지정한다. 그리고 다음 목록 21-1과같은 내용을 담고 있는 Home 컨트롤러를 추가한다. 
+
+
+목록 21-1 HomeController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace HelperMethods.Controllers
+{
+    public class HomeController : Controller
+    {        
+        public ActionResult Index()
+        {
+            ViewBag.Fruits = new string[] { "Apple", "Orange", "Pear" };
+            ViewBag.Cities = new string[] { "New York", "London", "Paris" };
+
+            string message = "This is an HTML element: <input>";
+            return View((object)message);
+        }
+    }
+}
+
+
+이 Index 액션 메서드는 ViewBag 기능을 통해서 두 개의 문자열 배열을 전송하고 있으며, 모델 개체로는 문자열을 지정하고 있다. 계속해서 이번에는 Views/Home 폴더에 Index.cshtml 이라는 이름의 뷰를 추가한다. 이뷰 파일의 내용을 목록 21-2에서 확인할 수 있다. 이 뷰는 강력한 형식의 뷰로(모델 형식은 string이다) 레이아웃은 사용하지 않는다.
+
+
+목록 21-2 Index.cshtml 파일의 내용
+
+@model string
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+    <div> 
+        Here are the fruits:
+        @foreach (string str in (string[])ViewBag.Fruits)
+        {
+            <b>@str</b>
+        }
+    </div>
+    <div>
+        Here are the cities:
+        @foreach (string str in (string[])ViewBag.Cities)
+        {
+            <b>@str</b>
+        }
+    </div>
+    <div>
+        Here is the message:
+        <p>@Model</p>
+    </div>
+</body>
+</html>
+
+
+
+
+※ 프로젝트 시작 URL 설정하기
+
+개인적으로 필자는 Visual Studio가 현재 편집 중이던 파일을 기반으로 추측한 URL보다는 응용프로그램의 루트 URL에서부터 프로젝트가 시작되는 것을 선호한다. 이렇게 설정하려면 Visual Studio 의 [프로젝트(Project)] 메뉴에서 [HelperMethods 속성(HelperMethods Properties)]을 선택한 다음 [웹(Web)]탭의 [시작 작업(Start Action)] 영역에 위치한 [특정 페이지(Specific Page)] 옵션을 체크한다. 다만 이 옵션의 텍스트 박스에 값을 입력할 필요는 없으며 단지 이옵션을 체크하는 것만으로도 충분하다. 
+
+
+
+※ 예제 응용프로그램 테스트하기
+
+이제 응용프로그램을 실행시켜보면 렌더된 뷰를 확인할 수 있다. 그림 21-1에서 볼 수 있는 것처럼 Visual Studio가 프로젝트에 추가해준 기본 라우팅 구성에 의해서 루트 URL에 대한 요청은 자동으로 Home 컨트롤러의 Index 액션 메서드로 전달된다. 
+
+
+※ 사용자 지정 헬퍼 메서드 작성하기
+이번 장에서도 지난 몇 개의 장들에서 사용했던 진행 방식을 취하려고 한다. 먼저 헬퍼 메서드의 사용자 지정 구현을 직접 작성해보면서 헬퍼 메서드에 대해서 자세하게 알아보자. 이어지는 절들에서는 사용자 지정 헬퍼 메서드를 만드는 두 가지 서로 다른 기법을 살펴볼 것이다. 
+
+
+
+
+※ 인라인 헬퍼 메서드 작성하기
+
+가장 간단한 유형의 헬퍼 메서드는 뷰 내부에 정의되는 인라인 헬퍼 메서드다. 목록 21-3의 예제 뷰에서 볼 수 있는 것처럼 @helper 태그를 사용하면 간단하게 인라인 헬퍼 메서드를 만들수 있다. 
+
+
+목록 21-3 Index.cshtml 파일에 인라인 헬퍼 메서드 만들기
+
+@model string
+@{
+    Layout = null;
+}
+<!-- 추가-->
+@helper ListArrayItems(string[] items)
+{
+    foreach (string str in items)
+    {
+        <b>@str</b>
+    }
+}
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+    <div> 
+        Here are the fruits: @ListArrayItems(ViewBag.Fruits)<!-- 수정-->
+        
+    </div>
+    <div>
+        Here are the cities: @ListArrayItems(ViewBag.Cities)<!-- 수정-->
+    </div>
+    <div>
+        Here is the message:
+        <p>@Model</p>
+    </div>
+</body>
+</html>
+
+
+인라인 헬퍼 메서드는 일반적인 C# 메서드와 유사하게 이름과 매개변수들을 가진다. 이번 예제에서는 문자열 배열을 매개변수로 갖는 ListArrayItems라는 이름의 헬퍼 메서드를 정의하고 있다. 헬퍼 메서드는 마치 메서드처럼 보이지만 반환 값이 존재하지 않는다. 헬퍼 메서드 본문의 콘텐트는 처리된 후 클라이언트로 전송되는 응답에 추가된다. 
+
+
+
+TIP:
+이 예제에서 ViewBag 의 동적 속성들을 문자열 배열로 형 변환할 필요가 없었다는 점에 유의하기 바란다. 이 유형의 헬퍼 메서드를 사용할 때 좋은 점중 하나는 바로 런타임에 형식을 평가한다는 점이다. 
+
+
+
+
+인라인 헬퍼 메서드의 구현 부분은 Razor 뷰의 다른 부분들과 동일한 구문을 따른다. 즉 리터럴 문자열들은 정적 HTML 요소로 간주되고 Razor에 의해서 처리되어야 할 구문들은 @ 문자로 시작된다. 이번 예제의 헬퍼 메서드에는 정적 HTML과 배열의 항목들을 열거하기 위한 Razor 태그들이 뒤섞여 있는데 결과적으로 헬퍼 메서드가 정의되기 이전의 뷰와 동일한 출력을 생성하지만 뷰 페이지에서 중복된 코드들의 양을 감소시켜 준다. 
+
+이 접근 방식의 장점은 배열의 내용이 표시되는 방식을 변경하고자 하는 경우 변경 작업을 단한번만 수행하면 된다는 것이다. 간단한 예로 목록 21-4는 그냥 단순히 값들만 출력하던 헬퍼 메서드를 번호 없는 HTML 목록 요소들을 사용해서 출력하도록 변경한 것이다. 
+
+
+
+목록 21-4 Index.cshtml 파일의 헬퍼 메서드 내용 변경하기
+
+....
+@helper ListArrayItems(string[] items)
+{
+    <ul>
+        @foreach(string str in items)
+        {
+            <li>@str</li>
+        }
+    </ul>
+}
+....
+
+
+단지 한 곳의 코드만 변경했는데 이번 예제 같은 간단한 프로젝트에서는 대수롭지 않은 사소한 장점인 것처럼 보일 수도 있지만 실제 프로젝트에서는 간단하지만 일관성 있게 뷰들을 관리하기 위한 유용한 방법이 될 수도 있다. 이 작업의 결과를 그림 21-2에서 확인할 수 있다. 
+
+
+
+
+TIP:
+목록 21-4에서는 목록 21-3과는 달리 foreach 구문 앞에 @ 문자를 입력했다는 점에 주목하자. 그 이유는 헬퍼 메서드에서 본문의 첫 번째 요소가 HTML 요소로 변경됐기 때문인데 이렇게 @ 문자를 지정하면 Razor 에 C# 문법을 사용하고자 한다는 의도를 알려주게 된다. 이전 예제에서는 헬퍼 메서드 본문의 첫 번째 요소가 HTML이 아니었기 때문에 Razor 메서드 본문의 대부분의 내용을 코드로 간주했었던 것이다. 이런 기이한 특징을 일일이 기억해두기 어려울 수도 있겠지만 대신 Visual Studio가 이런 부분들에 대한 오류를 상세하게 보여준다. 
+
+
+
+
+
+※ 외부 헬퍼 메서드 작성하기
+
+인라인 헬퍼 메서드는 매우 편리하기는 하지만 해당 메서드가 정의된 뷰에서만 사용할 수 있을 뿐만 아니라 조금 복잡해지기라도 하면 뷰의 내용 중 대부분을 차지하게 되어 가독성도 떨어지게 된다. 
+
+그 대안으로 C#의 확장 메서드 형식으로 구현되는 외부 HTML 헬퍼 메서드를 작성하는 방법이 있다. 외부 헬퍼 메서드는 좀 더 폭넓게 사용될 수 있는 반면 작성하기 다소 까다로울 수도 있는데 C#은 HTML 요소를 생성하는 작업을 자연스럽게 처리하지 못하기 때문이다. 이 기능을 살펴보기 위해서 예제 프로젝트에 Infrastructure라는 폴더를 추가한 다음 이 폴더에 새로운 CustomHelpers.cs 클래스 파일을 생성한다. 이 파일의 내용은 목록 21-5에서 살펴볼 수 있다. 
+
+
+목록 21-5 CustomHelpers.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+namespace HelperMethods.Infrastructure
+{
+    public static class CustomHelpers
+    {
+        public static MvcHtmlString ListArrayItems(this HtmlHelper html, string[] list)
+        {
+            TagBuilder tag = new TagBuilder("ul");
+
+            foreach (string str in list)
+            {
+                TagBuilder itemTag = new TagBuilder("li");
+                itemTag.SetInnerText(str);
+                tag.InnerHtml += itemTag.ToString();
+            }
+            return new MvcHtmlString(tag.ToString());
+        }
+    }
+}
+
+
+이번에 작성한 헬퍼 메서드도 이전 예제의 인라인 헬퍼 메서드와 동일한 기능을 수행한다. 즉 문자열 배열을 전달받은 다음 배열의 각각의 문자열들에 대한 li 요소를 담고 있는 HTML ul 요소를 생성한다. 
+
+헬퍼 메서드의 첫 번째 매개변수는 HtmlHelper 개체로 이 매개변수에 지정된 this 키워드는 C# 컴파일러에 지금 선언하고 있는 메서드가 확장 메서드라는 것을 알려준다. 이 HtmlHelper 클래스는 표 21-2에 설명된 속성들을 통해서 콘텐트를 생성하는 데 도움이 될 수 있는 유용한 정보들을 제공해준다. 
+
+
+표 21-2 HtmlHelper 클래스에 정의된 유용한 속성
+
+속성					설명
+RouteCollection			응용프로그램에서 정의된 라우트들의 집합을 반환한다. 
+
+ViewBag				액션 메서드에서 헬퍼 메서드가 호출된 뷰로 전송된 ViewBag 데이터를 반환한다. 
+
+ViewContext				요청에 대한 상세 정보들과 요청이 처리된 방법에 대한 정보를 담고 있는 ViewContext 개체를 반환한다(바로 다음에서 설명할
+					것이다)
+
+
+
+이 중에서 ViewContext 속성은 현재 처리 중인 요청에 적합한 콘텐트를 생성하고자 할때 가장 유용하다. 표 21-3에서 ViewContext 클래스에 정의된 일반적으로 가장 많이 사용되는 유용한 속성들을 정리해봤다. 
+
+
+
+표 21-3 ViewContext 클래스에서 정의된 유용한 속성
+
+속성					설명
+Controller				현재 요청을 처리하는 컨트롤러를 반환한다. 
+
+HttpContext				현재 요청에 대한 정보를 담고 있는 HttpContext 개체를 반환한다. 
+
+IsChildAction			헬퍼 메서드를 호출한 뷰가 자식 액션으로 렌더되고 있는 경우 true를 반환 한다(자식 액션에 대한 자세한 내용은 20장을 참고
+					하기 바란다)
+
+RouteData				요청에 대한 라우팅 데이터 반환한다.
+
+View					헬퍼 메서드를 호출한 IView 인터페이스 구현 개체의 인스턴스를 반환한다. 
+
+
+
+비록 요청에 관해서 얻을 수 있는 정보들은 상당히 포괄적이지만 대부분의 헬퍼 메서드는 간단하고 주로 일관성 있는 서식을 유지하기 위한 용도로 사용된다. 대신 요청에 따른 내용을 생성하기 위해서는 내장 헬퍼 메서드를 사용할 수 있으며(이번 장의 뒷부분에서 이런 헬퍼 메서드들을 살펴본다)보다 복잡한 작업들에 대해서는 부분 뷰나 자식 액션을 사용할 수도 있다(다음 절에서 어떤 접근 방식을 사용해야 하는지에 대한 지침을 제공한다)
+
+이번 예제 헬퍼 메서드는 요청에 대해서는 아무런 정보도 필요로 하지 않지만 몇 가지 HTML 요소들을 생성해야 한다. 헬퍼 메서드에서 HTML 을 생성할 수 있는 가장 쉬운 방법은 TagBuilder 클래스를 사용하는 것이다. 이 클래스를 사용하면 별도로 이스케이프 처리를 하거나 특수 문자들을 다루지 않고서도 HTML 문자열을 만들어 낼 수 있다. TagBuilder 클래스는 System.Web.WebPages.Mvc 어셈블리의 일부지만 형식 전달(Type Forwarding)기능을 통해서 마치 System.Web.Mvc 어셈블리의 일부분인 것처럼 보여진다. 두 어셈블리 모두 Visual Studio에 의해서 MVC 프로젝트에 추가되기 때문에 별도의 설정 없이도 TagBuilder 클래스를 바로 사용할 수 있다. 그러나 MSDN(Microsoft Developer Network) API 문서에는 이런 내용이 소개되어 있지 않다. 
+
+새로운 TagBuilder의 인스턴스를 생성하려면 구성하고자 하는 HTML 요소의 이름을 생성자 매개변수로 전달해 주면 된다. 그리고 TagBuilder 클래스를 사용하면 꺽쇠 문자(<, >)를 사용할 필요가 없다. 따라서 다음과 같은 방식으로 ul 요소를 생성할 수 있다. 
+
+...
+TagBuilder tag = new TagBuilder("ul");
+..
+
+
+TagBuilder 클래스의 가장 유용한 멤버들에 대해서 표 21-4에 정리했다. 
+
+
+표 21-4 TagBuilder 클래스의 주요 멤버
+
+멤버						설명
+InnerHtml					이 속성을 사용하면 HTML 문자열의 요소의 내용을 설정할 수 있다. 이 속성에 지정된 값은 인코딩 처리되지 않으므로
+						HTML 요소들을 끼워 넣어서 중첩시키는데 사용될 수 있다. 
+
+SetInnerText(string)			HTML 요소의 텍스트 내용을 설정한다. 문자열 매개변수의 값은 안전하게 출력될 수 있도록 인코딩 처리된다. 
+
+AddCssClass(string)				HTML 요소에 CSS 클래스를 추가한다. 
+
+MergeAttribute(string,string, bool)	HTML 요소에 어트리뷰트를 추가한다. 첫 번째 매개변수는 어트리뷰트의 이름이고, 두 번째 매개변수는 그 값이다. 마지막 
+						bool 형 매개변수는 이미같은 이름의 어트리뷰트가 존재할 경우 값을 덮어쓸지 여부를 지정한다. 
+
+
+
+이 HTML 헬퍼 메서드의 결과는 MvcHtmlString 개체로, 이 개체의 콘텐트는 클라이언트에 대한 응답에 직접 삽입된다. 이번예제 헬퍼 메서드에서는 다음과 같이 새로운 MvcHtmlString 개체의 생성자에 TagBuilder.ToString 메서드의 결과를 전달하고 있다.
+
+...
+return new MvcHtmlString(tag.ToString());
+...
+
+이 구문은 ul 및 li 요소들을 담고 있는 HTML 조각을 생성한 다음 응답에 삽입될수 있도록 그 HTML 조각을 뷰 엔진에 반환한다. 
+
+
+
+
+※ 사용자 지정 외부 헬퍼 메서드 사용하기
+
+사용자 지정 외부 헬퍼 메서드를 사용하는 방법은 인라인 헬퍼 메서드를 사용하는 방법과는 조금 다르다. 목록 21-6에서 인라인 헬퍼 메서드 대신 외부 헬퍼 메서드를 사용하도록 /Views/Home/Index.cshtml 파일을 변경한 결과를 확인할 수 있다. 
+
+
+
+
+목록 21-6 Index.cshtml 파일에서 사용자 지정 외부 헬퍼 메서드 사용
+
+@model string
+@using HelperMethods.Infrastructure <!-- 추가-->
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+    <div> 
+        Here are the fruits: @Html.ListArrayItems((string[])ViewBag.Fruits) <!-- 수정-->
+        
+    </div>
+    <div>
+        Here are the cities: @Html.ListArrayItems((string[])ViewBag.Cities) <!-- 수정-->
+    </div>
+    <div>
+        Here is the message:
+        <p>@Model</p>
+    </div>
+</body>
+</html>
+
+
+
+먼저 헬퍼 확장 메서드를 포함하고 있는 네임스페이스가 지정되어 있는지 확인해야 한다. 여기에서는 @using 태그를 사용해서 네임스페이스를 추가하고 있지만 많은 양의 사용자 지정 헬퍼 메서드를 개발해야 한다면 /Views/web.config 파일에 헬퍼 메서드들이 포함된 네임스페이스들을 추가해서 모든 뷰에서 항상 사용할수 있도록 설정할 수도 있다. 
+
+그리고 @Html.<helper> 방식을 사용하여 헬퍼 메서드를 참조하고 있는데 여기서 <helper>는 확장 메서드의 이름이다. 가령 이번 예제에서는 @Html.ListArrayItems와 같이 사용하고 있다. 이 표현식에서 Html 부분은 뷰의 기본 클래스에 정의된 속성을 참조하는데 이 속성은 목록 21-5의 확장 메서드를 작성하면서 첫 번째 매개변수로 지정했던 형식인데 이 속성은 목록 21-5의 확장 메서드를 작성하면서 첫 번째 매개변수로 지정했던 형식인 HtmlHelper 개체들을 반환해준다. 
+
+또한 인라인 헬퍼 메서드나 C# 메서드를 사용할 때와 마찬가지로 외부 헬퍼 메서드에도 데이터를 전달하고 있기는 하지만 ViewBag 개체의 동적 속성을 외부 헬퍼 메서드의 매개변수의 형식(이번 예제에서는 string 배열)으로 형 변환해야 하므로 주의해야만 한다. 이 구문은 인라인 헬퍼 메서드를 사용하는 것만큼 우아하지는 않지만 프로젝트의 모든 뷰에서 사용할 수 있는 헬퍼 메서드를 만들기 위해 지불해야만 하는 대가의 일부라고 보면 된다. 
+
+
+
+
+
+언제 헬퍼 메서드를 사용해야 할까?
+이렇게 헬퍼 메서드의 동작 방식을 살펴보고 나면 자연스럽게 언제 부분 뷰나 자식 액션 대신, 헬퍼 메서드를 사용해야 하는것인지에 대한 의문이 생길 것이다. 특히 이 기능들을 사용해서 수행할 수 있는 작업들 간에 서로 중복되는 부분들이 많기 때문이다. 
+
+개인적으로 필자는 이번 예제와 같이 뷰에서 중복되는 코드의 양을 줄이고 내용을단순화 시키기 위한 목적으로만 헬퍼 메서드를 사용하는 편이다. 보다 복잡한 마크업과 콘텐트를 다뤄야할 때는 부분뷰를 모델 데이터를 조작해야 하는 경우에는 자식 액션을 사용한다. 여러분도 이런 접근 방식에 따라 헬퍼 메서드는 가급적 간단하게 사용하는 것을 권한다.(필자는 헬퍼 메서드에 다소 많은 양의 C# 구문들이 필요하다거나 HTML 요소들보다 C# 구문들이 더 많다면 자식 액션으로 대체하곤 한다) 
+
+
+
+
+※ 헬퍼 메서드에서 문자열 인코딩 관리하기
+
+MVC 프레임워크는 악의적인 데이터로부터 응용프로그램을 보호하기 위해서 자동으로 데이터를 안전하게 인코딩해서 HTML 페이지에 추가해준다. 목록 21-7에서 볼 수 있는 것처럼 예제 응용프로그램의 Home 컨트롤러에서는 잠재적으로 문제를 일으킬수 있는 문자열을 모델 개체로 뷰에 전달하고 있는데 이를 통해서 이 기능을 직접 확인해볼 수 있다. 
+
+
+목록 21-7 HomeController.cs 파일의 내용
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace HelperMethods.Controllers
+{
+    public class HomeController : Controller
+    {        
+        public ActionResult Index()
+        {
+            ViewBag.Fruits = new string[] { "Apple", "Orange", "Pear" };
+            ViewBag.Cities = new string[] { "New York", "London", "Paris" };
+
+            string message = "This is an HTML element: <input>"; //주목
+
+            return View((object)message);
+        }
+    }
+}
+
+이 모델 개체는 유효한 HTML 요소를 포함하고 있지만 그 값이 Razor에 의해서 렌더되고 나면 다음과 같은 HTML 이 생성된다. 
+
+...
+<div>
+	Here is the message:
+	<p>This is an HTML element: &lt;input&gt;</p>
+</div>
+...
+
+
+이 기능은 브라우저에 의해서 유효한 마크업으로 해석되는 데이터 값들이 입력되는 것을 방지하기 위한 기본적인 보안 대책이다. 이런 기능이 제공되지 않는다면 악의적인 사용자가 자신의 HTML 마크업이나 JavaScript 코드를 추가해서 응용프로그램의 동작을 변조하려고 시도할 때 사용되는 일반적인 공격 형태의 좋은 먹잇감이 될 것이다. Razor 는 데이터 값들이 뷰에서 사용될 때 자동으로 그 값들을 인코드하지만 때로는 헬퍼 메서드에서 HTML을 생성해야 할 경우도 있다. 그에 따라 헬퍼 메서드는 뷰 엔진에 높은 수준의 신뢰를 받고 있기 때문에 더욱 주의가 필요하다. 
+
+
+
+
+
+※ 문제점 살펴보기
+
+문제점을 직접 살펴보기 위해서 목록 21-8에서 볼 수 있는 것처럼 CustomHelpers 클래스에 새로운 헬퍼 메서드를 작성했다. 이 헬퍼 메서드는 매개변수 형식으로 문자열을 받아서 Index뷰에 작성했던 일부 마크업과 동일한 HTML을 생성한다. 
+
+
+
+
+목록 21-8 CustomHelpers.cs 파일에 정의한 새로운 헬퍼 메서드
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+namespace HelperMethods.Infrastructure
+{
+    public static class CustomHelpers
+    {
+        public static MvcHtmlString ListArrayItems(this HtmlHelper html, string[] list)
+        {
+            TagBuilder tag = new TagBuilder("ul");
+
+            foreach (string str in list)
+            {
+                TagBuilder itemTag = new TagBuilder("li");
+                itemTag.SetInnerText(str);
+                tag.InnerHtml += itemTag.ToString();
+            }
+            return new MvcHtmlString(tag.ToString());
+        }
+        //추가
+        public static MvcHtmlString DisplayMessage(this HtmlHelper html, string msg)
+        {
+            string result = String.Format("This is the message: <p>{0}</p>", msg);
+            return new MvcHtmlString(result);
+
+    }
+}
+
+
+HTML 마크업을 생성하기 위해서 String.Format 메서드를 사용하고 있으며 MvcHtmlString 생성자의 인자로 그 결과값을 전달하고 있다. 목록 21-9를 살펴보면 /Views/Home/Index.cshtml 뷰를 변경해서 새로운 헬퍼 메서드를 사용하고 있는 방법을 살펴볼 수 있다. (또한 헬퍼 메서드에서 제공된 콘텐트를 강조하기 위해서 마크업도 일부 변경했다)
+
+
+
+목록 21-9 Index.cshtml 파일에서 DisplayMessage 헬퍼 메서드 사용하기
+
+@model string
+@using HelperMethods.Infrastructure <!-- 추가-->
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+</head>
+<body>
+    <div> 
+        <p>This is the content from the view:</p><!-- 수정-->
+        <div style="border:thin solid black; padding: 10px">
+            Here is the message:
+            <p>@Model</p>
+        </div>
+        
+    </div>
+    <p>This is the content from the helper method:</p>
+    <div style="border: thin solid black; padding: 10px">
+        @Html.DisplayMessage(Model)
+    </div>
+</body>
+</html>
+
+
+그림 21-3에서 볼 수 있는 것처럼 응용프로그램을 실행시켜보면 새로운 헬퍼 메서드의 효과를 확인할 수 있다. 
+
+이 결과에서 알 수 있는 것처럼 헬퍼 메서드는 안전한 콘텐트를 생성한다고 신뢰받기 때문에 브라우저가 input 요소를 출력하는 결과로 이어지게 되는데 불행하게도 이는 응용프로그램을 공격하기 위해 이용될수 있는 유형의 동작이다. 
