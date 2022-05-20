@@ -1,0 +1,234 @@
+5 : 뷰와 뷰모델이 합쳐진 코드 비하인드 이해하기
+
+기존의 Windows 개발 방식인 Windows Forms 등의 프로그램 개발에 익숙하거나 혹은 JSP나 ASP나 PHP, PERL 등의 CGI 프로그램 방식의 개발에 익숙한 독자는 뷰(View)와 뷰모델(ViewModel)로 구분된 프로그램을 하는 것에 대하여 과연 이렇게까지 프로그래밍을 어렵게 해야 하는지에 의문을 가질지도 모릅니다. 
+
+
+처음 접하는 get과 set 접근자를 사용하는 C# 문법도 쉽지만은 않고 하나로 작성하던 작고 간결한 프로그램을 굳이 두 개로 분리하여 작성하다 보니 개발 생산성도 그만큼 떨어집니다. 작고 간결한 프로그램을 개발할 때는 단순한 기술을 사용하고 복잡하고 어려운 프로그램을 개발할 때에는 정교한 기술을 사용하는 것이 타당합니다. 개발 기술이 업무를 위하여 존재하지 개발 기술을 위하여 업무가 존재하는 것은 아니기 때문입니다. 
+
+
+
+그래서 이번에는 MVVM 프로그램 패턴을 따르지 않는 방식의 UWP 프로그램은 어떻게 하는지 살펴보겠습니다. 마치 Windows Forms 프로그램을 작성하는 듯한 느낌을 받을 것입니다. 
+
+다음 코드와 같이 뷰(View)를 위한 TextBlock요소의 주석 처리를 풀고 코드비하인드(Code Begind)에서 사용할 TextBlock 요소를 추가합니다. 그리고 각각의 TextBlock 요소를 구분하여 프로그램하기 위하여 각각의 TextBlock 요소에 이름(Name)을 부여했습니다. 
+
+
+
+MainPage.xaml
+생략
+
+        <Grid
+            Grid.Row="1" 
+            Background="{ThemeResource SystemControlPageBackgroundChromeLowBrush}">
+            <TextBlock Text="Hello UWP World (View)" FontSize="36" HorizontalAlignment="Center"></TextBlock>
+            <TextBlock Text="{Binding helloGreetings}" FontSize="36" HorizontalAlignment="Center"></TextBlock>
+            <TextBlock x:Name="codeBehindGreetings" Text="Hello UWP World (Code Behind 기본값)" FontSize="36" HorizontalAlignment="Center" />
+            <!--
+                The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
+                Place your content here.
+            -->
+            
+        </Grid>
+생략
+
+
+그리고 프로그램을 실행해보면 다음 그림과 같이 3개의 TextBlock 요소가 겹쳐서 나오는 문제가 있는 것을 확인할 수 있습니다. 이런 현상을 해결하기 위하여 XAML 언어는 통상적으로 Layout 요소를 사용하나 여기서는 코드 비하인드(Code Behind)에서 해결할 것 입니다. 코드 비하인드(Code Behind)에서 TextBlock이나 Grid이나 StackPanel 같은 화면의 구성 요소들은 마치 Windows 컨트롤(Windows Control)처럼 동작합니다. 
+
+
+
+우선 프레임워크가 제공한 프로그램의 구조를 솔루션 탐색기에서 다시 한번 살펴봅시다. MainViewModel.cs 프로그램과 MainPage.xaml 프로그램은 각각 ViewModels 폴더와 Views 폴더에 독립적으로 위치합니다. 이와는 다르게 MainPage.xaml.cs라는 이름의 C# 프로그램은 다음 그림에서와 같이 MainPage.xaml 프로그램의하위 항목입니다. 다음 그림에 보이는 것과 같이 확장자가 .xaml.cs 인 뷰(View)에 종속된 프로그램을 코드 비하인드(Code Behind)라고 합니다. 그럼 MainPage.xaml.cs 파일을 더블클릭하여 프로그램 편집 화면으로 이동합니다. 
+
+프레임 워크에서 기본적으로 제공되는 Views에 종속된 코드 비하인드의 C# 코드는 다음과 같습니다. 
+
+
+
+MainPage.xaml.cs
+
+using System;
+
+using Hello_UWP_World.ViewModels;
+
+using Windows.UI.Xaml.Controls;
+
+namespace Hello_UWP_World.Views
+{
+    public sealed partial class MainPage : Page
+    {
+        private MainViewModel ViewModel => DataContext as MainViewModel;
+
+        public MainPage()
+        {
+            InitializeComponent();
+        }
+    }
+}
+
+
+위의 코드에서는 using 지시자를 사용하여 System과 Hello_UWP_World.ViewModels과 Windows.UI.Xaml.Controls 네임스페이스를 사용하도록 선언했습니다. System은 이벤트(Event)와 이벤트 핸들러(Event Handler)및 예외처리(Exception Handling)등을 위한 네임스페이스입니다. Hello_UWP_World.ViewModels는 이 프로그램의 ViewModel 네임스페이스이고 Windows.UI.Xaml.Controls는 XAML 언어의 화면 구성요소를 사용하게 해주는 네임스페이스입니다. 
+
+
+
+
+
+네임스페이스 ?
+C#에서 말하는 네임스페이스는 .NET이 가지고 있는 무수히 많은 클래스를 분류하여 모아놓은 동질의 클래스들의 집합으로 이해하면 됩니다. 네임스페이스는 점(.)으로 구분되는 계층적 트리 구조를 가지고 있습니다. Windows.UI.Xaml.Controls 네임스페이스를 예로 들면 Windows는 Windows 관련 최상위 네임스페이스가 되고 Windows.UI는 Windows 중 사용자 인터페이스(User Interface)관련 클래스들을 모아놓은 네임스페이스가 되고 Windows.UI.Xaml.Controls 는 사용자 인터페이스 중 XAML 컨트롤 클래스들을 모아놓은 네임스페이스가 되는 것입니다. 
+
+
+
+
+프로그램의 네임스페이스는 Hello_UWP_World.Views 로 지정했습니다. 그리고 하단에 있는 MainPage 클래스가 Page 클래스의 상속을 받아 정의된 후 MainPage() 생성자에서 InitializeComponent() 메소드를 호출하고 있습니다. 이 메소드는 Windows Forms 개발 경험이 있는 분들에게는 익숙할 텐데 화면을 초기화하는 역할을 합니다. 마이크로소프트는 컨트롤(Control)과 컴포넌트(Component)를 거의 같은 의미로 사용합니다. XAML에서는 요소(Element)라는 용어가 더해졌는데 역시거의 동일한 의미로 받아들이면 됩니다. 엄밀한 의미에서 컨트롤은 사용자와 상호작용하는 컴포넌트나 요소입니다. 
+
+
+여기서 이해하기 어려워 보이는 1 코드를 설명하면 =>는 필드 이니셜라이저(Field Initializer)로 사용되어 클래스의 DataContext 요소를 ViewModel 객체 변수에 할당하는 역할을 합니다. =>를 필드 이니셜라이저로 사용하기 때문에 ViewModel 변수에 값이 아닌 람다식이 할당됩니다. 그 결과 뷰모델(ViewModel)이 변경되어도 언제나 최산 상태를 가져다 사용하게 됩니다. 
+
+
+
+
+
+알아두기:
+DataContext는 XAML 코드, 코드 비하인드, 뷰모델 코드의 데이터를 연결해주는 클래스의 속성입니다. 코드 비하인드에서는 데이터바인딩을 위하여 controlName.DataContext = objectVariable;과 같은 문장의 형태로 직접 사용하는데 objectVariable은 INotifyPropertyChanged 인터페이스의 상속을 받아 PropertyChangedEventHandler를 구현하고 있어야 합니다. 
+
+WPF 프로그램에서는 개발자가 직접 코딩해야 했지만 Prism 기반의 UWP에서는 프레임워크가 제공하기 때문에 뷰모델에서 내부적으로 INotifyPropertyChanged 인터페이스가 구현되어 있어 개발자가 특별한 코딩을 하지 않아도 데이터 바인딩 이 동작하는 것입니다. XAML 코드에서는 <Control x:Name="controlName" DataContext="{StaticResource resourceName}">의 형태로 자원 데이터를 바인딩할때 주로 사용됩니다. 
+
+
+
+
+
+알아두기:
+필드 이니셜라이저는 값을 할당해 준다는 의미로 가장 간단한 형태는 할당 연산자 = 이 있으며 객체의 생성자에서 객체의 변수에 값을 할당해 주는 행위 등도 필드 이니셜라이저의 기능을 수행하는 것입니다. 
+
+
+
+
+
+클래스를 정의할 때 사용한 partial 키워드는 해당 클래스가 부분적이라는 의미입니다. 즉 다른 프로그램에도 이 클래스를 정의하는 부분이 있다는 뜻입니다. 그럼 MainPage 객체의 나머지 부분은 어디에 정의되어 있는 것일까요? 그곳은 바로 코드 비하인드의 뷰(View)인 MainPage.xaml 파일입니다. 
+
+
+XAML 언어는 외형상 마크업 언어이지만 컴파일하고 나면 이에 상응하는 C# 프로그램으로 변환됩니다. UWP Prism 프레임워크가 뼈대로 제공하는 XAML 프로그램의 Page 요소의 클래스가 x:Class="Hello_UWP_World.Views.MainPage"와 같이 정의되어 있어서 뷰(View)와 코드 비하인드가 같은 클래스임을 알려줍니다. 이로 인해 코드 비하인드 프로그램을 개발하기 위하여 수정한 XAMl 코드에서 이름을 부여한 TextBlock 요소들을 마치 객체(Object)와 같이, 혹은 화면의 컨트롤과 같이 코드 비하인드에서 사용할 수 있습니다. 뒤에서 설명할 코드 비하인드 코딩을 해보면 무슨 말인지 금방 이해할수 있을 것입니다. 
+
+
+sealed 키워드는 다른 클래스가 정의되는 클래스를 상속하여 사용하지 못하도록 막는다는 의미입니다. 뷰(View)에 종속적인 프로그램 클래스를 다른 곳에서 상속해서 사용할 수 없는 것입니다. 
+
+이상으로 프레임워크가 뼈대로 제공하는 코드 비하인드의 C# 프로그램 코드에 대한 설명이 끝났습니다. 이제 앞서 보셨던 TextBlock 요소가 중복하여 나타나는 문제를 해결해보죠. 
+
+
+우선 첫 번째 TextBlock 요소가 로드되었을 때 화면에 나타나지 않도록 해보겠습니다. TextBlock 요소의 Loaded 이벤트에 TextBlock 이 나타나지 않도록 코딩하면 됩니다. 코드 보기에서 첫 번째 TextBlock 태그를 선택하면 속성창이 다음 그림과 같이 나타납니다. 여기서 이벤트 창으로 이동하려면 번개아이콘을 선택합니다. 이벤트 창에서 속성 창으로 다시 이동하기 위해서는 뺀지그림 아이콘을 선택하면 됩니다. 
+
+
+이벤트 창을 스크롤해서 내려가면 Loaded 이벤트가 보입니다. TextBlock 요소가 뷰(View)에 로드되어 나타날 때 발생하는 이벤트라는 것은 직관적으로 알 수 있습니다. Loaded 이벤트에 프로그램 코드를 추가하기 위하여 Loaded 옆의 공란을 더블클릭합니다. 이벤트 핸들러는 이벤트가 발생했을 때 실행해주는 메소드를 의미합니다. TextBlock 요소를 정의하는 XAML 코드에서 Loaded 이벤트를 의미하는 Loaded 속성에 만들어진 이벤트 핸들러의 이름이 다음 코드와 같이 추가되는 것을 눈치 채셨나요?
+
+
+다음은 이벤트 핸들러가 추가된 XAML 코드입니다. 
+
+
+MainPage.xaml
+생략
+            <TextBlock Name="viewGreetngs" Text="Hello UWP World (View)" FontSize="36" HorizontalAlignment="Center" Loaded="TextBlock_Loaded" />	
+            <TextBlock Name="viewModelGreetngs" Text="{Binding helloGreetings}" FontSize="36" HorizontalAlignment="Center"></TextBlock>
+            <TextBlock x:Name="codeBehindGreetings" Text="Hello UWP World (Code Behind 기본값)" FontSize="36" HorizontalAlignment="Center" />
+
+생략
+
+
+다음은 이벤트 핸들러가 추가된 코드 비하인드 C# 코드입니다. 
+
+
+MainPage.xaml.cs
+
+생략
+
+        public MainPage()
+        {
+            InitializeComponent();
+        }
+
+        private void viewGreetngs_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+
+        }
+생략
+
+
+그러면 프레임워크가 자동으로 만들어준 이벤트 핸들러에 다음 코드와 같이 프로그램 코드를 추가해보겠습니다. 
+
+
+MainPage.xaml.cs
+생략
+        public MainPage()
+        {
+            InitializeComponent();
+        }
+
+        private void viewGreetngs_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+            viewGreetngs.Opacity = 0;
+            //((TextBlock)sender).Opacity = 0;
+        }
+생략
+
+
+자동으로 생성된 viewGreetngs_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)이벤트 핸들러에 viewGreetngs.Opacity = 0; 을 추가합니다. viewGreetngs는 첫 번째 TextBlock 요소의 이름이니 viewGreetngs라는 이름의 TextBlock요소의 Opacity(불투명도)를 0으로하면 TextBlock이 보이지 않게 됩니다. 이벤트 핸들러에 인자로 제공되는 sender가 이벤트가 발생한 객체임을 고려하여 ((TextBlock)sender).Opacity = 0; 처럼 코딩할수도 있습니다. 
+
+
+e는 이벤트 발생 시 함께 제공되는 인자(argument)인데 이 예제에서는 사용되지 않지만 마우스 관련 이벤트 발생 시 마우스의 좌표나 진행 상태 관련 이벤트 발생 시 진행률 등의 추가적인 정보를 제공합니다. 
+
+같은 방법으로 두 번째 TextBlock 요소인 viewModelGreeting TextBlock도 보이지않게 처리한 후 앱을 실행해보면 다음 그림과 같이 세 번째 codeBehindGreetings TextBlock 요소만 나타납니다. 
+
+
+MainPage.xaml.cs
+
+생략
+        public MainPage()
+        {
+            InitializeComponent();
+        }
+
+        private void viewGreetngs_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+            viewGreetngs.Opacity = 0;
+            //((TextBlock)sender).Opacity = 0;
+        }
+
+        private void viewModelGreetngs_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+            viewModelGreetngs.Opacity = 0;
+            //((TextBlock)sender).Opacity = 0;
+        }
+생략
+
+
+이제 코드 비하인드를 사용하여 화면에 나타나는 문자열을 바꾸어 보겠습니다. 세 번째 codeBehindGreetings TextBlock의 Loaded 이벤트 핸들러를 생성한 후 codeBehindGreetngs.Text = "Hello UWP World(Code Behind Program Code)"; 문장을 추가하고 프로그램을 실행하면 "Hello UWP World(Code Behind 기본값)"문자열 대신 "Hello UWP World(Code Behind Program Code)" 문자열이 화면에 나타나는 것을 확인할 수 있습니다. 
+
+
+MainPage.xaml.cs
+
+생략
+
+        public MainPage()
+        {
+            InitializeComponent();
+        }
+
+        private void viewGreetngs_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+            viewGreetngs.Opacity = 0;
+            //((TextBlock)sender).Opacity = 0;
+        }
+
+        private void viewModelGreetngs_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+            viewModelGreetngs.Opacity = 0;
+            //((TextBlock)sender).Opacity = 0;
+        }
+
+        private void codeBehindGreetings_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+            codeBehindGreetings.Text = "Hello UWP World(Code Behind Program Code)";
+        }
+생략
+
+
+어떤가요? MVVM 프로그램 패턴을 활용한 프로그램보다 이해하기도 쉽고 코딩하기도 쉽지요? 하지만 뷰와 모델이 분리되지 않은 코드 비하인드 개발은 테스트와 유지 보수가 어렵고 디자이너와 개발자의 역할을 분리하기도 어렵다는 사실을 기억해야 합니다. 
+
+코드 비하인드에 대하여 설명을 시작할 때 작고 간결한 프로그램에는 단순한 기술을 사용하고 크고 복잡한 프로그램에는 정교한 기술을 사용하자고 했습니다. 그러나 하나의 기업만 지원하는 수준의 프로그램들을 제외하고 범용으로 사용되는 프로그램들에서 작고 간결한 프로그램들은 점점 사라지고 있습니다. 그래서 우리는 MVVM 프로그램 패턴을 설명하는 데 많은 지면을 할애하고 있는 것입니다. 그렇다고 MVVM 패턴에 익숙해지면 코드 비하인드라는 방식은 몰라도 되는 것일까요?
+
+코드 비하인드는 화면을 제어하는 프로그램 로직을 구성하는 데 유용하다고 알려져 있습니다. 이번 예제에서도 화면의 구성 요소를 제어하기 위하여 코드 비하인드를 사용했습니다. 뷰모델은 업무용 프로그램 로직(Business Program Logic)을 구현하기 위하여 사용하되 프로그램의 독립성이 프로젝트에 매우 중요하다면 코드 비하인드의 사용은 배제하고 MVVM 프로그램 패턴에 충실하게 개발하여야 합니다. 
