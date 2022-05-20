@@ -1,0 +1,199 @@
+CHAPTER 03 : XAML 프로그램 기본기
+
+
+XAML (Extensible Application Markup Language)은 화면을 구성하기 위한 XML 기반의 마크업 언어로 이 책의 주제인 UWP만이 아니라 WPF, Silverlight 및 Xamarin 등의 개발 도구에서 채택하여 사용하고 있습니다. XAML은 HTML이나 XML 등 다른 마크업 언와는 다르게 대소문자를 구분하기 때문에 <Button> 은 바른 문법 이지만 <button> 은 문법 오류를 유발합니다. 
+
+XAML 에 대한 설명도 이론보다는 예제 프로그램 코드를 사용하여 설명할 것입니다. 따라서 테스트할 프로젝트를 새로 만들어 코딩한 후 실행시켜 보는 것을 반드시 실천하기 바랍니다. XAML을 테스트하기 위한 프로젝트는 2.1 프로젝트 만들기를 참조하여 XAML Test라는 이름으로 프로젝트를 만들어 테스트하기 바랍니다. 코딩과 실행은 설명되는 기능들을 모아서 하는 것보다 개별 기능별로 나누어서 하는것이 좋습니다. 따라서 프로젝트를 별도로 나누거나 프로그램 파일을 분리하거나 기존의 코드를 지우지 말고 기존 코드를 주석 처리한후 새롭게 코딩하여 실행해보도록 합니다. 
+
+
+
+
+1 : 기본 개념
+
+※ XAML 문장의 구성
+
+XAML 언어의 요소(Element)를 표현하는 문법은 태그(Tag)와 속성(Property)혹은 특성(Attribute) 으로 구성됩니다. 요소는 객체지향 프로그램 언어로 개발된 클래스, 속성은 클래스의 멤버 변수(Member Variable)로 대응하여 생각해볼 수 있습니다. 태그는 요소의 종류나 시작과 끝을 나타내주고 속성은 요소가 가지는 특성을 나타냅니다. 
+
+<Button Content="Click Me"></Button>
+
+위 코드는 전형적인 XAML 문법을 보여줍니다. 여기서 <Button>은 여는 태그 </Button>은 닫는 태그로 Button이라는 요소를 정의합니다. Content="Click Me"는 속성이며 Button 요소의 Content 속성의 값이 "Click Me"라는 것을 알려줍니다. 
+
+<Button Content = "Click Me"></Button>
+
+		↓
+<Button Content = "Click Me" />
+
+그리고 시작 태그와 종료 태그 사이에는 다른 요소들이 계층적으로 추가될 수 있으며, 하위 요소가 없을 경우 종료 태그가 생략되고 태그를 닫는 기호를 >에서 />로 변경할 수 있습니다. 즉 위의 코드처럼 축약하여 표현할 수 있습니다. 간혹 <Button>Click Me</Button> 와 같이 표현하는 경우도 있는데 이것도 HTML과 XML과 같은 마크업 언어의 관행으로 <Button Content = "Click Me"></Button> 문장의 다른 표현입니다. 
+
+
+
+
+※ XAML의 구현 기술
+
+XAML은 컴파일 단계를 거치면 C#의 클래스로 변환됩니다. 그래서 XAML 프로그램의 형식을 빌려 뷰(View)로 C#객체의 계층 구조를 표현하는 효과를 낼 수 있습니다. 즉 XAML 은 HTML이나 XML과 같이 화면을 구성하는 기능만을 가진 단순한 마크업 언어가 아니라 UWP의 주력 언어인 C#과 같은 .NET 기반의 객체지향 프로그램 언어와 결합할수 있는 강력한 뷰(View)디자인 도구입니다. 이런 특징얼 활용하여 XAML 프로그램과 C# 프로그램을 연동함으로써 코드 비하인드와 같이 화면을 제어하는 강력한 기능을 구현할수 있다는 것을 2.5 뷰와 뷰모델이 합쳐진 코드 비하인드 이해하기에서 예제를 통하여 살펴보았습니다. 
+
+
+다음은 Grid와 TextBlock 요소로 구성된 동일한 화면을 XAML과 C#으로 코딩한 것입니다. 
+
+
+XAML 프로그램
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" >
+	<TextBlock Name="viewGreetngs" Text="Hello UWP World (View)" />
+</Grid>
+
+
+
+C# 프로그램
+using Windows.UI.Xaml.Controls;
+
+
+Grid g = new Grid();
+TextBlock viewGreetings = new TextBlock();
+viewGreetings.Text = "Hello UWP World (View);
+g.Children.Add(viewGreetings);
+
+
+앞에서 살펴보았던 프레임워크가 자동으로 제공한 XAML 프로그램 설명이 기억나나요? x:Class = "Hello_UWP_World.Views.MainPage " 문장이 화면의 최상위 구성 요소에 지정되어 있어서 클래스를 지정해주었죠. 이는 XAML 프로그램이 결국 객체지향 프로그램의 마크업 표현이라는 것을 알 수 있게 합니다. 
+
+
+MainPage.xaml
+<Page
+    x:Class="XAML_Test.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Style="{StaticResource PageStyle}"
+    xmlns:prismMvvm="using:Prism.Windows.Mvvm"
+    prismMvvm:ViewModelLocator.AutoWireViewModel="True" 
+    mc:Ignorable="d">
+
+
+앞에서 언급한 프레임워크가 MainPage.xaml 파일에 뼈대로 제공한 XAML 프로그램의 최상위 요소인 Page 태그를 통해서 XAML의 네임스페이스를 알아보겠습니다. 
+
+xmlns 속성은 XML 네임스페이스의 사용을 선언하는데 여기에서 네임스페이스는 C#의 using 선언문에서 말하는 네임스페이스와 유사한 것으로 XAML 요소와 속성들같은 객체들이 정의된 네임스페이스를 사용할 수 있게 해줍니다. 
+
+
+x : 같은 접두사 없이 사용하는 Grid, TextBlock, Text및 Font와 같은 키워드들이 03행에서 선언한 XAMl의 기본 네임스페이스(Default Namespace)인 "http://schemas.microsoft.com/winfx/2006/xaml/presentation"에 속합니다. 
+
+
+04행의 x 즉 "http://schemas.microsoft.com/winfx/2006/xaml" 네임스페이스는 XAML 컴파일러를 통제합니다. 이 네임스페이스를 사용하면 속성이 정의되지 않은 다른 요소나 파일에서도 사용하게 해주는 역할을 합니다. 02행에서 x: 접두사가 붙은 x:Class 속성이 이 네임스페이스에 속하고 이 속성이 x:Class = "Hello_UWP_World.Views.MainPage"와 같이 지정되었는데 04행에서 xmlns:x와 같이 네임스페이스를 선언한 후 02행에서 x:Class 와 같이 표기해 사용했습니다. 클래스 이름은 모든 요소와 파일이 다 같이 사용할수 있어야 하겠지요? 그래서 x 네임스페이스를 사용하는 것입니다. 
+
+
+05~06행의 d와 mc 네임스페이스는 네임스페이스의 이름이 말해주는 것과 같이 Blend라는 XAML 디자인 도구를 사용하기 위한 http://schemas.microsoft.com/expression/blend/2008 네임스페이스와 XML 호환성을 맞추어 주기 위한 http://schemas.openxmlformats.org/markup-compatibility/2006 네임스페이스를 각각의미합니다. 
+
+
+08행의 prismMvvm 네임스페이스는 Prism MVVM 패턴을 사용하기 위한 네임스페이스로 웹상에 위치한 네임스페이스가 아니라 프레임워크에 포함된 C# .NET 네임스페이스를 사용하기 때문에 http URL 대신 "using:Prism.Windows.Mvvm"과 같이 기술된 것을 알 수 있습니다. 네임스페이스를 정의한 후 09행과 같이 ViewModelLocator.AutoWireViewModel 속성을 True로 지정하여 Hello UWP World 프로그램에서 사용한 ViewModel이 ViewModelLocator.AutoWireViewModel임을 알려줍니다. 
+
+
+10행의 mc:Ignorable 속성, 즉 mc 네임스페이스의 Ignorable 속성을 보면 값에 d가 들어가 있는데 이것은 d 네임스페이스 즉 Blend 네임스페이스가 XAML의 호환성에 맞지 않지만 허용하겠다는 의미가 됩니다. 
+
+
+
+
+※ 알아두기
+x:Class와 함께 자주 사용되는 x:Name이라는 속성이 있는데 요소의 이름을 다른 요소 혹은 프로그램과 공유하기 위한 목적으로 사용합니다. Name 보다 x:Name이 미치는 효력의 범위가 더 넓으므로 Name 속성을 사용하여 이름을 찾지 못하는 문제가 생기면 얼른 x:Name 으로 수정하면 됩니다. Name대신 x:Name을 사용할 수 있지만 x:Name대신 Name을 사용할수 있는 것은 아니니 습관적으로 x:Name을 사용하는 것도 좋은 프로그래밍 습관이 될 것입니다. x라는 접두사는 키워드가 아니라 변경할 수 있습니다. 즉 네임스페이스를 선언할 때의 접두사와 사용할 때 접두사가 일치하기만 하면 되는데 프로그램워크가 기본적으로 제공하는 접두사는 변경하지 않는 것이 좋습니다. 혹시 C# 프로그램으로 자신만의 XAML 네임스페이스를 만들었다면 접두사의 이름은 local 혹은 lib과 같은 이름으로 부여할 수 있을 것입니다. 자신만의 XAML 네임스페이스는 C# 프로그램을 개발하여 만듭니다. 
+
+
+
+
+
+
+프레임워크가 뼈대로 제공하는 MainPage.xaml의 Page 태그 중 설명하지 않은 속성으로07행의 Style하나가 남았습니다. 이에 대해서는 Resource 요소와 Style요소를 학습할 때 설명합니다. 
+
+
+
+
+※ 속성 요소와 부착 속성
+
+이제 UWP Prism 프레임워크가 뼈대로 제공하는 XAML 프로그램을 설명할 때 은근슬쩍 넘어갔던 XAML 프로그램 코드에서 발췌한 다음 코드를 보면서 속성 요소와 부착 속성에 대하여 설명하겠습니다. 
+
+
+MainPage.xaml
+<Grid x:Name="ContentArea" Margin="{StaticResource MediumLeftRightMargin}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            Grid.Row="0"
+            x:Uid="Main_Title"
+            Style="{StaticResource PageTitleStyle}" />
+        <Grid
+            Grid.Row="1" 
+            Background="{ThemeResource SystemControlPageBackgroundChromeLowBrush}">
+생략
+
+
+<Grid.RowDefinitions>와 같은 태그나 Grid.Row="0" 혹은 Grid.Row="1" 와 같은 속성도 뒤에 설명하게 될 Content Control과 같이 HTML 이나 XML 프로그램에는 없는 개념입니다. 통상적으로 마크업 언어의 속성은 상위 요소가 아니라 자기 자신의 요소에 대한 특성인데 이 두 가지는 상위 요소에 대한 특성과 자기 자신의 요소에 대한 특성이 섞여 있기 때문입니다. 
+
+
+Grid.RowDefinitions 요소는 상위에 있는 Grid 요소의 행을 정의하는 역할을 합니다. 그래서 이 요소는 마치 상위 요소인 Grid 요소의 속성처럼 동작하는 것입니다. 이와 같은 요소를 속성 요소(Property Element)라고 부릅니다. 
+
+
+TextBlock 요소가 Grid안에 배치되지 않는 경우 Grid.Row와 같은 속성은 존재하지 않습니다. Grid.Row는 속성 요소와 같이 상위 요소인 <Grid x:Name="ContentArea" Margin="{StaticResource MediumLeftRightMargin}"> 태그와의 관계에 의하여 비로소 지정할수 있는 것으로, 자신이 포함될 Grid 상위 요소의 행을 지정하는 역할을 합니다. 그래서 이와 같은 속성을 부착속성(Attached Property)이라고 부릅니다. 
+
+
+속성 요소와 부착 속성은 상위 요소와 하위 요소가 상호작용할수 있게 하여 위의 예제에서 보았던 것처럼 XAML에 강력한 힘을 부여합니다. 
+
+
+
+
+※ Content Control
+
+Button, CheckBox, RadioButton, ToggleButton, Border, ScrollViewer, ViewBox와 같은 XAML의 요소 혹은 컨트롤들은 사진이나 이미지 같은 Content를 관리하기 위한 목적으로 사용됩니다. 이와 같이 요소에 Content를 포함할 수 있는 컨트롤을 Content Control이라고 부릅니다. 
+
+
+Content를 관리하는 요소가 아닌 TextBlock 요소는 <TextBlock Text="Text Block" />와 같이 코딩했었습니다. 그럼 Button 요소도 동일한 방법으로 코딩할수 있을까요? <Button Text="Click Me" />와 같이 코딩하면 문법 오류가 발생합니다. Button 요소는 Content Control 이기 때문입니다. 컨트롤은 사용자와 상호작용을 하는 요소라고 설명했습니다. 대신 <Button Content="Click me" />와 같이 코딩하면 버튼이 Click Me 와 같이 잘 나타납니다. HTML이나 XML 프로그램에는 없는 개념이니 XAMl 코딩할 때 주의하여야 합니다. 물론 HTML이나 XML과 같이 <Button>Click Me</Button> 와 같이 코딩해도 동일한 결과가 나타납니다. 
+
+
+도대체 왜 XAML은 다른 마크업 언어와 문법을 달리해서 우리를 괴롭게 만드는 것일까요? XAML의 Content Control이 Content를 관리하는 방법을 이해하면 이와 같은 궁금증이 풀립니다. 문법이 다른 것이 아니라 HTML이나 XML, XAML의 TextBlock요소 등은 Content를 관리할 수 없고 Button 요소는 Content를 관리할수 있는 것입니다. 다음의 예제와 그 결과를 살펴봅시다. 단 프로그램을 실행하기 전에 Universal Windows 프로젝트 하단의 Assets 폴더에 이미지를 복사해 놓아야 합니다. 
+
+
+
+
+※ 알아두기
+비주얼 스튜디오에서 파일을 복사하여 붙여넣는 방법은 Windows 운영체제에서 사용하는 방법과 동일합니다. <Ctrl> + <C> 나 <Ctrl> + <V> 단축키를 사용하거나 마우스 오른쪽 클릭을 하여 나타나는 팝업 메뉴에서 복사와 붙여넣기를 선택해도 됩니다. 다음 예제에서 사용하는 lock.png파일을 출판사가 제공하는 사이트에서 복사하여 사용하기 바랍니다. 
+
+
+
+
+※ 알아두기
+다음 코드에서 설명할 때 의미가 있는 코드는 강조 표시되어 있습니다. 앞에서 설명한 것과 같이 프레임워크가 제공하는 코드를 깨트리지 않고 유지하려면 사용자의 코드는 강조된 것과 같이 사용자 코드 영역 안에 배치하여야 합니다. 다음 코드에서만 사용자 코드가 들어갈 Grid 요소를 보여주고 그 뒤의 코드에서는 설명에 필요한 코드만 남기고 생략하겠습니다. 
+
+
+
+이미지를 관리하는 Button Content Control 예제와 결과
+
+생략
+        <Grid
+            Grid.Row="1" 
+            Background="{ThemeResource SystemControlPageBackgroundChromeLowBrush}">
+            <!--
+                The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
+                Place your content here.
+            -->
+            <Button Width="100" Height="100" >
+                <Image Source="/Assets/lock.png" />
+            </Button>
+        </Grid>
+생략
+
+
+예제와 결과를 보니 버튼이 콘텐츠인 이미지로 나타나고 있어서 Content Control 의 의미가 와닿습니다. 
+
+
+이번에는 Button 요소와 마찬가지로 Content Control 인 CheckBox 요소의 예제를 살펴보겠습니다. 
+
+
+CheckBox Content Control 예제와 결과
+
+            <CheckBox Content="Click Me" />
+
+            <CheckBox Width="100" Height="100">
+                <Image Source="/Assets/lock.png" />
+            </CheckBox>
+
+
+어떤가요? 점점 XAML이 마음에 들기 시작하지요? Content Control 및 RadioButton, ToggleButton, Border, ScrollViewer, ViewBox 등의 요소를 동일한 방법으로 사용할수 있습니다. 어떤 컨트롤이 Content Control 인지 아닌지를 확인할 때는 해당 컨트롤에 Content 속성이 있는지 없는지를 보면 쉽게 판단할 수 있습니다. 
