@@ -1,0 +1,335 @@
+※ 장치독립적인 픽셀
+
+Width와 Height 속성을 설명 없이 사용했지만 의미를 직관적으로 이해했을 것으로 믿습니다. 앞에서 설명한 <Button Width="100" Height="100"> 코드에서 넓이와 높이를 지정하지 않고 <Button>과 같이 수정한 후 버튼의 모양을 살펴보겠습니다. XAML의 요소는 그 크기를 지정하지 않으면 다음 그림과 같이 상위 요소의 공간 전체를 채우는데 이때 높이가 넓이보다 먼저 상위 요소의 전체 공간을 차지하게 되어 넓이의 크기는 비율에 맞게 자동으로 조절됩니다. 만약 넓이가 높이보다 먼저 상위 요소의 전체 공간을 차지하게 된다면 높이의 크기가 비율에 맞게 자동으로 조절될 것이다. 
+
+
+
+
+※ 알아두기:
+Button이나 TextBox등 요소들의 Content나 Text 속성에 이미지가 아닌 문자열이 지정되는 경우, 문자열보다 크기가 좀 더 커집니다. WPF의 경우 Content가 이미지이든 문자열이든 상관없이 상위 요소의 크기로 버튼의 크기가 결정됩니다. 
+
+
+
+
+그럼 Width와 Height 속성을 정의할 때 값의 단위는 무엇일까요? XAML에서는 기본 단위로 장치 독립적인 픽셀(Pixel)을 사용합니다. 장치 독립적인 픽셀 개념은 자동 크기 조정 알고리즘을 통해 3미터 떨어진 Surface Hub 10에 표시된 24픽셀 글꼴이 몇센티미터 떨어진 5인치 휴대폰에 표시된 24픽셀 글꼴과 동일하게 보이게 해줍니다. 이런 작동 방식 때문에 UWP 앱을 디자인할 때 장비의 실제 물리적 픽셀이 아닌 알고리즘에 의한 장치 독립적인 픽셀 단위로 디자인합니다. 이렇게 하면 화면 크기나 해상도가 다른 경우에도 프로그램상에서 글꼴 크기를 변경할 필요가 없습니다. 
+
+
+이와 같은 특징을 직접 느끼고 싶다면 PC의 해상도를 변경해가면서 Width와 Height 속성이 100으로 지정된 버튼의 크기를 관찰해보세요. XAMl이 장치 독립적 픽셀 단위를 사용하기 때문에 버튼의 크기가 항상 일정하게 나타나는 것을 관찰할수 있습니다. 
+
+XAML은 다른 언어들과 다르게 단위를 별도로 지정하지 않고 "100"과 같이 숫자만으로 표현합니다. 
+
+
+
+※ 마크업 확장
+지금까지 우리가 언급해왔던 XAML 문장들은 데이터 바인딩을 제외하고는 변하지 않는 고정된상숫값과 고정된 XAML 요소들의 계층적 구조의 초깃값으로 사용하도록 해주었습니다. <Ellipse Width="150" Height="50" Margin="10">과 같은 문장을 생각해볼까요? 여기에서 사용하는 150, 50, 10과 같은 값들은 모두 변하지 않는 고정된 상수입니다. 그런데 프로그램을 하다보면상숫값이 아니라 변숫값, 즉 때에 따라서 변하는 값을 상황에 맞게 사용해야 할 때가 있습니다. 일반적인 프로그램이 라면 변수를 정의하여 사용할 수 있습니다. XAML 은 일반적인 프로그램 언어와는 다른 마크업 언어인데 변수를 어떻게 처리하는 것일까요?
+
+Hello UWP World 예제에서 언급했던 데이터 바인딩의 예를 생각해봅시다. 뷰(View)와 뷰모델(ViewModel)을 데이터 바인딩으로 연결하기 위하여 <TextBlock Text="{Binding helloGreetings}"/>와 같은 문장을 사용했습니다. 여기서 Text의 값에는 뷰모델(ViewModel)프로그램의 실행 결과에 따라서 변하는 값을 사용했습니다. 이처럼 XAML이 변하는 값을 사용하도록 만들어 놓은 것을 마크업 확장(Markup Extension)"이라고 부릅니다. 마크업 확장은 고정된 상숫값이 아니라 변하는 변숫값을 지정하기 위하여 컴파일 할 때(Compile Time)가 아니라 실행할 때(Run Time)속성의 값을 지정해주는 역할을 하는데 그와 같은 마크업 확장 중 하나가 데이터 바인딩인 것입니다. 
+
+
+마크업 확장은 {Binding helloGreetings}와 같이 하나의 매개변수 (Parameter)를 지정할 수도 있고 {Binding Path=helloGreetings, Mode=OneWay}와 같이 여러 개를 지정할 수도 있습니다. 여러 개를 지정할 때에는 Path=이나 Mode=과 같이 매개변수의 값 앞에 매개변수의 이름을 추가하고, 각각의 매개변수는 콤마(,)로 구분해 주어야 합니다. {Binding helloGreetings}는 {Binding Path=helloGreetings}와 같은 의미입니다. 그리고 {Binding Path=helloGreetings, Source={StaticResource redGradation}}과 같이 마크업 확장을 중첩(Nested Markup Extension)하여 사용해도 됩니다. 자주 사용하는 마크업 확장의 종류는 다음표와 같습니다. 
+
+
+
+종류				설명						사용 예
+Binding			데이터 바인딩				Text="{Binding Path=helloGreetings}" 혹은 Text="{Binding helloGreetings}"
+
+RelativeSource		데이터 바인딩의 RelativeSource		Height="{Binding Path=ActualWidth, RelativeSource = {RelativeSource Mode=Self}}"
+
+StaticResource		사용자 자원 지정				Style="{StaticResource PageStyle}"
+
+ThemeResource		시스템 자원 지정				Value="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+
+x:Null				없는 값(Null Value)을 지정		Background="{x:Null}"
+
+
+
+
+
+2. Layout
+
+Content Control 절에서 설명했던 XAML 코드들을 함께 실행해보겠습니다. 그러면 실행 화면에 다음 그림과 같이 요소들이 섞여서 나타납니다. Hello UWP World 프로그램 예제에서도 경험한 것입니다. 이것은 기본적으로 XAML이 Layout 요소들을 제외하고는 화면 배치 기능을 제공하지 않기 때문입니다. 
+
+
+MainPage.xaml
+
+<Page
+    x:Class="XAML_Test.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Style="{StaticResource PageStyle}"
+    xmlns:prismMvvm="using:Prism.Windows.Mvvm"
+    prismMvvm:ViewModelLocator.AutoWireViewModel="True" 
+    mc:Ignorable="d">
+    <Grid x:Name="ContentArea" Margin="{StaticResource MediumLeftRightMargin}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            Grid.Row="0"
+            x:Uid="Main_Title"
+            Style="{StaticResource PageTitleStyle}" />
+        <Grid
+            Grid.Row="1" 
+            Background="{ThemeResource SystemControlPageBackgroundChromeLowBrush}">
+            <!--
+                The SystemControlPageBackgroundChromeLowBrush background represents where you should place your content. 
+                Place your content here.
+            -->
+            <Button Width="100" Height="100" >
+                <Image Source="/Assets/lock.png" />
+            </Button>
+
+            <CheckBox Content="Click Me" />
+
+            <CheckBox Width="100" Height="100">
+                <Image Source="/Assets/lock.png" />
+            </CheckBox>
+        </Grid>
+    </Grid>
+</Page>
+
+
+
+
+
+※ StackPanel
+
+이와 같은 문제를 해결하려면 Layout 기능을 지원하는 요소를 사용해야 하는데 우선 가장 간단한 StackPanel Layout 요소를 사용하여 각각의 요소가 순서대로 나타나도록 합니다. 
+
+프로그램을 변경하기 전에 프로그램을 사소하게 고칠 때마다 프로그램을 다시 실행하지 않아도 프로그램을 고치면 실행 화면에 바로 반영되도록 해주는 "핫 다시로드(Hot Reload)"기능을 소개합니다. 실행 화면 상단과 같이 같은 표시가 있는데 이것이 바로 "핫 다시 로드"기능이 현재 활성화되어 있다는 것을 알려줍니다. 
+
+
+프로그램 실행을 중단시키기 않은 상태로 XAML 편집기에서 "Content Control"절에서 설명했던 XAML 코드의 앞뒤에 <StackPanel>과 </StackPanel>태그를 다음 그림과 같이 추가합니다. 프로그램을 실행하며 XAML 프로그램을 편집할 때 디자인 보기가 사라진 것을 눈치채셨나요? 그리고 프로그램에서 변경된 내역이 다음 두 번째 그림과 같이 실행 화면에 바로 반영되는 것을 확인하셨나요? 디자인 보기는 사용하기가 여러가지로 불편해서 개발할 때는 핫 다시 로드 기능을 사용하는 것이 편리합니다. 
+
+StackPanel 요소가 Layout에 내부 요소를 쌓아가는 순서는 위의 첫 번째 화면에서 본것과 같이 Vertical(수직)방향입니다. 이제 Horizontal(가로) 방향으로 바꾸어 쌓기 위하여 Orientation 속성을 Horizontal 로 바꾸고, 요소의 배치 역시 우측에서 좌측으로 하기 위하여 FlowDirection 속성을 RightToLeft로 바꾸겠습니다. 즉 StackPanel의 시작 태그를 <StackPanel Orientation="Horizontal" FlowDirection="RightToLeft">와 같이 수정합니다. 버튼에 경계선이 없어서 다른 버튼과 구분하기 힘드니 BorderBrush와 BorderThickness 속성을 사용해 경계선도 나타나도록 합니다. 
+
+
+또 버튼간의 거리가 너무 가까우니 Margin 속성을 사용해 버튼 간 간격도 넓혀 보겠습니다. Margin 속성은 좌상, 우하에 각각의 값을 주어 따로 지정할수도 있고, 이번 예처럼 하나의 값을 전체에 동일하게 지정할 수도 있습니다. 그리고 핫 다시 로드 기능에 의하여 XAML 코드 변경이 바로반영된 실행 화면을 확인해보겠습니다. 화면에 요소들이 수평으로 배치되는 것을 확인할 수 있습니다. 
+
+
+MainPage.xaml
+            <StackPanel Orientation="Horizontal" FlowDirection="RightToLeft" BorderBrush="Red" BorderThickness="2" >
+                <Button Width="100" Height="100" Margin="5" >
+                    <Image Source="/Assets/lock.png" />
+                </Button>
+
+                <CheckBox Content="Click Me" />
+
+                <CheckBox Width="100" Height="100">
+                    <Image Source="/Assets/lock.png" />
+                </CheckBox>
+            </StackPanel>
+
+
+
+
+
+※ Grid
+이번에는 Grid Layout 요소를 사용해보겠습니다. 행마다 동일한 종류의 요소를 배치할수 있도록 격자의 행과 열을 각각 3개로 만듭니다. <Grid.RowDefinitions> 태그로 지정한 행을 만드는 코드와 <Grid.ColumnDefinitions> 태그로 지정한 열을 만드는 코드는 속성 요소라는 것을 알면 쉽게 이해할수 있습니다. 
+
+다음 코드의 02~06행과 같이 행의 높이는 장치 독립적인 픽셀 단위를 사용하지 않고 Auto로 지정하여 하위 요소의 크기에 따라 높이가 자동으로 결정되도록 합니다. 
+
+08~12행에서 열의 넓이는 비율 배분하기 위하여 1*와 2*를 값으로 사용하는 방식으로 전체 넓이를 5등분하여 첫 번째 열에 1/5을 배분하고 나머지 두 열에 2/5를 배분합니다. *가 지정되고 남은 공간을 의미한다는 것은 Hello UWP World예제를 설명할 때 언급했는데 *앞에 숫자를 붙이는 방식으로 지정을 하면 비율로 배분하여 사용할수 있습니다. 
+
+
+그리고 14~25행에서 만들어진 Grid 요소의 행과 열에 하위 요소들을 Grid.Row와 Grid.Column 부착 속성으로 해당 격자에 나타나게 처리한 코드를 확인해보기 바랍니다. Grid.ColumnSpan 부착 속성은 여러 개의 열을 하나의 객체가 점유하게 할 때 사용하는 데 TextBlock 요소에 적용합니다. 3개의 열을 점유하는 것을 명시적으로 보이게 하기 위하여 "TextBlock"문자열을 반복하여 붙여넣습니다. 직관적으로 유추할수 있는 것처럼 Gird.RowSpan 부착 속성을 사용하면 여러 개의 행을 점유하게 할 수 있습니다. 
+
+
+MainPage.xaml
+
+<Page
+    x:Class="XAML_Test.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Style="{StaticResource PageStyle}"
+    xmlns:prismMvvm="using:Prism.Windows.Mvvm"
+    prismMvvm:ViewModelLocator.AutoWireViewModel="True" 
+    mc:Ignorable="d">
+    <Grid x:Name="ContentArea" Margin="{StaticResource MediumLeftRightMargin}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*" />
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+        <TextBlock
+            Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Text="Text Block Text Block Text Block Text Block Text Block Text BLock Text Block Text Block
+            Text Block Text Block Text Block Text Block" 
+            x:Uid="Main_Title"
+            Style="{StaticResource PageTitleStyle}" />
+
+
+        <Button Width="100" Height="100" Margin="5" Grid.Row="1" Grid.Column="0" Content="Click Me" BorderBrush="Black" BorderThickness="1" />
+        <Button Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="1" Margin="5">Click Me</Button>
+        <Button Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="1" Margin="5">
+            <Image Source="/Assets/lock.png" />
+        </Button>
+
+
+        <CheckBox Content="Click Me" Grid.Row="2" Grid.Column="0"/>
+
+        <CheckBox Width="100" Height="100" Grid.Row="2" Grid.Column="1">
+            <Image Source="/Assets/lock.png" />
+        </CheckBox>
+            
+        
+    </Grid>
+</Page>
+
+
+
+
+
+이번에는 Grid를 행과 열로 균등하게 나눠봅니다. 행과 열을 균등 배분하는 방법은 아주 쉽습니다. 다음 예제와 같이 모든 RowDefinition 요소와 ColumnDefinition 요소에 아무런 속성을 지정하지 않으면 됩니다. 혹은 Width와 Height 속성에 공통으로 * 혹은 1*를 지정해주어도 되는데 문법적으로는 그렇지만 굳이 Width와 Height 속성을 지정할 필요는 없습니다. 실행 화면에는 Grid 행과 열을 구분하는 실선이 나타나지 않기 때문에 이번에는 실행 화면 대신에 디자인 보기에서 확인합니다. 
+
+
+MainPage.xaml
+
+<Page
+    x:Class="XAML_Test.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Style="{StaticResource PageStyle}"
+    xmlns:prismMvvm="using:Prism.Windows.Mvvm"
+    prismMvvm:ViewModelLocator.AutoWireViewModel="True" 
+    mc:Ignorable="d">
+    <Grid x:Name="ContentArea" Margin="{StaticResource MediumLeftRightMargin}">
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="1*" />
+            <RowDefinition Height="*" />            
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>       
+
+       
+        <Image Grid.Row="0" Grid.Column="0" Source="/Assets/lock.png" />
+        <Image Grid.Row="0" Grid.Column="1" Source="/Assets/lock.png" />
+        <Image Grid.Row="0" Grid.Column="2" Source="/Assets/lock.png" />
+
+        <Image Grid.Row="1" Grid.Column="0" Source="/Assets/lock.png" />
+        <Image Grid.Row="1" Grid.Column="1" Source="/Assets/lock.png" />
+        <Image Grid.Row="1" Grid.Column="2" Source="/Assets/lock.png" />
+
+        <Image Grid.Row="2" Grid.Column="0" Source="/Assets/lock.png" />
+        <Image Grid.Row="2" Grid.Column="1" Source="/Assets/lock.png" />
+        <Image Grid.Row="2" Grid.Column="2" Source="/Assets/lock.png" />
+       
+            
+        
+    </Grid>
+</Page>
+
+
+
+
+※ RelativePanel
+이번에는 RelativePanel Layout 요소를 사용하여 배치해보겠습니다. 위의 예에서 사용한 요소들을 Button과 TextBlock, CheckBox 그룹으로 묶어, Button 그룹의 오른쪽에 TextBlock 그룹을 배치하고 하단에는 CheckBox 그룹을 배치합니다. 다음 코드와 같이 x:Name 속성으로 위치 지정의 기준이 되는 요소에 이름을 부여한 후 RelativePanel.RightOf 부착 속성과 RelativePanel.Below 부착 속성으로 상대적 위치를 지정하면 되는데, 그룹 간의 간격을 유지하기 위하여 Margin 을 함께 지정합니다. 
+
+
+
+MainPage.xaml
+
+<Page
+    x:Class="XAML_Test.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Style="{StaticResource PageStyle}"
+    xmlns:prismMvvm="using:Prism.Windows.Mvvm"
+    prismMvvm:ViewModelLocator.AutoWireViewModel="True" 
+    mc:Ignorable="d">
+
+    <RelativePanel>
+        <StackPanel x:Name="ButtonGrp" Margin="20">
+            <Button Content="Click Me" BorderBrush="Black" BorderThickness="1" Margin="5" />
+            <Button BorderBrush="Black" BorderThickness="1" Margin="5" >Click Me</Button>
+            <Button Width="100" Height="100" BorderBrush="Black" BorderThickness="1" Margin="5">
+                <Image Source="/Assets/lock.png" />
+            </Button>
+        </StackPanel>
+
+        <StackPanel Margin="20" RelativePanel.RightOf="ButtonGrp">
+            <TextBlock Text="Text Block" />
+        </StackPanel>
+
+        <StackPanel Margin="20" RelativePanel.Below="ButtonGrp">
+            <CheckBox Content="Click Me" />
+
+            <CheckBox Width="100" Height="100">
+                <Image Source="/Assets/lock.png" />
+            </CheckBox>
+        </StackPanel>
+    </RelativePanel>
+</Page>
+
+
+
+
+
+※ ViewBox
+
+이번에는 이미지와 글자가 동시에 들어가는 아이콘을 하나 만들어보겠습니다. 앞에서 배운 Content Control인 Button요소를 사용합니다. 
+
+
+MainPage.xaml
+
+<Button Height="100" Width="100">
+        <Image Source="/Assets/lock.png" />
+        <TextBlock Text="Lock" HorizontalAlignment="Center" />
+    </Button>
+
+그런데 입력한 코드에 밑줄이 생기며 문법 오류가 납니다. 
+
+
+앞에서도 언급했듯이 Button 요소에는 Layout 기능이 없기 때문에 이런 오류가 나는 것입니다. ViewBox는 상자의 크기만큼 내부 요소를 확장하여 배치하는 Layout 요소인데 ViewBox를 사용하여 이 문제를 해결해보겠습니다. 단순히 이미지 버튼에 글자를 넣는 것보다 더 직관적인 아이콘을 만들 수 있습니다. 
+
+다음의 XAML 코드를 확인해보면 매우 쉽고 직관적입니다. ViewBox 요소는 넓이와 높이가 각각 200인 상자를 만듭니다. Border 요소는 테두리를 그려주는데 색상은 노랑, 두께는 15로 지정했습니다. 그리고 수평 StackPanel을 사용하여 빨강, 초록, 파랑으로 구성된 막대를 만듭니다. 그 후 수직 StackPanel을 사용하여 색상 막대위에 자물쇠 모양의 이미지 하나와 Lock 이라는 문자열 하나를 배치합니다. 이와 같이 XAML 의 구성요소들을 조합하여 새로운 형태의 요소를 만들 수 있습니다. 
+
+
+MainPage.xaml
+
+<Page
+    x:Class="XAML_Test.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Style="{StaticResource PageStyle}"
+    xmlns:prismMvvm="using:Prism.Windows.Mvvm"
+    prismMvvm:ViewModelLocator.AutoWireViewModel="True" 
+    mc:Ignorable="d">
+
+    <Viewbox Height="200" Width="200">
+        <Border BorderBrush="Yellow" BorderThickness="15">
+            <StackPanel>
+                <Image Source="/Assets/lock.png" />
+                <TextBlock Text="IU" HorizontalAlignment="Center" />
+                <StackPanel Orientation="Horizontal">
+                    <Rectangle Fill="Red" Height="10" Width="57" />
+                    <Rectangle Fill="Green" Height="10" Width="57" />
+                    <Rectangle Fill="Blue" Height="10" Width="57" />
+                </StackPanel>
+            </StackPanel>                
+        </Border>
+    </Viewbox>
+</Page>
+
+
+ViewBox요소와 Stretch 속성을 사용하면 고정된 크기의 XAML 객체들을원하는 형태의 유연한 크기로 조정할 수 있습니다. 앞선 예제의 ViewBox 태그를 <ViewBox Height="100" Width="200" Stretch="Fill">와 같이 혹은 <ViewBox Height="200" Width="100" Stretch="Fill">와 같이 수정하여 높이와 넓이를 다르게 지정하고 Stretch 속성을 Fill로 지정해봅니다. 그러면 다음 그림과 같이 ViewBox의 크기에 맞게 내부의 XAML 객체의 크기가 변경되는 것을 알 수 있습니다. 
