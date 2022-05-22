@@ -1,0 +1,246 @@
+※ Layout 요소에 사용되는 공통 속성들
+
+Layout 요소에서 공통적으로 사용되는 속성들을 정리해보면 다음 표와 같습니다. 사용이 가능한 값은 비주얼 스튜디오의 자동완성 기능을 사용하여 확인해보기 바랍니다. 이와 같은 속성들은 Layout 요소만이 아니라 다른 요소들에서도 공통으로 나타나는 것들이 많으니 참조하기 바랍니다. 
+
+
+속성				설명									속성						설명
+Width				넓이									Height					높이
+MinWidth			최소 넓이								MaxWidth					최대 넓이
+MinHeight			최소 높이								MaxHeight					최대 높이
+HorizontalAlignment	수평 정렬								VerticalAlignment				수직 정렬
+RenderTransform		변형(Layout불변)							LayoutTransform				변형(Layout 수정)
+Margin			경계선 밖의 공간							Padding					경계선 안의 공간
+Visibility			요소 보기/숨기기							FlowDirection				객체 출력 방향
+Panel.ZIndex			Layout 상의 객체 계층 정렬 순서로 부착 속성으로 사용됨
+
+[표]Layout 요소에서 사용하는 공통 속성들
+
+
+
+
+3: XAML Controls Gallery
+
+3.2 Layout에서 주로 사용되는 몇 가지 Layout 요소와 Layout 요소에 공통으로 적용되는 속성들에 대하여 알아보았습니다. XAML 에는 위에서 언급한 것들 외에 다양한 종류의 더 많은 Layout 요소들이 있습니다. 그런데 Layout 요소뿐만 아니라 XAML이 제공하는 수많은 요소들 혹은 컨트롤들을 이 책에서 언급하는 것은 가능하지 않을뿐만 아니라 기본적이고 핵심적인 개념을 중심으로 언급하겠다는 약속에도 부합하지 않습니다. 그래서 Content Control과 Layout 요소 등 가장 기본적이고 핵심적인 요소들에 대한 설명을 완료했으니 이제는 XAML 요소를 필요할 때 찾아서 학습할 때 도움이되는 유용한 앱인 XAML Controls Gallery를 소개합니다. 
+
+XAML  Controls Gallery는 마이크로소프트가 무상으로 제공하는 앱으로 XAML에서 사용하는 요소들을 참조하여 프로그램할수 있도록 XAML 코드 사례를 제공합니다. 마이크로소프트 스토어에서 XAML Controls Gallery를 찾아 설치하고 실행하면 다음 그림과 같이 실행 초기 화면이 나타납니다. 
+
+
+XAML Controls Gallery의 좌측 메뉴에 XAML이 제공하는 화면 구성 요소들이 나와 있습니다. 각각의 화면 구성 요소는 컴퓨터에 대한 기초 지식만 있어도 충분히 이해할수 있으니 설명을 생략합니다. 
+
+
+컨트롤은 사용자와 상호 작용을 하는 요소이니 컨트롤이라는 용어보다는 요소라는 용어를 사용해야 하지만 마이크로소프트는 관행적으로 컨트롤이라는 용어를 사용합니다만 엄격하게 이야기하면 Layout 요소는 사용자와의 상호 작용이 없으니 컨트롤이 아닙니다. 하지만 응용프로그램 개발자의 입장에서 요소를 대상으로 프로그램하는 방법과 컨트롤을 대상으로 프로그램하는 방법이 동일하여 두 용어의 구분은 큰 의미가 없으니 문맥에 맞게 이해하도록 합니다. 
+
+
+지금까지 모든 Layout 요소를 소개한 것이 아니니 우선 Layout 요소부터 살펴보겠습니다. 위의 화면에서 Layout 메뉴 항목을 선택합니다. 
+
+다음 화면에 나타나는 Layout 요소의 종류들을 보니 위에서 프로그램 코드의 예로 사용한 Border 요소도 Layout 요소였다는 것을 알 수 있고 Canvas, ItemRepeater, SplitView, VaribleSizedWrapGrid등이 Layout 요소로 더 있다는 것을 알 수 있습니다. 다음 화면에서 Canvas 메뉴 항목을 선택합니다. 
+
+그러면 다음 그림과 같이 요소의 모양과 코드 예시 같은 정보가 제공됩니다. Canvas Layout 요소에 대한 설명을 읽어보니 절대좌표를 사용하여 컨트롤을 배치하는 기능을 제공하며 Canvas.Top이나 Canvas.Left와 같은 부착 속성을 사용하여 상대적인 위치에 내용물들을 위치시킨다고 되어 있습니다. 아무튼 Canvas Layout 요소는 이름이 의미하듯이 그래픽 요소들을 배치할 때 주로 사용됩니다. XAML 코드 사례에서 Canvas.ZIndex 속성을 제외하고는 모두 앞에서 설명했습니다. ZIndex는 Layout 요소들에 적용되는 속성으로 여기서는 Canvas에 요소들이 중첩되어 나타나는 경우 무엇을 먼저 보여줄지 결정해줍니다. 이때 값이 큰 것이 화면의 상단에 위치하게 되고 값이 작은 요소들은 값이 더 큰 요소들에 가려 일부 혹은 전부가 보이지 않게 됩니다. 
+
+XAML 프로그램을 개발하다가 활용해야 할 컨트롤들이 생기면 XAML Controls Gallery에서 원하는 컨트롤을 찾아 외관(Apperance)과 동작(Behavior)을 살펴본 후 화면 중간에 위치한 코드 사례를 복사해 사용하면서 이해하기를 바랍니다. 
+
+
+
+4 : 데이터 바인딩
+
+데이터 바인딩(Data Binding)은 두 속성 간의 데이터를 데이터 바인딩 엔진(Engine)혹은 로직의 도움을 받아 서로 동기화 혹은 일치화시키는 것을 말합니다. 데이터를 동기화할 때 필요한 경우 데이터의 형변환을 통해 주고받는 데이터 형식을 일치시킵니다. 데이터는 주로 요소와 요소 간에 혹은 요소와 프로그램 객체 간에 교환됩니다. 
+
+
+※ 요소와 요소 간 데이터 바인딩
+먼저 요소와 요소를 데이터 바인딩하는 다음의 XAML 코드 사례부터 살펴봅니다. 
+
+
+MainPage.xaml
+
+<StackPanel>
+	<TextBox Name="sourceTextBox" Text="Source Text Value" />
+	<TextBox Text="{Binding Path=Text, ElementName=sourceTextBox, Mode=TwoWay}" />
+	<Ellipse Stroke="Blue" Width="100" Height="{Binding Path=ActualWidth, RelativeSource={RelativeSource Mode=Self}}" />
+</StackPanel>
+
+
+앞의 코드에서 요소의 이름을 참조하여 사용하기 위하여 Name="sourceTextBox"와 같이 먼저 소스(Source)요소의 이름을 지정합니다. 그러고는 타깃(Target)요소에서 Text="{Binding Path=Text, ElementName=sourceTextBox, Mode=TwoWay}"/>와 같이 요소 간 데이터 바인딩을 합니다. Path 매개변수에 Text를 지정한 것은 Text 속성을 데이터바인딩한다는 의미이고 요소 간 데이터 바인딩을 하기 위하여 ElementName 매개변수에 소스 요소의 이름을 지정했습니다. 
+
+Mode = TwoWay와 같이 매개변수를 추가로 지정한 이유는 데이터 바인딩을 양방향으로 하기 위함입니다. 소스 요소에서 타깃 요소로만 값을 가져오려면 Mode를 OneWay로 지정하면 됩니다. 
+
+
+이제 앱을 실행하여 소스 요소의 값과 타깃 요소의 값을 번갈아 수정해보기 바랍니다. 두 요소의 데이터가 바인딩되어 하나의 값을 바꾸면 다른 하나의 값도 바뀌는 것을 확인할 수 있습니다. Mode를 OneWay로 바꾸어 소스에서 타깃으로 한 방향 바인딩만 되는지도 테스트해보기 바랍니다. 
+
+
+앞의 코드에 요소와 요소간 데이터 바인딩의 특수한 사례로 RelativeSource 마크업 확장을 사용한 사례를 추가해보았습니다. RelativeSource는 요소와 요소간 데이터 바인딩을 할 때 요소의 이름을 절댓값으로 지정하지 않고 상대위치로 지정하는 방법으로 지정 가능한 값에는 Self와 TempatedParent가 있습니다. Self는 자기자신을 소스 요소로지정하는 방식으로 이 예제에서와같이 자기 자신의 속성을 다른 속성에 지정할 때 사용합니다. 
+
+Height="{Binding Path=ActualWidth, RelativeSource={RelativeSource Mode=Self}}" 와 같이 지정하면 자신의 실제 넓이를 Height 속성에 지정하므로 넓이가 변하더라도 항상 원의 형태를 유지합니다. TemplatedParent는 Control Template에서 사용하는 속성으로 Control Template 절에서 설명하도록 하겠습니다. 
+
+
+※ 요소와 프로그램 객체 간 데이터 바인딩
+
+요소와 프로그램 객체를 바인딩하는 사례는 Hello UWP World 예제에서 언급했습니다. Hello UWP World 예제에서 데이터 바인딩되는 부분의 XAML 코드와 뷰모델(ViewModel)의 C# 코드만 다시 확인해보겠습니다. 요소 간 데이터 바인딩과 차이는 XAML 코드에서 ElementName 매개 변수를 지정하지 않았다는 것과 뷰모델 (ViewModel)코드에서는 속성을 정의했다는 것입니다. 
+
+다음은 요소와 프로그램 객체 간 데이터 바인딩을 설명하기 위한 XAML 코드와 뷰모델(ViewModel)코드입니다. 
+
+
+MainPage.xaml
+
+<TextBlock Text="{Binding helloGreetings}" />
+
+
+
+MainViewModel.cs
+private string _helloGreetings;
+
+public string helloGreetings
+{
+	get => _helloGreetings;
+	set => SetProperty(ref _helloGreetings, value);
+}
+
+
+※ 축약 표현과 축약되지 않은 표현
+<TextBlock Text="{Binding Path=helloGreetings}"/>와같은 표현 방식은 데이터 바인딩 마크업 확장의 축약 문법표현입니다. 축약되지 않은 문법 표현은 다음 코드와 같은데, 축약된 표현보다 코드에 대한 이해도를 높여줍니다. 
+
+<TextBlock>
+	<TextBlock.Text>
+		<Binding Path="helloGreetings" />
+	</TextBlock.Text>
+</TextBlock>
+
+
+
+※ 데이터 바인딩과 바인딩 오류
+
+데이터 바인딩 시 오류가 발생하는 경우 오류가 발생했는지 인식하지 못하고 넘어가는 경우가 많습니다. 데이터 바인딩을 수행하다가 오류가 발생하여도 실행 화면에 값이 나타나지 않거나 이상하게 나타날 뿐 명시적인 오류 메시지가 발생하지 않기 때문입니다. 따라서 데이터 바인딩을 사용할 때는 오류 발생 여부를 확인하기 위하여 앱을 디버그 모드로 실행시킨 후 비주얼 스튜디오의 출력 창을 확인하는 습관을 들여야 합니다. 데이터 바인딩 시 오류가 발생한다면 다음 그림과 같이 오류를 출력해줍니다. 
+
+
+
+※알아두기:
+데이터 바인딩은 XAML이 제공하는 Binding이라는 키워드와 함께 x네임스페이스에서 제공하는 x:Bind 키워드를 사용합니다. x네임스페이스를 사용하면 x네임스페이스를 사용하지 않는 범용 네임스페이스를 사용하는 것보다 속성이 미치는 영향의 범위가 사용중인 네임스페이스 밖으로 넓어지고 중단점 설정등을 통한 디버깅을 가능하게 해줍니다. 
+
+그리고 x네임스페이스를 사용하는 경우 Name은 x:Name을 사용하는 것에 비하여 Binding은 x:Binding이 아니라 x:Bind를 사용하니 주의하여야 합니다. 또한 Binding을 사용하면 앱을 실행할 때 바인딩되는 속성을 찾아보고 바인딩할 속성이 없으면 바인딩하지 않고 오류없이 실행되어 디버깅을 어렵게 하는데 x:Bind는 컴파일할 때 바인딩할 속성을 찾아보고 바인딩할 속성이 없으면 오류를 발생시킵니다. 따라서 x:Bind를 사용하면 오류를 찾는 것이 쉬워짐과 동시에 실행 성능도 개선됩니다. 따라서 위와 같은 오류를 겪지 않으려면 특별한 목적이 없는 한 x:Bind를 사용하는 것이 좋습니다. 
+
+
+
+
+
+5 : Resource
+
+XAML의 자원 즉 Resource는 주로 문자열이나 멀티미디어 파일들을 의미하는 다른 프로그램 언어들과는 다르게 Brush, Color, Text 객체등을 필요한 요소에서 반복하여 가져다 사용할수 있도록 미리 정의해 놓은 요소를 말합니다. Resource로 정의할수 있는 객체들은 Resource로 활용이 가능한 객체 절을 참고하기 바랍니다. 
+
+
+
+
+
+※ 사용자 정의 Resource
+
+다음 코드와 같이 Resource를 사용하지 않는 XAML 프로그램 코드를 생각해봅시다. 
+
+
+MainPage.xaml
+<StackPanel>
+        <Button Height="300" Width="300">
+            <Button.Background>
+                <LinearGradientBrush>
+                    <GradientStop Color="White" Offset="0" />
+                    <GradientStop Color="Blue" Offset="1" />
+                </LinearGradientBrush>
+            </Button.Background>
+        </Button>
+        <Button Height="300" Width="300">
+            <Button.Background>
+                <LinearGradientBrush>
+                    <GradientStop Color="White" Offset="0" />
+                    <GradientStop Color="Blue" Offset="1" />
+                </LinearGradientBrush>
+            </Button.Background>
+        </Button>
+    </StackPanel>
+
+파란색 그라데이션(Gradation)효과를 가지는 버튼을 두 개 나열하는 XAML 코드로 StackPanel 요소를 사용하여 Button 요소 2개를 감쌌습니다. 각각의 Button 요소에 그라데이션 효과를 내기 위하여 Button.Background 속성 요소를 사용해 버튼의 배경을 LinearGradientBrush 요소로 지정했습니다. Brush는 요소의 배경이나 전경혹은 글자의 색을 지정해주는 역할을 합니다. 그 중에서 LinearGradientBrush는 선형으로 변하는 그라데이션을 구현하는 요소입니다. LinearGradientBrush 요소는 하부에 GradientStop 요소를 가지는데 여기서는 하얀색으로부터 서서히 파란색으로 만들어주기 위하여 각각의 LinearGradientBrush에 대하여 2개의 GradientStop 요소를 지정했습니다. 
+
+이렇게 하면 첫 번째 GradientStop에서 두 번째 GradientStop으로 서서히 선형으로 변하면서 그라데이션 효과가 나타나게 됩니다. Offset 속성에서 0은 왼쪽 상단의 모서리를 의미하고 1은 오른쪽 하단의 모서리를 의미합니다. 따라서 그라데이션 효과는 Offset 속성이 0인 왼쪽 상단 모서리에서 Offset 속성이 1인 오른쪽 하단 모서리로 나타나게 됩니다. XAML 코드의 효과는 코드 오른쪽의 이미지를 참조하기 바랍니다. 
+
+그런데 이 프로그램 코드를 분석해보면 두 가지 문제점이 발견됩니다. 첫째 Button.Background 속성 요소가 버튼마다 중복하여 코딩된다는 문제가 있습니다. 둘째, 이 코드가 파란색 그라데이션을 구현하는 코드라는 것을 직관적으로 파악하기가 어렵다는 문제가 있습니다. 
+
+이런 문제들을 해결하기 위하여 Resource를 사용할수 있습니다. 그리고 Resource는 통상적으로 자원이 필요한 최상위 요소에서 정의하여 사용합니다. 
+
+설명과 이론만으로 이해하기는 어려우니 Resource를 사용한 XAML 프로그램 코드의 예제를 살펴보겠습니다. 
+
+
+MainPage.xaml
+
+<StackPanel>
+        <StackPanel.Resources>
+            <LinearGradientBrush x:Key="blueDiagonalGradation">
+                <GradientStop Color="White" Offset="0" />
+                <GradientStop Color="Blue" Offset="1" />
+            </LinearGradientBrush>
+        </StackPanel.Resources>
+        <Button Height="300" Width="300" Background="{StaticResource blueDiagonalGradation}"/>
+        <Button Height="300" Width="300" Background="{StaticResource blueDiagonalGradation}" />
+    </StackPanel>
+
+여기서는 StackPanel의 요소의 하부에서만 Resource를 사용하기 위하여 StackPanel 요소 레벨에서 Resource를 정의하고 있습니다. Resource를 정의하기 위해서는 StackPanel.Resources 속성 요소를 사용합니다.  Resource로 정의한 요소는 그라데이션 효과를 내는 LinearGradientBrush 요소입니다. 자원은 다른 요소에서 가져다 사용하기 때문에 x네임스페이스 Key 속성의 값을 blueDiagonalGradation으로 지정했습니다. x네임스페이스를 사용해야 파일 간, 그리고 요소 간 공유가 가능하다고 설명했었지요? 이렇게 Resource로 정의한 후 Button 요소에서 Background="{StaticResource blueDiagonalGradation}와 같은 형식으로 Key의 이름을 지정하여 Resource를 가져다 사용합니다. 이렇게 해서 첫 번째 문제였던 코드의 중복 문제가 Resource를 사용하여 깔끔하게 해결되었습니다. 
+
+
+직관적으로 파란색 그라데이션 코드라는 것을 알기 어렵다는 두 번째 문제는 Resource를 정의할 때 x:Key="blueDiagonalGradation"와 같이 Key 속성을 지정하고 지정된 이름으로 Resource를 가져다 사용하는 방법으로 해결되었습니다. Resource를 사용하지 않는 프로그램 코드에서는 코드를 자세히 분석해봐야 코드가 의도하는 것이 무엇인지 알 수 있었는데 Resource를 사용하는 프로그램 코드에서는 LinearGradientBrush 요소와 하부 요소들이 의미하는 것이 파란색 대각선 그라데이션(blueDiagonalGradation)이라는 것을 Key 속성을 통하여 바로 알수 있습니다. 
+
+
+이와 같은 노력을 추상화(Abstraction)했다고 합니다. 단순한 프로그램 코드의 나열에 의미를 부여하는 것으로 변수나 객체, 메소드의 이름을 왜 잘 지어야 하는가와 밀접하게 연결되어 있는 개념입니다. 이름을 잘 지어야 추상화가 되어 코드의 의미를 쉽게 알 수 있게 됩니다. 
+
+
+그런데 추상화를 해놓고 나니 한 가지 어려움이 있습니다. 
+
+한국인에게는 blueDiagonalGradation과 같은 영문이 아니고 파란 대각선 그라데이션과 같은 한글이라면 의미가 더 와닿을 것이기 때문입니다. 그래서 컴퓨터가 한글을 지원하기 시작하던 시절 데이터베이스의 필드 이름을 한글로 만들어 사용하려는 시도가 이루어졌었습니다. 그런데 실패했습니다. 그이유는 잘 운영되던 시스템이 가끔 이상한 동작을 했기 때문입니다. 그래서 어쩔 수 없이 프로그램 개발자에게는 프로그램을 개발하는 능력 외에 한 가지 능력이 더 필요하게 되었습니다. 
+
+그것은 영문으로 추상화해서 이름을 지어도 그 의미를 알수 있는 정도의 영어 실력입니다. 영어로 추상화를 잘할수 있어야 가독성과 유지보수성이 높은 프로그램을 개발할 수 있기 때문입니다. 그리고 프로그램 개발과 관련된 서적들은 주로 영어로 되어 있기 때문에 원서를 어렵지 않게 읽을수 있기 위해서라도 어느 정도의 영어 실력은 필수입니다. 그래서 이 책에서는 가능한 한글과 영어를 병기하여 이책으로 공부한 사람들이 영어로 된 책을 읽을 때 용어만이라도 익숙하게 되는데 도움이 될수 있도록 노력했습니다. 
+
+
+
+
+
+※ Resource의 적용 순서와 적용 범위
+
+Resource는 자원이 필요한 최상위 요소에서 정의하여 사용한다고 했습니다. 앞의 예에서는 StackPanel 요소에서 StackPanel.Resources 속성 요소를 사용하여 정의했죠. 여기서 정의된 Resource는 StackPanel하부에만 영향을 미칩니다. 만약에 Grid나 Page 요소에서 Resource를 정의하려고 한다면 Grid.Resources나 Page.Resources 속성 요소를 사용하여 정의해야 할 것입니다. 
+
+이때 혹시 동일한 이름으로 여러 상위 요소에서 Resource를 정의했다면 그중 가장 가까운 상위 요소의 자원을 가져다 사용하게 됩니다. 즉 우리가 지금 사용하고 있는 Prism 프레임워크에서는 우리가 코딩한 StackPanel의 Resource를 가장 먼저 사용하고 그다음에 Prism이 제공한 Grid와 Page 그리고 Application 순서로 Resource를 사용하는 것입니다. 
+
+
+
+※ Prism이 기본으로 제공하는 Resource
+상위 요소가 아니라 별도의 XAML 파일로 Resource를 정의해놓고 사용할수도 있습니다. 이때는 ResourceDictionary 요소를 사용하는데 Prism 프레임워크는 몇 가지 ResourceDictionary를 제공합니다. 
+
+Prism이 기본으로 제공하는 Resource로는 어떤 것들이 있는지 확인해봅시다. 다음 그림에는 Prism 프레임워크가 제공하는 Resource 와 관련된 파일들이 선으로 표기되었습니다. 
+
+
+다음 그림을 보면 App.xaml 파일은 ResourceDictionary.MergedDictionaries 속성 요소를 사용하여 외부의 5개의 또다른 ResourceDictionary 파일을 병합하여 구성한하나의 특수한 ResourceDictionary 요소라는 것을 확인할 수 있습니다. App.xaml은 최상위 XAML 프로그램 파일이기 때문에 이름이 중복되지 않는 한 모든 XAML 프로그램에서 여기서 정의된 Resource 를 공통적으로 사용할 수 있습니다. 
+
+또한, 다음 그림과 같이 App.xaml 파일의 ResourceDictionary에 병합된 (Merged)_FontSizes.xaml 코드를 보면 병합된 각각의 외부 파일도 ResourceDictionary로 정의되어 있는 것을 확인할 수 있습니다. 각각의 ResourceDictionary XAML 프로그램 코드 파일들은 어떤 Resource들이 정의되어 있는지 파일명으로 알 수 있으니 설명을 생략하겠습니다. 보다 자세한 정보는 정의된 ResourceDictionary XAML 프로그램 코드를 직접 확인해보기 바랍니다. 
+
+
+
+
+
+※ 시스템이 기본으로 제공하는 Resource
+
+Resource를 사용할 때 StaticResour 마크업 확장을 사용하면 Prism 프레임워크가 제공하거나 사용자가 직접만든 Resource 를 가져다 사용하게 됩니다. 그런데 ThemeResource 마크업 확장을 사용하면 시스템이 기본으로 사용하는 Resource를 가져다 사용하게 됩니다. 시스템이 제공하는 Resource는 generic.xaml 파일에 정의되어 있습니다. ResourceDictionary 파일을 어떻게 확인할수 있는지는 3.6 Style절에서 설명합니다. 
+
+
+
+※ Resource 로 활용이 가능한 객체
+
+일반적으로 ResourceDictionary 및 XAML 은 다음과 같은 객체들을 Resource로 정의하여 활용할 수 있습니다. 
+
+* Style 및 Template
+
+* Brush 및 Color
+
+* Storyboard를 포함한 Animation 형식
+
+* Transform
+
+* Matrix 및 Matrix3D
+
+* Point
+
+* Thickness 및 CornerRadius 같은 특정한 다른 UI 관련 구조
+
+* x:String이나 x:Double과 같은 XAMl 기본 데이터 형식
