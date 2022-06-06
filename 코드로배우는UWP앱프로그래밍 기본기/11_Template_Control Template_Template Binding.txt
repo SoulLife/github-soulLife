@@ -1,0 +1,194 @@
+10 : Template
+Template는 컨트롤의 외관이나 내용이 나타나는 형태를 제어할 수 있도록 XAML 에 의하여 제공되는 틀 혹은 장치입니다. 
+
+
+※ Item Template과 DataTemplate
+
+여러 값의 데이터 바인딩을 설명하기 위하여 ListBox컨트롤 예제에서 배열로 이루어진 이름을 하드코딩하여 실행하는 방식을 사용했습니다. 지금부터는 실제 프로그램할 때의 환경과 유사하게 API 호출을 통하여 가져온 값을 보여주는 방식으로 코드를 수정하면서 Template 에 대한 개념을 이해합니다. 다음은 ListBox의 값들을 API 호출로 가져오도록 수정한 ViewModel C# 코드입니다. MainPage.xaml과 MainPage.xaml.cs 파일에는 변경되는 것이 없이 그대로 사용하고 MainViewModel.cs 파일에만 변경이 발생합니다. 
+
+
+
+
+MainViewModel.cs 변경되는 부분만 기술합니다. 
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using Prism.Windows.Mvvm;
+using Windows.System;
+namespace Hello_UWP_World.ViewModels
+{
+
+    public class MainViewModel : ViewModelBase
+    {
+        private IList<User> _users;
+        public IList<User> users
+        {
+            get => _users;
+            set => SetProperty(ref _users, value);
+        }        
+        public MainViewModel()
+        {
+            //helloGreetings = "Hello UWP World (ViewModel)";
+            //getUserAsync();
+            //string[] tempUsers = { "홍길동", "유관순", "안정복" };
+            //users = tempUsers.ToList();
+            getUsersAsync();
+        }
+
+        private async void getUsersAsync()
+        {
+            using (HttpClient httpClient = new HttpClient())
+            {
+                string httpResponse = await httpClient.GetStringAsync("http://jsonplaceholder.typicode.com/users");
+                User[] tempUsers = await Json.ToObjectAsync<User[]>(httpResponse);
+                users = tempUsers.ToList();
+            }
+        }
+
+    }
+}
+
+
+3.9 여러 값의 데이터 바인딩의 Hello UWP World 예제에서 사용했던 string 데이터 타입의 List를 User 데이터 타입, 엄밀하게 표현하면 객체 타입(Class/클래스) 으로 변경하고 하나의 User 값을 가져오던 getUserAsync()메소드를 여러 값을 가져오도록 getUsersAsync() 메소드로 복사하여 수정합니다. 
+
+이때 복사한 코드에서 http://jsonplaceholder.typicode.com/users/1과 같이 특정 User만 가져오던 API를 모든 User를 가져오도록 /1 부분만 제거합니다. 그리고 User[] tempUsers = await Json.ToObjectAsync<User[]>(httpResponse); 문장과 같이 User 클래스를 User[]와 같이 User 객체 배열 타입으로 변경하고 변수 객체명 tempUser는 복수인 tempUsers로 변경합니다. 
+
+이제 앱을 실행해보면 10개의 User가 ListBox에 나타납니다. 그런데 Hello_UWP_World.Core.Models.User와 같이 모델의 이름이 나타나 어떤 사용자들의 목록인지 알 수가 없습니다. 상단의 공략은 Hello UWP World 예제의 출력이 나타나던 공간인데 공란이 필요 없기는 하지만 설명하는데 큰 문제가 있는 것은 아니니 수정하지 않고 두겠습니다. 
+
+이와 같은 문제가 발생하는 이유는 XAML 코드에 <ListBox ItemsSource={Binding users}"/>라고 기술한 ListBox 요소가 전체 객체 하나의 값만을 보여주기 때문입니다. 이와 같은 문제를 풀기 위하여 Item Template와 Data Template를 사용하겠습니다. 
+
+Item Template는 여러 개의 값을 보여주기 위하여 XAML이 만들어 놓은 Template이고 Data Template는 데이터가 여러 개의 값으로 구성되어 있을 때 전체 객체 하나의 값이 보여지는 형태를 사용자가 지정하여 보여주도록 XAML이 만들어 놓은 Template입니다. 설명이 더 어렵죠.? 이럴 때는 개발자들의 공통 언어인 프로그램 코드를 봅니다. 백문이 불여일견 이므로 금방 이해할수 있을 것입니다. 여러분은 백견이 불여일타 로 한 발 더 나아가실 것으로 믿습니다. 
+
+다음은 API 호출로 가져온 User 객체를 구성하는 개별 값이 ListBox에 나타나도록 수정한 XAML 코드입니다. 
+
+
+
+
+MainPage.xaml: 변동되는 부분만 기술합니다. 
+
+                <ListBox ItemsSource="{Binding users}" >
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding id}" Margin="0 0 5 0" />
+                                <TextBlock Text="{Binding name}" Margin=" 0 0 5 0" />
+                                <TextBlock Text="{Binding phone}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+
+
+위의 코드를 보면 ListBox 태그를 시작 태그와 종료 태그로 나누고 그 안에 <ListBox.ItemTemplate> 태그를 속성 요소로 배치했습니다. 이 Item Template에 의하여 ListBox컨트롤의 ItemsSource에 지정한 항목들의 값이 반복하여 나타나는 것입니다. 그 안에 DataTemplate 요소를 배치했는데 TextBlock 요소 3개를 StackPanel요소를 사용하여 수평으로 배치하고 각각의 값들에 대하여 id와 name, phone을 데이터 바인딩하고 있습니다. Margin은 여러 개의 값으로 지정할 때에는 좌상우하의 순서로 지정하는데 여기서는 마지막 값 항목을 제외하고 우측에 5Pixel만큼의 Margin을 지정하여 값들간의 간격을 조정했습니다. 실행 화면과 코드를 함께 보고 이해하기 바랍니다. 
+
+
+
+
+
+※ Control Template
+
+XAML은 주어진 요소의 모양을 사용자가 정의할 수 있도록 Control Template를 제공합니다. Style을 사용하여 주어진 요소의 기본적인 모양을 변경할 수 있지만 주어진 요소의 속성(Property)이 허용하는 범위 내에서만 변경할 수 있습니다. 이것으로 부족하다면 Control Template을 사용하여 주어진 요소의 모양을 완전히 변경할수 있습니다. 
+
+간단한 사용자 정의 버튼 컨트롤을 만드는 예를 통하여 설명하겠습니다. 이 예제는 단순해서 Hello UWP World 프로젝트를 사용하지 않고 XAML Test 프로젝트를 사용합니다. 
+
+다음은 Control Template로 사용자 정의 버튼을 만드는 XAML 코드입니다. 
+
+
+MainPage.xaml
+
+                <Button Content="Click Me" VerticalAlignment="Top" Width="100" Height="50">
+                    <Button.Template>
+                        <ControlTemplate>
+                            <Ellipse Fill="Magenta" />
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+위의 코드는 매우 단순합니다. Button 요소안에 <Button.Template> 속성 요소를 배치한후 그 안에 <ControlTemplate>요소를 배치했습니다. 그 구조가 <ListBox.ItemTemplate>속성 요소 안에 <DataTemplate>요소를 배치한 것과 같습니다. ItemTemplate 가 값이 나타나는 항목을 변경해주는 틀이라면 Template는 요소 자체를 변경해주는 틀로 이해하면 무리가 없습니다. 그 후 버튼의 모양을 대체할 Ellipse 요소를 배치하여 XAML이 제공하는 버튼의 모양을 보라색 타원형으로 변경했습니다. 버튼의 모양을 타원으로 바꾸는 속성은 없으니 Style로 지정할 수는 없습니다. 하지만 ControlTemplate 을 사용하여 아주 간단하게 사각형의 버튼 모양을 타원형으로 변경했습니다. 버튼의 모양은 변경되었지만 버튼의 동작이 변경되지는 않았습니다. 
+
+코드와 실행 결과를 함께 살펴보기 바랍니다. 용어나 이론으로 설명하는 것은 어렵지만 코드와 실행 결과로 설명하는 것은 비교적 쉽게 이해됩니다. 여러분들도 이런 설명 방식의 이점을 최대한 누리면 좋겠습니다. 
+
+
+그런데 앞의 예제에는 버튼의 모양은 바뀌었는데 버튼에 글자가 나타나지 않는 문제가 있습니다. 이와 같은 문제를 해결하려면 ContentPresenter 요소를 사용해야 합니다. 다음 코드를 보면 ContentPresenter 요소로 부모 요소의 Content 인 버튼의 글자를 가져다 보여주며 Control Template안에 Ellipse와 ContentPresenter 요소가 동시에 들어가기 때문에 Layout을 지정하는 요소인 Grid가 둘러싸고 있는 것을 확인할수 있습니다. 
+
+
+MainPage.xaml
+
+                <Button Content="Click Me" VerticalAlignment="Top" Width="100" Height="50">
+                    <Button.Template>
+                        <ControlTemplate>
+                            <Grid>
+                                <Ellipse Fill="Magenta" />
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>                            
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+이번에는 Control Template를 Style로 정의한 후 여러 개의 버튼에 동시에 적용해보겠습니다. 3.5 Resource 절에서 배웠던 문법과 다른 부분은 진하게 표기하겠습니다. 그러면 차이가 나는 부분은 <Setter Property="Template">와 <Setter.Value>만 남습니다. 저절로 코드가 이해가 되지요? 이 두 문장으로 Control Template 요소를 감싸면 Style로 정의한 후 반복하여 사용할수 있습니다. 코드와 실행 화면을 함께 확인해보기 바랍니다. 
+
+
+MainPage.xaml
+
+            <StackPanel>
+                <StackPanel.Resources>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate>
+                                    <Grid>
+                                        <Ellipse Fill="Magenta" />
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Grid>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </StackPanel.Resources>
+
+                <Button Content="1st Button" VerticalAlignment="Top" Width="100" Height="50" />
+                <Button Content="2st Button" VerticalAlignment="Top" Width="150" Height="75" />
+	</StackPanel>
+
+
+
+※ Template Binding
+
+이번에는 버튼의 색상을 각각 다르게 지정하고 싶습니다. 그렇게 하려면 버튼마다 공통된 코드는 Control Template 에 작성해야 하고 버튼마다 다른 코드는 Button 요소에 작성해야 합니다. Control Template에서는 자신이 적용되는 부모 요소의 값을 가져다 사용할 수 있어야 합니다. 이때 사용하는 것이 Template Binding입니다. 이것도 코드로 살펴보면 아주 쉽습니다. 
+
+다음은 Template Binding을 사용하여 버튼의 크기와 색상을 각각 다르게 적용한 XAML 코드입니다. 
+
+
+MainPage.xaml
+
+           <StackPanel>
+                <StackPanel.Resources>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate>
+                                    <Grid>
+                                        <Ellipse Fill="{Binding Path=Background, RelativeSource={RelativeSource Mode=TemplatedParent}}" />
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Grid>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </StackPanel.Resources>
+
+                <Button Content="1st Button" VerticalAlignment="Top" Width="100" Height="50" Background="Brown"/>
+                <Button Content="2st Button" VerticalAlignment="Top" Width="150" Height="75" Background="Magenta" />
+	</StackPanel>
+
+이 코드에서 Template Binding은 바인딩하여 가져다 사용하는 대상이 부모 요소입니다. 달라진 코드 중에 {Binding Path=Background, RelativeSource={RelativeSource Mode=TemplatedParent}}"를 봅시다. 앞에서 이미 설명한 내용 입니다. 데이터바인딩으로 값을 가져오는 요소가 상대적 소스입니다. 즉 소스로 Template 의 부모요소를 지정하고 있고 부모의 값 중에서 Background 값을 가져오도록 했습니다. 그리고 버튼마다 Background 색상을 별도로 지정하여 Control Template에서 가져다 사용하게 하고 있습니다. 
+
+
+
+
+※ 알아두기
+여기서 설명한 것들 외에도 버튼과 같은 간단한 컨트롤이 아니라 ProgressBar나 ComboBox 같은 복잡한 컨트롤들을 변경하여 사용하기 위하여 XAML이 기본적으로 제공하는 요소를 수정하기 위한 많은 기법이 있습니다. 그러나 필자는 현장에서 프레임워크 혹은 패키지를 수정하여 프로젝트가 잘되는 모습을 별로 보지 못했습니다. 반대로 시스템이 사용자가 예상하는 대로 동작하지 않아 혼란을 초래하고 유지보수를 어렵게 하는 것은 자주 목격했습니다. 심지어 기본적으로 제공된 기능을 변경한 사람이 퇴사하면 남은 사람들이 속수무책인 경우도 많았습니다. 결국 IT 시스템은 기본 기능을 최대한 수용하는 것이 더 나은 선택일 수 있습니다. 
