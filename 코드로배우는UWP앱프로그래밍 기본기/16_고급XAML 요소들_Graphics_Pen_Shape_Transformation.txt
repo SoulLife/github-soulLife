@@ -1,0 +1,260 @@
+CHAPTER 05 : 고급 XAML 요소들
+
+
+1 : Graphics
+
+앞선 예제들을 통해 Rectangle, Ellipse, LinearGradientBrush 및 SolidColorBrush 등의 그래픽 요소들을 사용해보았습니다. 지금부터는 XAML 에서 제공되는 그래픽 기능을 전반적으로 살펴보겠습니다. XAML 그래픽 요소에는 Shape, Brush, Pen 등 세개의 카테고리가 있습니다. 
+
+
+※ Shape : 그래픽의 모양을 표현하기 위한 것으로 Ellipse(타원), Line(선), Rectangle(사각형), Polygon(다각형), Polyline(다중선) 및 Path(경로)가 있습니다. 
+
+※ Brush : 그래픽의 색상을 표현하기 위한 것으로 가장 단순하게 하나의 색상을 제공하는 SolidColorBrush(단색 브러시), 선형으로 색이 변화하는 시각적 효과를 제공하는 LinearGradientBrush(선형 그라디언트 브러시), 이미지를 사용하는 ImageBrush(이미지 브러시)등이 있습니다. 
+
+※ Pen : Shape 경계선을 그리기 위하여 사용하는데 Thickness(두께)와 Dash Pattern(점선 패턴), End Cap Details(선끝 모양)등을 위한 정보를 추가로 제공합니다. 
+
+
+
+
+※ Pen과 Shape
+
+XAML이 제공하는 Shape 요소들은 기본 컨트롤을 설명할 때와 같이 XAML 코드 조각과 컨트롤 외관 조각의 형태로 설명하겠습니다
+
+
+
+※ 색상과 경계선
+
+다음 예제를 보면 Shape 요소들은 속성을 이용해 색상과 경계선을 표현하는 것을 알 수 있습니다. Shape 의 안에 색을 채우는 Fill 속성은 Brush에 해당하고, 경계선을 표현하는 Stroke 속성은 Pen에 해당합니다. Brush에 해당하는 속성은 Fill외에도 Background이나 BorderBrush 등 여러가지가 있습니다. 
+
+
+XAML 코드 조각
+<Ellipse Width="100" Height="50" Fill="Green" Stroke="Black" StrokeThickness="5" />
+
+
+
+
+※ 선
+다음 예제를 보면 Line 요소를 사용해 선을 그리는 방법을 알 수 있습니다. 선의 시작 위치를 X1과 Y1 속성으로 지정하고 선이 끝나는 위치를 X2와 Y2 속성으로 지정하는 것은 매우 직관적입니다. 
+
+
+XAML 코드 조각
+<StackPanel>
+	<Line Stroke="Red" X1="0" Y1="10" X2="370" Y2="10" />
+	<Line Stroke="Green" StrokeThickness="10" X1="30" Y1="20" X2="400" Y2="20" />
+</StackPanel>
+
+
+
+
+
+※ 선끝 유형
+다음 예제를 보면 Line 요소들은 StrokeStartLineCap 속성으로 선이 시작하는 쪽의 선 끝 유형을 지정하고 StrokeEndLineCap 속성으로 선이 종료되는 쪽의 선 끝 유형을 지정하는 것을 알 수 있습니다. 그리고 선 끝 유형이 지정되는 경우 선 끝으로 돌출되는 부분은 라인의 범위를 살짝 벗어납니다. 
+
+
+XAML이 제공하는 선 끝 유형은 Flat(없음), Round(둥근모양), Square(사각) 및 Triangle(삼각)이 있는데 첫 번째 예제에서 확인할 수 있는 것과 같이 선 끝 유형을 지정하지 않으면 기본값으로 Flat이 사용됩니다. 각각의 선 끝 유형이 생긴 모양은 컨트롤 외관 조각에서 확인하기 바랍니다. 
+
+
+
+XAML 코드 조각
+
+    <StackPanel>
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="10" X2="370" Y2="10" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="10" X2="370" Y2="10" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="10" X2="370" Y2="10" StrokeStartLineCap="Square" StrokeEndLineCap="Square" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="10" X2="370" Y2="10" StrokeStartLineCap="Triangle" StrokeEndLineCap="Triangle" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="10" X2="370" Y2="10" StrokeStartLineCap="Flat" StrokeEndLineCap="Flat" />
+    </StackPanel>
+
+
+
+※ 점선의 패턴
+다음 예제를 보면 Line 요소들은 StrokeDashArray 속성으로 점선의 패턴을 지정하며, 점선이 전체 선 길이를 채울 때까지 반복하여 적용된다는 것을 알 수 있습니다. 
+
+즉 다음 컨트롤 외관 조각의 첫 번째 선에서 첫 번째 점과 공란은 단위 1만큼 즉, 선의 굵기인 10만큼 반복하여 적용되는 것을 볼 수 있습니다. 두 번째 선에서 첫 번째 점은 단위 5만큼 첫번째 공란은 단위 5만큼, 두 번째 점은 단위 1만큼, 두 번째 공란은 단위 5만큼 적용된 후 선이 끝날 때까지 반복하여 적용됩니다. 이와 같은 점선의 패턴은 Line 요소만이 아니라 선을 가지는 다른 Shape 요소에도 공통으로 적용됩니다. 
+
+
+XAML 코드조각
+
+    <StackPanel>
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="20" X2="370" Y2="20" StrokeDashArray="1" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="30" X2="370" Y2="30" StrokeDashArray="5 5 1 5" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="30" X2="370" Y2="30" StrokeDashArray="3 1 3 1" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="30" X2="370" Y2="30" StrokeDashArray="3 1 1 1" />
+    </StackPanel>
+
+
+
+※ 점선의 종류 
+다음 예제를 보면 Line 요소들은 StrokeDashCap 속성으로 점선을 그릴 때 점의 종류를 지정한다는 것을 알 수 있습니다. 점의 종류를 명시적으로 확인할수 있도록 점과 점 사이 공간의 크기를 StrokeDashArray = "2"와 같이 조금 길게 지정했습니다. 
+
+XAML이 제공하는 점의 종류는 Flat, Round, Square 및 Triangle이 있는데 첫 번째 예제에서도 확인한 바와 같이 점의 종류를 지정하지 않으면 Flat 이 기본값으로 사용됩니다. 점의 종류도 선 끝 유형과 같이 점의 크기보다 공백 쪽으로 조금 더 돌출됩니다. 각각의 점의 종류가 생긴 모양은 컨트롤 외관 조각에서 확인하기 바랍니다. 이와 같은 점선의 종류는 Line 요소만이 아니라 선을 가지는 Shape 요소에 공통으로 적용됩니다. 
+
+
+XAML 코드 조각
+
+    <StackPanel>
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="20" X2="370" Y2="20" StrokeDashArray="2" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="20" X2="370" Y2="20" StrokeDashArray="2" StrokeDashCap="Round" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="20" X2="370" Y2="20" StrokeDashArray="2" StrokeDashCap="Square" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="20" X2="370" Y2="20" StrokeDashArray="2" StrokeDashCap="Triangle" />
+        <Line Stroke="Green" StrokeThickness="10" X1="0" Y1="20" X2="370" Y2="20" StrokeDashArray="2" StrokeDashCap="Flat" />
+    </StackPanel>
+
+
+
+
+
+※ 위치 지정과 모서리 처리
+
+다음 예제를 보면 Shape 요소는 Canvas Layout 요소 안에 위치하는 경우 Canvas.Left와 Canvas.Top 부착 속성을 사용해 위치를 지정하고, StrokeLineJoin 속성을 사용해 사각형의 모서리를 지정하는 것을 알 수 있습니다. StrokeLineJoin 속성으로 지정할 수 있는 값은 Bevel(각진 모양), Miter(사각 모양) 및 Round(둥근 모양)가 있습니다. 이 예제에서는 Canvas의 경계를 명시적으로 보여주기 위해 빨간색 Border 요소로 Canvas Layout요소를 둘러쌌습니다. 
+
+
+
+XAML 코드 조각
+
+<Border BorderBrush="Red" BorderThickness="5">
+        <Canvas>
+            <Rectangle Width="100" Height="50" Fill="Green" Stroke="Black" StrokeThickness="10" StrokeLineJoin="Round" Canvas.Left="10" Canvas.Top="20" />
+        </Canvas>
+    </Border>
+
+
+
+
+
+※ Points 속성으로 다각선과 다각형 그리기
+
+다음 예제를 보면 Polyline과 Polygon은 Points 속성에 꼭짓점의 위치를 지정하는 것을 알 수 있습니다. Polyline은 지정된 꼭짓점을 연결하는 선만 그려주는데 Polygon은 마지막 꼭짓점과 시작점을 연결해 다각형을 그려주는 것이 다릅니다. 
+
+
+
+
+
+XAML 코드 조각
+
+<Polyline Stroke="Red" Points="0,0,0,50 50,50" />
+
+<Polyline Stroke="Red" Points="0,0 0,50 50, 50"/>
+
+
+
+XAML이 제공하는 Shape 중에서 아직 언급하지 않은 Path에 대한 설명은 크기 바꾸기(Scaling)와 회전(Rotation)에 대한 이해를 먼저 한 후에 별도로 진행하겠습니다. 
+
+
+
+※ Transformation
+
+XAML은 마크업 언어이기 때문에 대부분의 기능이 화면 요소의 형태로 제공되어 쉽게 화면을 구성할 수 있습니다. 또한 C#과 같은 프로그램 코드와 결합해 크기를 바꾸거나 회전하는 등 요소들의 모양이나 위치를 변형시키며 다양한 효과를 낼 수 있습니다. 
+
+다음의 첫 번째 코드와 두 번째 코드를 보면 StackPanel 요소 안에 녹색 Ellipse와 하늘색 Rectangle을 배치하고 버블링 이벤트(Bubbling Event)의 특성을 사용해 타원과 사각형의 상위 요소인 StackPanel요소의 Tapped 이벤트에 이벤트 핸들러를 달았습니다. 이렇게 상위 요소에 이벤트 핸들러를 달면 하위 요소를 탭해도 상위 요소에서 함께 처리할 수 있습니다. 
+
+다음 두 번째 코드의 코드 비하인드 이벤트 핸들러에서는 e.OriginalSource 인자를 사용해 탭한 하위 요소를 찾아 ellipse와 rectangle변수 객체에 저장합니다. 그리고 저장된 값이 null값이 아닌 경우 타원 크기는 2배 늘리고 사각형은 90도 회전하게 했습니다. 객체 변환값이 null이 아니라는 의미는 해당 객체에서 이벤트가 발생했다는 것을 의미합니다. 
+
+
+다음은 탭한(Tapped)그래픽 요소를 변환(Transformation)시키는 XAML 코드입니다. 
+
+
+
+
+MainPage.xaml
+
+    <StackPanel x:Name="mainStackPanel" Tapped="mainStackPanel_Tapped">
+        <Ellipse Width="40" Height="20" Fill="Green" />
+        <TextBlock Text="문자열 String" HorizontalAlignment="Center" />
+        <Rectangle Width="40" Height="20" Fill="Cyan" />
+    </StackPanel>
+
+
+다음은 탭한 그래픽 요소를 변환시키는 코드 비하인드입니다. 
+
+
+
+MainPage.xaml.cs
+
+        private void mainStackPanel_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            Ellipse ellipse = e.OriginalSource as Ellipse;
+            Rectangle rectangle = e.OriginalSource as Rectangle;
+
+            if (ellipse != null)
+                ellipse.Width *= 2;
+
+            if (rectangle != null)
+                rectangle.Rotation += 90;
+        }
+
+
+그래픽 요소의 크기를 조절하거나 회전을 시키는 등의 작업은 XAML 로 하는 것보다 프로그램 코드를 사용해 동적(Dynamic)으로 하는 것이 훨씬 유연성이 있지만 위에서 한 작업을 XAML 코드만 사용해 정적(Static)으로 구현하면 다음 코드와 같습니다. <Ellipse.RenderTransform>과 <Rectangle.RenderTransform>이 상위 요소에 속성을 추가해주는 속성 요소라는 것을 이해하면 다음 코드를 매우 직관적으로 이해할 수 있습니다. 
+
+다음은 그래픽 변환을 정적으로 구현한 XAML 코드입니다. 
+
+
+
+
+
+MainPage.xaml
+
+<StackPanel x:Name="mainStackPanel" Tapped="mainStackPanel_Tapped">
+	<Ellipse Width="40" Height="20" Fill="Green">
+		<Ellipse.RenderTransform>
+			<ScaleTransform ScaleX="2" />
+		</Ellipse.RenderTransform>
+	</Ellipse>
+	<Rectangle Width="40" Height="20" Fill="Cyan">
+		<Rectangle.RenderTransform>
+			<RotateTransform Angle="90" />
+		<Rectangle.RenderTransform>
+	</Rectangle>
+</StackPanel>
+
+
+다음 예제에서는 SkewTransform(기울기 변환)을 정적으로 구현해보았습니다. 실행 화면을 보면 첫 번째 "SkewTransform AngleX="30" 문자열의 기울기가 X축을 기준으로 30도 기울어진 것을 알 수 있고, 두 번째 "SkewTransform AngleY="10"문자열의 기울기가 Y축을 기준으로 10도 기울어진 것을 알 수 있습니다. SkewTransform을 코드 비하인드로 동적으로 구현하고 싶다면 인터넷에서 "uwp compositeransform"을 검색해 방법을 알아봅니다. 
+
+
+
+MainPage.xaml
+
+<StackPanel x:Name="mainStackPanel" Tapped="mainStackPanel_Tapped">
+	<TextBlock Text="SkewTransform AngleX=30" HorizontalAlignment ="Center">
+		<TextBlock.RenderTransform>
+			<SkewTransform AngleX="30" />
+		</TextBlock.RenderTransform>
+	</TextBlock>
+	<TextBlock Text="SkewTransform AngleY=10" HorizontalAlignment ="Center">
+		<TextBlock.RenderTransform>
+			<SkewTransform AngleY="10" />
+		</TextBlock.RenderTransform>
+	</TextBlock>
+</StackPanel>
+
+
+지금까지는 하나의 요소에 하나의 변환을 적용하는 코드와 예제를 살펴보았습니다. 다음 예제에서는 하나의 요소에 여러 개의 변환을 동시에 적용하는 코드를 보여줍니다. 방법은 간단합니다. 
+
+
+여러 개의 변환 요소들을 TransformGroup 요소로 감싸거나 CompositeTransform 요소를 사용하며 속성 요소에 변환 요소에 대응되는 속성값을 지정하면 됩니다. 그런데 RotateTransform 요소는 회전을 시키기 위해 Angle이라는 이름의 속성을 사용하는데 CompositeTransform 요소는 Rotation 이라는 이름의 속성을 사용합니다. 일관성! 참으로 풀기 어려운 숙제입니다. 풀어야 할 숙제가 하나 더 있는데 요소들의 변환이 처음에 XAML 에게서 배정받은 위치에서 이루어지기 때문에 변환된 후의 요소들이 서로 겹친다는 것입니다. 그래서 회전 각도를 90도에서 45도로 바꾸고 요소의 위치를 이동해주는 TranslateTransform 변환을 사용해 Ellipse 는 X축으로 10만큼 이동시키고 Rectangle은 Y축으로 10만큼 이동시켰습니다. 실행 화면을 보면 Ellipse와 Rectangle의 크기가 모두 2배로 커졌고 회전은 45도로 이루어진 것을 확인할 수 있습니다. 우측으로 10만큼 아래로 10만큼 이동한 것은 육안으로 확인하기 쉽지 않습니다. 
+
+
+다음은 여러 효과를 동시에 정적으로 구현한 XAML 코드입니다. 
+
+
+
+MainPage.xaml
+
+    <StackPanel x:Name="mainStackPanel" Tapped="mainStackPanel_Tapped">
+        <Ellipse Width="40" Height="20" Fill="Green">
+            <Ellipse.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform ScaleX="2" />
+                    <RotateTransform Angle="45" />
+                    <TranslateTransform X="10" />
+                </TransformGroup>
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Rectangle Width="40" Height="20" Fill="Cyan">
+            <Rectangle.RenderTransform>
+                <CompositeTransform ScaleX="2" Rotation="45" TranslateY="10" />
+            </Rectangle.RenderTransform>
+        </Rectangle>
+    </StackPanel>
+
+
+MatrixTansform 요소는 3차원 Matrix에 변환 정보를 담아 변환하는 기능을 제공하는데 기본기의 범주를 벗어난다고 판단해 설명하지 않겠습니다만 위에서 설명한 고정된 방식의 변환이 아니라 수학적 지식을 기반으로 변환이 필요하다면 인터넷 검색하여 찾아보기 바랍니다. Microsoft Docs와 많은 전문가의 블로그에서 필요한 정보를 찾을 수 있을 것입니다. 필자는 개인적으로 정보의 바다에 빠져서 허우적거리지 않기 위해 평소에 기본 개념을 잘 익혀둔 후 필요한 기법과 문법들을 인터넷에서 찾아가면서 코딩합니다. 
