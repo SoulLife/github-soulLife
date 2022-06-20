@@ -1,0 +1,308 @@
+※[Meida] > [MediaPlayerElement]
+
+UWP에서는 MP3, Mp4, WMA및 WMV등의 오디오와 비디오 형식을 지원합니다. 더 자세한 것은 Microsoft Docs의 "지원되는 코덱" 페이지(https://docs.microsoft.com/ko-kr/windows/uwp/audio-video-camera/supported-codecs)에서 확인할 수 있습니다. 
+
+다음 예제를 보면 MediaPlayerElement 요소를 이용해서 WMV 동영상 파일을 실행시키는 XAML 코드를 확인할 수 있습니다. Source 속성을 이용해 실행할 동영상 파일을 지정하는데, 파일의 경로명 앞에 ms-appx://를 붙여 주어야 합니다. 이미지를 Source로 지정할 때에는 이런 제약이 없었죠. 그냥 MediaPlayerElement의 문법적 특징이라고 이해하면 됩니다. ms-appx://의 문법은 http://와 같이 프로토콜을 지정하는 형식으로 ms는 마이크로소프트를 의미하고 appx는 확장형 앱을 의미합니다. 
+
+
+AutoPlay 속성은 프로그램을 자동으로 실행할 것인지를 결정하고 AreTransportControlsEnabled 속성은 동영상 화면 하단에 동영상 제어판(TransportControl)들을 보이게 할 것인지 아닌지를 결정합니다. 일반적으로 AutoPlay가 False이면 AreTransportControlsEnabled을 True로 지정해 제어판이 나타나도록 합니다. 
+
+그런데 실행 화면을 보니 동영상은 기본적으로 전체 화면에 나타납니다. 단 프로그램을 실행시켜 보기 전에 Universal Windows 프로젝트 하단의 Assets 폴더에 동영상 파일을 복사해 놓아야 합니다. FilmModeDetection.wmv 파일은 Windows 10의 파일 탐색기에서 *.wmv 를 검색어로 찾았습니다. 복사하는 방법은 일반적인 Windows 운영체제에서와 동일한데 파일 탐색기에서 파일을 복사한 후 비주얼 스튜디오의 Assets 폴더에 붙여넣으면 됩니다. 
+
+
+
+※ 알아두기
+FilmModeDetection.wmv 파일이 여러분의 PC에 존재하지 않으면 임의의 동일한 형식의 파일을 사용하거나 출판사가 제공하는 사이트에서 복사해 사용하기 바랍니다. 
+
+
+<MediaPlayerElement Source="ms-appx:///Assets/mingming.mp4" AutoPlay="False" AreTransportControlsEnabled="True" 
+MaxWidth="300" MaxHeight="200" />
+
+
+동영상의 크기를 제어하려면 다음 예제와같이 MaxWidth나 MaxHeight 속성을 사용해야 합니다. 그러면 동영상이 큰 경우 동영상이 차지하는 최대 넓이와 최대 높이를 제한할 수 있습니다. 
+
+
+
+다음은 동영상과 동일한 방식으로 오디오를 실행시키는 XAML 코드입니다. 편의상 전체 화면 XAML 코드는 기술하지 않았는데 Source 속성을 이용해 실행할 오디오 파일을 지정하기만 하면 됩니다. 당연히 프로그램을 실행해보기 전에 Universal Windows 프로젝트 하단의 Assets 폴더에 오디오 파일을 복사해 놓아야 합니다. CompletedSound.mp3 파일은 Windows 10 의 파일 탐색기에서 *.mp3 를 검색어로 찾았습니다.
+
+
+
+※ 알아두기
+CompletedSound.mp3 파일이 여러분의 PC에 존재하지 않으면 임의의 동일한 형식의 파일을 사용하거나 출판사가 제공하는 사이트에서 복사해 사용하기 바랍니다. 
+
+
+
+<MediaPlayerElement MaxWidth="300" MaxHeight="200" Source="ms-appx:///Assets/BLACKPINK - How You Like That.mp3" AutoPlay="False" AreTransportControlsEnabled="True" />
+
+
+
+※[Media] > [Sound]
+
+
+XAML Controlls Gallery 앱의 Media 카테고리 하단의 Sound는 파일에 저장된 일반 오디오가 아니라 UWP가 제공하는 System Sound(시스템 사운드)를 의미합니다. 
+
+UWP가 제공하는 System Sound는 ElementSoundKind 열거형(enum)으로 정의되어 있는데 Focus, Invoke, Show, Hide, MoveNext, MovePrevious 및 GoBack이 있습니다. 그런데 소리가 나게 하기 위해서는 다음과 같이 코드 비하인드의 도움이 필요합니다. 코드는 간단합니다. ElementSoundPlayer의 상태를 On으로 두고 Play() 메소드를 사용하여 원하는 시스템 소리를 실행하면 됩니다. 단 ElementSoundPlayer를 사용하려면 using Windows.UI.Xaml;와 같이 using 선언문을 먼저 기술해야 합니다. 물론 ElementSoundPlayer위에 마우스 커서를 놓고 <Ctrl> + <.>키를 사용하여 using 선언문을 추가해도 됩니다. ElementSoundPlayer는 Windows.UI.Xaml 네임스페이스에 Static으로 정의된 객체여서 객체를 만드는 코드 없이 메소드를 바로 사용할수 있는 것입니다. 
+
+소리는 책에 보이게 할 수 없으니 만들어진 버튼을 클릭해 System Sound를 들어보기 바랍니다. 
+
+
+
+XAML 코드 조각
+
+<Button x:Name="playFocusSound" Content="Play Focus Sound" Tapped="playFocusSound_Tapped" />
+
+
+코드 비하인드 조각
+        private void playFocusSound_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            ElementSoundPlayer.State = ElementSoundPlayerState.On;
+            ElementSoundPlayer.Play(ElementSoundKind.Focus);
+        }
+
+
+※[Media] > [WebView]
+
+WebView는 UWP 앱에서 웹 콘텐츠를 보여주는 역할을 합니다. 코딩하는 방법은 다음 예제와 같이 아주 단순합니다. URL은 UWP 를 백과사전식으로 설명하는 Microsoft Docs 사이트 주소를 사용했습니다. UWP 앱을 개발하려면 자주 참조해야할 사이트이기도 합니다. 
+
+
+<WebView Source="https://docs.microsoft.com/ko-kr/windows/uwp" />
+
+
+
+
+
+3 : Animation
+
+이번에는 Animation과 관련하여 XAML이 제공하는 기능들을 살펴보겠습니다. 
+
+XAML에서 이야기하는 Animation은 현재 모습을 다른 모습으로 전환할 때 유용한 기능으로 대상 요소의 크기나 위치, 색상 등이 특정 시간 안에 변경되게 하는 작업을 포함합니다. 그런데 Animation 예제와 설명은 XAML Controls Gallery에서는 Motion이라는 이름으로, Windows Community Toolkit Sample App에서 는 Animation이라는 이름으로 분류되어 있습니다. XAML 코드와 코드 비하인드등 에니메이션을 위한 복잡한 여러 요소를 사용하는 방식은 설명하기가 어려워서 Windows Community Toolkit Sample App의 [Animation]부분의 예제와 같은 방식으로 쉽게 설명해보겠습니다. 그러기 위해서는 Microsoft.Xaml.Interactivity와 Microsoft.Toolkit.Uwp.UI.Animations.Behaviors 네임스페이스가 필요합니다. 무슨 일을 하는 네임스페이스인지는 이름을 통해 추정할 수 있습니다. 
+
+우선 Microsoft.Toolkit.Uwp.UI.Animations NuGet 패키지를 설치해야 합니다. NuGet 패키지를 설치하는 방법이 생각나지 않으면 "[Collections] > [DataGrid]절에서 NuGet 패키지를 설치하는 것을 설명한 부분을 참조하기 바랍니다. 다음 그림에서 왼쪽 사각형으로 둘러싼 것이 설치할 NuGet 패키지이고 성공적으로 설치한 후에는 오른쪽 사각형으로 둘러싼 것처럼 나타나야 합니다. (6.0버전 설치)
+
+
+
+
+※ 알아두기
+코딩으로 Animation 기능을 작성하는 것은 추천할 만한 방법이 아닙니다. Blend라는 도구를 사용하면 화면을 이용해 간단하고 정확하게 작업할 수 있는데 아쉽게도 Blend 사용법 은 이 책의 범위를 벗어나므로 따로 설명하지 않습니다. 앞에서 설명한 호 BezierSegment, QuadraticBezierSegment, PolyBezierSegment, PolyQuadraticBezierSegment등뿐만 아니라 Animation을 구현해야 하는 상황이 오면 XAML 코드로 그리지 말고 Blend for Visual Studio로 그려서 제공되는 XAML 코드를 사용하기 바랍니다.
+
+
+
+다음 예제를 보면 이미지의 Animation을 시각적으로 확인하기 쉽도록 Border 요소를 만들고 배경색을 회색으로 지정했습니다. 그리고 Animation에서 사용할 2개의 네임스페이스를 선언했습니다. XAML 네임스페이스의 선언은 Resource나 Style과 같이 사용할 위치와 가장 가까운 요소에서 할 수 있습니다. 하지만 일반적으로 Page와 같이 XAML 파일의 최상위 요소에서 선언해야 전체 프로그램이 동일한 네임스페이스를 사용할 수 있습니다. 
+
+Animation 대상은 Image 요소인데 이미지를 대상으로 interactivity 네임스페이스에 정의된 Interaction.Behaviors 요소를 사용해 Animation을 지정합니다. 유사한 의미를 가지는 Motion과 Animation이라는 용어에 Behavior(움직임)이라는 용어가 추가되었습니다. 개발 도구 개발자들이 저마다 다른 생각을 가지고 개발하고 실제로도 각 용어는 조금씩 다르기 때문에 응용 프로그램 개발자가 그 용어의 의미를 잘 찾아서 사용하는 수밖에는 없습니다. 
+
+그리고 behaviors 네임스페이스의 Fade 요소를 사용해 점점 사라지는 방식(Fade out)으로 Animation을 만듭니다. Fade Behavior는 Animation 대상 속성으로 Opacity를 사용하는데 여기서는 점점 사라지는 예제를 구현하기 위해 Animation이 끝날 때의 값인 Value 속성을 0으로 지정했습니다. 이미지의 Opacity 초깃값은 기본값 1인 상태입니다. 즉 불투명한 상태이니 보이던 이미지가 서서히 0으로 변해가면서 사라지죠. 그리고 5초간 서서히 사라지게 하기 위해 Duration(지속 시간) 속성의 값을 5000으로 지정했습니다. Duration 속성의 지정 단위는 1000분의 1초입니다. 결과는 컨트롤 외관 조각에서 확인하기 바랍니다. 이미지가 서서히 사라지는 것을 확인할 수 있습니다. 
+
+
+
+XAML 코드 조각
+
+    <StackPanel>
+        <Border xmlns:interactivity="using:Microsoft.Xaml.Interactivity" xmlns:behaviors="using:Microsoft.Toolkit.Uwp.UI.Animations.Behaviors" Background="Gray"
+                Width="100" Height="100">
+            <Image Source="/Assets/lock.png" Height="100" Width="100" Opacity="0">
+                <interactivity:Interaction.Behaviors>
+                    <behaviors:Fade Value="0" Duration="5000" />
+                </interactivity:Interaction.Behaviors>
+            </Image>
+        </Border>
+    </StackPanel>
+
+
+XAML이 제공하는 Animation 방식중 NuGet 패키지를 프로젝트에 포함하면 이 방식의 Animation이 가장 직관적이고 쉬운데 다음 그림과 같이 Windows Community Toolkit Sample App의 Animation 부분을 보면 제공되는 Animation 의 종류가 충분하지 않은 한계가 있습니다. 하지만 여기서 제공하는 예제가 XAML 코드만 가지고 Animation을 구현하기 때문에 Animation이 무엇이라고 설명하기에는 적절하다고 판단됩니다. Effect(효과)라는 용어가 추가되었습니다. 아무튼 이 책은 기본기를 설명하는 책이니만큼 Windows Community Toolkit Sample App에서 기술하는 모든 움직임과 효과를 설명하지는 않을 것입니다. 필요할 때 찾아보시면 됩니다. 
+
+
+
+
+
+※ Transition
+
+예제를 통해 XAML에서 말하는 Animation이 무엇인지 알았으니 이제는 XAML이 가장 기본적으로 제공하는 기술을 사용해야 하지만 위에서 설명한 것보다는 조금 어려운 방법을 통하여 앞에서 구현했던 서서히 나타나는 Animation을 구현해보겠습니다. XAML Controls Gallery의 [Motion] > [Implicit Transitions] 부분의 예제와 같은 방식인데 XAML 코드와 코드 비하인드 코드를 조합하여 구현할 수 있습니다. 
+
+이번에는 Transition(전환)이라는 용어가 추가되었습니다. 앞의 예제에서 이미지가 서서히 사라지는 것을 보면 Animation이나 Motion, Behavior, Effect라기보다는 투명도의 Transition이라고 보는 것이 타당할 수도 있습니다. 
+
+응용 프로그램 개발자들이 용어의 본뜻을 찾아내기 위하여 애쓴다면 개발 도구의 개발자들은 적합한 용어를 찾기 위하여 애쓴다는 것을 어렵지 않게 짐작할 수 있습니다. 그만큼 응용 프로그램 개발자와 개발 도구 개발자들의 기술의 초점은 상이합니다. 그런데 시중에는 개발 도구 개발자를 위한 서적들은 넘쳐나는데 응용프로그램 개발자를 위한 서적들이 잘 보이지 않으니 조금 이상한 현상이라고 볼 수 있겠습니다. 
+
+
+
+
+
+※ OpacityTransition
+
+다음 예제는 XAML 코드에서 이미지의 불투명도의 초깃값을 0으로 두어 투명하게 만든 후 코드 비하인드의 Image 요소에 대한 Loaded 이벤트 핸들러에서 불투명도를 1로 지정하여 전환해가는 방식으로 Animation을 구현합니다. 우선 XAML의 기본 기능을 사용하기 때문에 Border 요소에서 별도의 네임스페이스 선언은 필요하지 않습니다. 코드 비하인드에서 Image 요소를 사용하기 위해 이름을 lockImage로 지정했습니다. 
+
+그리고 이미지의 불투명도를 전환하기 위하여 Image.OpacityTransition 속성 요소를 추가했습니다. 전환되는 방식은 ScalarTransition 요소로 지정하는데 여기에 전환해가는 시간을 지정했습니다. 앞의 예제에서는 밀리초 단위로 Duration 속성을 지정했는데 여기서는 시:분:초의 형식으로 지정해야 합니다. 그리고 전환이 끝날 때의 lockImage의 불투명도는 코드 비하인드의 Loaded 이벤트 핸들러에서 lockImage.Opacity의 값을 1로 지정하여 완전히 불투명한 상태로 지정했습니다. 이렇게 XAML 코드와 코드 비하인드 코드의 관련성도 응용 프로그램 개발자가 코드 예제를 통해 파악해갈 부분이라고 판단됩니다. 
+
+반투명 상태에서 Animation을 시작하게 하고싶으면 Image 요소의 Opacity 속성을 0.5로 지정하고 반투명 상태로 Animation이 끝나게 하고싶으면 코드 비하인드에서 lockImage.Opacity의 값을 0.5로 지정하면 되겠다는 것을 쉽게 유추할 수 있습니다. 반대로 이와 같은 방식으로 이미지가 사라지는 Animation을 구현하고 싶다면 Image 요소의 Opacity 속성 값을 1로, 코드 비하인드의 lockImage.Opacity 값을 0으로 지정하면 됩니다. 
+
+
+
+XAML 코드 조각
+
+        <Border Background="Gray" Width="100" Height="100">
+            <Image x:Name="lockImage" Source="/Assets/lock.png" Height="100" Width="100" Opacity="0" Loaded="lockImage_Loaded">
+                <Image.OpacityTransition>
+                    <ScalarTransition Duration="0:0:5" />
+                </Image.OpacityTransition>
+            </Image>
+        </Border>
+
+
+코드 비하인드 조각
+
+        private void lockImage_Loaded(object sender, RoutedEventArgs e)
+        {
+            lockImage.Opacity = 1;
+        }
+
+
+UWP의 XAML에서는 OpacityTransition 외에도 RotationTransition, ScaleTransition, TranslationTransition, BackgroundTransition을 제공합니다. 그리고 상위 Transition에 따라서 하위 Transition으로 ScalarTransition, Vector3Transition, BrushTransition등을 제공합니다. 
+
+
+
+
+
+※ RotationTransition
+
+다음 예제는 RotationTransition을 사용해 요소를 회전시키는 예제입니다. Opacity 속성 대신 Rotation 속성을 사용한 것과 Rotation 속성에 값을 지정할 때 0~360도 사이의 각도를 지정한 것과 회전이 시계 방향으로 이루어지는 것을 제외하면 이전 예제와 동일합니다. 
+
+
+
+XAML 코드 조각
+
+        <Border Background="Gray" Width="100" Height="100" >
+            <Image x:Name="lockImage" Source="/Assets/lock.png" Height="100" Width="100" Rotation="0" Loaded="lockImage_Loaded">
+                <Image.RotationTransition>
+                    <ScalarTransition Duration="0:0:5" />
+                </Image.RotationTransition>
+            </Image>
+        </Border>
+
+
+코드 비하인드 코드 조각
+
+        private void lockImage_Loaded(object sender, RoutedEventArgs e)
+        {
+            lockImage.Rotation = 360;
+        }
+
+
+
+
+
+※ ScaleTransition
+
+다음 예제는 ScaleTransition 을 사용해 요소의 크기를 점점 커지게 하는 예제입니다. Scale 속성을 사용한 것과 Scale 속성에 값을 지정할 때 Scale="0,0,0"와 같이 요소의 크기의 배율을 X, Y, Z축에 대해 각각 0으로 지정하여 Animation 초기에는 요소를 보이지 않게 했습니다. 그리고 ScaleTransition 하위 Animation 요소 대신 Vector3Transition 요소를 사용했습니다. 
+
+Vector3는 3차원 벡터를 의미하는 것으로 3차원은 각각 X축과 Y축과 Z축을 의미합니다. 이 예제에서는 X축과 Y축의 2차원 벡터만으로도 표현이 가능한데 XAML 이 입체적인 요소도 지원하기 때문에 Vector3Transition을 사용하게 되어 있습니다. 
+우리는 Z축은 사용하지 않기 때문에 값을 변화시키지 않고 Scale"0,0,0"과 System.Numerics.Vector3(1,1,0)과 같이 0으로 고정했습니다. 
+
+코드 비하인드 조각에서 Scale 속성에 값을 지정할 때에는 System.Numerics.Vector3 객체를 사용해 요소의 크기 배율을 X, Y 축에 대해 각각 1로 지정하여 Animation이 종료될 때는 요소의 전체 크기로 복귀되도록 했습니다. 만약에 배율을 1보다 큰 값으로 지정하면 원래의 크기보다 배율만큼 더 커지게 됩니다. 
+
+
+
+
+XAML 코드 조각
+
+        <Border Background="Gray" Width="100" Height="100" >
+            <Image x:Name="lockImage" Source="/Assets/LockScreenLogo.scale-200.png" Height="100" Width="100" Scale="0,0,0" Loaded="lockImage_Loaded">
+                <Image.ScaleTransition>
+                    <Vector3Transition Duration="0:0:5" />
+                </Image.ScaleTransition>
+            </Image>
+        </Border>
+
+
+코드 비하인드 조각
+
+        private void lockImage_Loaded(object sender, RoutedEventArgs e)
+        {
+            lockImage.Scale = new System.Numerics.Vector3(1, 1, 0);
+        }
+
+
+
+※ TranslationTransition
+
+다음 예제는 TranslationTransition 을 사용해 요소의 위치를 조정하는 예제입니다. Image 요소를 밑에서 대각선 방향으로 날아오게 했습니다. Scale 속성 대신 Translation 속성을 사용한 것과 값을 배율이 아니라 XAML의 장치 독립적인 단위를 사용한 것을 제외하면 이전 예제와 동일합니다. 실행해 보면 도형이 100, 100, 0의 위치에서 0, 0,0 의 위치로 서서히 이동합니다. 
+
+
+
+XAML 코드 조각
+
+        <Border Background="Gray" Width="100" Height="100" >
+            <Image x:Name="lockImage" Source="/Assets/LockScreenLogo.scale-200.png" Height="100" Width="100" Translation="100,100, 0" Loaded="lockImage_Loaded">
+                <Image.TranslationTransition>
+                    <Vector3Transition Duration="0:0:5" />
+                </Image.TranslationTransition>
+            </Image>
+        </Border>
+
+
+
+코드 비하인드 조각
+
+        private void lockImage_Loaded(object sender, RoutedEventArgs e)
+        {
+            lockImage.Translation = new System.Numerics.Vector3(0, 0, 0);
+        }
+
+
+
+※ BackgroundTransition
+
+다음 예제는 BackgroundTransition을 사용해 요소의 배경색을 서서히 변화시키는 예제입니다. 회색(Gray)에서 청색(Blue)으로 서서히 변합니다. BackgroundTransition은 ContentControl에만 적용할 수 있는데 Content Control에 바로 적용하지 않고 Content Control의 Content 부분만 떼어내서 표현하는 ContentPresenter 하부 요소의 도움을 받아야 Animation을 구현할 수 있습니다. 
+
+ContentPresenter 개념이 혼동될 수도 있습니다. 그러나 다음 예제에서 Button 요소는 버튼을 정의하는 것이고 ContentPresenter 요소는 버튼의 구성 요소 중 Content만 떼어서 정의하는 것으로 이해하면 됩니다. BackgroundTransition 상위 Animation 요소의 하부 Animation 요소는 BrushTransition을 사용합니다. 코드 비하인드의 Loaded 이벤트 핸들러에서 색상을 지정하는 로직이 이해되지 않으시면 4장 기본 컨트롤 요소들에서 [Collections] > [ListBox]"절을 다시 보기 바랍니다. 
+
+
+
+XAML 코드 조각
+
+        <Button>
+            <ContentPresenter x:Name="animationContentPresenter" Width="100" Height="100" Content="Blue Button" HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Background="Gray" Loaded="animationContentPresenter_Loaded">
+                <ContentPresenter.BackgroundTransition>
+                    <BrushTransition Duration="0:0:5" />
+                </ContentPresenter.BackgroundTransition>
+            </ContentPresenter>
+        </Button>
+
+
+코드 비하인드 조각
+
+        private void animationContentPresenter_Loaded(object sender, RoutedEventArgs e)
+        {
+            Color color = (Color)XamlBindingHelper.ConvertValue(typeof(Color), "Blue");
+            animationContentPresenter.Background = new SolidColorBrush(color);
+        }
+
+
+
+
+
+
+※ ContentPresenter
+
+다음 예제에서는 ContentPresenter 요소의 개념을 이해하기 쉽도록 Button 컨트롤을 Border 컨트롤로 변경해보았습니다. 컨트롤 외관 조각을 확인해보면 버튼에서 나타나던 회색 테두리가 사라지고 버튼을 클릭하는 기능이 동작하지 않는 것을 확인할 수 있습니다. 요소의 모양과 동작은 Content Control에 의해 결정되고 내용은 ContentPresenter 요소에 의해 결정되는 것을 이해하면 됩니다. 
+
+
+
+
+XAML 코드 조각
+        <Border>
+            <ContentPresenter x:Name="animationContentPresenter" Width="100" Height="100" Content="Blue Border" HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Background="Gray" Loaded="animationContentPresenter_Loaded">
+                <ContentPresenter.BackgroundTransition>
+                    <BrushTransition Duration="0:0:5" />
+                </ContentPresenter.BackgroundTransition>
+            </ContentPresenter>
+        </Border>
+
+
+코드 비하인드 조각
+        private void animationContentPresenter_Loaded(object sender, RoutedEventArgs e)
+        {
+            Color color = (Color)XamlBindingHelper.ConvertValue(typeof(Color), "Blue");
+            animationContentPresenter.Background = new SolidColorBrush(color);
+        }
