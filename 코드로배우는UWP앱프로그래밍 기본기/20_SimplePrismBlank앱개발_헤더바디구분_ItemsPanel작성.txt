@@ -1,0 +1,360 @@
+CHAPTER 6 : UWP 프로그램 예제
+
+
+지금까지 배운 기본기를 활용해 레고 조각을 맞추어 가듯이 간단한 앱을 개발하면서 UWP 프로그램을 익히겠습니다. 설명보다 실습으로 익히기에 용이에 설명하지 않고 남겨 두었던 기본기를 추가적으로 학습하면서 여러분이 앞에서 이미 공부한 것들을 한 번 더 복습할 수 있도록 구성했으니 잘 따라오기 바랍니다. 
+
+
+
+1 : SimplePrismBlank 앱 개발하기
+
+SimplePrismBlank 앱은 Prism 프레임워크로 만드는 Blank 프로젝트 유형의 앱으로, 간단한 UWP 앱을 만들어 보면서 실제 프로젝트 환경에서 필요한 기술들을 추가적으로 학습할 수 있도록 구성했습니다. 
+
+
+이 앱은 다음 그림과 같이 처음 기동될 때 3행 3열의 버튼을 보여주며, 상단 헤더 영역에 버튼을 그릴 행과 열의 개수를 입력하고 <다시 그리기> 버튼을 누르면 하단의 본문 영역에 지정한 행과 열만큼의 버튼을 동적으로 그려줍니다. 
+
+
+앱을 개발하는 순서는 다음과 같습니다. 우선 XAML 화면을 앞의 예제들처럼 정적으로 만들지 않고 동적으로 생성할 것입니다. XAML 화면은 기본적으로 정적인 코드이기 때문에 프로그램이 실행될 떄의 상황을 반영해 화면을 동적으로 구성하지 못합니다. 그러나 프로그래밍을 하다보면 상황에 맞게 화면을 변경해야 할 때가 있습니다. 이럴 때를 대비해 첫째, ItemsControl 요소를 사용해 데이터 바인딩에 기반한 동적 XAML 화면(Data Driven User Interface)을 생성하는 기술을 알아봅니다. 
+
+둘째 시스템 자원과 로컬 자원을 비주얼 스튜디오의 속성 창에서 선택해 화면의 룩앤드 필(Look & Feel)을 관리하는 방법과 XAML을 사용하지 않고 비주얼 스튜디오의 속성 창에서 마우스 클릭을 사용해 그라데이션 효과를 만드는 방법을 알아보겠습니다. 
+
+셋째 화면의 형태만 동적으로 구성하는 것이 아니라 사용자 정의 객체를 사용해 동적으로 변화하는 화면의 컨트롤 항목에 데이터의 값을 보여주는 방법을 알아봅니다. 
+
+넷째 데이터를 XAML 화면의 형식에 맞게 보여주거나 화면의 오류 메시지를 처리하는 방법 등을 코드를 통해 설명하면서 .NET 기능 확장의 예로 오류 메시지를 음성으로 불러주는 기능을 함께 구현해 볼 것입니다. 
+
+끝으로 Windows 운영체제에서 제공하는 다국어 버전의 앱을 만드는 방법을 알아봅니다. 
+
+
+
+※ Prism Framework 기반의 새 프로젝트 만들기
+
+먼저 새 프로젝트를 만듭니다. 비주얼 스튜디오를 새로 시작한 후 [새 프로젝트 만들기]를 클릭해도 되고 비주얼 스튜디오가 이미 실행 중인 경우는 상단의 [파일] > [새로 만들기] > [프로젝트] 메뉴 항목을 선택합니다. 
+
+[Windows Template Studio (Universial Windows)] 템플릿을 선택하고 <다음> 버튼을 클릭합니다. 
+C#, Windows, UWP, 데스크톱이라고 하단에 나옴(모든언어 C#, 모든 플랫폼 Window, 모든 프로젝트 형식에 UWP 선택)
+
+
+프로젝트 이름을 SimplePrismBlank로 설정하고 프로젝트가 생성될 폴더의 위치를 선택한 후 만들기 버튼을 클릭합니다.
+
+프로젝트 유형을 [Blank]로 설정한 후 <다음> 버튼을 클릭합니다. 
+
+Design Pattern을 [Prism]으로 선택한 후 <다음> 버튼을 클릭합니다. 
+
+페이지 추가 화면에 Blank가 선택된 것과 페이지 이름이 Main으로 설정된 것을 확인한 후 <만들기> 버튼을 클릭해 프로젝트 생성 작업을 완료합니다.
+
+
+프로젝트가 생성된 후 비주얼 스튜디오의 솔루션 탐색기를 보면 Views 와 ViewModels 폴더에 MainPage.xaml과 MainViewModel.cs 파일이 생성되어 있습니다. 프로젝트를 생성할 때 [Blank]프로젝트 유형을 선택해서 생긴 것입니다. MainPage.xaml 파일 하위에는 코드 비하인드 파일인 MainPage.xaml.cs 파일이 있습니다. 
+
+
+이제 앱을 실행해봅니다. 그러면 다음 그림과 같이 Prism이 제공하는 기본 기능으로 빈 화면이 나오는 것을 확인할 수 있습니다. 
+
+
+
+
+※ MainPage 뷰를 2개의 영역으로 분할하기
+
+우선 MainPage.xaml 코드에서 화면을 헤더와 본문의 2개 영역으로 분할합니다. 다음 코드와 같이 화면 전체를 사용하기 위해 Grid 요소를 배치하고 Grid 를 두 개의 행으로 나누어 상단의 행에는 높이를 Auto로 지정해 하부에 배치되는 컨트롤의 크기로 지정하고 하단의 행은 높이를 지정하지 않아 나머지 전체 공간을 사용했습니다. 헤더 영역은 상단의 제한된 영역에 배치하기 위해 StackPanel로 구성하고 하단은 나머지 영역을 모두 차지하게 배치하도록 다시 Grid를 사용했습니다. 
+
+
+
+
+ MainPage.xaml
+
+<Page
+    x:Class="SimplePrismBlank.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Style="{StaticResource PageStyle}"
+    xmlns:prismMvvm="using:Prism.Windows.Mvvm"
+    prismMvvm:ViewModelLocator.AutoWireViewModel="True" 
+    mc:Ignorable="d">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+
+        <StackPanel x:Name="headerStackPanel" Grid.Row="0" Orientation="Horizontal">
+            
+        </StackPanel>
+        <Grid x:Name="bodyGrid" Grid.Row="1">
+            
+        </Grid>
+    </Grid>
+</Page>
+
+
+
+
+
+
+※ MainPage 뷰에 헤더 영역 추가하기
+
+이번에는 MainPage 뷰의 헤더에 행과 열을 입력하는 필드와 <다시 그리기> 버튼을 추가하겠습니다. 
+
+
+
+
+MainPage.xaml
+
+        <StackPanel x:Name="headerStackPanel" Grid.Row="0" Orientation="Horizontal">
+            <TextBlock Text="행 : " />
+            <TextBox Margin="5 0 0 0" Text="{Binding rowCount, Mode=TwoWay}" />
+
+            <TextBlock Margin="10 0 0 0" Text="열 : " />
+            <TextBox Margin="5 0 0 0" Text="{Binding columnCount, Mode=TwoWay}" />
+
+            <Button x:Name="drawButton" Margin="10 0 0 0" Content="다시 그리기" />
+        </StackPanel>
+
+
+입력 필드의 이름은 TextBlock 요소로, 입력 필드는 TextBox 요소로 구현했습니다. 요소의 크기가 Content의 값에 의해 결정되도록 Width는 지정하지 않습니다. 그리고 첫번째 요소가 아닌 컨트롤들의 경우 좌측 마진을 각각 5와 10으로 주어 요소들을 적당한 거리를 두고 배치했습니다. 
+
+
+입력 필드를 구성하기 위한 TextBox 요소에 MainViewModel.cs의 rowCount와 columnCount 속성을 데이터 바인딩하고 Mode 속성을 TwoWay로 지정해 값을 주고 받습니다. 그리고 <다시 그리기> 버튼을 배치했습니다. 
+
+이제 앱을 실행해 현재까지 코딩한 결과를 확인해봅니다. 
+
+
+화면 상단의 헤더 영역에 행과 열을 입력하는 필드와 <다시 그리기> 버튼이 나타나는 것을 확인할 수 있습니다. 이렇게 의미 있는 코드가 완성될 때마다 앱을 실행시켜 확인해보는 것은 작은 부분부터 조금씩 코딩한 후 제대로 동작하는지 테스트하면서 확장해 가는 테스트 주도 개발(Test Driven Development)방법 입니다. 
+
+
+이와 같은 기법은 레고 블록을 조립할 때 한 조각씩 맞추어 가면서 원하는 모양이 나오는지를 확인하는 방법과 유사합니다. 원하는 모양이 아니라면 레고 조각을 풀어서 다시 맞추듯이 작은 조각의 코딩을 목적에 맞게 수정하면 됩니다. 
+
+
+앱을 실행했다면 이제 행과 열 필드에 초깃값인 3이 나타나게 할 차례라는 것을 알 수 있습니다. 
+
+
+
+
+※ 행과 열의 초깃값 지정하기
+
+행과 열의 초깃값은 MainViewModel.cs 에 rowCount와 columnCount 속성을 정의한 후 초깃값으로 3을 지정하면 됩니다. 
+
+
+
+
+MainViewModel.cs
+
+using System;
+
+using Prism.Windows.Mvvm;
+
+namespace SimplePrismBlank.ViewModels
+{
+    public class MainViewModel : ViewModelBase
+    {
+
+        private int _rowCount = 3;
+        public int rowCount
+        {
+            get => _rowCount;
+            set => SetProperty(ref _rowCount, value);
+        }
+
+        private int _columnCount = 3;
+        public int columnCount
+        {
+            get => columnCount;
+            set => SetProperty(ref _columnCount, value);
+        }
+
+        public MainViewModel()
+        {
+        }      
+    }
+}
+
+
+속성을 정의하는 방법도 매우 기초적이고 직관적입니다. 초깃값을 지정하기 위해 private 변수의 뒤에 =3과 같은 코드를 추가해 초깃값을 지정합니다. 그럼 앱을 실행해 행과 열 필드에 각각 3이 나타나는지 확인해봅시다. 
+
+
+
+
+※ ItemsControl 요소를 활용한 XAML 요소의 생성
+
+이제 화면의 본문 영역에 지정한행과 열의 개수만큼 버튼을 그리는 코드를 작성합니다. XAML 코드에서 초기에 정해진 형태대로 정적으로 화면을 구성하지 않고 속성에 지정된 값을 기반으로 동적으로 화면을 구성할 때는 ItemsControl 요소를 사용합니다. Items 즉 항목들의 값에 의해 모양이 결정되는 Control이라고 이해하면 됩니다. 
+
+화면을 동적으로 구성하기 위해 데이터를 먼저 생성해놓고 화면을 그려야 하기 때문에 다음과 같이 코딩합니다. 
+
+
+
+MainViewModel.cs 
+
+생략
+
+        private List<int> _cells = new List<int>();
+        public List<int> cells
+        {
+            get => cells;
+        }
+
+        public MainViewModel()
+        {
+            cells.Clear();
+
+            for (int i = 0; i < _rowCount; i++)
+            {
+                for (int j = 0; j < _columnCount; j++)
+                {
+                    cells.Add(0);
+                }
+            }
+        }
+
+
+cells 속성을 만들어 MainViewModel() 생성자에서 초기화하는 로직입니다. 각각의 버튼은 행과 열을 곱한 개수만큼 나타나야 하기 때문에 for 문장을 사용해 행과 열을 곱한 수만큼 0의 값으로 채워 넣었습니다. 
+
+이제는 MainViewModel.cs 에서 정의하고 초기화한 속성을 가져다 사용하기 위해 MainPage.xaml 을 수정해보겠습니다. 본문 영역으로 준비해둔 Grid 요소에 ItemsControl 요소를 다음과 같이 추가하면 되는데 헤더 영역과 좌측 경계에 적당한 공간을 두고 본문 영역을 배치하기 위해 좌측 Margin과 상단 Margin을 10으로 지정했고 ItemsControl 요소에 앞에서 정의한 데이터를 연결하기 위해 ItemsSource 속성에 cells 속성을 데이터 바인딩했습니다. 이렇게 코딩하면 cells 속성에 포함되는 cell의 개수만큼 ItemsControl 요소 내부를 반복하여 그리게 됩니다. 
+
+
+
+MainPage.xaml
+생략
+
+/StackPanel>
+
+        <Grid x:Name="bodyGrid" Grid.Row="1">
+            <ItemsControl Margin="10 10 0 0" ItemsSource="{Binding cells}">
+                
+            </ItemsControl>
+        </Grid>
+생략
+
+
+ItemsControl 요소의 내부를 반복하여 그릴 각 항목이 배치되는 형태는 다음 코드와 같이 <ItemsControl.ItemsPanel> 속성 요소를 사용해 정의합니다. 반복하여 그릴 각각의 Item, 즉 항목이 어떻게 보이는지는 다음 코드와 같이 <ItemsControl.ItemTemplate> 속성 요소를 사용해 정의하며 각각의 속성 요소들의 모양은 <ItemsPanelTemplate>과 <DateTemplate> 속성으로 결정합니다. 
+
+
+
+
+MainPage.xaml
+
+생략
+        <Grid x:Name="bodyGrid" Grid.Row="1">
+            <ItemsControl Margin="10 10 0 0" ItemsSource="{Binding cells}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+생략
+
+
+ItemsControl 요소의 내부의 배치를 결정하는 ItemsPanel은 반복하여 그려야 하기 때문에 <ItemsPanelTemplate>요소는 안에는 다시 ItemsWrapGrid 요소를 배치합니다. 
+
+요소의 이름과 같이 항목들을 Wrap 즉, 줄을 넘겨가며 배치하는 Grid 요소인데 값을 수평으로 순차적으로 보여주도록 Orientation 속성에 Horizontal 값을 지정했습니다. 그리고 MaximumRowsOrColumns 속성은 데이터 바인딩으로 columnCount 속성의 값을 가져다 사용하게 했습니다. 그래서 열의 수만큼 수평으로 항목들을 배치한 후 줄을 넘겨서 다음 줄에 항목들을 순차적으로 배치하게 됩니다. 만약에 Orientation 속성에 Vertical 값을 지정했다면 데이터 바인딩을 columnCount 대신 rowCount로 하여야 합니다. 대신 항목들이 그려질 때 좌에서 우로 나타나면서 아래로 줄이 넘어가는 것이 아니라 위에서 아래로 나타나면서 줄이 오른쪽으로 넘어가게 됩니다. 
+
+<DataTemplate> 요소의 안은 매우 단순하게 코딩되는데 항목의 수만큼 버튼을 보여줄 것이기 때문에 버튼 요소를 배치하고 Margin에 2를 지정하여 버튼의 좌상우하에 각각 2독립 단위만큼의 공란이 나타나도록 하겠습니다. 
+
+
+
+MainPage.xaml
+
+생략
+        <Grid x:Name="bodyGrid" Grid.Row="1">
+            <ItemsControl Margin="10 10 0 0" ItemsSource="{Binding cells}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="{Binding columnCount}" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Margin="2" Width="50" Height="50" Background="Green" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+생략
+
+
+이제 앱을 실행해보면 다음 그림과 같이 3행 3열의 초록색 버튼이 동적으로 생성되는 것을 확인할 수 있습니다. 
+
+이제는 행과 열 필드의 값을 수정한 후 다시 그리기 버튼을 누르면 수정한 행과 열에 맞게 버튼이 다시 그려지게 하기 위하여 코드를 수정해봅니다. 
+
+먼저 다음 코드와 같이 MainPage 뷰의 <다시 그리기> 버튼에 Click 이벤트의 이벤트 핸들러를 지정합니다. 
+
+
+
+
+MainPage.xaml
+생략
+            <TextBox Margin="5 0 0 0" Text="{Binding columnCount, Mode=TwoWay}" />
+
+            <Button x:Name="drawButton" Margin="10 0 0 0" Content="다시 그리기" Click="drawButton_Click"/>
+        </StackPanel>
+
+
+MainViewModel() 생성자에서 cells 속성에 값을 지정하는 로직을 newGame()메소드로 분리한 후 생성자에서 newGame() 메소드를 호출합니다. newGame() 메소드는 코드 비하인드에서 호출하여 사용할 것이기 때문에 public 메소드로 정의했습니다. 이것만으로 로직이 충분할 것 같은데 여기까지만 코딩하면 바뀐 cells 속성의 개수만큼 버튼이 나타나지 않습니다. 
+
+이유는 뷰모델에서 속성의 값이 변경된 다음 뷰에 그 정보를 전달해 주지 않기 때문인데 바뀐 정보를 뷰에 전달하기 위해서는 List 클래스를 ObservableCollection 클래스로 변경해야 합니다. 
+
+
+
+
+MainViewModel.cs
+생략
+/*
+        private List<int> _cells = new List<int>();
+        public List<int> cells
+        {
+            get => cells;
+        }
+        */
+        private ObservableCollection<int> _cells = new System.Collections.ObjectModel.ObservableCollection<int>();
+        public ObservableCollection<int> cells
+        {
+            get => _cells;
+        }
+
+        public MainViewModel()
+        {
+            NewGame();
+        }
+        public void NewGame()
+        {
+            cells.Clear();
+
+            for (int i = 0; i < _rowCount; i++)
+            {
+                for (int j = 0; j < _columnCount; j++)
+                {
+                    cells.Add(0);
+                }
+            }
+        }
+
+
+
+※ 알아두기
+앞에서 Data Content에 대하여 설명할 때 INotifyPropertyChanged 인터페이스의 상속을 받아 구현하고 있는 객체를 Data Content 로 사용할수 있고 뷰 모델에는 프레임워크에 의하여 INotifyPropertyChanged 인터페이스가 구현되어 있기 때문에 특별한 코딩 없이 데이터바인딩을 사용할수 있다고 설명했습니다. ObservableCollection 객체는 이와 유사하게 INotifyCollectionChanged 인터페이스가 구현되어 있기 때문에 Collection 객체의 내용이 바뀔 때 뷰에 반영되어 보이는 것입니다. List 객체에는 INotifyCollectionChanged 인터페이스가 구현되어 있지 않으므로 List Collection 객체의 내용이 변경되어도 뷰에 반영되어 나타나지 않습니다. 그러면 비주얼 스튜디오의 "정의로 이동" 기능을 사용하여 ObservableCollection 클래스가 INotifyPropertyChanged 나 INotifyCollectionChanged 인터페이스를 상속받아 구현하고 있는지 알아봅시다. ObservableCollection 위에 마우스 커서를 놓고 <F12> 키를 눌러봅시다. 그러면 다음 그림과 같이 INotifyPropertyChanged 나 INotifyCollectionChanged 인터페이스를 상속받아 구현하고 있는 것을 확인할 수 있습니다. 객체의 값이 변경될 때 뷰에 반영하는 기능을 수행하기 위한 PropertyChanged 이벤트도 함께 정의되고 있습니다. 
+
+ViewModel의 경우 상속받고 있는 ViewModelBase 클래스에서 <F12>키를 누른 후 ViewModelBase 가 상속받고 있는 BindableBase 클래스에 마우스 커서를 놓고 다시 한번 F12 기능키를 눌러 보기 바랍니다. 그러면 다음 화면과 유사한 형태로 INotifyPropertyChanged 인터페이스를 상속받아 구현하고있는 것을 알 수 있습니다. 
+
+
+
+
+MainPage 뷰의 코드 비하인드에 <다시 그리기> 버튼의 Click 이벤트 핸들러를 추가하여 정의합니다. 이벤트 핸들러에서 수행하는 로직은 뷰모델의 NewGame() 메소드를 실행하는 것입니다. ViewModel.NewGame()와 같이 뷰모델의 메소드를 호출할수 있는 것은 코드비하인드의 상단에 private MainViewModel ViewModel => DataContext as MainViewModel; 문장이 있어 ViewModel 변수 객체 변수에 DataContext로 넘어오는 MainViewModel의 값을 할당해 놓았기 때문입니다. 
+
+
+
+
+MainPage.xaml.cs
+
+        private void drawButton_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+            ViewModel.NewGame();
+        }
+
+
+이제 앱을 실행하여 행과 열의 값을 수정한 후 <다시 그리기> 버튼을 클릭해봅니다. 원하는 행과 열만큼의 버튼이 동적으로 화면에 나타나는 것을 알 수 있습니다. 
