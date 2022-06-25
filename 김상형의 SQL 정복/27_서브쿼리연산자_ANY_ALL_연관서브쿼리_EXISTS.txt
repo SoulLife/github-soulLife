@@ -1,0 +1,138 @@
+9-2 서브쿼리 연산자
+
+
+1. ANY, ALL
+
+IN 연산자는 괄호 안의 결과셋과 순차적으로 상등 비교하는데 비해 ANY, ALL 연산자는 결과셋 전체와 비교한다. ANY는 그 중 하나라도 만족하는 값이 있으면 참이고 ALL은 모두 만족해야 참이다. ANY는 조건을 OR로 연결하는 것이고 ALL 은 조건을 AND로 연결하는 것이다. 
+
+
+ANY와 동의어인 SOME 키워드가 정의되어 있지만 잘 사용하지 않는다. 다음 두 쿼리는 영업부 직원보다 월급이 많은 직원 목록을 조사하는데 각각 ANY와 ALL로 비교해 보았다. 서브쿼리만 따로 실행해보면 영업부 직원의 월급은 285~400 범위에 있다. 
+
+SELECT name FROM tStaff WHERE salary > ANY 
+(SELECT salary FROM tStaff WHERE depart = '영업부');
+
+SELECT name FROM tStaff WHERE salary > ALL
+(SELECT salary FROM tStaff WHERE depart = '영업부');
+
+
+ANY 연산자는 이 월급 중 어떤 값과 비교하더라도 월급이 더 많은 직원을 조사하므로 최소값인 285와 비교하는 것과 같다. 무려 16명이나 된다. ALL 연산자는 영업부의 모든 직원보다 월급이 많은 직원을 조사하므로 최대값인 400과 비교한다. 결과는 월급이 420인 김유신과 440인 장보고 밖에 없다. 결국 다음 두 명령과 같은 결과를 출력한다. 
+
+
+
+SELECT name FROM tStaff WHERE salary > (SELECT MIN(salary) FROM tStaff WHERE depart = '영업부');
+
+SELECT name FROM tStaff WHERE salary > (SELECT MAX(salary) FROM tStaff WHERE depart = '영업부');
+
+
+일반적으로 ANY와 ALL은 부등 연산자와 함께 사용한다. 등호도 사용할 수는 있지만 하나의 값을 여러 개의 값과 상등 비교하는 것은 별 의미가 없다. = ANY는 그 중 하나라도 같은 것을 찾으며 IN 연산자를 사용하는 것과 결과적으로 같다. 향단이의 쇼핑 가격은 다음 명령으로도 구할수 있다. 
+
+
+SELECT item, price FROM tItem WHERE = ANY
+(SELECT item FROM tOrder WHERE member = '향단');
+
+ALL을 등호와 함께 사용하는것도 문법적으로 가능은 하지만 모든 값과 같아야 한다는 조건은 항상 거짓이므로 아무것도 검색되지 않는다. 다만 서브쿼리의 리턴값이 하나뿐이라면 이때는 등호만 쓰는 것과 같다. 
+
+
+
+2. 연관 서브쿼리
+
+지금까지 작성한 서브쿼리는 단독으로 실행 가능하며 괄호 안쪽만 선택해서 실행해도 결과가 잘 나온다. 이런 서브쿼리를 독립 서브쿼리라고 하며 외부쿼리에 값을 제공하는 역할을 한다. 
+
+
+SELECT item, price FROM tItem WHERE item IN 					ITEM
+							단독실행			대추
+(SELECT item FROM tOrder WHERE member = '향단');		--->			사과
+
+
+서브쿼리에 나온 결과값을 IN키워드에 값을 제공한다. 
+
+
+
+이에 비해 연관 서브쿼리(Correlated Subquery)는 외부쿼리의 필드값을 참조하며 단독으로는 실행하지 못한다. tOrder 테이블에는 누가 무엇을 주문했는지 정보가 들어 있는데 주문한 상품의 가격도 같이 출력해 보자. 
+
+
+상품의 가격은 tOrder 테이블에 없으며 tItem 테이블에 있다. 한꺼번에 두 테이블을 읽어야하기 때문에 쿼리 하나로는 문제를 해결할 수 없다. 외부쿼리에서 주문자와 상품을 먼저 조사하고 이 상품에 대한 가격을 서브쿼리에서 조사하는 식으로 두 개의 쿼리를 묶어서 실행해야 한다. 
+
+
+SELECT member, item (SELECT price FROM tItem WHERE tItem.item = tOrder.item) price FROM tOrder;
+
+
+주문자와 상품은 tOrder에서 읽고 가격은 tItem 에서 읽어 같이 출력한다. tItem에서 가격을 읽으려면 어떤 상품에 대한 가격인지 전달해야 한다. 외부쿼리는 매 레코드를 읽을 때마다 서브쿼리로 tOrder.item을 전달하고 서브쿼리는 이 상품의 가격을 찾아 리턴한다. 
+
+
+외부쿼리의 item 필드값을 서브쿼리가 참조하기 때문에 연관 쿼리라고 부른다. 외부쿼리로부터 값을 받아야 실행할 수 있으며 단독으로는 실행할수 없다. 위 쿼리의 괄호 안만 선택해서 실행하면에러이다. 
+
+관련있는 테이블은 같은 이름의 필드를 가지는 경우가 많고 외부, 내부에서 각각 이 필드를 읽다 보면 모호함이 발생할수 있다. 사람이 보기에도 어느 테이블의 필드인지 혼란스럽다. 그래서 필드를 이름만으로 참조하는 것보다는 테이블에 별명을 주고 별명으로 참조하는 것이 바람직하다. 
+
+
+SELECT O.member, O.item, (SELECT price FROM tItem I WHERE I.item = o.item) price 
+FROM tOrder O;
+
+
+tOrder는 O, tItem은 I로 별명을 붙였으며 별명으로부터 필드를 참조한다. 이렇게 하면 쿼리가 길어도 누구의 어떤 필드인지 쉽게 구분할수 있다. 두 개의 테이블에서 정보를 조합하여 읽는 더 공식적인 방법은 조인이다. NULL 이 있을 때 미세한 차이가 있지만 위 연관 쿼리를 조인문으로 작성해도 결과는 같다. 
+
+
+SELECT O.member, O.item, I.price FROM tOrder O JOIN tItem I ON I.item = O.item;
+
+보다시피 더 짧으며 두 테이블의 필드를 마음대로 읽을수 있어 자유도가 높다. 하지만 아직 배우지 않은 문법이라 당장은 이 구문을 이해하기 어려울 것이다. 출력 결과가 단순할 때 연관 서브쿼리는 복잡한 조인문 대신 간편하게 쓸 수 있는 문법이다. 
+
+
+
+
+
+3. EXISTS
+
+EXISTS는 결과셋이 있는지 없는지만 조사하는 단순한 연산자이다. 뒤쪽 쿼리의 결과셋이 있으면 true이고 그렇지 않으면 false이다. 단순하지만 직관적인 사용예가 드물어 처음 보면 헷갈리는 연산자이다. 다음 문장은 도시 목록에 면적이 1000이 넘는 도시가 있는지 조사한다. 
+
+
+EXISTS(SELECT * FROM tCity WHERE area > 1000)
+
+표현식일뿐 명령은 아니어서 단독으로는 실행할수 없으며 IF문과 함께 사용하여 실행할 명령을 선택하거나 쿼리의 WHERE절에 사용하여 선택할 레코드를 결정한다. IF문은 아직 배우지 않았으니 WHERE 절에 이 연산자를 사용해 보자. 
+
+
+SELECT name FROM tCity WHERE EXISTS( SELECT * FROM tCity WHERE area > 1000);
+
+
+
+의미상 면적이 1000이 넘는 도시를 조사하는 것처럼 보이지만 그렇지 않다. EXISTS 연산자의 서브쿼리는 면적 1000 이상의 도시가 있는지만 따지기 때문에 항상 참이며 그래서 모든 도시가 다 나타난다. 만약 면적을 10000으로 바꾸면 그런도시는 없어 아무 도시도 출력하지 않는다. 
+
+사실 참, 거짓이 이미 결정되어 있는 값을 WHERE 절에서 쓸 필요는 없다. 이 연산문이 효력을 발휘하려면 외부쿼리의 필드에 따라 EXISTS의 평가가 달라야 한다. 그래서 EXISTS의 괄호 안에는 통상 연관 서브쿼리가 온다. 위 쿼리문을 제대로 작성하면 다음과 같다. 
+
+
+
+SELECT name FROM tCity C WHERE EXISTS( SELECT * FROM tCity WHERE C.area > 1000);
+
+
+tCity의 모든 도시를 출력하되 각 도시에 대해 C.area가 1000이 넘는지 조사한다. 이 조건에 맞는 춘천, 홍천이 출력되며 뭔가 동작하는 것 같디는 하다. 그러나 이 문장도 사실 실용성은 전혀 없으며 SELECT name FROM tCity WHERE area > 1000이 훨씬 간편하다. 
+
+
+EXISTS 연산자가 제대로 기능을 발휘할 때는 외부쿼리와 서브쿼리의 테이블이 다를 때 이다. 외부쿼리의 필드값으로부터 어떤 조건을 점검하고 그 결과셋이 있는 경우만 추려낼 때 EXISTS 연산자를 사용한다. 다음 쿼리는 쇼핑몰에서 뭔가를 산적이 한번이라도 있는 회원목록을 출력한다. 
+
+
+SELECT * FROM tMember M WHERE EXISTS
+(SELECT * FROM tOrder O WHERE O.member = M.member);
+
+
+tMember와 각 회원에 대해 tOrder테이블을 검색한다. 외부쿼리는 춘향, 향단, 이도령, 방자등을 순서대로 읽어 서브쿼리로 전달하며 EXISTS는 tOrder테이블에 이 회원이 있는지 조사하여 true, false를 리턴한다. 그래서 구입 내역이 있는 충성 회원만 출력한다. 반대 연산자는 NOT EXISTS이다. 매출에 아무 도움이 안되는 회원은 누구인지 조사해 보자. 
+
+
+SELECT * FROM tMember M WHERE NOT EXISTS
+(SELECT * FROM tOrder O WHERE O.member = M.member);
+
+
+이도령은 tMember에는 가입되어 있지만 tOrder에는 아무 실적이 없는 회원임을 알 수 있다. 
+그렇다면 이 정보를 알아내는 데 EXISTS 연산자가 반드시 필요할까? 다른 방법으로도 이정도는 얼마든지 알아 낼 수 있다. 구입 실적이 있는 회원 목록은 다음 명령으로 쉽게 구할수 있다. 
+
+
+SELECT * FROM tMember WHERE member IN( SELECT DISTINCT member FROM tOrder);
+
+tOrder의 구입 회원 이름을 조사한 후 이 이름중 하나에 해당하는 회원의 정보를 출력하면 된다. 이 방법이 더 직관적이고 쉽다. 그러나 EXISTS는 이런 평이한 방법과는 달리 속도가 빠르다는 이점이 있다. EXISTS는 존재 여부만 조사하며 굉장히 효율적으로 동작한다. 서브쿼리에서 모든 멤버를 다 읽었는데 사실 이 필드 목록에 무엇이 오든 상관없다. 
+
+
+... EXISTS (SELECT item FROM tOder O WHERE O.member = M.member);
+... EXISTS (SELECT member FROM tOder O WHERE O.member = M.member);
+... EXISTS (SELECT '얼씨구' FROM tOder O WHERE O.member = M.member);
+
+제품명이든 회원이름이든 상수든 있냐 없냐가 중요할 뿐이어서 결정이 빠르다. IN 연산자는 서브쿼리의 결과셋을 다 구해야 하지만 EXISTS는 단 하나라도 결과셋을 발견하면 즉시 리턴한다. 필드 목록을 구하는 것도 아니고 개수를 세지도 않으며 오로지 존재 여부만 본다. 
+
+이 정도 규모에서는 속도차를 체감할 수 없지만 tOrder에 쌓인 레코드가 십만 건 정도 된다고 해보자. 목록을 조사하는 것과 존재 여부만 조사하는 것은 비교할 수 없는 속도차가 난다. JOIN에 비해서도 더 빠르며 특히 중복값이 많을 때 월등히 빨라 훨씬 유리하다. 문제를 푸는 데만 급급하지 말고 경우에 따라 가장 효율적인 방법을 잘선택해야 한다. 
