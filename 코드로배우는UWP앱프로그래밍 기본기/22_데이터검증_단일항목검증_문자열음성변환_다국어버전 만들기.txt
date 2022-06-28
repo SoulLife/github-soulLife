@@ -1,0 +1,353 @@
+※ 데이터 검증 - 단일 항목 검증
+
+데이터 검증은 입력된 데이터의 값이 적절한지 확인하는 것을 말합니다. 데이터 검증은 검증을 수행하는 위치에 따라서 Client Side Validation과 Server Side Validation으로 나뉩니다. 우리는 이 책의 목적에 맞게 Client Side Validation을 수행할 것입니다. 그리고 데이터 검증은 입력된 단일 항목의 값을 대상으로 하는 검증과 입력된 전체 항목의 값들을 비교하는 검증으로 나뉩니다. 
+
+여기서는 코드의 단순성을 위하여 단일 항목을 대상으로 하는 검증은 비하인드에서 수행하겠습니다. 단일 항목의 변경을 이벤트로 받아 가장 단순하게 단일 항목에 대한 검증을 할 수 있기 때문입니다. 전체 항목의 값들을 비교하는 검증은 뷰모델에서 수행하겠습니다. 입력된 전체 항목들은 뷰모델에 저장이되고 코드 비하인드에서는 전체 항목들을 대상으로 검증을 하기 위하여 뷰모델이 가진 전체 항목들을 private이 아니라 public 으로 정의하는 것은 정보 은폐의 원칙에 위배되기 때문입니다. 
+
+우선 오류 메시지를 보여줄 화면 구성이 필요한데 오류 메시지를 출력할 화면의 공간을 다음 코드와 같이 MainPage뷰의 Grid에 최하단 행으로 추가했습니다. 메시지가 출력될 공간만큼만 확보되면 되기 때문에 Height 속성을 auto로 지정했습니다. 
+
+
+
+MainPage.xaml
+생략
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+생략
+
+
+그리고 MainPage 뷰의 최하단 행으로 두 개의 TextBlock 요소를 StackPanel 요소로 감싼후 단일 항목에 대한 오류 메시지를 보여줄 TextBlock에는 errorMessageElement라는 이름을 부여하고 전체 항목들에 대한 오류 메시지를 보여줄 TextBlock에는 errorMessagePage라는 이름을 부여했습니다. 전체 항목들에 대한 데이터 검증은 뷰모델에서 수행할 것이기 때문에 뷰모델의 errorMessagePage 속성과 데이터 바인딩했습니다. 
+
+
+MainPage.xaml
+생략
+        <StackPanel Grid.Row="2">
+            <TextBlock x:Name="errorMessageElement" Foreground="Red" />
+            <TextBlock x:Name="errorMessagePage" Foreground="Red" Text="{Binding errorMessagePage}" />
+        </StackPanel>
+    </Grid>
+</Page>
+
+
+당연히 뷰모델에는 다음 코드와 같이 오류메시지를 저장할 속성이 정의되어야 합니다. 
+
+
+MainViewModel.cs
+생략
+        private string _errorMessagePage = string.Empty;
+        public string errorMessagePage
+        {
+            get => _errorMessagePage;
+            set => SetProperty(ref _errorMessagePage, value);
+        }
+생략
+
+
+먼저 행의 값에 대한 단일 항목 검증 코드를 다음과 같이 작성해보겠습니다. MainPage뷰에서 데이터 검증이 필요한 행과 열 입력 요소에 각각 이름을 부여하고 TextChanged 이벤트 핸들러를 추가합니다. TextBlock 요소에 대한 단일 항목 검증은 요소의 값이 바뀔 때 발생하는 TextChanged 이벤트 발생시 수행하는 것이 적절합니다. 
+
+
+MainPage.xaml
+
+            <TextBlock Text="행 : "  VerticalAlignment="Center"/>
+            <TextBox x:Name="rowCount" Margin="5 0 0 0" Text="{Binding rowCount, Mode=TwoWay,Converter={StaticResource twoDigitsFormat}}" TextChanged="rowCount_TextChanged" />
+
+            <TextBlock Margin="10 0 0 0" Text="열 : " VerticalAlignment="Center" />
+            <TextBox x:Name="columnCount" Margin="5 0 0 0" Text="{Binding columnCount, Mode=TwoWay, Converter={StaticResource twoDigitsFormat}}" TextChanged="columnCount_TextChanged" />
+
+
+코드 비하인드의 이벤트 핸들러는 다음과 같이 추가해보았습니다. 행과 열을 검증하는 로직이 동일하여 validateRowAndColumnCount() 메소드를 추가했습니다. 그리고 단일 값 검증이어서 오류가 발생하면 검증을 중단하도록 return 문장을 추가했습니다. 검증을 위한 코드를 좀 더 일반적으로 코딩하려면 오류 메시지를 Collection 객체로 관리하거나 C#의 System.ComponentModel 네임스페이스에서 제공하는 INotiyDataErrorInfo 인터페이스를 구현하여 사용할수도 있습니다. 
+
+
+
+MainPage.xaml.cs
+
+생략
+        private void rowCount_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            TextBox rowCount = sender as TextBox;
+            validateRowAndColumn(rowCount.Name, rowCount.Text);
+        }
+
+        private void columnCount_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            TextBox columnCount = sender as TextBox;
+            validateRowAndColumn(columnCount.Name, columnCount.Text);
+        }
+
+        private void validateRowAndColumn(string elementName, string enteredCount)
+        {
+            int count;
+
+            if (!int.TryParse(enteredCount, out count))
+            {
+                errorMessageElement.Text = elementName + " : " + "정수값이 입력되어야 합니다.";
+                return;
+            }
+
+            if (count < 1 || count > 10)
+            {
+                errorMessageElement.Text = elementName + " : " + "1에서 10까지의 정수가 입력되어야 합니다.";
+                return;
+            }
+            errorMessageElement.Text = string.Empty;
+        }
+생략
+
+
+단일 항목 검증 로직의 구현이 끝났으니 앱을 실행하여 행과 열의 값으로 문자도 입력해보고 0이나 11을 입력하여 오류 메시지가 나타나는 형태를 확인해보기 바랍니다. 화면의 하단에 오류 메시지가 나타나는 것을 확인할 수 있을 것입니다. 
+
+
+
+※ 알아두기
+이 예제에서는 데이터 검증을 수행하는 UWP 프로그램 기법에 집중하고 단일 항목들의 데이터 검증과 전체 항목 비교 검증의 결과를 모두 모아서 처리하거나 화면에 보여주는 방식에는 신경을 쓰지 않았습니다. 실제 개발 환경에서는 데이터 검증 결과를 처리하는 방식과 표준이 프레임워크나 프로젝트 및 개발회사마다 각각 다르기 때문에 그에 맞춰 구현하면 되고 여기서는 데이터 검증을 수행하는 기법에 초점을 맞추어 학습하기 바랍니다. 
+
+
+
+
+※ 데이터 검증 - 전체 항목 비교 검증
+
+이번에는 입력된 행과 열의 값을 비교하여 검증하는 코드를 작성하겠습니다. 이번 예제에서 전체 항목의 값을 비교하는 검증은 입력된 행과 열의 값을 모두 사용하는 <다시 그리기> 버튼을 클릭하는 시점이 적절합니다. 이 예제의 경우 특별히 전체 항목을 비교하여 검증할 필요성은 없으나 학습 목적으로 행의 수는 열의 수보다 클수 없다는 규칙을 임의로 만들어 코딩해보겠습니다. 
+
+뷰모델의 코드만 수정하면 됩니다. 
+
+
+MainViewModel.cs
+생략
+        public void NewGame()
+        {
+
+            int cellNumber = 0;
+
+            if (!validateRowAndColumnCount()) return;
+
+            cells.Clear();                       
+
+            for (int i = 0; i < rowCount; i++)
+            {
+                for (int j = 0; j < columnCount; j++)
+                {                    
+                    cells.Add(new Cell(cellNumber++));
+                }
+            }
+        }
+        private bool validateRowAndColumnCount()
+        {
+            bool result = false;
+            if (rowCount > columnCount)
+            {
+                errorMessagePage = "행의 수가 열의 수보다 작거나 같아야 합니다.";
+            }
+            else
+            {
+                errorMessagePage = String.Empty;
+                result = true;
+            }
+            return result;
+        }
+
+
+검증하는 메소드의 반환 값을 불리언 형식으로 지정했습니다. 전체 항목을 비교하여 검증하다가 오류가 발생하는 경우 false값을 반환하게 함으로써 newGame() 메소드 하단의 로직을 실행하지 않게 한 것입니다. 오류 메시지는 errorMessagePage 속성에 저장하여 화면에 나타나게 했습니다. 
+
+앱을 실행하여 열의 값을 행보다 작게 2로 수정한 후 <다시 그리기> 버튼을 클릭해 오류 메시지가 나타나는 형태를 확인해보기 바랍니다. 행의 값을 수정하여 열의 값보다 크게 하면 rowCount가 ItemsWrapGrid 요소에 데이터 바인딩되고 있어 본문에 반복되어 나타나는 버튼들의 정렬이 흐트러지는 부작용이 발생하는데 이 문제를 해결하는 것은 독자 여러분에게 맡기겠습니다. 
+
+
+
+※ .NET 연동 - 문자열의 음성변환
+
+UWP 프로그램의 많은 장점 중의 하나는 .NET 에 개발되어 있는 많은 기능과 연동하여 개발할 수 있다는 것입니다. .NET에서 제공하는 기능들을 하나하나 설명하는 것은 이 책의 범위를 벗어나기 때문에 여기서는 오류 메시지를 음성으로 불러 주는 .NET 기능의 예를 들어 .NET과 연동되는 모습을 보여주는 것으로 .NET 연동의 기본기에 대한 설명을 대신하겠습니다. 
+
+다음 코드를 보면 음성을 들려주는 기능은 Windows.UI.Xaml.Controls 네임스페이스에 정의된 MediaElement 요소를 사용하고, 문자열을 음성으로 변환하는 기능은 Windows.Media.SpeechSynthesis 네임스페이스에 정의된 SpeechSynthesizer 객체를 사용하고 있습니다. 
+
+SpeechSynthesizer 객체를 생성한 후 오류 메시지 문자열을 음성 Stream으로 전환하고 MediaElement 요소에 Source 속성으로 전달하여 Play했습니다
+
+
+
+
+MainViewModel.cs
+생략
+
+using Windows.UI.Xaml.Controls;
+using Windows.Media.SpeechSynthesis;
+
+(중략)
+        private bool validateRowAndColumnCount()
+        {
+            bool result = false;
+            if (rowCount > columnCount)
+            {
+                errorMessagePage = "행의 수가 열의 수보다 작거나 같아야 합니다.";
+
+            }
+            else
+            {
+                errorMessagePage = String.Empty;
+                result = true;
+            }
+            return result;
+        }
+
+        private async void textToSpeech(string text)
+        {
+            MediaElement mediaElement = new MediaElement();
+
+            SpeechSynthesizer speechSynthesizer = new SpeechSynthesizer();
+            SpeechSynthesisStream speechSynthesizerStream = await speechSynthesizer.SynthesizeTextToStreamAsync(text);
+
+            mediaElement.SetSource(speechSynthesizerStream, speechSynthesizerStream.ContentType);
+            mediaElement.Play();
+        }
+
+생략
+
+
+
+이제 앱을 실행한 후 전체 항목을 비교 검증할 때처럼 열의 값을 행의 값보다 작게 지정한 후 <다시그리기> 버튼을 클릭해보기 바랍니다. 화면에 오류 메시지가 나타나는 동시에 음성으로도 들릴 것입니다. 
+
+
+
+
+
+※ 다국어 버전 앱 만들기
+
+UWP 프로그램의 다국어 버전 앱의 지원은 언어와 국가에 적합한 문자열 자원을 만들어 놓고 가져다 사용하는 방식으로 이루어집니다. 
+
+먼저 다음 그림과 같이 솔루션 탐색기에서 Strings 폴더의 하위 구조를 확인해보기 바랍니다. en-us폴더가 보이고 그 아래에 Resources.resw 파일이 있는 것을 확인할수 있습니다. en-us 폴더에서 en은 언어를 지정하며, 영어(English)를 의미합니다. 또한 us는 국가를 지정하며 미국(United State)을 의미합니다. Resources.resw 파일은 해당 언어와 국가에서 사용하는 문자열 자원을 정의하는 자원 파일입니다. 
+
+
+이제 Resources.resw 파일의 내용을 확인해봅니다. 3개의 문자열이 지정되어 있는데 이름이 Main_Title.Text이고 값이 Main인 자원이 눈에 익숙합니다. Main_Title은 자원의 이름이고 Text는 자원을 적용할 대상 요소속성의 이름이라는 것도 직관적으로 파악할수 있습니다. 이름은 다시 페이지의 이름인 Main과 항목의 이름인 Title로 구분되는 것도 직관적으로 파악됩니다. 이 값이 어디서 사용되는지 볼까요?
+
+Prism 프레임워크가 제공하는 MainPage 뷰 코드의 상단을 보면 화면의 최상단 Grid를 구성하는 TextBlock이 있는데 거기에 x:Uid:"Main_Title"이라고 지정된 것이 보입니다. Uid는 Unique Identifier의 약자로 문자열 자원의 고유한 이름을 가져다 보여주는 역할을 합니다. 자원의 이름은 Main_Title.Text이기 때문에 사용할 때에는 지정된 값을 Text 속성에 반영하게 되어 있습니다. 
+
+
+
+MainPage.xaml
+<Page
+    x:Class="SimplePrismBlank.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Style="{StaticResource PageStyle}"
+    xmlns:prismMvvm="using:Prism.Windows.Mvvm" xmlns:localobject="using:SimplePrismBlank.Core.Models" xmlns:localConverter="using:SimplePrismBlank.Value_Converters"
+    prismMvvm:ViewModelLocator.AutoWireViewModel="True" 
+    mc:Ignorable="d">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+	<TextBlock Grid.Row="0" x:Uid="Main_Title" Style="{StaticResource PageTitleStyle}" />
+생략
+
+
+이런 방법으로 앱 실행시 화면의 상단에 다음 그림과 같이 Main이 나타나게 된 것입니다. 
+
+
+이제 행과 열의 TextBlock과 <다시 그리기> 버튼을 en-us 설정에 맞게 문자열로 영문이 나타나도록 해보겠습니다. 다음 그림과 같이 3개의 문자열을 추가했습니다. 이름의 표준은 Prism이 기본으로 제공하는 형식을 따랐습니다. 값에는 en-us 설정에 맞게 미국에서 사용하는 영어인 Row와 Column과 Redraw를 사용했습니다. 주석은 우리가 한국인이니 당연히 한국어를 사용하여 주석을 달았습니다. 주의해야 할 것은 버튼의 경우 다국어 문자열이 Text 속성이 아니라 Content 속성에 반영되어야 하기 때문에 자원의 이름이 .Content로 끝나야 한다는 것입니다. 
+
+정의된 자원을 MainPage 뷰에서 가져다 사용해보겠습니다. 사용하는 방법은 다음코드에서 보는 것과 같이 Main_Title 자원을 가져가 사용하는 것과 동일합니다. Text 속성과 Content 속성을 지우고 대신에 x:Uid 속성을 사용하여 하드코딩되어 있는 값을 자원의 이름으로 바꾸면 됩니다. 
+
+
+MainPage.xaml
+생략
+<!--<TextBlock Text="행 : "  VerticalAlignment="Center"/>-->
+            <TextBlock x:Uid="Main_RowLabel" />
+            <TextBox x:Name="rowCount" Margin="5 0 0 0" Text="{Binding rowCount, Mode=TwoWay,Converter={StaticResource twoDigitsFormat}}" TextChanged="rowCount_TextChanged" />
+
+            <!--<TextBlock Margin="10 0 0 0" Text="열 : " VerticalAlignment="Center" />-->
+            <TextBlock x:Uid="Main_ColumnLabel" />
+            <TextBox x:Name="columnCount" Margin="5 0 0 0" Text="{Binding columnCount, Mode=TwoWay, Converter={StaticResource twoDigitsFormat}}" TextChanged="columnCount_TextChanged" />
+            
+            <!--<Button x:Name="drawButton" Margin="10 0 0 0" Content="다시 그리기" Click="drawButton_Click" Foreground="{ThemeResource SystemColorHotlightColor}">-->
+            <Button x:Name="drawButton" Margin="10 0 0 0" x:Uid="Main_RedrawButton" Click="drawButton_Click" Foreground="{ThemeResource SystemColorHotlightColor}">
+                <Button.Background>
+                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                        <GradientStop Color="White" />
+                        <GradientStop Color="Green" Offset="1"/>
+                    </LinearGradientBrush>
+                </Button.Background>
+            </Button>
+생략
+
+
+앱을 실행해보면 다음 그림과 같이 행과 열의 필드 이름과 버튼에 나타나는 문자열이 하드코딩되었던 한글에서 en-us 자원 파일에 맞추어 영어로 바뀌어 나타납니다. 프로그램의 로직과 화면은 동일한 상태에서 자원 파일의 값을 사용하여 다국어 버전의 프로그램이 아주 쉽게 완성된 것입니다. 
+
+
+이제는 한글 화면을 구성하기 위하여 한글로 된 자원 파일을 추가해보겠습니다. 영어로 된 자원 파일이 있으니 복사하여 사용하면 되겠지요. 그래서 다음 화면들과 같이 먼저 Strings 폴더의 하단에 있는 en-us 폴더에서 [마우스 우측클릭] > [복사]로 폴더 전체를 복사합니다. 
+
+복사 후 Strings 폴더에서 다시 [마우스 우측 클릭] > [붙여 넣기] 로 폴더 전체를 붙여넣습니다. 
+
+
+그런 다음 폴더 이름을 ko-kr로 지정하면 한글 화면을 구성하기 위한 자원 파일이 생성됩니다. ko는 한국어(Korean)을 의미하고 kr은 한국(Korea)을 의미합니다. 
+
+이제 ko-kr 폴더 하부에 위치한 Resources.resw 파일의 내용을 확인해봅니다. 그리고 영어로 된 값들을 그에 맞는 한글로 변환합니다. 
+
+이제 앱을 실행해보면 Main은 주화면으로 Row는 행으로 Column은 열로 Redraw는 다시 그리기로 한글화되어서 나타납니다. 
+
+
+자원을 en-us와 ko-kr로 두개를 만들었는데 한글이 먼저 반영되는 것은 PC나 태블릿, 게임기 등의 단말기 언어 설정이 한글로 되어있기 때문입니다. 사용중인 Windows 10운영체제의 설정 언어를 확인하기 위해서는 Windows 10 운영체제에서 [설정] > [시간 및 언어] 메뉴 항목을 선택한 후 좌측 메뉴중에서 [언어] 메뉴 항목을 선택합니다. 
+
+[Windows 표시 언어]를 [한국어]에서 [English (United States)]로 변경한 후 PC 태블릿이나 게임기 등의 단말기를 재부팅하면 변경된 언어가 사용중인 운영체제에 반영됩니다. 
+
+
+재부팅한 후 앱을 다시 실행하면 영어 화면으로 앱이 동작하는 것을 확인할수 있습니다. 
+
+
+테스트가 종료되었으면 언어 환경을 다시 한국어로 바꾸고 재부팅하기 바랍니다. 
+
+
+
+
+※ 알아두기
+자원을 활용하는 방식은 폴더를 계층적으로 두거나 문자열만이 아니라 Width나 Height등을 언어나 국가에 맞게 자원으로 저장하여 활용하거나 코드 비하인드의 도움을 받아 시스템의 언어와 국가 환경을 알아낸후 오류 메시지 등을 다국어화하는 등의 기능을 활용할수 도 있습니다. 여기서는 기본기만 언급했으니 부가적인 기능들은 인터넷 검색을 활용하여 찾아보기 바랍니다. 
+
+
+
+
+
+※ 화면 마무리
+
+아무리 교육용 예제라 하여도 게임을 하기 위한 주요 화면이 좌측 상단에 있는 것은 자연스럽지 않습니다. 숫자 버튼들의 위치를 화면의 중앙으로 배치해보겠습니다. 숫자 버튼들이 ItemsControl 요소에 배치되기 때문에 아래 코드와 같이 <ItemsControl.Template> 속성 요소를 사용합니다. 그리고 ItemsControl 요소의 모양을 변경하는 것이기 때문에 ControlTemplate 속성을 사용하고 적용한 대상 TargetType으로 ItemsControl을 지정합니다. 
+
+나머지 코드들은 직관적인데 Rectangle 요소를 사용하여 ItemsControl의 배경색을 연한 파랑으로 지정하고 사각형의 꼭지는 RadiusX와 RadiusY 속성을 지정하여 둥글게 만듭니다. 여기서 이해하기 어려운 코드는 ItemsPresenter 요소인데 앞에서 설명한 ContentPresenter와 비교해보면 쉽게 이해할수 있습니다. ContentPresenter의 위치에 상위 컨트롤의 Content가 나타나듯이 ItemsPresenter의 위치에 상위 컨트롤 즉 ItemsControl의 Item들이 나타납니다. 그리고 HorizontalAlignment와 VerticalAlignment 속성의 값을 Center로 지정하여 숫자 버튼들을 ItemsControl의 중앙에 위치시키게 됩니다. 
+
+
+
+MainPage.xaml
+생략
+
+            <ItemsControl Margin="10 10 0 0" ItemsSource="{Binding cells}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Vertical" MaximumRowsOrColumns="{Binding rowCount}" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Margin="2" Width="50" Height="50" Background="Green" ContentTemplate="{StaticResource cellNumber}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+
+                <ItemsControl.Template>
+                    <ControlTemplate TargetType="ItemsControl">
+                        <Grid>
+                            <Rectangle Fill="LightBlue" RadiusX="20" RadiusY="20" />
+                            <ItemsPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </ControlTemplate>
+                </ItemsControl.Template>
+            </ItemsControl>
+생략
+
+
+그리고 앱을 실행해보면 배경이 연한파랑으로 바뀌어 있고 사각형의 테두리가 둥글게 되어 있으면서 게임의 주 화면이 화면의 중앙에 배치되는 것을 확인할 수 있습니다. 
+
+
+
+이것으로 첫 번째 예제 프로그램의 개발을 마무리합니다. 어떤가요? 프로그램을 한번에 코딩하지 않고 레고를 맞추어 가듯이 코드 조각을 하나씩 맞추어 가는 것이 재미있지요? 이와 같은 원칙은 테스트 주도 개발(Test Driven Development)방법론의 원칙과 유사하다고 반복하여 말씀드립니다. 아무리 강조해도 지나치지 않습니다. 전체 코드를 한번에 완성한 후 테스트하지 말고 앱의 전체 틀을 구성한 후 필요한 코드와 그에 맞는 테스트를 반복하며 앱을 점진적으로 완성해가기 바랍니다. 
