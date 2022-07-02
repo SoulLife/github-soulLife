@@ -1,0 +1,392 @@
+※ UserDetailViewModel 뷰모델 수정하기
+
+이제는 사용자 상세 정보를 보여줄 페이지의 뷰모델을 개발해보겠습니다. 먼저 필요한 속성들을 정의합니다. 코드는 다음과 같습니다. 
+
+
+
+
+UserDetailViewModel.cs
+
+생략
+
+using System;
+
+using Prism.Windows.Mvvm;
+using Prism.Windows.Navigation;
+using SimpleDataGrid.Core.Models;
+
+namespace SimpleDataGrid.ViewModels
+{
+    public class UserDetailViewModel : ViewModelBase
+    {
+
+        private INavigationService _navigationService;
+        public INavigationService NavigationService
+        {
+            get => _navigationService;
+            //set => SetProperty(ref _navigationService, value);
+        }
+
+        private User _user;
+
+        public User User
+        {
+            get => _user;
+            set => SetProperty(ref _user, value);
+        }
+
+        private string _address;
+        public string Address
+        {
+
+            get => _address;
+            set => SetProperty(ref _address, value);
+        }
+
+        public UserDetailViewModel()
+        {
+        }
+    }
+}
+
+
+위의 코드에서는 사용자 목록 화면으로 돌아가는 기능을 개발하려고 NavigationService 속성을 정의했습니다. 사용자 목록 화면에서 여러 명의 사용자 정보를 저장하기 위하여 User 객체의 배열 속성을 정의했지만 상세 화면에서는 한 명의 사용자 정보를 가지면 되기 때문에 하나의 user 속성을 정의했습니다. 
+
+주소의 경우 setter, stute, city 및 zipcode를 합쳐서 보여줘야 하기 때문에 string 타입의 address 속성을 추가했습니다. NavigationService 속성은 코드 비하인드의 이벤트 핸들러에서 사용되고 user와 address 속성은 뷰의 데이터 바인딩을 위해 사용됩니다. 
+
+그리고 Navigation 기능을 사용하기 위하여 UserListViewModel에서 했던 것과 동일한 방법으로 Navigation 속성에 NavigationService객체를 아래 코드와 같이 UserDetailViewModel 생성자에서 저장합니다. 
+
+
+
+
+
+UserDetailViewModel.cs
+
+생략
+        public UserDetailViewModel(INavigationService navigationService)
+        {
+            _navigationService = navigationService;
+        }
+생략
+
+
+사용자 목록 화면의 UserListViewModel.cs 뷰모델 프로그램에서 사용자 목록 정보를 가져와 User 배열 속성에 저장하는 작업을 프레임워크가 제공하는 OnNavigatedTo() 메소드에서 했던 기억이 나나요? 이번에도 OnNavigationTo() 메소드를 생성하여 위에서 정의한 user 속성에 저장하는 작업을 할 것입니다. 사용자 목록 화면의 로직과 가장 큰 차이는 NavigationService.Navigate(PageTokens.UserDetailPage, userId); 문장으로 사용자 상세 페이지를 호출할 때 선택된 사용자 정보로 넘겨진 userId 인자를 e.Parameter as string; 형태로 받아와서 처리한다는 것입니다. 그리고 API 호출을 위한 URL에 인자로 받아온 userId를 추가했습니다. address는 street, suite, city 및 zipcode를 문자열로 이어붙여 만들었습니다. 
+
+
+
+
+UserDetailViewModel.cs
+
+생략
+
+        public override async void OnNavigatedTo(NavigatedToEventArgs e, Dictionary<string, object> viewModelState)
+        {
+            base.OnNavigatedTo(e, viewModelState);
+
+            string userId = e.Parameter as string;
+
+            using (HttpClient httpClient = new HttpClient())
+            {
+                string httpResponse = await httpClient.GetStringAsync("http://jsonplaceholder.typicode.com/users/" + userId);
+                User = await Json.ToObjectAsync<User>(httpResponse);
+                Address = User.address.street + ", " + User.address.suite + ", " + User.address.city + ", " + User.address.zipcode;
+            }
+        }
+생략
+
+
+그런데 코드를 작성하는 데 한 가지 어려움이 있습니다. 손으로 코딩하기에 public override async void OnNavigatedTo(NavigatedToEventArgs e, Dictionary<string, object> viewModelStatus) 라는 메소드의 헤더가 너무 길고 복잡하기 때문입니다. 물론 한 가지 쉬운 방법으로 다른 프로그램에서 복사해오는 방법이 있습니다. 비주얼 스튜디오의 코드 작성 도움 기능을 활용하면 편합니다. 
+
+그럼 우선 메소드를 추가할 위치에 public override라고 치고 공란을 입력해보겠습니다. 그러면 다음 그림과 같이 override 가능한 메소드의 목록과 설명이 나타납니다. 목록에서 OnNavigatedTo() 메소드를 더블클릭하면 자동으로 메소드의 시작과 끝을 만들어줍니다. 그러면 개발자는 로직만 구현해 넣으면 된다. 
+
+
+
+
+※ 알아두기
+override 키워드는 상속받은 부모 객체가 정의해놓은 메소드를 그대로 사용하지 않고 덮어씌워(override)재정의하라는 의미를 가집니다. 메소드의 이름과 반환값, 그리고 인자의 종류와 속성들과 같은 기본 인터페이스는 부모 객체에서 정의하고 로직은 상속을 받은 자식 객체에서 구현해야 하는 경우에 사용합니다. 
+
+이 설명을 들으니 앞에서 설명한 인터페이스 가 왜 클래스가 아니고 인터페이스인지 아시겠지요? 인터페이스를 단순화하여 설명하면 로직의 구현이 없이 객체의 틀, 즉 인터페이스만 정의해 놓은 약식 클래스가 됩니다. 위의 설명이 마치 추상 클래스를 설명하는 것 같은데 추상 클래스와 차이가 있습니다. C++이외의 대부분의 프로그래밍 언어에서 인터페이스는 다중 상속을 허용하지만 클래스의 다중 상속은 허용되지 않습니다.이유는 인터페이스는 다중 상속을 해도 수행 속도나 프로그램의 단순성 등을 헤치지 않지만 클래스는 그렇지 않기 때문입니다. 하지만 클래스의 다중 상속이 허용된다면 프로그램 개발자는 더욱 강력한 무기를 가지게 될것입니다. 이럴 때 제한을 가진 클래스의 역할을 하는 인터페이스를 활용하면 다중 상속의 이점을 함께 누릴수 있습니다. 
+
+
+
+
+※ 알아두기
+뷰모델 프로그램을 개발하면서 뷰에 대한 고려를 거의하지 않고 있는 것이 느껴지시나요? 개발만이 아니라 뷰모델을 테스트할 때에도 뷰와 독립적으로 테스트할 수 있습니다. MVVM 프로그램 패턴을 통하여 조금씩 모델(Model)과 뷰(View)와 뷰모델(ViewModel)을 분리하여 독립적으로 개발하는 이점을 느끼기 시작했을 것으로 믿습니다. MVVM 프로그램 패턴을 사용하면 뷰모델(ViewModel)은 프로그램 개발자가 개발하고 뷰(View)는 디자이너가 각각 독립적으로 개발할 수 있습니다. 
+
+
+
+
+
+※ UserDetailPage 뷰 수정하기
+
+사용자 상세 화면을 다음 그림과 같이 구성하겠습니다. 
+
+위의 화면을 XAML로 어떻게 구현해야 할까요? <뒤로가기> 버튼을 배치할 행하나, 사용자 ID를 배치할 행하나, 그리고 나머지 사용자 상세 정보를 배치할 행 하나, 이렇게 3개의 행이 필요합니다. 왼쪽의 사용자 상세 정보를 배치할 열 하나와 오른쪽의 사용자 상세 정보를 배치할 열 하나, 이렇게 2개의 열도 필요합니다. 그러면 Grid Layout 컨트롤을 다음과 같이 정의하면 될 것입니다. 
+
+
+
+UserDetailPage.xaml
+
+생략
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="50" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+    </Grid>
+생략
+
+
+첫 번째 행은 버튼이 들어갈 공간만 필요하니 높이를 Auto로 지정했습니다. 두 번째 행은 사용자 ID가 들어갈 공간이고 상하에 여유 공간이 필요하다고 판단하여 높이를 50으로 고정했습니다. 나머지 공간은 사용자 상세 정보가 모두 차지하면 되기 때문에 높이를 별도로 지정하지 않았습니다. 열은 왼쪽의 사용자 상세 정보와 오른쪽 상세 정보가 균등 비율로 배치되면 되기 때문에 넓이를 별도로 지정하지 않았습니다. 
+
+
+이제 첫 번째 행에 사용자 목록 화면으로 돌아가는 기능을 가진 <뒤로가기> 버튼을 배치해 보겠습니다. 특별히 설명이 필요한 코드는 아니지만 버튼 이름을 지정하는 것과 이벤트 핸들러를 지정하는 것을 잊으면 안됩니다. 
+
+
+
+UserDetailPage.xaml
+
+생략
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="50" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+
+        <Button Grid.Row="0" Grid.Column="0" x:Name="backButton" Content="바로가기" Background="LightBlue" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Tapped="backButton_Tapped" />
+    </Grid>
+생략
+
+
+사용자 ID를 보여주는 두 번째 행은 다음 코드와 같습니다. <뒤로가기> 버튼 컨트롤 아래에 코드를 배치하면 됩니다. 사용자 ID 타이틀과 사용자 ID를 보여주기 위한 TextBlock을 수평 방향으로 배치하기 위하여 StackPanel Layout 컨트롤을 사용했습니다. 사용자 ID를 보여주기 위하여 데이터 바인딩한 Text="{Binding user.id}" 코드에서는 뷰모델(ViewModel)의 OnNavigatedTo() 메소드에서 저장한 user 속성에서 id값을 가져가 사용하고 있습니다. Margin을 주는 순서가 항상 혼동되는데 좌상우하의 순서입니다. 
+
+
+UserDetailPage.xaml
+
+생략
+
+        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="사용자 ID :" FontSize="20" Margin="24, 0, 0, 0" />
+            <TextBlock Text="{Binding user.id}" FontSize="20" Margin="10, 0, 0, 0" />
+        </StackPanel>
+생략
+
+
+사용자 상세 정보는 2개의 StackPanel Layout 컨트롤을 사용하여 배치할 것입니다. 
+사용자 정보의 필드들을 위에서 아래로 나열하여 보여주면 되기 때문입니다. 마찬가지로 사용자 ID를 보여주기 위한 StackPanel의 아래에 배치하면 됩니다. 
+
+필드를 보여주는 코딩은 TextBlock이 아닌 TextBox를 사용합니다. 필드 레이블을 Header속성으로 지정할 수 있어 편리하기 때문입니다. 그리고 TextBox는 기본적으로 편집이 가능하기 때문에 IsReadOnly 속성을 True로 설정하여 읽기 전용 필드로 만들었습니다. 
+
+주소를 보여주는 필드는 값이 일반 필드보다 길기 때문에 높이를 확장하고 TextWrapping 속성을 True로 설정하여 주소가 TextBox의 길이 보다 길면 다음 줄로 넘어가게 했습니다. 
+
+
+
+UserDetailPage.xaml
+
+생략
+
+        <StackPanel Grid.Row="2" Grid.Column="0">
+            <TextBox Header="이름" Text="{Binding user.name}" Margin="24, 24, 0, 0" Width="300" HorizontalAlignment="Left" IsReadOnly="True" 	/>
+            <TextBox Header="메일" Text="{Binding user.email}" Margin="24, 24, 0, 0" Width="300" HorizontalAlignment="Left" IsReadOnly="True" 	/>
+            <TextBox Header="회사" Text="{Binding user.company}" Margin="24, 24,0, 0" Width="300" HorizontalAlignment="Left" 		IsReadOnly="True" />
+            <TextBox Header="주소" Text="{Binding user.address}" Margin="24, 24, 0, 0" Width="300" HorizontalAlignment="Left" 		IsReadOnly="True" TextWrapping="Wrap" />
+        </StackPanel>
+        <StackPanel Grid.Row="2" Grid.Column="1">
+            <TextBox Header="계정명" Text="{Binding user.username}" Margin="24, 24, 0, 0" Width="300" HorizontalAlignment="Left" 		IsReadOnly="True" />
+            <TextBox Header="전화번호" Text="{Binding user.phone}" Margin="24, 24, 0, 0" Width="300" HorizontalAlignment="Left" 		IsReadOnly="True" />
+            <TextBox Header="웹사이트" Text="{Binding user.website}" Margin="24, 24, 0, 0" Width="300" HorizontalAlignment="Left" 		IsReadOnly="True" />
+        </StackPanel>
+생략
+
+
+이제 <뒤로가기> 버튼을 탭하면 사용자 목록 화면으로 돌아가는 로직을 구현해 보겠습니다. 마찬가지로 코드 비하인드 기술을 활용할 것입니다. 다음 코드와 같이 사용자 목록 화면에서 구현했던 것과 내용이 거의 동일한데 특정한 페이지로 이동하는 것이 아니라 Navigate()메소드를 사용하지 않고 GoBack()메소드를 사용하여 호출한 페이지로 돌아가는 것이 다릅니다. 덕분에 페이지 이름과 넘겨줄 인자에 대한 고민도 사라졌습니다. 
+
+
+
+UserDetailPage.xaml
+생략
+
+        private void backButton_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            ViewModel.NavigationService.GoBack();
+        }
+생략
+
+
+이제 앱을 실행하고 사용자 목록 화면에서 사용자를 선택하여 사용자 상세 화면으로 이동한 뒤 사용자 정보를 확인해보고 다시 <뒤로가기> 버튼을 탭하여 사용자 목록 화면으로 돌아가보기 바랍니다. 
+
+이번에는 DataGrid로 할 수 있는 가장 기본적인 작업인 필터링(골라보기, Filtering)과 정렬(Sorting)기능을 만들어 보겠습니다. 
+
+
+
+
+※ 필터링
+
+지금까지는 뷰모델(ViewModel)에 있는 속성의 값을 DataGrid에 일방적으로 보여주는 기능을 구현해보았는데 Filtering은 DataGrid와 뷰모델(ViewModel)이 상호 작용하며 구현되기 때문에 다음 코드와 같이 users 속성의 클래스를 IList에서 ObservableCollection으로 변경해야 합니다. 그리고 new ObservableCollection<User>(); 와 같은 문장을 사용하여 객체의 값을 초기화합니다. IList와 ObservableCollection의 가장 큰 차이점은 Collection을 구성하는 데이터가 바뀔 때 시스템에 알림(Notify)을 발생시켜 DataGrid의 내용과 자동으로 맞추어 준다. (Sychronization)는 것입니다. IList는 데이터가 바뀌어도 뷰에 값이 변경되지 않습니다. 
+
+
+
+
+UserListViewModel.cs
+
+생략
+
+        /*
+        private IList<User> _users;
+        public IList<User> users
+        {
+            get => _users;
+            set => SetProperty(ref _users, value);
+        }
+        */
+        private ObservableCollection<User> _users = new ObservableCollection<User>();
+        public ObservableCollection<User> users
+        {
+            get => _users;
+            set => SetProperty(ref _users, value);
+        }
+생략
+
+
+그리고 users = tempUsers.ToList(); 문장으로 users 속성 변수에 값을 저장하던 문장을, 다음 코드와 같이 users.Clear(); 문장으로 기존에 있던 Collection을 모두 비운 후 foreach(User user in tempUsers)문장으로 tempUsers 객체 변수에 받아온 값들을 users.Add(user); 문장을 통하여 하나하나 추가하도록 변경했습니다. 
+
+IList 타입의 변수에도 동일한 방식으로 값을 추가할 수 있으나 ToList()메소드의 도움을 받아 간편하게 처리한 것입니다. 만약에 ObservableCollection 타입의 변수도 ToObservableCollection() 와 같은 메소드의 도움을 받아 간편하게 코딩할수 있었다면 속성 변수를 정의할 때 초기화하는 번거로움을 겪지 않아도 되었을 것입니다. 여기까지 코딩하고 나니 속성 변수를 정의하거나 값을 추가하는 코드가 Prism 프레임워크가 제공한 코드와 거의 동일하게 되었습니다. 다음의 알아보기를 꼭 읽어보기 바랍니다. 
+
+
+
+UserListViewModel.cs
+        public override async void OnNavigatedTo(NavigatedToEventArgs e, Dictionary<string, object> viewModelState)
+        {
+            base.OnNavigatedTo(e, viewModelState);
+
+            using (HttpClient httpClient = new HttpClient())
+            {
+                string httpResponse = await httpClient.GetStringAsync("https://jsonplaceholder.typicode.com/users");
+                User[] tempUsers = await Json.ToObjectAsync<User[]>(httpResponse);
+                //users = tempUsers.ToList();
+                users.Clear();
+                foreach (User user in tempUsers)
+                {
+                    users.Add(user);
+                }
+            }
+            
+        }
+
+
+
+※ 알아두기
+뷰의 XAML 컨트롤과 뷰모델의 속성 변수가 상호 작용하지 않고 뷰모델의 값을 한 방향으로 보여주기만 한다면 수행 속도가 빠른 IList와 같은 저수준(Low Level)클래스를 사용하는것이 유리합니다. 하지만 뷰의 XAML 컨트롤과 뷰모델의 속성 변수가 상호 작용을 한다면 상호 작용을 하는 코드가 이미 구현되어 있는 ObservableCollection과 같은 고수준 (High Level)클래스를 사용하는 것이 수행 성능 면에서 유리합니다. 그러나 수행 성능이 크게 중요하지 않은 프로그램을 개발할 때는 고수준의 클래스를 사용하다가 수행 속도의 향상이 필요해지는 시점에 저수준의 클래스 사용을 고려하는 것이 좋습니다. 
+
+
+
+
+
+※ 알아두기
+ObservableCollection 타입의 객체에 Add 메소드를 사용하여 항목을 추가하는 경우 항목이 추가될 때마다 뷰에 통보되어 화면을 갱신하기 때문에 소량의 데이터를 처리할 때는 괜찮지만 대량의 데이터를 처리할 때는 속도의 저하를 유발하니 Add 메소드를 가능한 사용하지 않아야 합니다. 많은 고수준의 클래스들이 기능과 코딩 생산성 측면에서 유리하지만 수행 속도 측면에서는 반대로 저수준 클래스들이 유리한 경우가 많습니다. 
+
+
+
+
+
+필터링(Filtering)기능은 북반구 사용자 Check Box를 선택하면 위도가 양수인 지역에 위치하는 사용자만 골라서 보여주도록 구현해보겠습니다. 
+
+먼저 CheckBox를 만들기 위하여 다음 코드와 같이 DataGrid 컨트롤을 StackPanel로 감싸고 상단에 CheckBox 컨트롤을 위치시킨 다음 Click 이벤트 핸들러를 추가합니다. 
+
+
+
+UserListPage.xaml
+생략
+            <StackPanel>
+                <CheckBox x:Name="northernHemisphereCheckBox" Content="북반구 사용자" Click="northernHemisphereCheckBox_Click" />
+                <controls:DataGrid
+                AutoGenerateColumns="False"
+                GridLinesVisibility="Horizontal"
+                ItemsSource="{x:Bind ViewModel.users, Mode=OneWay}" IsTabStop="False" x:Name="userList" SelectionChanged="userList_SelectionChanged"
+                SelectionMode="Extended">
+                    <i:Interaction.Behaviors>
+                        <core:EventTriggerBehavior EventName="SelectionChanged">
+                            <core:InvokeCommandAction Command="{Binding SelectionChangedCommand}" CommandParameter="{Binding ElementName=DataGrid, Path=SelectedItems}" />
+                        </core:EventTriggerBehavior>
+                    </i:Interaction.Behaviors>
+                    <controls:DataGrid.Columns>
+                        <!--
+                        TODO:
+                        Remove this column definitions and define columns for your data.
+                        Consider adding header properties to Resources.resw
+                    -->
+                        <controls:DataGridTextColumn Binding="{Binding id}" Header="사용자 ID" IsReadOnly="True" />
+                        <controls:DataGridTextColumn Binding="{Binding name}" Header="이름" IsReadOnly="True"/>
+                        <controls:DataGridTextColumn Binding="{Binding company.name}" Header="회사" IsReadOnly="True" />
+                        <controls:DataGridTextColumn Binding="{Binding address.city}" Header="도시"  IsReadOnly="True" />
+                        <controls:DataGridTextColumn Binding="{Binding address.geo.lat}" Header="위도" IsReadOnly="True" />
+                    </controls:DataGrid.Columns>
+                </controls:DataGrid>
+            </StackPanel>
+생략
+
+
+CheckBox의 Click 이벤트 핸들러는 다음 코드와 같은데 대부분 직관적으로 이해가 되니 LINQ 부분만 설명하면 되겠죠?
+
+
+UserListPage.xaml.cs
+생략
+using System.Linq;
+using System.Collections.ObjectModel;
+(중략)
+        private void northernHemisphereCheckBox_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+            CheckBox northernHemisphereCheckBox = sender as CheckBox;
+
+            if (northernHemisphereCheckBox.IsChecked == true)
+            {
+                userList.ItemsSource = new ObservableCollection<User>(ViewModel.users.Where(user => !user.address.geo.lat.Contains("-")));
+            }
+            else
+            {
+                userList.ItemsSource = ViewModel.users;
+            }
+        }
+생략
+
+
+
+LINQ는 Language INtegrated Query의 약자로 DBMS의 SQL(Structured Query Language)기능을 프로그램 언어에 병합한 것입니다. 여기서 Query(질의)는 시스템 내부에 저장된 것을 사용자에게 보여주는 것을 의미합니다. LINQ는 System.Linq네임스페이스에 정의되어 있으며 코드의 상단에 using System.Link; 문장을 추가하여 사용할 네임스페이스를 선언한 후 LINQ 문장을 사용하면 됩니다. 앞선 예제들에서 문자열 배열을 IList Collection 으로 전환하기 위하여 ToList()메소드를 사용했는데 그러한 것들도 일종의 LINQ 기능입니다. 이 예제에서는 ViewModel.users.Where( user => !user.address.geo.lat.Contatins("-")))가 LINQ 문장입니다. 
+
+그러나 LINQ 문장이라고 특별한 것은 아니고 일반 C# 문장이지만 WHERE()메소드에 조건을 입력할 때 람다식을 지정하여야 한다는 점이 다릅니다. 람다식 안의 !user.address.geo.lat.Contatins("-")문장은 user.address.geo.lat 칼럼이 마이너스(-)문자를 가지고 있지 않은 조건의 것들만 고르라는 의미입니다. user.address.geo.lat 칼럼의 타입은 숫자가 아닌 문자열이므로 음수가 남반구의 위도를 나타냅니다. 이 에 착안하여 Contatins() 메소드를 사용하여 마이너스(-)문자를 포함한 남반구만 찾은 후, 앞에 부정을 의미하는 ! 논리 연산자를 추가하여 마이너스(-)문자를 포함하지 않은 위도를 북반구로 찾도록 로직을 구성한 것입니다. 
+
+
+
+
+※ 알아두기
+ViewModel.users.Where( user => !user.address.geo.lat.Contains("-")))와 같은 LINQ 문장은 from user in ViewModel.users where !user.address.geo.lat.Contains("-") select user와 같이 바꾸어 쓸 수 있습니다. 이 문법은 DB의 SQL 문장을 거의 그대로 차용한 것입니다. SQL 문장은 영어를 차용하고 있어서 읽으면서 바로 그 의미를 이해할수 있습니다. 
+
+
+
+
+※ 알아두기
+userList.ItemsSource에 직접 값을 할당하는 코딩을 어떻게 생각하나요? 이와 같은 코딩의 첫 번째 문제는 뷰모델(ViewModel)의 users 속성에 데이터 바인딩되어 있는 것이 깨진다는 것입니다. 만약에 users 속성의 값에 변경이 생긴다면 변경되는 값이 userList 컨트롤에 반영되지 않을 것입니다. 두 번째 문제는 users 속성에 데이터가 대량으로 들어 있다면 이와 같은 할당 방식은 수행 속도가 떨어질수 밖에 없다는 것입니다. 그렇다면 필자는 왜 이런 코딩을 했을까요?
+
+첫째 여기서 설명하고자 하는 것은 가장 단순한 형태의 코드로 필터링을 설명하는 것이기 때문입니다. 둘째 이 앱은 users 속성의 값이 많지 않고 조회만 수행한다는 확신을 가졌기 때문입니다. 때로 기술자 관점에서는 말도 되지 않는 기술이지만 업무를 정확하게 알고 사용한다면 코딩 생산성이 가장 높고 가독성과 유지 보수성이 높은 기술입니다. 
+
+응용프로그램을 개발하기 위하여 기술이 필요한 것이기 기술을 구현하기 위하여 응용프로그램 이 필요한 것이 아니라는 것을 이해하면 필자가 설명하는 것이 쉽게 이해가 될 것입니다. 이는 응용프로그램을 개발할 때 처음에는 가장 단순하고 직관적인 기술을 선택하여 구현하고 필요한 만큼 기술의 난이도를 높여가는 리팩터링(Refactoring, 프로그램 재구성)기법의 기본 개념입니다. 이는 프로그램 개발의 경제성과 효율성을 고려해야 하는 응용 프로그램 개발자에게 꼭 필요한 덕목입니다. 
+
+
+
+
+이제 앱을 실행해봅니다. 북반구 사용자 CheckBox 가 체크되면위도가 양수인 북반구 사용자만 보여주고, 체크가 해제되면 전체 사용자를 보여줍니다. 
+
+남반구 사용자 CheckBox를 선택하면 위도가 음수인 지역에 위치하는 사용자만 골라서 보여주는 기능은 직접 만들어 보기 바랍니다. !user.address.geo.lat.Contains("-")에서 부정을 의미하는 논리 연산자인 !만 제거하면 북반구 사용자와 동일하게 개발할 수 있습니다. 
