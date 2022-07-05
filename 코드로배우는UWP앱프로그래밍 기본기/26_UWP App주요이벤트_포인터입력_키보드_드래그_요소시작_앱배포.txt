@@ -1,0 +1,282 @@
+CHAPTER 07 : 부록
+
+
+1 : UWP App의 주요 이벤트
+
+
+※ 포인터 입력 이벤트
+
+UWP 앱에서 포인터는 일반적으로 터치, 마우스, 펜/스타일러스, 터치 패드 등의 입력 장치를 포함합니다. 
+
+
+이벤트			종류	설명
+Click			Bubbling	버튼과 같은 특수한 요소에서 포인터를 탭함
+DoubleTapped		Bubbling	요소 안에서 포인터를 두번 연속해 탭함
+PointerCanceled		Bubbling	플랫폼에서 포인터를 취소
+PointerCaptureLost		Bubbling	다른 UI 요소가 포인터를 캡처하거나, 포인터가 해제되거나, 다른 포인터가 프로그래밍 방식으로 캡처
+PointerEntered		Direct	포인터가 요소의 경계 안으로 이동
+PointerExited		Direct	포인터가 요소의 경계 밖으로 이동
+PointerMoved		Bubbling	요소의 경계 영역 내에서 포인터가 좌표, 버튼 상태, 압력, 기울기 또는 접촉 기하(예 : 너비 및 높이)를 변경
+PointerPressed		Bubbling	요소의 경계 영역 내에서 포인터가 누르기 동작(예:터치다운, 마우스 단추 누름, 펜 누름 또는 터치패드 단추
+				누름)
+PointerReleased		Bubbling	포인터가 요소 경계 영역내에서 해제 동작(예:터치업, 마우스 단추에서 손떼기, 펜 텁 또는 터치 패드 단추
+				에서 손 떼기)
+PointerWheelChanged	Bubbling	요소 안에서 포인터의 Wheel을 움직임
+RightTapped		Bubbling	요소 안에서 포인터의 우측 버튼을 탭함
+Tapped			Bubbling	요소 안에서 포인터를 탭함
+
+
+
+
+
+※ 키보드 입력 이벤트
+
+이벤트			종류		설명
+CharacterReceived		Tunneling	요소 안에서 키보드 입력이 발생
+GettingFocus		Tunneling	요소가 키보드 Focus를 받는 중 
+GetFocus			Tunneling	요소가 키보드 Focus를 받음
+KeyDown			Bubbling		요소 안에서 키보드의 키가 눌림
+KeyUp			Bubbling		요소 안에서 키보드의 키 누름이 해제됨
+LosignFocus		Bubbling		요소가 키보드 Focus를 읽는중
+LostFocus		Bubbling		요소가 키보드 Focus를 잃음
+PreviewKeyDown		Tunneling	요소 안에서 키보드의 키가 눌림
+PreviewKeyUp		Tunneling	요소 안에서 키보드의 키 누름이 해제됨
+
+
+
+
+※ 드래그 앤드 드롭 이벤트
+
+특정 요소에 대해 드래그 (Drag)을 하려면 CanDrag 속성을 True로 설정하고 끌어서 놓인 콘텐츠를 받을 수 있는 모든 요소에서 AllowDrop 속성을 True로 설정합니다. 시스템에서 이미지 및 문자열을 자동으로 드래그 앤드 드롭 처리를 해주는 경우가 아니라면 개발자가 DragStarting 및 DropCompleted 이벤트를 처리해야 합니다. 그리고 시스템에서 해당 요소가 받을 수 있는 끌기 작업 유형을 알 수 있도록 DragOver 이벤트를 처리하고 놓인 콘텐츠를 받도록 Drop 이벤트를 처리합니다. 
+
+
+
+이벤트		종류		설명
+DragEnter	Direct		드래그하는 요소가 드롭할 요소 안으로 진입
+DragLeave	Direct		드래그하는 요소가 드롭할 요소 밖으로 이동
+DragOver		Direct		드래그하는 요소를 드롭할 요소에 드롭 즉 놓을 때가 아니라 끌 때 발생
+DragStrting	Direct		드래그하는 요소의 드롭을 시작함
+Drop		Direct		유효한 드롭 요소에 드래그 요소를 놓음
+DropCompleted	Direct		유효한 드롭 요소에 드래그 요소를 놓는 작업이 완료됨
+
+
+
+
+※ 요소의 시작 및 종료 이벤트
+
+이벤트		종류		설명
+Loaded		Direct		요소가 생성되어 메모리에 적재됨
+Loading		Direct		요소가 생성되면서 메모리에 적재 중임
+Unloaded		Direct		요소의 사용이 종료되어 메모리에서 내려감
+
+
+
+
+
+2 : 마이크로소프트 스토어에 올리지 않고 배포하기
+
+앞선 예제에서 개발했던 SimpleDataGrid 앱의 사례를 들어 UWP 앱을 마이크로소프트 스토어에 올리지 않고 배포하는 방법을 알아보겠습니다. 우선 다음 그림과 같이 Windows 시작 메뉴를 클릭해 개발하면서 자동으로 설치된 SimpleDataGrid 앱을 찾아 제거합니다. 
+
+
+앱 패키지를 만들 때의 기본기만 설명할 것입니다. 전체적인 내용을 모두 언급하는 것은 비효율적일 뿐만 아니라 제한된 지면에서 가능하지도 않습니다. 여기서 설명하지 않는 값들은 시스템이 제시하는 기본값을 사용하기 바랍니다. 
+
+
+
+
+※ 앱 패키지 만들기
+
+앱 패키지를 만들기 위해 비주얼 스튜디오의 솔루션 탐색기에서 Package.appxmanifest 파일을 찾아 더블클릭합니다. 
+
+Package.appxmanifest 파일은 설치에 필요한 정보를 관리해주는데 파일을 더블클릭하면 정보를 수정하는 화면으로 이동합니다. 다음 그림과 같이 [애플리케이션] 탭에는 표시 이름란에 앱의 이름을 입력하고 설명란에 앱에 대한 기본적인 설명을 입력합니다. 
+
+[시각적 자산] 탭에는 타일과 아이콘 등 앱에서 사용할 이미지 파일을 등록합니다. 특히 앱 아이콘의 경우 jpg와 png 파일 등이 사용되는데 44x44크기의 이미지를 사용하지 않으면 배포할 때 오류가 발생하니 주의합니다. 그리고 Prism에서 기본적으로 제공하는 이미지를 사용하는 경우  마이크로소프트 스토어에 올리지 않고 배포하는 경우에는 별다른 제약이 존재하지 않지만 마이크로소프트 스토어에 앱을 올릴 때는 앱의 유효성 검사를 통과하지 못하니 주의해야 합니다. 
+
+
+그리고 솔루션 탐색기에서 Universal Windows 프로젝트에 마우스 커서를 놓고 우측 버튼을 클릭한 후[게시] > [앱 패키지 만들기] 메뉴 항목을 차례로 클릭합니다. 
+
+배포 방법을 [사이드로드중]으로 선택하고 다음 버튼을 클릭합니다. 
+
+
+서명 방법을 [예, 현재 인증서를 사용합니다]로 선택하고 <다음> 버튼을 클릭합니다. 여기서 사용되는 인증서는 솔루션 탐색기에서 SimpleDataGrid_TemporaryKey.pfx라는 이름으로 Package.appxmanifest 파일 아래에 생성되어 있습니다. 
+
+
+버전을 지정하고 <다음> 버튼을 클릭합니다. 초기 버전에서는 1.0.0이 적절한 선택입니다. 
+
+설치 파일을 저장할 파일 서버나 원격 서버의 URL을 입력한 후 <만들기> 버튼을 클릭합니다. 필자는 개발할 때 사용했던 파일 서버의 UWP 설치 파일 경로를 입력했습니다. 
+
+설치 파일이 저장될 원격 서버나 파일 서버를 지정했으면 <복사 후 닫기> 버튼을 클릭하고, 지정하지 않았으면 <닫기> 버튼을 클릭합니다. <복사 후 닫기> 버튼을 클릭하면 개발 PC와 함께 원격 서버 혹은 파일 서버에 설치 파일 폴더가 하나 더 생깁니다. 
+
+
+파일 탐색기에서 UWP 프로그램 소스가 있는 폴더로 이동한 후 [SimpleDataGrid] > [SimpleDataGrid] 하위 폴더를 보면 AppPackage라는 폴더가 추가되어 있을 것입니다. 이 폴더가 설치 파일이 위치하는 폴더입니다. 원격 서버나 파일 서버의 경우 지정된 위치에 앱 패키지가 생성됩니다. 
+
+
+
+
+※ 앱 설치하기
+
+마이크로소프트 스토어에 올리지 않은 사이드로드(Sideload)방식의 설치 파일로 앱을 설치하려면 Windows 10 개발자용 설정이 [테스트용으로 앱 로드] 혹은 [개발자 모드]인지를 확인해야 합니다. 그런데 일반 사용자들의 PC는 초기에 [Microsoft Store 앱]으로 초기 설정되어 있기 때문에 설치를 위해 설치자의 Windows 10 단말기에 별도로 설정해주어야 합니다. 다행히 설치할 PC나 단말기가 AD에 가입되어 있다면 중앙에서 설정을 통제할수 있습니다. 
+
+
+파일 탐색기에서 앱 패키지 만들기를 통해 생성된 AppPackage 폴더에 들어가면 index.html 파일이 있습니다. 파일 서버나 원격 서버에 만들어지는 앱 패키지 폴더도 유사한 구조를 가집니다. 
+
+
+사이드로드 방식으로 앱을 설치하는 방법은 세 가지가 있습니다. 
+
+
+첫째는 다음 그림과 같이 Index.html 파일을 실행시킨 후 <앱 가져오기> 버튼을 클릭해 앱을 설치하는 방법입니다. 
+
+
+둘째는 다음 그림과 같이 AppPackage 폴더 아래에 있는 SimpleDataGrid_1.0.0.0_Debug_Test 폴더로 이동한 후 SimpleDataGrid_1.0.0.0_x86_x64_arm_Debug.msixbundle 파일을 실행시켜 앱을 설치하는 방법입니다. 설치 화면이 나타나고 설치 진행 상태를 보여줍니다. 설치 파일의 확장자는 지원하는 Windows 10 의 버전마다 조금씩 다른데 .msix, .msixbundle, appx 혹은 .appxbundle로 나타날수 있습니다. 
+
+
+셋째는 다음 그림과 같이 AppPackage 폴더 아래에 있는 SimpleDataGrid_1.0.0.0_Debug_Test 폴더로 이동한 후 Add-AppDevPackage.ps1 파일 위에 마우스 커서를 놓고 우측 버튼을 클릭한 후 [PowerShell에서 실행]을 선택해 앱을 설치하는 방법입니다. 
+
+
+설치 시 다음 그림과 같이 Command Prompt로 몇 가지 질문을 하는데 <Y> 혹은 <Enter> 키를 입력하여 설치를 완료하면 됩니다. 간혹 인증서 비밀번호를 물어보는 경우가 있는데 인증서에 비밀번호를 설정하지 않았기 때문에 그냥 <Enter> 키를 누르면 됩니다. 
+
+
+혹시 앞의 두 가지 방식으로 앱을 설치하다 오류가 발생하면 이 방법을 사용하면 됩니다. 이 방법을 사용하기 위해서는 반드시 [개발자 모드]에서 설치해야 합니다. 
+
+
+다음 그림과 같이 Windows 시작 메뉴를 클릭해 설치된 SimpleDataGrid 앱을 확인하고 실행해보기 바랍니다. 
+
+
+
+
+3 : 마이크로소프트 스토어에 올려서 배포하기
+
+앞선 예제에서 개발했던 SimpleDataGrid 앱의 사례를 들어 UWP 앱을 마이크로소프트 스토어에 올려서 배포하는 방법을 알아보겠습니다. 마이크로소프트 스토어에 올리지 않고 배포하는 방법과 유사한 부분은 화면을 생략해가며 간략히 설명하겠습니다. 
+
+
+우선 Windows 시작 메뉴를 클릭해 개발하면서 자동으로 설치된 SimpleDataGrid 앱을 찾아 제거합니다. 
+
+
+
+
+
+※ 마이크로소프트 개발자 계정 등록하기
+
+
+UWP 앱을 마이크로소프트 스토어에 등록하기 위해서는 먼저 개발자 계정이 있어야 합니다. 개발자 계정을 등록하기 위해 웹 브라우저에서 등록 사이트(https://developer.microsoft.com/ko-kr/microsoft-store/register/)로 이동한 후 <등록> 버튼을 클릭해 개발자 계정으로 등록합니다. 
+
+
+먼저 마이크로소프트계정을 입력하고 <Next> 버튼을 클릭합니다. 아직 마이크로소프트 계정이 없다면 무료이니 다음 화면에서 [Create one!] 링크를 클릭해 만들기 바랍니다. 
+
+그리고 마이크로소프트 계정의 암호를 입력하고 <Sign In> 버튼을 클릭한 후 화면의 안내에 따라 암호를 입력하고 필요한 정보를 갱신하는 등의 로그인 절차를 밟습니다. 
+
+로그인이 완료되면 다음 그림과 같이 Account Settings 화면이 나타납니다. 그러면 개발자 계정의 생성이 완료된 것입니다. 
+
+
+
+※ 알아두기
+https://partner.microsoft.com/사이트에서 우측 상단에 위치한 [Dashboard]링크를 클릭해 Microsoft Parther Center로 이동한 후 다시 우측 상단에 있는 [Settings]아이콘을 클릭하면 Microsoft Accout Settings 화면으로 이동할 수 있습니다. 
+
+
+
+마이크로소프트 스토어에 앱을 배포하기 위해서는 비주얼 스튜디오에서 개발자 계정으로 로그인해야 합니다. 비주얼 스튜디오의 우측 상단에 있는 <로그인> 버튼을 클릭합니다. 
+
+
+로그인 화면에서 등록한 개발자 계정으로 로그인합니다. 
+
+
+
+
+※ 마이크로소프트 스토어에 신규 앱 만들기
+
+https://partner.microsoft.com/dashboard 사이트에 개발자 계정으로 로그인하여 새로운 앱을 생성해야 UWP 앱을 마이크로소프트 스토어에 등록할 수 있습니다. 웹 브라우저를 사용해 사이트로 이동하면 https://partner.microsoft.com/en-us/dashboard/windows/first-run-experience 주소로 이동한 후 다음과 같은 화면이 나타나는데 앱을 등록하기 위해 <Create a new app> 버튼을 클릭합니다. 
+
+
+
+
+
+※ 알아두기
+https://partner.microsoft.com/사이트에서 우측 상단에 위치한 [Dashboard] 링크를 클릭해 Microsoft Parthner Center 화면으로 이동할 수 있습니다. 
+
+
+
+
+Name란에 앱의 이름인 SimpleDataGrid를 입력하고 <Check availability> 버튼을 클릭해 사용할 수 있는 앱 이름인지 확인합니다. 그리고 <Reserve product name> 버튼을 클릭해 앱을 만듭니다. 
+
+
+그러면 다음 그림과 같이 앱이 등록되어 Application Overview 화면이 나타나는 것을 확인할 수 있습니다. 
+
+
+
+※ 앱 패키지 만들기
+
+앱 패키지를 만들기 위해 솔루션 탐색기에서 Package.appxmanifest 파일을 찾아 파일을 더블클릭하면 정보를 수정하는 화면으로 이동한 후 설치에 필요한 정보를 관리합니다. 앱의 이름과 앱에 대한 설명, 앱의 아이콘을 등록하는 것은 잊지 말도록 합시다. 
+
+
+그리고 솔루션 탐색기에서 Universal Windows 프로젝트에 마우스 커서를 놓고 우측 버튼을 클릭한 후 [게시] > [앱 패키지 만들기] 메뉴 항목을 차례로 클릭합니다. 
+
+
+배포 방법을 [새 앱 이름으로 Microsoft Store]로 선택하고 다음 버튼을 클릭합니다. 
+
+
+앱 이름 선택 화면에서 앞에서 만든 앱의 이름이 나타나면 앱 이름을 마우스로 클릭해 선택한 후 다음 버튼을 클릭합니다. 
+
+
+
+버전을 지정하고 화면 하단에 [Windows 앱 인증 키트를 사용해 앱의 유효성을 검사하기 위한 아티팩트를 생성합니다.] 옵션이 선택되어 있는 것을 확인한 후 만들기 버튼을 클릭합니다. Windows 앱 인증 키트는 개발한 앱이 마이크로소프트 스토어에 올릴 수 있는 것인지 인증해주는 도구입니다. 앱 패키지를 만드는 데는 시간이 오래 걸리니 인내심을 가지고 기다려야 합니다. 
+
+
+만들어진 패키지의 정보를 확인한 후 <Windows 응용 프로그램 인증 키트 시작 > 버튼을 클릭합니다. 
+
+
+
+Windows 앱 인증 키트의 테스트 선택 화면에서 어떤 항목들을 인증하는지 확인한 후 <다음> 버튼을 클릭합니다. 
+
+
+앱 유효성 검사가 완료되면 결과를 확인합니다. 
+
+
+앱 유효성 검사의 전체 결과가 실패로 나왔습니다. 실패를 보여주는 메시지의 하단에 있는 링크를 클릭해 검사 결과를 확인해보니 이미지 파일을 만들어 사용하지 않고 Prism 프레임워크가 제공하는 기본 이미지를 그대로 사용한 것이 지적되었습니다. 앱 테스트를 통과하기 위해서 Prism 프레임워크가 제공하는 기본 이미지들을 모두 지운후 앱의 고유 이미지들을 만들어 사용해야 합니다. 이 책에서는 교육 목적상 앱의 고유 이미지를 만들어 사용하지는 않겠습니다만 마이크로소프트 스토어에 앱을 올려서 배포하기 위해서는 반드시 이미지를 모두 교체해야 합니다. 
+
+
+파일 탐색기에서 UWP 프로그램 소스가 있는 폴더로 이동한 후 [SimpleDataGrid] > [SimpleDataGrid] 하위 폴더를 보면 AppPackage 폴더가 추가되어 있는데 이 폴더가 설치 파일이 위치하는 폴더입니다. 
+
+
+AppPackage 라는 폴더를더블 클릭하고 들어가면 SimpleDataGrid_1.0.0.0_x86_x64_arm_bundle.appxupload라는 파일이 생성되어 있는 것을 확인할 수 있습니다. 이 파일이 마이크로소프트 스토어에 업로드할 파일입니다. 
+
+
+
+
+※ 앱을 마이크로소프트 스토어에 등록하기 
+
+
+이제 다시 https://partner.microsoft.com/dashboard 사이트로 이동합니다. 웹 브라우저를 사용해 사이트로 이동하면 https://partner.microsoft.com/en-us/dashboard/windows/overview 주소로 이동한 후 다음과 같은 화면이 나타나는데 앞에서 만든 SimpleDataGrid 앱이 목록에 나타나는 것을 확인할 수 있습니다. 이 앱을 클릭합니다. 
+
+
+그러면 앱을 처음 생성했을 때와 동일하게 SimpleDataGrid 앱의 Application overview 화면으로 이동하는데 앞에서 생성한 앱 패키지를 마이크로소프트 스토어에 올리기 위해서 <Start your submission> 버튼을 클릭합니다. 
+
+
+Submission 화면에서 나열되는 메뉴들을 차례로 클릭해 세부적인 정보들을 입력하면 Not Started 상태가 Complete 상태로 바뀌는데 모든 정보를 입력한 후 <Submit to the Store> 버튼을 클릭해 마이크로소프트 스토어에 개발한 앱을 올립니다.
+
+
+우선 우리가 생성한 패키지를 먼저 마이크로소프트 스토어에 업로드하기 위해 Packages 메뉴를 선택합니다. 
+
+다음 Packages 화면에서 선으로 표시된 영역에 앱 패키지 생성 시 만들어진 SimpleDataGrid_1.0.0.0_x86_x64_arm_bundle.appxupload 파일을 드래그 앤드 드롭 하거나 [browse your files] 하이퍼링크를 클릭해 앱 패키지를 업로드합니다. 
+
+
+그러면 업로드하는 앱의 상태를 Validating 하는 단계를 거쳐 앱 패키지가 업로드되는데 Packages 화면의 중앙에서 앱 패키지가 정상적으로 업로드 된것을 확인합니다. 
+앱 유효성 검사가 실패했다면 업로드 시의 Validating에 성공해도 앱을 마이크로소프트 스토어에 업로드하는 것이 최종 승인되지 않으니 주의해야 합니다. 
+
+
+Packages 화면의 하단에서 <Save> 버튼을 클릭합니다. 
+
+
+Submission 화면에서 Packages 메뉴가 Complete 상태로 변한 것을 확인한 후 나머지 메뉴들의 세부적인 정보들을 입력합니다. 
+
+
+
+
+[Pricing and availability] 화면의 [Pricing] 영역에서 Base Price를 Free로 지정하고 [Free Trial] 영역에서 Unlimited로 지정한 후 나머지 값들은 모두 기본값으로 내버려 둔후 <Save draft> 버튼을 클릭합니다. 
+
+[Properties] 화면의 [Category and subcategory]영역에서 Category를 Books + reference로 선택하고 [Subcategory]를 Reference로 선택합니다. [Support Info] 영역에서 No 옵션을 선택한 후 Save 버튼을 클릭합니다. 
+
+[Age ratings] 화면의 [Rating questionnaire] 영역에서 App Type을 All Other App Types 으로 선택한 후 설문서의 질문 항목에 모두 No를 선택한 후 <Save and generate> 버튼을 클릭하면 앱의 Age Rating을 보여주는데 확인한 후 <Continue> 버튼을 클릭합니다. 
+
+다음 화면에서 English (United States)하이퍼링크를 클릭해 Store listing - English(United States) 화면으로 이동한 후 Description을 입력하고 Desktop Screenshot을 업로드한 후 <Save> 버튼을 클릭합니다. 
+
+
+끝으로 Submission Options 의 상태를 제외하고 모두 Complete 상태로 바뀐 것을 확인한 후 <Submit to the Store> 버튼을 클릭합니다. 그럼 다음 그림과 같이 앱의 인증상태를 보여줍니다. 앱의 인증에는 수 시간에서 수일이 걸리기도 하며 앱이 게시된 후 사용자들이 앱을 사용하려면 24시간이 필요하다는 정보를 보여줍니다. 
