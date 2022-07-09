@@ -1,0 +1,184 @@
+10-4 조인 고급
+
+
+1. 자체 조인
+
+자체 조인(Self Join)은 조인 테이블이 자기 자신이다. 특별한 문법이 따로 없고 내부 조인 문법을 사용한다. 한 테이블을 조인하는 것이 의미가 있으려면 테이블 내의 필드끼리 참조 관계여야 한다. 즉 한 필드가 다른 필드를 참조하는 1:n의 자기 참조 관계가 있는 특수한 테이블에만 사용할 수 있다. 이 조건에 맞는 간단한 예제 테이블을 만들어 보자. 
+
+
+CREATE TABLE tDirectory
+(
+	id	INT PRIMARY KEY,
+	name	VARCHAR(20) NOT NULL,
+	parent	INT NOT NULL
+);
+
+
+INSERT INTO tDirectory(id, name, parent) VALUES (1, 'Root', 0);
+INSERT INTO tDirectory(id, name, parent) VALUES (2, 'Data', 1);
+INSERT INTO tDirectory(id, name, parent) VALUES (3, 'Program', 1);
+INSERT INTO tDirectory(id, name, parent) VALUES (4, 'Sound', 2);
+INSERT INTO tDirectory(id, name, parent) VALUES (5, 'Picture', 2);
+INSERT INTO tDirectory(id, name, parent) VALUES (6, 'Game', 3);
+INSERT INTO tDirectory(id, name, parent) VALUES (7, 'StartCraft', 6);
+
+이 테이블은 디렉터리 구조를 표현하는데 id는 디렉터리의 고유 번호이고 name은 디렉터리의 이름이다. 디렉터리끼리는 계층 구조를 이루므로 부모가 있어야 한다. parent 필드는 부모 필드가 누구인가를 가리키며 0일 경우 루트이다. 
+
+1번 Root가 최상위이고 1번에 속한 자식으로 Data 와 Program이 있다. Sound, Picture 디렉터리는 2번 디렉터리인 Data를 부모로 가지고 Game은 3번 디렉터리인 Program에 속하며 StarCraft를 자식 디렉터리로 가진다. 계층적인 구조를 평면적인 테이블로 표현할 때 이런 방식을 흔히 사용한다. 
+
+
+	Root
+		Data
+			Sound
+			Picture
+
+		Program
+			Game		StarCraft
+
+
+이 테이블에서 id와 parent는 둘 다 디렉터리 번호이되 parent가 id를 참조한다. 즉 자신의 부모가 누구인지 테이블 내의 다른 레코드에 대한 참조로 표현한다. 이런 경우에 자체 조인을 사용할 수 있다. 다음은 부모 디렉터리와 그 자식 디렉터리 목록을 출력한다. 
+
+
+SELECT A.name 부모, B.name 자식 FROM tDirectory A INNER JOIN tDirectory B ON A.id = B.parent;
+
+
+
+JOIN 양쪽의 테이블이 같지만 논리적으로 다른 테이블로 취급하기 위해 반드시 별명을 지정해야 한다. 별명을 주지 않으면 tDirectory JOIN tDirectory 구문은 성립하지 않는다. 각 레코드의 부모, 자식 관계를 결과셋으로 정리하여 출력한다. 잘 이해되지 않으면 조인 조건을 제거한 크로스 조인을 먼저 생각해 보자. 
+
+
+SELECT A.name 부모, A.id, B.name, B.parent 자식 FROM tDirectory A CROSS JOIN tDirectory B;
+
+총 49개의 논리곱을 생성한다. 이 중 부모의 id와 자식의 parent가 일치하는 행만 골라내면 된다. 그 조건이 바로 ON A.id = B.parent이다.
+
+
+Root 는 부모가 없고 Data와 Program은 부모가 있다. 부모가 있는 행만 추려내면 계층도가 된다. 재귀적 CTE를 사용하면 각 디렉터리의 전체 경로를 보여주거나 그래픽 형태로 출력할수도 있다. 
+
+
+
+
+2. 구형 조인
+
+지금까지 알아본 조인 문법은 ANSI에서 제정한 표준 SQL이다. 지금은 모든 DBMS가 표준 구문을 잘 지원하지만 표준이 도입되기 전에는 각 DBMS마다 조인 문법이 달랐다. 내부 조인은 단순 조인후 WHERE 절에 조건을 지정하는 형식으로 사용했다. 
+
+
+SELECT * FROM tCar, tMaker WHERE tCar.maker = tMaker.maker;
+
+
+간편해서 아직까지도 여전히 사용하며 모든 DBMS가 다 지원한다. 표준은 이 구문을 CROSS JOIN으로 정의하여 공식화했지만 권장하지는 않는다. 지금은 두 테이블을 INNER JOIN 양쪽에 적고 ON 절에 조건을 적는 내부조인을 사용하는 것이 정석이다. 
+
+
+SELECT * FROM tCar INNER JOIN tMaker ON tCar.maker = tMaker.maker;
+
+
+외부 조인은 예전 형식이 좀 복잡하고 DBMS마다 구문도 조금씩 달랐다. 표준의 외부 조인은 LEFT, RIGHT, FULL 로 방향을 지정하고 ON 절에 조인 조건을 지정한다. 
+
+
+SELECT * FROM tCar LEFT OUTER JOIN tMaker ON tCar.maker = tMaker.maker;
+
+
+오라클은 외부 조인을 다음과 같이 작성한다. 데이터가 적은 쪽, 즉 부테이블에 (+) 기호를 붙인다. 이 기호는 조건을 만족하는 행을 찾아 주 테이블에 덧붙여 출력하라는 뜻이다. 다음은 각 각 왼쪽 외부조인, 오른쪽 외부 조인이다. 
+
+
+SELECT * FROM tCar, tMaker WHERE tCar.maker = tMaker.maker(+);
+
+SELECT * FROM tCar, tMaker WHERE tCar.maker(+) = tMaker.maker;
+
+
+오라클은 아직까지도 이 문법을 지원하지만 권장하지는 않는다. SQL Server는외부 조인을 다음과 같이 작성했었다. 단순 조인 구문과 같되 WHERE 절에서 *= 연산자로 왼쪽 외부 조인을 표기하고 =*연산자로 오른쪽 외부 조인을 표기한다. *기호가 있는 쪽이 주테이블이다. 
+
+
+SELECT * FROM tCar, tMaker WHERE tCar.maker *= tMaker.maker;
+
+
+기호로 되어 있어 짧고 간단하다. 그러나 표준이 아니어서 마이크로소프트도 권장하지 않는다. 한동안 옵션을 조정해야만 쓸 수 있는 상태였다. 최신 SQL Server 2019에서는 아예 에러처리하여 지금은 완전히 폐기하였다. 
+
+오라클과 SQL Server의 문법은 모두 표준 이전에 만들어진 것이어서 예전 조인 문법이 아직 남아있다. 둘다 FULL OUTER JOIN은 지원하지 않는다. 평이한 영어 구문을 지향하는 SQL에 *=이나 (+)같은 기호는 어울리지 않는다. MariaDB는 단순 조인과 내부, 외부 조인만 지원한다. 
+
+표준이 잘 정립된 덕에 조인은 DBMS별로 큰 차이 없이 잘 정비되어 있다. 지금은 잘 사용하지 않고 권장하지도 않는 이런 구형 문법을 굳이 소개하는 이유는 아직도 이런 식으로 작성된 쿼리가 남아 있기 때문이다. 오래된 쿼리문에서 이런 구문을 만나면 표준 구문으로 바꿀수 있어야 한다. 
+
+
+
+
+11장 함수
+
+
+11-1 스칼라 함수
+
+1. 함수
+
+
+SELECT 명령은 테이블의 필드값을 있는 그대로 읽어 출력한다. SELECT name, area FROM tCity 명령은 도시 정보 테이블에 저장된 이름과 면적을 변형없이 보여준다. 그러나 때로는 원형 그대로 보기보다 약간 가공해서 보는 것이 편리할 때도 있다. 이럴 때 함수가 필요하다. 
+
+함수는 입력값을 주면 모종의 계산을 통해 하나의 출력값을 만들어낸다. 수학의 전통적인 함수와 유사하고 프로그래밍 언어에서 사용하는 함수와도 같은 개념이다. 전달받은 값으로 뭔가를 계산하여 결과치를 돌려준다. 
+
+함수로 전달하는 입력값을 인수라고 하는데 개수 제약은 없다. 하나 또는 둘 이상도 가능하고 없을 수도 있다. 출력 값을 리턴이라고 하며 계산 결과 딱 하나만 리턴한다. 호출할 때는 함수명을 적고 괄호 안에 콤마로 구분하여 인수를 나열한다. 인수가 없으면 빈 괄호만 적는다. 
+
+함수명(인수, 인수, 인수, ....)
+
+예를 들어 합계를 구하는 Add 함수가 있다고 하자. Add(3, 4) 형식으로 더할 값을 인수로 전달하면 내부에서 두 값을 더해 그 결과인 7을 리턴한다. 함수의 리턴값도 하나의 값이며 필드 목록이나 WHERE 절에서 필드 대신 사용할 수 있다. 
+
+
+SELECT Add(3, 4), ....
+SELECT * FROM tTable WHERE field = Add(3,4)
+
+Add는 이해의 편의를 위해 내부 동작이 직관적인 함수를 예로 든 것일 뿐 사실 3 + 4 연산식이 더 간편하다. SQL의 연산식만으로도 가감승제, 비교, 대입 등 많은 처리를 할 수 있지만 연산식으로 표현할수 없는 복잡한 동작을 처리하려면 함수가 필요하다. 
+
+테이블의 필드는 원자적인 값 하나를 저장한다. 함수는 원자값을 더 작은 단위까지 섬세하게 추출, 조작, 변형하는 수단이다. 손으로 일일이 계산해야 할 어려운 일도 함수를 잘 활용하면 쉽게 해결할 수 있다. 함수 하나를 배울 때마다 할 수 있는 일이 늘어난다. 
+
+
+2. 함수 사용예
+
+함수가 꼭 필요한 몇 가지 예를 들어 보자. 다음 명령은 영업부 직원의 성취도 평균을 구한다. 이 명령에 사용한 AVG도 집계 함수이며 이미 배운 바 있다. 성취도의 총합을 구하고 인원수로 나누어 정확한 평균을 구한다. 
+
+
+SELECT AVG(score) FROM tStaff WHERE depart = '영업부';
+
+
+과연 이렇게까지 꼬랑지를 길게 늘어뜨려가며 정확할 필요가 있을까? 정확한 것도 좋지만 읽기 쉽게 정리한 값이 더 보기 좋고 결과도 눈에 쏙 들어온다. 이럴 때 반올림 처리하는 ROUND 함수를 사용하며 반올림할 값과 표시할 소수점 자리수를 인수로 전달한다. 
+
+
+SELECT ROUND(AVG(score), 2) FROM tStaff WHERE depart = '영업부';
+
+
+소수점 2자리 까지만 남기고 뒷부분을 반올림 처리하여 깔끔하게 정리했다. 수치값은 소수점 이하가 너무 길면 정확하기는 커녕 오히려 지저분해 보여 필요한 정밀도까지만 값을 변형하는 것이 좋다. 이런 변형을 ROUND함수가 해준다. 
+
+
+다음은 문자열을 변형해보자. 문자열은 검색, 추출, 변환, 연결, 대체 등 다양한 방법으로 변형할 수 있다. REPLACE 함수는 문자열 내의 특정글자를 찾아 다른 글자로 치환한다. 샘플 테이블에는 적당한 예가 없는데 영업부, 총무부를 영업팀, 총무팀으로 바꿔 출력해 보자. 
+
+
+SELECT name, REPLACE(depart, '부', '팀') FROM tStaff;
+
+
+그냥 depart 필드는 테이블의 내용대로 출력하지만 REPLACE 함수로 부서명 내의 '부' 글자를 '팀'으로 대체하면 영업팀, 총무팀이 된다. 인사과는 '부'가 없어 치환하지 않는다. 테이블내의 depart 필드를 직접 변경하는 것이 아니라 출력할 때만 잠시 변형한 것이다. 
+
+
+함수는 적당한 인수와 함께 호출만 하면 원하는 결과를 돌려 주어 사용하기 쉽다. 그러나 안타깝게도 DBMS마다 지원하는 함수의 종류와 사용법이 약간씩 달라 호환성은 없다. ROUND와 REPLACE는 대부분의 DBMS에서 공통적이지만 그렇지 않은 함수가 더 많다. 
+
+
+이번에는 직원의 이름과 직함을 연결하여 출력해 보자. name과 grade 필드를 같이 출력하면 무슨 직급의 누구인지 알아 볼 수 있지만 필드가 떨어져 있어 눈에 잘 들어오지 않는다. 안중근대리, 홍길동 차장 식으로 딱 붙여 출력하면 더 읽기 쉽다. 
+
+
+SELECT name, grade, salary FROM tStaff WHERE depart = '인사과';
+
+
+이 처리를 하려면 불필요한 공백을 잘라내고 문자열을 연결해야 한다. 잘라내는 동작은 TRIM 함수로 처리하고 연결은 || 연산자를 사용한다. 
+
+
+SELECT TRIM(name) || ' ' || grade, salary FROM tStaff WHERE depart = '인사과';
+
+
+사원의 이름인 name 필드는 CHAR(15) 타입이며 뒤쪽에 15자를 다 채울 만큼의 공백이 있다. TRIM 함수는 앞뒤의 불필요한 공백을 제거한다. TRIM 함수를 생략하면 오른쪽 결과처럼 이름과 직급이 너무 떨어져 버린다. 공백을 정리한 후 || 연산자로 직급을 뒤에 붙이되 중간에 공백 문자를 삽입하여 한 칸 띄우면 원하는 형식이 된다. 
+
+두 필드의 값을 조작, 연결하여 하나의 문자열을 만드는 재미있는 예제이다. 그러나 안타깝게도 위 명령은 오라클에서만 실행되며 다른 DBMS에서는 문자열을 연결하는 방법이 달라 동작 하지 않는다. 똑같은 작업을 수행하는 SQL Server와 MariaDB의 명령은 다음과 같다. 
+
+
+SQL Server : SELECT TRIM(name) + ' ' + grade, salary FROM tStaff WHERE depart = '인사과';
+
+MariaDB : SELECT CONCAT(name, ' ', grade), salary FROM tStaff WHERE depart = '인사과';
+
+
+SQL Server는 문자열을 자를 때 TRIM 함수를 쓰는것은 같지만 문자열끼리 연결할 때는 + 연산자를 사용한다는 점이 다르다. 오라클 구문에 비해 || 연산자만 + 로 바꾸면 된다. MariaDB는 문자열 연결을 연산자가 아닌 CONCAT 함수로 처리한다. TRIM은 하지 않아도 자동으로 잘라준다. 
+
+이처럼 DBMS마다 함수를 사용하는 방법에 차이가 있다. 아무리 표준이라도 함수 목록까지 강제할 수 없고 DBMS마다 공유한 함수 집합을 이미 보유하고 있어 앞으로도 통일하기는 어렵다. 그래서 함수를 사용하면 호환성 확보는 어려워진다. 
+
+그러나 형식만 다를 뿐 처리 동작은 유사하다. 이쪽 DBMS에 있는 명령은 다른 DBMS에도 대응하는 다른 명령이 있다. 웬만하면 다 비슷비슷해서 잘 찾아서 사용하면 큰 어려움은 없다. 함수의 기능을 암기할 필요는 없고 어떤 함수가 있는지 파악만 해두고 필요할 때 레퍼런스를 참고하면 된다. 
