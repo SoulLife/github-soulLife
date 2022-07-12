@@ -1,0 +1,365 @@
+3.13 레이아웃
+
+※ 화면이 크기 조절되지 않는 이유
+
+애플리케이션의 창 크기를 조절하면 컨트롤들이 움직이지 않는다는 것을 알게 될 것이다. 컨트롤이 원래 위치에 남아있다는 것은 창 크기를 더 크게 조정하면 여분의 공간이 손실되고, 창이 작아지면 컨트롤의 일부가 가려진다. 아마 가려지는 것을 원치 않을 것이다. 컨트롤이 메뉴 페이지의 중심에 있다면 더욱 좋지 않을까?
+
+지금까지 도구상자에서 디자인 화면으로 끌어다 놓기를 사용해 컨트롤을 화면에 추가했다. 비주얼 스튜디오는 끌어다 놓기 동작을 너비, 높이, 왼쪽 및 상단(루트 컨트롤이 Canvas일 때) 또는 HorizontalAlignment 및 VerticalAlignment (루트 컨트롤이 Grid 인 경우) 컨트롤 속성으로 변환한다. 이러한 속성은 컨트롤의 위치와 크기를 지정하므로 화면에 고정된 컨트롤이 표시된다. 
+
+두려워하지 말자. 화면 크기를 조정할 때 컨트롤이 화면을 따라가게 만드는 것은 아주 쉽다. Panel 컨트롤을 사용하고 WPF 애플리케이션의 컨트롤에 크기를 할당하는 방법을 이해하기만 하면 된다. 바로 다음에 설명하겠다. 
+
+
+
+※ 크기 할당
+
+WPF는 컨트롤의 최종 너비를 계산하기 위해 다음 과정을 진행한다. 말할 필요도 없이 높이를 계산하기 위해서도 동일한 과정이 반복된다고 말할 수 있다. 
+
+
+
+콘텐츠나 자식 항목에 필요한 너비 	> 부모에 의해 제한되는 너비는? 존재한다면 재정의	-> Width,MinWidth 또는 MaxWidth 속성은
+											존재한다면 재정의
+
+
+Width 속성은 실제로 원하는 너비다. 런타임 시 임시 컨트롤에 할당된 실제 너비를 알고 싶다면 컨트롤의 ActualWidth 속성을 사용하면 된다. 
+
+
+
+앞의 스키마에서 알 수 있듯이 먼저 WPF는 컨트롤의 자식, 부모에 의해 제약된 크기를 조회하고 마지막에 컨트롤 자체의 Width, MinWidth 또는 MaxWidth 속성을 확인한다. 부모 제한 크기는 자식 필수 크기보다 우선이고, Width 속성은 부모나 자식의 값보다 우선한다. 다음과 같은 코드가 있다고 가정해 보자. 
+
+<Canvas Width="50" Height="50" Background="Orange">
+	<Button Content="Hello World" Margin="5" />
+</Canvas>
+
+Canvas 컨트롤은 자식 컨트롤 크기를 제한하지 않고(곧 살펴보겠지만) Button 컨트롤에 Width 속성이 없으므로 Button 컨트롤에 'Hello World' 텍스트 전체를 표시하는데 필요한 크기가 할당된다. 
+
+결과는 다음과 같이 나타난다(배경색은 오렌지색으로 나타난다. )
+
+이제 다음과 같은 코드를 고려해보자. 
+
+<Grid Width="50" Height="50" Background="Orange">
+	<Button Content="Hello World" Margin="5" />
+</Grid>
+
+Grid 컨트롤은 자식의 크기를 제한하므로(마찬 가지로 곧 살펴보겠지만) Button 컨트롤에는 Grid 컨트롤의 너비가 지정되고 텍스트는 잘릴 것이다. 결과는 다음과 같다. (마찬가지로 배경색은 오렌지색으로 나타난다)
+
+
+
+
+※ Panel 컨트롤
+
+Panel 컨트롤은 다음과 같은 두 가지 용도로 사용한다. 
+
+* 하나의 컨트롤만 허용하는 여러 개의 컨트롤을 표시한다(Button 컨트롤 내부 및 페이지 또는 창 내부의 이벤트)
+
+* 사용 가능한 크기에 따라 컨트롤을 배치한다.
+
+레이아웃 부분은 Panel 컨트롤의 매우 흥미로운 측면이다. 널리 사용되면 애플리케이션 화면을 사용 가능한 화면 영역에 맞게 조정할 수 있다.(과장 하자면 이것을 반응형 디자인이라 한다.)
+
+신사 숙녀 여러분, 내가 사랑하는 패널 컨트롤을 소개하겠다. 
+
+
+
+
+※ Canvas
+
+Canvas 패널을 사용하면 자체 좌표를 제공하는 컨트롤을 배치할 수 있다. 컨트롤에 어떤 크기도 강요하지 않으므로 컨트롤이 자신의 크기 상태로 자유롭거나 자신의 자식에 의해 컨트롤 크기가 정해진다는 의미다. 내부 컨트롤의 위치는 각 내부 컨트롤의 Canvas.Left 및 Canvas.Top 속성을 사용해 선언한다. 
+
+
+※ 알아두기
+Canvas.Left 및 Canvas.Top 은 연결된 속성이다. Canvas.Left 및 Canvas.Top 이 각 컨트롤로 존재하지 않고 Canvas 컨트롤의 Left 및 Right속성이 다른 컨트롤에 연결될 수 있다는 시작점을 선언한다. 이것은 나중에 보게될 종속성 속성의 마술 같은 기능이다. 
+
+다음은 Canvas 사용 예제다. 
+
+<Canvas>
+	<Button Canvas.Top="0" Canvas.Left="0" >A</Button>
+	<Button Canvas.Top="25" Canvas.Left="0">B</Button>
+	<Button Canvas.Top="25" Canvas.Left="25">C</Button>
+	<Button Canvas.Top="0" Canvas.Left="50">D</Button>
+</Canvas>
+
+결과는 다음과 같을 것이다. 
+
+A		D
+B	C
+
+
+Canvas에 컨트롤을 배치하는 데 필요한 XAML 을 입력하는 작업은 지루하다. 단순히 비주얼 스튜디오의 디자인 뷰를 사용해 도구상자에서 자식 컨트롤을 끌어다 놓기하면 Canvas.Left, Canvas.Top, Width 및 Height 속성이 자동으로 지정된다. 
+
+
+
+
+※ StackPanel
+
+기본 패널은 XAML을 수동으로 편집할 때 매우 편리하다. 반면 디자인 보기에서 StackPanel을 사용하는 것은 번거로울 수 있다. StackPanel은 컨트롤을 하단에서 상단으로 쌓아서 각 컨트롤에 전체 너비를 할당한다. 
+
+StackPanel 컨트롤의 Orientation 제어를 사용해 방향 변경이 가능하다. 값을 Horizontal로 설정하면 자식이 왼쪽에서 오른쪽으로 전체 높이를 채운다. 또한 컨트롤에서 HorizontalAlignment 및 VerticalAlignment 속성을 사용해 전체 너비나 높이 사용을 변경할 수 있다. 
+
+다음은 StackPanel 예제 및 그 결과다. 
+
+<StackPanel Orientation="Vertical" >
+	<Button>A</Button>
+	<Button>B</Button>
+	<Button>C</Button>
+	<Button>D</Button>
+</StackPanel>
+
+
+<StackPanel Orientation="Horizontal">
+	<Button>A</Button>
+	<Button>B</Button>
+	<Button>C</Button>
+	<Button>D</Button>
+</StackPanel>
+
+
+
+
+※ DockPanel
+
+또 다른 패널은 단순히 XAML을 수동으로 편집할 때는 사용하기 쉽지만 디자인 보기에서는 번거롭다. DockPanel은 대부분의 데스크탑 애플리케이션과 같은 화면 레이아웃을 빠르게 얻을 수 있다. 
+
+DockPanel 에 컨트롤을 배치하려면 DockPanel.Dock 연결 속성에 연결하기만 하면 된다. 
+
+다음은 DockPanel예제 및 그 결과다. 
+
+<DockPanel>
+	<Button DockPanel.Dock="Left" >
+		Left
+	</Button>
+	<Button DockPanel.Dock="Right">
+		Right
+	</Button>
+	<Button DockPanel.Dock="Top">
+		Top
+	</Button>
+	<Button>Takes What's left</Button> <-- 지정하지않으면 가운데 -->
+</DockPanel>
+
+
+
+
+※ WrapPanel
+
+XAML을 수동으로 편집할 때 사용하기 쉽고 컨트롤 배치가 왼쪽에서 오른쪽으로 흘러가고 모든 너비가 사용되면 왼쪽으로 되돌아간다. 텍스트가 있는 워드프로세서와 매우 비슷하다. 
+
+
+※ UniformGrid
+
+XAML을 수동으로 편집할 때 시간을 들이지 않고 입력 UI를 배치하는데 적합하다. 
+
+생각해보면 UniformGrid 컨트롤은 꽤 똑똑하다. 컨트롤에 필요한 행과 열의 양을 자동으로 계산한다. 예를 들어 UniformGrid 컨트롤에 9개의 자식이 있으면 3행과 3열을 사용해 조절된다. 
+Rows 또는 Columns 속성을 사용해 제한할수도 있다. 예를 들어 UniformGrid 컨트롤에 9개의 자식이 있고 Columns 속성에 2 값을 제공하면 5줄과 2열을 사용해 컨트롤을 완성한다. 
+UniformGrid 컨트롤의 유일한 문제점은 모든 행과 열을 동일한 너비와 높이로 만든다는 점이다. 이는 프로토타이핑에만 적합하다 
+
+다음은 UniformGrid 예제와 그 결과다. 
+
+<UniformGrid>
+	<Label>Name</Label>
+	<TextBox Width="70" />
+	<Label>Age</Label>
+	<ComboBox />
+</UniformGrid>
+
+
+
+※ Grid
+
+생각해보면 Grid 컨트롤은 레이아웃 크기를 조정할 수 있는 최상의 다기능 컨트롤이다. 강력함은 복잡함에서 나오므로 XAML을 수동으로 편집할 때 많은 양의 XAML 이 필요한 Grid 컨트롤을 사용하고 싶지 않을 수도 있다. 하지만 비주얼 스튜디오 또는 Blend의 디자인 뷰에서는 완벽하게 처리한다. 
+
+다음은 Grid 컨트롤을 사용하는 기본 레이아웃과 그 결과다. 
+
+
+<Grid Width="200" Height="100">
+	<Grid.ColumnDefinitions>
+		<ColumnDefinition />
+		<ColumnDefinition />
+	</Grid.ColumnDefinitions>
+
+	<Grid.RowDefinitions>
+		<RowDefinition />
+		<RowDefinition />
+	</Grid.RowDefinitions>
+	<Button Grid.Row="0" Grid.Column="0" >Button A </Button>
+	<Button Grid.Row="1" Grid.Column="0" >Button B </Button>
+	<Button Grid.Row="1" Grid.Column="1" >Button C </Button>
+	<Button Grid.Row="0" Grid.Column="1" >Button D </Button>
+</Grid>
+
+	Button A		Button D
+	Button B		Button C
+
+Grid를 사용해 배치된 컨트롤은 다음 규칙에 따라 동작한다. 
+
+* 컨트롤은 자신이 속한 전체 칸을 채운다. 
+
+* 같은 칸에 속한 컨트롤이 각기 다른 컨트롤 상단에 나타난다. 
+
+* 컨트롤은 Grid.RowSpan 및 Grid.ColumnSpan 연결 속성을 사용해 몇 개의 열이나 행을 채울 수 있다. 
+
+
+Grid의 RowDefinitions 및 ColumnDefinitions 속성을 사용해 행과 열을 정의하는 방법에 유의하자. 필요한 만큼의 정의가 있을 수 있다. 
+
+아무것도 없이 시작되면 사용 가능한 너비(또는 높이)가 정의된 모든 열(또는 행)간에 동일하게 나뉜다. 그러나 열 정의의 Width 속성(또는 행 정의의 Height 속성)을 사용해 해당 동작을 변경할 수 있다. 
+다음과 같이 Width 및 Height 속성에는 세 가지 값을 사용할 수 있다. 
+
+
+* 고정 숫자 : 열/행에 픽셀의 수가 할당된다. 
+
+* Auto : 열/행이 자체 콘텐츠에 대한 크기로 적용된다. 
+
+* 별 또는 별이 붙은 숫자: 열/행이 남은 너비/높이에 비례한 크기가 지정된다. 나중에 설명 예정이다. 
+
+다음과 같은 예제를 고려해보자. 
+
+<Grid.ColumnDefinitions>
+	<ColumnDefinition Width="30" />
+	<ColumnDefinition Width="*" />
+	<ColumnDefinition Width="2*" />
+</Grid.ColumnDefinitions>
+
+
+첫 번째 열에는 고정 크기가 지정된다. 그런 다음남은 너비가 별표 표시된 두 개의 열에 지정된다. 두번째 열은 하나의 별이 있고 세번째는 두 개의 별이다. 정의된 모든 별의 합은 세 개이므로 두 번째 열은 너비의 1/3이고, 세 번째는 너비의 3/2이다. 
+
+*과 1*은 완전히 동일하다. 
+
+
+
+
+
+※ 패널 컨트롤 요약
+
+앞에서 살펴봤던 패널 컨트롤 목록은 다음 표와 같다. 일부는 XAML에 거의 필요하지 않기 때문에 XAML 수작업에 더 적합하며 일부는 XAML에 필요한 것이므로 비주얼 스튜디오 디자인 화면에 더 적합하다. 예를 들어 XAML을 수동으로 편집할 때 Grid 컨트롤이 아닌 StackPanel 컨트롤 사용이 선호된다. 
+
+
+
+컨트롤			크기 강제		사용 편의
+Canvas			No		디자인 뷰
+DockPanel		Yes		XAML
+Grid			Yes		디자인 뷰
+StackPanel		Yes		XAML
+UniformGrid		Yes		XAML
+WrapPanel		Yes		XAML
+
+
+대개 화면에서 비주얼 스튜디오 디자인 뷰를 사용할 때 사용자는 Canvas(고정 레이아웃용) 및 Grid(크기 조절 레이아웃용) 컨트롤을 선호한다. 
+
+
+
+
+3.14 목록 컨트롤
+
+목록(List) 컨트롤을 언급하지 않고는 장을 완전하게 마무리 할 수 없다. 대부분의 경우 요소가 XAML을 사용해 정의되지 않고 오히려 데이터요소 컬렉션에 바인딩되기 때문에 지금부터 빠르게 살펴보겠다. 자세한 내용은 4.4 목록 컨트롤을 사용하는 컬렉션 표시 절에서 살펴볼 예정이다. 
+
+
+목록 컨트롤에 대한 또 다른 공통점은 컨트롤 모양을 변경하는 템플릿뿐만 아니라 항목의 표시 방법을 변경하는 항목 템플릿을 제공할 수 있다는 것이다(4.5 목록 컨트롤 사용자 정의 절에서 다룬다) 다음 두 가지를 의미한다. 
+
+* 아래 보이는 모양이 기본 모양이고 쉽게 변경할 수 있다. 
+
+* 외형이 아닌 필요한 동작에 초점을 맞춰 컨트롤을 선택해야 한다. 
+
+
+
+
+
+※ 선택 컨트롤
+
+ListBox 는 하나 또는 그 이상의 항목을 선택할 수 있으며, 한 번에 여러 항목을 표시할 수 있다. ComboBox는 하나의 항목을 선택할 수 있으며,  두 가지 표시 모드를 갖는다. 하나는 선택한 요소가 표시되고 다른 하나는 사용 가능한 요소가 표시되는 모드다. 
+
+
+<ListBox Height="100">
+	<Label>Element 1</Label>
+	<Label>Element 2</Label>
+	<GroupBox Header="Element 3">
+		With Some Content It's funnier
+	</GroupBox>
+</ListBox>
+
+
+<ComboBox>
+	<Label>Element 1</Label>
+	<Label>Element 2</Label>
+	<GroupBox Header="Element 3">
+		With Some Content It's funnier
+	</GroupBox>
+</ComboBox>
+
+
+TabControl은 헤더(항상 표시됨)와 내용을 가질 수 있다는 점을 제외하고는 대부분 ComboBox와 동일하다. 하위 컨트롤로 TabItem 요소를 사용해 구체화 된다. 
+
+
+
+
+3.15 연습문제 : 토론 페이지 생성
+
+Discussion.xaml이라는 새 페이지를 애플리케이션에 추가하고 사용자가 메뉴 페이지의 채팅 버튼을 클릭할 때 표시되는지 확인한다. 
+
+나중에 클라이언트 지원과 사용자 간에 교환되는 메시지를 표시할 ListBox 컨트롤을 추가한다. 나중에 사용자가 메시지를 입력하고 보낼 수 있게 TextBox및 Button 컨트롤을 추가한다. 
+
+페이지는 다음과 같은 모양이다. 
+
+
+맨위상단 ListBox
+
+TextBox(Type your message here기본Text)	Button(Send)
+
+
+페이지 크기 조절이 가능한지 확인한다. 크기가 조절되면 ListBox 컨트롤이 늘어나야 (가로 및 세로)하고 Button 컨트롤이 오른쪽에 있어야 하며, TextBox 컨트롤의 너비가 늘어나야 한다. 
+
+다음은 페이지가 크기 조절되는 방법을 보여준다. 
+
+
+
+
+3.16 연습문제 풀이
+
+1. 비주얼 스튜디오로 전환해 3.12 연습문제 풀이에서 작성한 BikeShop 프로젝트를 연다. 
+
+2. 보기 > 솔루션 탐색기 메뉴 항목을 클릭해 솔루션 탐색기를 연다. 
+
+3. 솔루션 탐색기의 프로젝트(솔루션이 아님)에서 마우스 오른쪽 클릭하고 컨텍스트 메뉴에서 추가 > 페이지를 선택한다. 
+
+4. 새 항목 추가 대화상자에서 하단의 이름 영역을 찾아 Discussion을 입력한다. 추가 버튼을 클릭한다. 
+
+5. 솔루션 탐색기에서 Menu.xaml 파일을 더블 클릭한다. 
+
+6. Live support 표시 버튼을 더블 클릭한다. 
+
+7. 더블 클릭으로 XAML에 Click 특성이 추가되고 코드 비하인드에 이벤트 처리기가 추가되면서 코드 비하인드가 열린다. 
+
+private void Button_Click1(object sender, RoutedEventArgs e)
+{
+}
+
+
+8. 생성된 이벤트 처리기에 다음 코드를 추가한다.
+private void Button_Click1(object sender, RoutedEventArgs e)
+{
+	NavigationService.Navigate(new Uri("/Discussion.xaml", UriKind.Relative));
+}
+
+9. 솔루션 탐색기에서 Discussion.xaml 파일을 더블 클릭한다. 페이지에 다음 XAML 코드를 추가한다. 
+
+
+<Page ...>
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*" />
+			<ColumnDefinition Width="100" />
+		</Grid.ColumnDefinitions>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*" />
+			<RowDefinition Height="50" />
+		</Grid.RowDefinitions>
+		<ListBox.Grid.ColumnSpan="2" Margin="5" />
+		<Button Grid.Row="1" Grid.Column="1" Margin="5" Content="Send" />
+		<TextBox Grid.Row="1" Margin="5" Text="Type your message here" />
+	</Grid>
+</Page>
+
+
+10. 애플리케이션을 실행한다(디버그 > 디버깅 시작 메뉴 항목 클릭)
+
+
+11. Live support 표시 버튼을 클릭한다. Discusstion 페이지가 표시되고 예상대로 크기 조절이 되는지 확인한다. 
+
+12. 애플리케이션을 닫는다.
