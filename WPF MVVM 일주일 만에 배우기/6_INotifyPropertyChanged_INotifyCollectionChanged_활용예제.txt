@@ -1,0 +1,224 @@
+4.8 INotifyPropertyChanged
+
+WPF 엔진이 개발자의 마음을 읽을 수 있다면 데이터 바인딩의 세계에서 모든것이 좋을 것이다. 하지만 불행히도 그렇지 못하다. 따라서 더 많은 작업이 필요한 사용 경우가 있다. 
+
+컨트롤을 통해 사용자가 속성을 업데이트하면 동일한 속성에 바인딩된 다른 컨트롤이 작성된 코드가 전혀 없어도 업데이트된다. 그러나 코드 자체(예를 들어 이벤트에 대한 응답 또는 웹 서비스에서 오는 데이터)로 인해 속성이 변경되면 해당 속성에 바인딩된 컨트롤이 업데이트되지 않는다.
+
+이런 종류의 시나리오가 작동하려면 속성이 변경되기 시작할 때 이벤트를 발생시켜야 한다. 그리고 좋은 소식은 이벤트 발생이 수행이 쉬울 뿐 아니라 생성된 클래스(엔티티 프레임워크, 웹 서비스 및 WCF 클라이언트 프록시) 대부분이 해당 이벤트를 발생시킨다. 속성 변경 이벤트는 INotifyPropertyChanged 인터페이스에 설명돼 있으며, 이는 데이터 객체가 사실상 INotifyPropertyChanged 인터페이스를 구현해야 한다는 의미다. 
+
+모든 데이터 객체에 속성 변경 이벤트가 필요하므로 모든 프로젝트에 다음 클래스를 추가하고 데이터 객체를 상속하는 것이 좋다. 
+
+
+using System.ComponentModel;
+
+public class Notifier : INotifyPropertyChanged
+{
+	public event PropertyChangedEventHandler PropertyChanged;
+	protected void OnPropertyChanged(string propertyName)
+	{
+		if(PropertyChanged != null)
+		{
+			PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+		}
+	}
+}
+
+
+보는 바와 같이 복잡하지 않다. INotifyPropertyChanged 클래스를 구현하듯이 대부분의 코드는 쉽게 가져올 수 있다. 어쨌든 아직 이해하지 못해도 그냥 사용할 수 있다. 
+
+
+※ 대부분의 MVVM 프레임워크는 해당 클래스와 같은 기능을 제공하고 몇 가지 똑똑한 방법으로 이벤트를 발생시키는 도우미까지도 제공한다. 하지만 지금은 MVVM 패턴에 대해 이야기하지 않는다. 
+
+
+Notifier 클래스를 만들고 속성의 세터(Setter)에서 OnPropertyChanged 메소드를 호출해야 한다. 
+
+자동차 클래스를 기억하는가? 자동차 클래스는 다음과 같이 작성됐다. 
+
+
+public class Car
+{
+	public double Speed {get; set;}
+	public Color Color {get; set;}
+	public Human Driver {get;set; }
+}
+
+Speed 속성이 코드에 의해 업데이트될 때 인터페이스가 업데이트되게 하려면 다음과 같이 다시 작성해야 한다. 
+
+public class Car : Notifier
+{
+	private double speed;
+	private Color color;
+	private Human driver;
+	public double Speed
+	{
+		get {return speed; }
+		set 
+		{
+			speed = value;
+			OnPropertyChanged("Speed");
+		}
+	}
+	public Color Color
+	{
+		get => color;
+		set
+		{
+			color = value;
+			OnPropertyChanged("Color");
+		}
+	}
+	public Human Driver
+	{
+		get => driver;
+		set
+		{
+			driver = value;
+			OnPropertyChanged("Driver");
+		}
+	}
+	//자동차의 다른 속성도 이런식으로 작성하면된다. 
+}
+
+
+4.9 INotifyCollectionChanged
+
+데이터 객체가 WPF 컨트롤에 속성 변경 내용을 알릴 수 있게 하는 INotifyPropertyChanged 인터페이스에 대해 살펴봤다. 이 인터페이스는 데이터 바인딩된 UI가 자동으로 업데이트되는 동안 데이터 객체를 업데이트하는 데 중점을 둔 깨끗한 코드를 작성할 수 있게 한다. 
+
+이제 한 단계 더 나갈수 있다. 컬렉션의 내용이 변경되면 세분화된 알림을 생성할 수 있다. 연습문제에서 작성한 애플리케이션으로 돌아가서 INotifyPropertyChanged 인터페이스만 사용하면 사용자가 메시지를 보내거나 받을 때 모든 목록의 내용을 제거하고 다시 추가해야 한다. 추가된 메시지는 끝에 있고 ListBox 컨트롤의 현재 스크롤로 인해 보이지 않는 경우 특히 시간이 많이 소모된다. 좀 더 적절한 인터페이스인 INotifyCollectionChanged 를 사용하면 더 잘만들수 있다. 
+
+
+INotifyCollectionChaged 인터페이스를 사용하면 컬렉션에서 추가, 제거 및 변경을 알릴수 있다. WPF 목록 컨트롤은 해당 인터페이스를 검색하고 고려해 사용자 인터페이스를 세부적으로 업데이트 한다. 
+
+그리고 직접 인터페이스를 구현할 필요조차 없다는 좋은 소식이 있다. WPF는 INotifyCollectionChanged 인터페이스인 ObservableCollection<T>를 구현한다는 점을 제외하고 List<T> 와 같은 클래스를 제공한다. 
+
+실제로 List<T> 대신 ObservableCollection<T>를 사용하면 세밀한 UI 업데이트를 얻을 수 있다. 
+
+
+
+
+4.10 연습문제 : 제품 및 세부 정보 표시
+
+StartAssets 폴더에는 Notifier.cs 및 ProductsFactory.cs 파일이 있다. 파일들을 프로젝트에 추가한다. 
+
+Notifier.cs에는 '4.8 INotifyPropertyChanged' 절에서 본 속성 변경 알림 코드가 들어 있다. 
+
+ProductsFactory.cs 파일은 Product 클래스 및 ProductsFactory 클래스를 정의한다. ProductsFactory는 필터링되거나 되지 않은 임의의 제품 목록을 반환하는 메소드를 제공한다. 메소드를 살펴보자. 모든 제품을 나열하고 다음과 같은 productsMa-nagement.xaml 페이지를 생성한다. 
+
+
+
+메뉴 페이지의 Products 버튼을 클릭하면 사용자가 제품 관리 페이지로 이동해야 한다. 
+
+TextBox에 검색 문자열을 입력하면 문자열로 목록을 필터링 해야 한다. 
+
+사용자가 제품을 선택하면 제품 세부 정보가 다음과 같이 오른쪽에 표시돼야 한다. 
+
+
+
+4.11 연습문제 풀이
+
+1. 비주얼 스튜디오로 전환해 4.7 연습문제 풀이에서 작성한 BikeShop 프로젝트를 연다. 
+
+2. 보기 > 솔루션 탐색기 메뉴 항목을 클릭해 솔루션 탐색기를 연다. 
+
+3. 솔루션 탐색기에서 프로젝트(솔루션이 아님)를 마우스 오른쪽 클릭해 컨텍스트 메뉴에서 추가 > 기존 항목 ...을 선택한다. 
+
+4. 기존 항목 추가 대화상자에서 StartAssets 폴더를 탐색하고 Notifier.cs 및 ProductsFactory.cs 파일을 선택한다. (복수 파일 선택 시 Ctrl 키 + 마우스 왼쪽 버튼을 클릭한다) 추가 버튼을 클릭한다. 
+
+5. Notifier.cs 파일을 더블클릭하고 내용을 확인해보면 INotifyPropertyChanged 인터페이스를 상속받아 Notifier 클래스 내에 OnPropertyChanged 이벤트를 구현했음을 알수 있다. 
+
+6. ProductsFactory.cs 파일을 더블 클릭하고 내용을 확인해보면 하단에 Notifier 클래스를 상속받은 Product 클래스가 있고 클래스 내의 속성인 Title, price, Color, Reference가 변경되면 OnPropertyChanged 를 호출하게 된다. In-memorydata로 표시된 접혀 있는 코드 부분은 products라는 제품배열을 생성하고 0~99까지 총 100개의 제품을 Random을 이용해 제목과 색상 등을 임의로 자동 조합해서 생성하도록 구성돼 있다. 
+
+7. 솔루션 탐색기에서 프로젝트(솔루션이 아님)를 마우스 오른쪽 클릭해 컨텍스트 메뉴에서 추가 > 페이지를 선택한다. 
+
+8. 새 항목 추가 대화상자에서 하단 이름 영역을 찾아서 ProductsManagement를 입력한다. 추가 버튼을 클릭한다. 
+
+9. 도구상자 창에서 ProductsManagement 페이지로 TextBlock 및 TextBox를 상단에 추가하고, DataGrid를 가운데에 추가 한 후 Border를 오른쪽에 추가한다. 
+
+
+10. 다음과 같은 속성을 각 컨트롤에 할당한다. 
+
+컨트롤		속성		값
+TextBox		Text		Seatch
+TextBox		name		textBox
+		Text		(empty)
+DataGrid		name		dataGrid
+Border		Background	White
+
+
+11. TextBox 컨트롤을 더블 클릭한다. 
+
+12. 그러면 textBox_TextChanged 메소드가 생성된다. 
+
+public ProductsManagement()
+{
+	InitializeComponent();
+}
+private void textBox_TextChanged(object sender, TextChangedEventArgs e)
+{
+
+}
+
+13. ProductsManagement 클래스 상단과 textBox_TextChanged 메소드에 다음과 같은코드를 각각 추가한다. 
+ProductsFactory factory = new ProductsFactory();
+public ProductsManagement()
+{
+	InitializeComponent();
+	
+}
+private void textBox_TextChanged(object sender, TextChangedEventArgs e)
+{
+	dataGrid.ItemsSource = factory.FindProducts(textBox.Text);
+}
+
+14. Menu.xaml 파일을 열고 Products 표시 버튼을 더블 클릭한다. 
+
+15. 그러면 Click 특성이 XAML에 추가되고 코드 비하인드에 이벤트 처리기가 추가되면서 코드 비하인드가 열린다. 생성된 이벤트 처리기에 다음과 같은 코드를 추가한다. 
+
+private void Button_Click_2(object sender, RoutedEventArgs e)
+{
+	NavigationService_Navigate(new Uri("/ProductsManagement.xaml", UriKind.Relative));
+}
+
+16. 애플리케이션을 실행한다(디버그 > 디버깅 시작 메뉴 항목 클릭)
+
+17. Products 버튼을 클릭한다. TextBox 컨트롤에 검색 문자열을 입력하면 일치하는 제품 목록이 표시되는지 확인한다. 
+
+18. 애플리케이션을 닫는다. 
+
+19. ProductsManagement.xaml 파일을 열고 부모 창(MainWindow)의 크기를 참고해 페이지 크기를 조절하고 컨트롤 크기도 다시 조절한다. 
+
+20. Border 요소를 찾아 <Border /> 라는 하나의 태그로 구성된 부분을 <Border></Border> 의 열고 닫는 태그로 변경을 한다음 DataContext 특성을 Border 요소에 추가한다. 
+
+
+21. Border 요소 내부에 다음 코드를 추가한다. 
+
+
+<StackPanel Margin="10">
+	<TextBox Text="Product details" FontWeight="Bold" FontSize="16" HorizontalAlignment="Center" Margin="10" />
+	<TextBlock Text="Title" />
+	<TextBox Text="{Binding Title, Mode=TwoWay}" />
+	<TextBlock Text="Price" />
+	<TextBox Text="{Binding Price, Mode=TwoWay}" />
+	<TextBlock Text="Color" />
+	<TextBox Text="{Binding Color, Mode=TwoWay}" />
+	<Border Background="{Binding Color}" Height="10" />
+	<TextBlock Text="Reference" />
+	<TextBox Text="{Binding Reference, Mode = TwoWay}" />
+</StackPanel>
+
+
+22. 애플리케이션을 실행(디버그 > 디버깅 시작 메뉴 항목 클릭)하고, Products 버튼을 클릭한다. DataGrid 컨트롤에서 제품을 선택하면 모든 속성이 오른쪽 패널에 표시되는지 확인한다. 
+
+23. 오른쪽 측면 패널을 사용해 일부 제품 속성을 변경한다. 예를 들어 Title 문자열 끝에 '2'를 추가한다. 
+
+24. 포커스를 다음 컨트롤로 이동하면 DataGrid 컨트롤에 변경 내용이 표시되는지 확인한다. 
+
+25. 애플리케이션을 닫는다. 
+
+
+※ 슈퍼 영웅이 필요하다!
+이 책을 읽고 있다는 것에 감사한다. WPF 및 MVVM을 이해하고 자신감을 얻는 데 도움이 되길 바란다. 
+
+독자로서 여러분은 슈퍼 영웅이다. WPF를 사용해 아름답고 잘 구조화된 데스크탑 애플리케이션을 만들고 컴퓨터를 더 유용하게 사용할 수 있다. 
+
+상상할 수 있는가? 여러분은 구입한 사이트나 아마존에서 이 책을 평가할수 있는 초능력이 있다. 아무것도 아닐지도 모르지만 이 책과 같은 자동 편집된 도서의 경우 매우 중요하다. 소중한 시간을 이책을 평가하는데 할애해주면 좋겠다. 그렇게 하면 나와 같은 독립 저자들에게 많은 도움이 된다. 
