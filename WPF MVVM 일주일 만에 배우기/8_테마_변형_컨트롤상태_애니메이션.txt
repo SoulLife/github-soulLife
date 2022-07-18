@@ -1,0 +1,114 @@
+5.10 테마
+
+디자이너와 올바르게 작업한다면 디자이너는 템플릿과 속성 값을 적용하는 암시적 및 명시적 스타일이 포함된 ResourceDictionary 파일을 제공할 것이다. 해당 파일을 테마(Theme)라고 할 수 있다. 
+
+소규모 프로젝트의 경우와 같이 디자이너와 함께 작업하지 않을 경우 무료로 사용할 수 있는 테마가 있는지 궁금할 것이다. 물론 있다. 예를 들어 몇 가지 테마를 https://wpfthemes.codeplex.com에서 찾을 수 있다. 
+
+
+5.11 변형
+
+컨트롤을 쉽게 크기 변경, 회전 또는 기울일 수 있다. 모든 컨트롤에는 변형을 위해 사용 가능한 RenderTransform 및 LayoutTransform이 있다. 둘 다 적용 할 변형을 묘사하는 똑같은 하위 항목을 갖는다. 둘의 차이점은 필요한 크기를 계산할 때의 계산 방법이다. 
+
+변형에 필요한 XAML을 직접 작성할 수도 있지만 무의미하다. 비주얼 스튜디오에서는 직관적인 방법으로 변형이 가능하다. 컨트롤의 속성 창을 열면 다음과 같은 변형 부분이나타난다. 
+
+자세히 살펴보면 아랫부분에 확장 표시가 있어서 사용 빈도가 낮은 LayoutTransform에 접근할 수 있다. 차이점은 무엇일까? 쉽게 말해 RenderTransform은 컨트롤에 필요한 크기를 계산할 때 변환을 고려하지 않는(필요 하다면 크기 할당 참조) 반면 LayoutTransform은 변환을 고려한다. 디자인 모드에서 작업하거나 Canvas를 사용할 때 차이점이 없으므로 LayoutTransform이 자주 사용되지 않는다. 
+명확하지 않다면 둘의 차이점은 다음과 같다. 
+
+왼쪽 에는 ListBox내부의 GroupBox 컨트롤에 할당된 크기가 변환되지 않고 갖고 있던 크기가 유지되게 RenderTransform을 사용했다. 그래서 다른 요소가 한 번 회전되면 덮어 쓰게 된다. 
+
+
+
+5.12 컨트롤 상태
+
+살펴봤던 도구를 사용해 Button 컨트롤에 대한 템플릿을 만들려고 시도하면 실망할 수 있다. 클릭시 모양이 변경되지 않고 마우스가 영역에 들어갈 때도 변경되지 않는다. 개선이 가능하다. 물론 애니메이션에 대해 바로 생각해보고 곧 애니메이션에 관해 이야기하겠지만 내가 권장하는 것은 아니다. 
+
+애니메이션을 적용하는 경우 마우스를 누른 상태 하나, 마우스를 놓은 다른 상태 하나, 추가로 마우스가 컨트롤 영역에 들어올 때 및 머물러 있을 때 상태 하나를 각각 만들어야 할 것이다. 아 그리고 마우스가 영역에 들어가 있고 동시에 눌려진 상태 하나 및 놓은 상태 하나가 필요하다. 즉 상호 의존적인 6개의 애니메이션을 만들어야 한다. 자체적으로 준비해야 하는 지옥 같은 길을 생각해보자. 
+
+컨트롤 상태(Control States)라는 더 좋은 방법이 있다. 컨트롤 상태를 사용하면 컨트롤이 각 상태에서 갖는 모양을 차례로 생각할 수 있으며, WPF는 각 상태 간의 모든 전환 애니메이션을 만들 것이다. 버튼의 경우 여섯개의 애니메이션 대신 두 가지 상태(Pressed 및 MouseOver)로 모양을 수정한다. 충분히 훨씬 줄어든 작업이다. 
+
+몇 가지 이론을 먼저 살펴보면 각 컨트롤은 특성을 사용해 자신의 상태목록을 선언한다. Button 선언에서 추출한 내용은 다음과 같다. 
+
+
+[TemplateVisualState(Name="Normal", GroupName = "CommonStates")]
+[TemplateVisualState(Name="MouseOver", GroupName = "CommonStates")]
+[TemplateVisualState(Name="Pressed", GroupName = "CommonStates")]
+[TemplateVisualState(Name="Disabled", GroupName = "CommonStates")]
+[TemplateVisualState(Name="Unfocused", GroupName = "CommonStates")]
+[TemplateVisualState(Name="focused", GroupName = "CommonStates")]
+public class Button : ButtonBase {...}
+
+
+상태를 그룹화할 수 있다. 그룹 내에서 상호 배타적이지만 하나의 컨트롤은 다른 그룹에서 몇 가지 상태로 동시에 수행될 수 있다. 화면에는 상태로 전환할 때 예상되는 변경 사항을 설명하는 몇 가지 XAML 코드가 추가돼 있다. Blend for Visual Studio는 몇 번의 마우스 조작만으로 상태를 생성하지만 다음과 같은 방법이 가능하다.
+
+
+<ControlTemplate TargetType="Button" xmlns:vsm="clr-namespace:System.Windows;assembly=System.Windows">
+	<Border x:Name = "RootElement">
+		<vsm:VisualStateManager.VisualStateGroups>
+			<vsm:VisualStateGroup x:Name="CommonStates">
+				<vsm:VisualState x:Name ="MouseOver">
+					<Storyboard>
+						<ColorAnimation Storyboard.TargetName="BorderBrush"
+						 Storyboard.TargetProperty="Color" To="Red />
+					</Storyboard>
+				</vsm:VisualState>
+			</vsm:VisualStateGroup>
+		</vsm:VisualStateManager>
+	</Border>
+</ControlTemplate>
+
+그러면 다음과 같이 간단하게 지정해 전환을 애니메이션으로 만들수 있다. 
+
+<vsm:VisualTransition GeneratedDuration="0:0:1.5">
+
+
+추가 컨트롤의 경우 Button 컨트롤의 Pressed 상태로 들어갈 때의 짧은 상태와 같은 특정 상태 전환에 대해 다른 타이밍을 갖게 VisualTransition의 From 및 To 속성을 사용할 수도 있다. 
+
+언급한 것처럼 Blend for Visual Studio는 개발자를 위해 XAML을 생성해준다. 수행에 필요한 것은 다음과 같다. 
+
+
+* 템플릿 정의 모드로 들어간다(컨트롤을 오른쪽 클릭하고 템플릿 편집 > 현재 항목 편집을 선택)
+
+* 상태 창을 연다.
+
+* 편집을 원하는 상태 이름을 클릭한다. 
+
+* 컨트롤 속성을 변경하거나 속성을 주의로 움직여서 필요한 변경을 한다.
+
+* 선택적으로 상태 창에서 그룹 이름을 클릭해 전환 시간을 지정한다. 
+
+
+
+
+※ 알아두기
+상태는 컨트롤 템플릿에만 국한되지 않는다. 모든 화면에서 자신의 상태 목록을 선언하고 XAML 또는 C#을 사용해 상태 목록을 전환할 수 있다. 또한 동일한 간편 애니메이션 전환 효과를 얻을 수 있다. 
+
+
+
+5.13 애니메이션
+
+상태(States)는 대부분의 상황에서 애니메이션을 생성하는 쉬운 방법이다. 상태는 전환의 세부 사항이 아닌 최종 상태에 집중하기 때문에 애니메이션을 쉽게 유지 관리할 수 있다. 
+그러나 예를 들어 전환을 여러 단계로 나누기처럼 전환을 수행하는 방식을 사용자 정의하려는 경우가 있다. 이 경우 StoryBoard를 사용해 사용자 정의 애니메이션을 만들 수 있다. 
+StoryBoard는 일방적인 애니메이션을 만들고 싶을 때 완벽한 후보가 될 수 있다. 예를 들어 애플리케이션을 통해 낮 시간 동안 태양의 고도에 따라 일반적인 배경색이 변경되는 것과 같은 기능이다. 
+애니메이션은 XAML을 사용해 선언되고 리소스로 저장된다. 다음은 애니메이션 예제다. 
+
+
+<Page.Resources>
+	<Storyboard x:Key="rotateFast">
+		<DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="rotation"
+			Storyboard.TargetProperty="Angle">
+			<SplineDoubleKeyFrame KeyTime="00:00:02" Value="90" />
+		</DoubleAnimationUsingKeyFrames>
+	</Storyboard>
+</Page.Resources>
+
+애니메이션이 선언되면 XAML 코드(트리거) 또는 C#을 사용해 애니메이션을 트리거할 수 있다. 다음은 rotateFast 애니메이션을 시작하기 위해 해당 페이지의 코드 비하인드에 작성할 수 있는 내용이다. 
+
+
+rotateFast.Begin();
+
+
+생각에 따라 애니메이션 코드는 지루할 수 있다. 애니메이션을 만들려면 애니메이션의 타임라인 뷰 편집을 쉽게 해주는 Blend for Visual Studio를 사용하는 것이 좋다. Blend for Visual Studio를 사용하면 애니메이션을 미리 보고 언제든지 모양을 확인할 수 있다. 요약하면 애니메이션을 생성할 때 Blend for Visual Studio를 사용하자는 것이다. Blend에서는 StoryBoard를 만들기 위해 객체 및 타임라인 창의 맨 위에 있는 '+' 버튼을 클릭하기만 하면 된다. 결과로 다음과 같은 StoryBoard 편집기가 보인다.
+
+그런 다음 타임라인을 따라 노란색 수직선을 이동하고 객체 속성을 변경한다. 객체 속성을 변경하면 StoryBoard에 XAML로 기록되며 Blend는 노란색 선과 객체 이름의 교차점에 나타나는 회색 마커로 표시한다. 
+
+이 작업이 전부다! 일부 개발자가 Blend에 대해 모르거나 사용법을 배울 기회가 없어 C#으로 StoryBoard 객체를 선언하는 것을 보았고, 해당 개발자는 힘들고 힘든 시간을 보냈다. 
