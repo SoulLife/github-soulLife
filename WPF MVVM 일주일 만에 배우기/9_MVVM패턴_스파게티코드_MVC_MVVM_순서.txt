@@ -1,0 +1,191 @@
+6장 : WPF MVVM 패턴
+
+6.1 스파게티 코드
+
+주의를 기울이지 않으면 유지보수가 불가능하고 재사용이 불가능한 코드를 작성할 수 있다. 그런 일은 실제로 정말 빨리 일어날 수 있다. 다음은 WPF 또는 Windows Forms 화면의 코드 비하인드에 일어날수 있는 가상의 코드다. 
+
+
+void Loaded(object sender, RoutedEventArgs args)
+{
+	BankData = GetBankData();
+	BankData.DataChanged += new EventHandler(BankData_Changed);
+}
+
+void BankData_Changed(object sender, BankDataEventArgs args)
+{
+
+	BankData b = args.Data;
+	this.BalanceDisplay = b.Balance;
+	if(this.IncludeInterests.Checked)
+	{
+		this.BalanceDisplay = b.Balance * b.InterestRate;
+	}
+}
+
+void BalanceDisplay_TextChanged(object sender, RoutedEventArgs args)
+{
+	...
+}
+
+
+위와 같은 종류의 코드에는 다음과 같은 많은 문제점이 있다. 
+
+* 거대한 파일을 만들어내고 유지보수가 갈수록 어렵게 된다. 해당 종류의 코드는 종종 한 화면에 대해 5,000줄 이상의 코드 비하인드를 생성한다. 
+
+* 테스트가 어렵다. 컨트롤 코드와 논리적 코드가 많이 섞여 있기 때문에 테스트를 실행하려면 UI를 인스턴스화 해야한다. 
+
+* 재사용이 어렵다. 컨트롤에 대한 참조는 다른 화면에서 코드 재사용을 어렵게 만든다. 
+
+* 컨트롤의 속성을 깊이 있게 알아야 한다. UI에 대한 모든 변경은 해당 코드에 큰 영향을 미친다. 
+
+
+이 목록 외에도 많다. 간단히 말해위와 같은 코딩 방식은 유지보수가 불가능한 코드를 생성한다. 
+
+그러나 많은 애플리케이션이 해당 방식으로 코딩되므로 자연스러운 코드 작성 방식이다. 모든 것이 심하게 서로 섞여 있기 때문에 스파게티 코드다. 해당 코드 방식으로 작성하지 않게 주의해야 한다. 
+MVC 및 MVVM 과 같은 더 좋은 패턴이 활용되는 곳이다. 그러나 MVC 및 MVVM 패턴은 자체 복잡성을 수반한다. 
+
+
+
+6.2 MVC
+
+과거에 MVC(Model View Controller)가 개선 모델로 나왔다. 기본적으로 컨트롤러는 모델과 뷰를 가져와서 모델을 뷰에 제공한다. WPF가 MVC를 위한 모든 것을 갖추고 있으니 걱정 없다. 
+
+* 뷰 : 순수 XAML
+
+* 모델 : INotifyPropertyChanged 및 INotifyCollectionChanged를 구현하는 클래스
+
+* 컨트롤러 : 명령, 트리거, 관련 이벤트, NavigationService 
+
+그러나 또 다른 SOC(관심사 분리)모델의 필요성이 생긴 다음과 같은 두 가지 이유가 있다.
+
+* 그냥
+
+* 개발자가 올바르게 코딩했는지를 설계자가 파악하기 위해 해당 코드를 살펴볼 필요가 있다. 
+
+그래서 설계자(개발자는 종종 소프트웨어 설계자이기도 하다.) 는 MVVM 모델을 도입했다. MVVM 에는 몇 가지 장점이 있다. 그 중 하나는 개발자가 코드를 올바르게 코딩했는지를 설계자가 1초 내에 알 수 있다는 사실이다. 쉽다!
+
+설계자의 코드 리뷰를 훨씬 쉽게 만들어주는 것 외에도 MVVM은 깨끗하고, 재사용 가능하고, 테스트 가능(자동화된 단위 테스트로)하고, 유지 보수 가능한 코딩 방법을 제공한다. 내 생각은 추가 복잡성을 완전히 감당할 가치가 있다는 것이다. 프로젝트에서 나 홀로 개발자이자. WPF 초보자인 개발자에게 MVVM을 추천하지는 않지만 좋은 습관이다. 
+
+
+
+6.3 MVVM
+
+MVVM은 Model View ViewModel을 의미한다. 해당 부분들이 다음과 같이 서로 연관돼 있다. 
+
+
+View 	>	ViewModel	> DataModel
+
+DataModel은 비즈니스 클래스로 구성된다. UI에 제공된 데이터를 갖고 있다. DataModel은 쉽게 단위 테스트 가능하며 좋은 소식은 이미 독자가 DataModel을 생성하는 방법을 알고 있다는 것이다. 
+
+View는 UI다. 이상적으로 View는 순수 XAML로 구성된다. View는 자동화된 테스트를 사용해 테스트가 어렵기 때문에 View의 코드 양을 줄여야 하는 이유다. 보게 되겠지만 View의 DataContext는 ViewModel이며 데이터 바인딩은 둘 사이의 접착제 역할을 한다. 
+
+ViewModel은 이 시점에서 MVVM을 사용하기 위해 배울 필요가 있는 큰 모험이다. 다음과 같은 기능을 한다. 
+
+
+* 하나의 뷰에 대한 메소드(또는 명령)로 속성 및 액션을 사용해 데이터를 노출한다. 
+
+* 뷰를 참조하지 않아야 하지만 뷰에 크게 의존한다. 
+
+* 다른 DataModel 혼합을 허용하거나 비동기 호출의 복잡성을 숨길 수 있다. 
+
+* 단위 테스트를 쉽게 할 수 있다. 
+
+* INotifyPropertyChanged를 구현한다. 
+
+
+※알아두기
+MVVM에는 여러 가지 특징이 있다. 나는 WPF 코드를 수년간 가르치고, 코딩하고, 검토하면서 학습의 용이함과 설계적 완성 간의 규형을 잘 잡아왔다. 따라서 잘 전수해 줄 것이다. 논쟁의 여지가 있을 수 있지만 좋은 학습 기반과 즉시 사용 가능한 방법론으로 모두 작용할 수 있다고 생각한다. 
+
+
+
+6.4 권장하는 단계(단순)
+
+MVVM은 특히 Windows Forms 이나 WPF와 관련된 코드 비하인드(스파게티)모델에 물들어 있는 경우 매우 복잡할 수 있다. 가능하면 쉽게 만들어보자. MVVM을 사용해 화면 코딩시 다음 단계를 따르자. 
+
+1. ViewModel을 생성한다. 
+
+2. ViewModel이 노출해야 하는 속성을 찾는다. 
+
+3. 알림 속성을 코딩한다. 
+
+4. ViewModel을 View의 DataContext로 사용한다. 
+
+5. View를 ViewModel에 데이터 바인딩한다. 
+
+6. 기능적 논리를 코딩한다.(3단계 이후에 언제든지 수행 가능)
+
+
+
+
+※ ViewModel 생성
+
+ViewModel은 단순히 클래스다. 각 화면당(창(WIndow), 페이지(Page), 또는 사용자 정의 컨트롤(UserControl))하나씩 있어야 한다. 
+연습문제를 통해 비슷한 화면에서 ViewModel을 공유하거나 기본 ViewModel 클래스를 상속받을 수도 있지만 각 화면당 하나의 ViewModel은 좋은 출발점이다. 
+
+ViewModel 클래스는 INotifyPropertyChanged를 구현해야 한다. 4.8 INotifyPropertyChanged 절에서 봤던 Notifier 클래스에서 그냥 상속한다. 
+
+ViewModel 클래스의 이름을 화면에 따라 명명하면 좋다. 예를 들어 다음과 같은 파일이 가능하다. 
+
+
+* View : \View\YourScreen.xaml
+
+* ViewModel : \ViewModels\YourScreenViewModel.cs
+
+또는 단순한 프로젝트에는 다음과 같이 지정한다. 
+
+* View : \Screens\YourScreen.xaml
+
+* ViewModel : \Screens\YourScreenViewModel.cs
+
+
+
+※ ViewModel이 노출해야 하는 속성 찾기
+
+생성을 원하는 뷰를 살펴보자(XAML을 이미 만든 경우) 모든 사용자 입력이나 출력에 대해 ViewModel에 속성을 추가해야 한다. 
+
+
+
+
+※ 코드 알림 속성
+
+ViewModel에 추가하는 속성은 알림 속성(notifying properties)이어야 한다. 알림 속성 종류의 코드를 단순화하는 데 도움이 되는 여러 도구가 있다. 그런 도구가 없는 경우 알림 속성은 다음과 같이 코딩될 것이다. 
+
+
+private double speed;
+
+public double Speed
+{
+	get {	return speed;	}
+	set 
+	{
+		speed = value;
+		OnPropertyChanged("Speed");
+	}
+}
+
+위 코드에 대한 설명은 4.8 INotifyPropertyChanged절을 다시 읽어 보자. 알림 속성에 대한 이론적 근거는 ViewModel이 View에 대해 알지 못한다는 것이므로 알림 속성이 이봐 뭔가 변경됐어!! 라고 말하는 방법이다. 
+
+
+※ 알림 속성은 공간을 많이 차지하지만 기능 코드는 포함하지 않는다. #region요소로 그룹화해 화면상에서 자리를 차지 하지않게 처리하자. 
+
+
+어떤 시점에 해당 속성들 중 하낙 변경되면 ViewModel이 무언가를 수행하게 할 수 있다. 나의 조언은 ViewModel에 메소드를 추가하고 속성 설정자에서 한 줄로 그 메소드를 호출하는 것이다. 그렇게 하면 기능 코드로 속성 선언을 오염시키지 않고 ViewModel을 읽을 때 ViewModel의 속성 코드 전체(ViewModel의 꽤 많은 양의 코드를 차지한다)를 안전하게 무시할 수 있다. 마지막으로 닷넷 명명 규칙에 따르는 On[속성_이름]Changed 해당 메소드를 호출해야 한다. 위의 속성은 다음과 같은 모습이 될 것이다. 
+
+
+private double speed;
+
+public double Speed
+(
+	get	{	return speed;	}
+	set
+	{
+		speed = value;
+		OnPropertyChanged("Speed");
+		OnSpeedChanged();
+	}
+}
+
+void OnSpeedChanged()
+{
+	//기능적인 코드 추가
+)
