@@ -1,0 +1,232 @@
+4. 결과셋 재활용
+
+특정 조건으로 검색한 똑같은 결과셋이 여러 번 필요한 경우가 있다. 예를 들어 영업부 남직원만을 대상으로 어떤 작업을 한다면 다음 쿼리문으로 테이블을 만든다. 조건절에 영업부 남직원을 주었으니 필드 목록에 depart와 gender는 굳이 포함할 필요 없다. 
+
+
+SELECT name, salary, score FROM tStaff WHERE depart = '영업부' AND gender = '남';
+
+
+다섯명의 남자 직원이 검색되며 이것도 쿼리문으로 만든 하나의 테이블이다. 이 집합을 대상으로 평균 월급 이상인 직원을 조사한다면 다음 쿼리문을 작성한다. FROM 절에 대상 테이블을 밝혀야 하고 평균 월급을 구하는 서브쿼리에서도 테이블이 필요하다. 
+
+
+SELECT * FROM
+(
+SELECT name, salary, score FROM tStaff WHERE depart = '영업부' AND gender = '남'
+) A
+WHERE salary >= (
+SELECT avg(salary) FROM
+	(
+	SELECT name, salary, score FROM tStaff WHERE depart = '영업부' AND gender = '남'
+	) B
+);
+
+보다시피 똑같은 쿼리문이 두 번 반복된다. 반 복을 피하려면 영업부 남직원만을 모아 별도의 테이블을 만든 후 이 테이블을 사용하면 된다. 한 번만 쓸 쿼리를 위해 사본 테이블을 만드는 것은 부담스럽고 절차도 복잡해 임시 테이블을 쓰는 것이 더 낫다. 다음 쿼리로 이름, 월급, 성취도만을 가지는 임시 테이블을 생성하고 영업부 남직원만 조회한다. 
+
+CREATE GLOBAL TEMPORARY TABLE tBusiMan AS SELECT name, salary, score FROM tStaff;
+
+INSERT INTO tBusiMan SELECT name, salary, score FROM tStaff WHERE depart = '영업부' AND gender = '남';
+
+
+SQL Server나 MariaDB는 이 두 과정을 한 번에처리할 수 있다. 
+
+SQL Server : SELECT name, salary, score INTO #BusiMan FROM tStaff WHERE depart = '영업부' AND gender = '남';
+
+
+MariaDB : CREATE TEMPORARY TABLE tBusiMan AS
+SELECT name, salary, score FROM tStaff WHERE depart = '영업부' AND gender = '남';
+
+
+영업부 남직원 다섯 명으로만 구성한 임시 테이블을 생성했다. 중간에 레코드를 더 삽입, 삭제할 수 있고 특정 값을 조작하는 것도 얼마든지 가능하다. 이제 임시 테이블에서 값을 읽으면 된다. 
+
+
+SELECT * FROM tBusiMan WHERE salary >= (SELECT avg(salary) FROM tBusiMan);
+
+
+FROM (...) 에 해당하는 구문이 tBusiMan 으로 대체되어 짧고 간결하다. 뿐만 아니라 단계를 나누어 놓으니 사람의 사고도 단순해진다. 뷰로도 이 문제를 풀 수 있다. 조건에 맞는 레코드 집합을 뷰로 정의하고 뷰에서 원하는 값을 조사하면 된다. 
+
+
+CREATE VIEW vBusiMan AS SELECT name, salary, score FROM tStaff 
+WHERE depart = '영업부' AND gender = '남';
+
+SELECT * FROM vBusiMan WHERE salary >= (SELECT avg(salary) FROM vBusiMan);
+
+실행 결과는 똑같다. 그러나 뷰는 DB 오브젝트를 생성한다는 면에서 번거롭다. 자동으로 삭제되지 않는데다 권한도 신경써야 하니 임시 테이블보다 여러모로 번거롭다. 
+
+
+
+
+12-3 CTE
+
+1. CTE
+
+중간 과정의 결과셋을 여러번 사용할 때 임시 테이블이나 뷰를 사용한다. 둘 다 임시적이지만 DB에 실제 저장되는 객체여서 이미 존재하면 먼저 삭제해야 하며 사용 후 정리해야 한다는 면에서 번거롭다. 객체를 생성하고 저장공간을 차지하기 때문에 속도도 그다지 빠르지는 않다. 
+
+CTE(Common Table Expressions)는 쿼리 실행 중에 메모리에 존재하는 테이블이다. 쿼리 내부에서 임시 테이블을 정의하는 일종의 매크로 기능이며 예비 동작 없이 쿼리문 내부에서 모든 것을 일괄 처리할 수 있어 간편하다. ANSI SQL99의 표준 기능이며 모든 DBMS가 지원하여 호환성이 높다. 
+
+WITH 테이블명(필드목록) AS (쿼리문)
+CTE 사용
+
+WITH 구문으로 쿼리문에 대해 이름을 붙여 생성하며 필드 목록 생략시 내부 쿼리의 필드명을 사용한다. 뷰 정의문과 유사하되 객체를 생성하지 않고 이름만 부여한다. 이어지는 명령과 구분하기 위해 쿼리문을 괄호로 감싼다는 점도 다르다. 이렇게 정의한 이름으로 이어지는 쿼리에 서 결과셋을 사용한다. 앞절의 결과셋 재활용 쿼리를 CTE로 다시 작성해 보자. 
+
+WITH tBusiMan AS
+(SELECT name, salary, score FROM tStaff WHERE depart = '영업부' AND gender = '남')
+SELECT * FROM tBisuMan WHERE salary >= (SELECT avg(salary) FROM tBusiMan);
+
+
+영업부 남직원 목록을 tBusiMan 으로 정의한다. 이후 쿼리에서는 tBusiMan을 마치 테이블처럼 사용하면 된다. tBusiMan 에 대해 단순 조회는 물론이고 서브쿼리나 다른 테이블과의 조인등 테이블로 할 수 있는 모든 동작을 다 할수 있다. 평균 월급을 조사할 때나 평균이 넘는 직원을 조사할 때나 tBusiMan 을 이름으로 참조하면 된다. 
+
+CTE는 디스크에 기록되는 DB 객체가 아니며 쿼리문 실행 중에 메모리상에서 잠시만 존재한다. 그래서 CTE 정의문과 사용문을 한 번에 실행하며 전체가 하나의 문장이다. 앞 부분만 실행하면 쓰지도 않을 CTE를 정의하는 꼴이어서 에러이며 뒷부분만 실행하면 tBusiMan이 없어 역시 에러이다. 트랜잭션 내부의 지역 객체여서 명칭 충돌 걱정이 없으며 tCity나 tMember로 이름을 붙여도 상관없다. 
+
+CTE를 정의할 때 테이블명 뒤에 필드 목록을 밝히면 원래 쿼리와 다른 필드명을 쓸 수 있다. 필드 개수는 내부 쿼리와 일치해야 한다. 필드명을 한글로 붙이면 가독성이 향상된다. 별명은 옵션일 뿐이지만 SUM(salary), COUNT(*) 같은 계산 필드는 이름을 붙여야 외부에서 사용할 수 있다. 
+
+
+WITH tBusiMan(이름, 월급, 성취도) AS
+(SELECT name, salary, score FROM tStaff WHERE depart = '영업부' AND gender = '남')
+SELECT * FROM tBusiMan WHERE 월급 >= (SELECT avg(월급) FROM tBusiMan);
+
+
+두 개 이상의 CTE 테이블을 콤마로 구분하여 한꺼번에 정의할 수도 있다. 다음 문장은 영업부 남직원과 여직원을 각각의 테이블로 정의하고 남직원 평균 월급보다 많이 받는 여직원 목록을 조사한다. 
+
+
+WITH tBusiMan AS
+(SELECT name, salary, score FROM tStaff WHERE depart ='영업부' AND gender = '남' tBusiGirl AS
+( SELECT name, salary, score FROM tStaff WHERE depart = '영업부' AND gender = '여')
+SELECT * FROM tBusiGirl WHERE salary >= ( SELECT avg(salary) FROM tBusiMan);
+
+
+앞 4줄은 2개의 CTE를 정의하고 마지막 SELECT문에서 서브쿼리로 tBusiMan의 평균 월급을 조사하고 그보다 더 많이 받는 직원 목록을 tBusiGirl에서 조사한다. CTE도 진짜 테이블과 자격이 같아 정의한 직후부터 바로 사용할 수 있다. 다른 CTE를 정의할 때도 사용할수 있어 중첩 가능하다. 
+
+
+WITH tBusiMan AS
+(SELECT name, salary, score FROM tStaff WHERE depart ='영업부' AND gender = '남'), tBusiManGod AS
+(SELECT name, salary, score FROM tBusiMan WHERE score > 70) 
+SELECT * FROM tBusiManGod;
+
+
+tBusiMan은 영업부 남직원이다. 이 중에 성취도가 70점이 넘는 사람만을 추려 tBusiManGod 테이블을 또 정의했다. 1차 조건으로 걸러내고 그 중에 또 2차 조건으로 새로운 집합을 정의하여 영업의 신만 골라냈다. 
+
+
+
+2. CTE 보기
+
+CTE는 결과셋 한 벌을 두 번 이상 사용할 때 성능상의 이점이높다. 딱 한번만 사용할 테이블이라면 굳이 CTE가 아니더라도 서브쿼리면 충분하다. 특히 루프 등에서 반복적으로 사용할 때는 10배 이상의 성능 향상을 보여준다. 다음은 쇼핑 목록중 평균 주문 개수보다 더 많이 주문한 사람을 찾는다. 
+
+
+WITH Shopping AS
+(SELECT M.member, M.addr, O.item, O.num, O.orderDate FROM tMember M INNER JOIN tOrder O ON M.member = O.member)
+SELECT * FROM Shopping WHERE num >= (SELECT avg(num) FROM Shopping);
+
+
+CTE 정의문에 조인, UNION, 각종 조건이나 함수 호출문이 들어가면 굉장히 길고 복잡해진다. 내부가 아무리 복잡해도 이후에는 Shopping 이라는 이름으로 참조만 하면 되니 간편하다. 이런 거대한 결과셋에 이름을 붙여 놓고 여러 번 사용하는 것이 CTE의 장점이다. 
+
+복잡한 CTE를 한 번에 만들어 내려면 고도로 숙련된 경험이 필요하다. 만드는 것은 고사하고 완성된 문장을 분석하는 것만 해도 쉽지 않다. CTE는 메모리상에 생성되는 것이어서 최종 결과만 볼 수 있을 뿐 모습을 확인할 수 없다. 이럴 때는 CTE 정의문을 뷰나 임시 테이블 정의문으로 살짝 바꾸어 본다. 
+
+
+CREATE VIEW vTemp AS
+(SELECT M.member, M.addr, O.item,O.num, O.orderDate FROM tMember M INNER JOIN tOrder O ON M.member = O.member);
+
+SELECT * FROM vTemp WHERE num >= (SELECT avg(num) FROM vTemp;
+
+
+정의문과 사용문을 뷰를 통해 분리했다. 이렇게 하면 중간 결과인 vTemp의 모습을 직접 확인할 수 있으며 결과셋이 원하는 목적과 맞지 않으면 수정하기도 쉽다. 물론 다 사용한 후 vTemp는 적당한 때에 삭제해야 한다. 
+
+
+CTE를 만들 때는 반대로 한다. 뷰로 먼저 원하는 결과셋을 만들어 검증한 후 이어지는 쿼리에서 뷰를 사용한다. 원하는 결과가 나왔으면 뷰를 제거하고 CTE 구문으로 바꾼다. 사실상 기능은 같지만 트랜잭션 내에서만 잠시 생성한 후 버린다는 면에서 CTE가 더 간편하고 성능도 좋다.
+
+
+
+3. 재귀 CTE
+
+
+재귀 CTE는 중첩 CTE의 특수한 예이다. CTE 테이블을 정의할 때 자기 자신을 참조하며 더이상 결과셋이 없을 때까지 반복하여 최종 결과셋을 만들어 낸다. 본체 안에 두 개의 쿼리문을 작성하여 합치는 형식이다. 
+
+
+WITH 테이블명(필드목록) AS
+(
+	엥커 멤버
+	UNION ALL
+	재귀 멤버
+)
+
+최초 앵커 멤버를 실행하여 첫 결과셋을 만들고 이를 재귀 멤버에게 전달한다. 재귀 멤버는 첫 결과셋을 참조하여 새로운 결과셋을 만들고 기존 결과셋에 지속적으로 추가한다. 이 과정을 더 이상 결과셋이 없을 때까지 반복한다. 
+
+재귀 CTE는 조건에 따라 반복 수행한다는 면에서 프로그래밍 언어와 유사하되 반복 대상이 쿼리라는 것만 다르다. 재귀의 가장 직관적인 예는 1부터 n까지의 누적곱인 팩토리얼 (1 * 2 * 3....*n) 계산이며 논리가 간단해서 이해하기 쉽다. 다음 코드는 10까지의 팩토리얼을 계산한다. 
+
+
+WITH tFact(num, sum) AS
+(
+	SELECT 1 AS num, 1 AS sum FROM dual
+	UNION ALL
+	SELECT num +1, sum * (num+1) FROM tFact T WHERE T.num < 10
+)
+
+SELECT * FROM tFact;
+
+
+엥커 멤버에서 최초 num은 1로, sum도 1로 초기화한다. 1!은 의심의 여지없이 1이며 이 두 필드를 tFact에 삽입하여 초기화한다. 두 필드를 재귀 멤버로 전달하며 num을 1증가시키고 sum은 num + 1을 곱한다. 1, 1을 받았을 때 2, 2를 만든다. 
+
+이 값은 다시 재귀 멤버로 전달되어 num은 3이 되고 sum은 2 * 3  = 6이 된다. 이 과정을 num이 10 미만인 동안 반복하면 10까지의 팩토리얼 계산 테이블을 생성한다. SQL Server는 FROM dual만 빼면 잘 실행되지만 MariaDB는 아직 재귀 CTE를 지원하지 않는다. 
+
+재귀적인 데이터는 본질적으로 반복적인 구조여서 쿼리문도 반복적일 수 밖에 없다. 재귀 CTE를 사용하여 디렉터리 트리 구조를 표현하는 tDirectory 테이블을 출력해 보자. 
+
+
+WITH tTree(id, name, parent, depth) AS
+(
+	SELECT id, name, parent, 0 FROM tDirectory WHERE parent = 0 
+	UNION ALL
+	SELECT D.id, D.name, D.parent, T.depth + 1 FROM tDirectory D 
+	INNER JOIN tTree T ON D.parent = T.id
+)
+
+
+SELECT * FROM tTree;
+
+
+엥커 멤버는 최초 부모가 0인 루트를 찾는다. 루트의 깊이는 0이므로 depth 필드는 상수 0으로 지정했다. 이 결과셋을 재귀 멤버로 전달하면 부모가 루트로 지정되어 있는 디렉터리를 찾아 결과셋을 합친다. 자식 디렉터리의 깊이는 항상 부모보다 1 더 깊으며 루트 바로 아래 디렉터리의 깊이는 1이다. 
+
+각 디렉터리에 대해 또 재귀 멤버가 호출되어 그 자식을 모두 찾으며 재귀가일어날 때마다 깊이는 계속 증가한다. 이 과정을 더 이상 자식이 발견되지 않을 때까지 반복하여 모든 결과셋을 합치면 최종적으로 tTree 는 디렉터리 전체를 포함하는 테이블이 된다. 
+
+재귀를 통해 원본 테이블에는 없던 depth 필드를 계산해 추가했다. 재귀가 일어날 때마다 부모의 이름과 경로를 조합하면 각 디렉터리의 전체 경로를 구할 수도 있다. 앞 쿼리를 조금 변형 해보자. 
+
+
+WITH tTree(id, name, parent, depth, fullpath) AS
+(
+	SELECT id, name, parent, 0, CAST(name AS VARCHAR(256))
+	FROM tDirectory WHERE parent = 0
+	UNION ALL
+	SELECT D.id, D.name, D.parent, T.depth + 1, 
+	CAST (CONCAT(CONCAT(T.fullpath, '/'), D.name) AS VARCHAR(256))
+	FROM tDirectory D
+	INNER JOIN tTree T ON D.parent = T.id
+)
+
+SELECT * FROM tTree;
+
+
+경로 출력을 위해 fullpath 필드를 추가했다. 엥커 멤버는 루트 디렉터리의 경로를 이름으로 초기화한다. 루트의 경로는 당연히 루트 자신이다. 재귀 멤버는 부모의 경로에 구분자 /와 자신의 이름을 연결하여 새로운 경로를 만들어 아래로 내려갈 때마다 경로를 누적한다. 
+
+이때 엥커 멤버와 재귀 멤버의 fullpath 필드 타입은 완전히 일치시켜야 결과셋을 정확하게 전달할 수 있다. 똑같은 문자열이어야 함은 물론이고 길이까지도 정확히 일치해야 한다. SQL Server와 오라클을 동시에 지원하기 위해 CAST, CONCAT 이 필요하지만 한쪽만 지원한다면 +나 || 연산자를 쓰면 된다. 
+
+다음 명령은 경로를 연결하는 대신 깊이에 따라 들여쓴다. 디렉터리간의 포함 관계를 그래픽적으로 그려 직관적이다. 재귀 관련 코드는 같고 fullpath를 조립하는 코드만 변경하여 1단계마다 4칸씩 들여쓰고 L 문자로 소속을 표기했다. 
+
+
+WITH tTree(id, name, parent, depth , fullpath) AS
+(
+	SELECT id, name, parent, 0, CAST(name AS VARCHAR(256))
+	FROM tDirectory WHERE parent = 0
+	UNION ALL
+	SELECT D.id, D.name, D.parent, T.depth + 1,
+	LPAD('L', (T.depth+1) * 4) || D.name
+	FROM tDirectory D
+	INNER JOIN ON D.parent = T.id
+)
+
+SELECT fullpath FROM tTree;
+
+
+깊이별로 폭을 가변적으로 설정하는 LPAD 함수를 활용한 예이다. SQL Server의 경우 비슷한 기능의 REPLICATE 나 SPACE 함수가 있어 경로 조립 부분만 변경하면 된다. 
+
+
+CAST(SPACE((T.depth + 1) * 4) + "L' + D.name AS VARCHAR(256))
+
+프로그래밍 언어에 경험이 없는 사람에게 재귀 CTE는 약간 어려운 면이 있다. 자체적인 반복 기능이 있어 잘 활용하면 스크립트 없이도 복잡한 동작을 한 번에 처리할 수 있다. 
