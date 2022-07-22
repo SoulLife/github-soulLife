@@ -1,0 +1,276 @@
+13장 분석과 통계
+
+
+
+13-1 소계
+
+1. ROLLUP
+
+애써 구축한 데이터를 실용적으로 잘 활용하려면 통계가 필수이다. SQL 은 분석과 통계 기능을 대폭 보강하였고 표준으로 잘 정착하여 대부분의 DBMS에서 호환성 걱정 없이 사용할 수 있다. 약간의 형식적 차이가 있지만 제공하는 기능은 거의 비슷하다. 
+
+통계 실습을 하려면 대량의 데이터가 있어야 한다. 여기서는 주로 tStaff 테이블을 사용하는데 레코드 20개짜리이지만 실습에는 충분하다. 이 외에 순서가 있는 데이터도 필요해 다음 샘플 테이블을 하나 더 만들었다. 년도별, 월별 매출을 저장하는 간단한 테이블이다. 
+
+
+CREATE TABLE tMonthSale
+(
+	year	INT,
+	month	INT,
+	sales	INT
+);
+
+INSERT INTO tMonthSale VALUES(2021, 9, 3650);
+INSERT INTO tMonthSale VALUES(2021, 10, 4120);
+INSERT INTO tMonthSale VALUES(2021, 11, 5000);
+INSERT INTO tMonthSale VALUES(2021, 12, 4420);
+INSERT INTO tMonthSale VALUES(2022, 1, 3800);
+INSERT INTO tMonthSale VALUES(2022, 2, 4200);
+INSERT INTO tMonthSale VALUES(2022, 3, 4150);
+
+
+가장 기본적인 통계 명령은 그룹별로 집계를 구하는 GROUP BY 이다. 여러 개의 기준 필드를 지정하여 각 기준별로 그룹을 나누어 합계나 평균을 구할 수 있다. 이미 익숙하겠지만 혹시 생각이 안나면 앞으로 돌아가 복습하고 오자. 다음 쿼리는 성별, 부서별 월급 합계를 구한다. 
+
+
+SELECT gender, SUM(salary) FROM tStaff GROUP BY gender;
+
+SELECT depart, SUM(salary) FROM tStaff GROUP BY depart;
+
+SELECT depart, gender, SUM(salary) FROM tStaff GROUP BY depart, gender;
+
+
+
+일일이 암산하지 않아도 두 성별과 세 부서별 월급 총합은 물론이고 부서별, 성별로 그룹핑한 월급 총합까지 한눈에 파악할 수 있다. 그러나 총 월급 합계나 중간 소계는 알 수 없으며 여전히 암산이 필요하다. 그래서 GROUP BY 에 소계를 출력하는 확장 함수를 제공한다. 
+
+ROLLUP 함수는 그룹별 소계와 총계를 같이 계산한다. 그룹핑 기준 필드를 ROLLUP() 괄호안에 감싸 나열하며 기준 필드가 여러 개이면 콤마로 구분한다. 부서별로 ROLLUP 을 구해보자. GROUP BY 다음의 그룹핑 기준 필드를 ROLLUP으로 감싼다. 
+
+
+SELECT depart, SUM(salary) FROM tStaff GROUP BY ROLLUP(depart);
+
+
+부서별 월급 합계를 먼저 출력하고 마지막 줄의 NULL 레코드에 전체 총계를 같이 출력한다. 여기서 NULL은 실제 존재하는 부서가 아니라 전체 통계를 위해 인위적으로 생성한 행이라는 뜻이며 전체 부서라고 읽으면 이해하기 쉽다. 부서별 월급 총합과 전체 총합을 한눈에 볼 수 있다. 
+
+여기까지는 쉽지만 그룹핑 기준이 둘 이상이면 각 그룹에 대한 소계까지 포함하여 조금 복잡해 진다. ROLLUP 안에 부서별, 성별 그룹핑 기준 필드를 둘 다 적어 소계를 출력해 보고 앞의 단순 그룹핑 결과와 어떤 점이 다른지 잘 비교해 보자. 
+
+
+SELECT depart, gender, SUM(salary) FROM tStaff GROUP BY ROLLUP(depart, gender);
+
+
+부서별 성별로 그룹핑하되 각 부서의 소계를 추가한다. 영업부의 남, 여별 월급 총합을 출력하고 다음 행에 영업부 전체의 소계를 출력한다. 3행의 영업부 NULL행은 영업부이되 성별은 남, 녀 구분없다는 뜻이며 결국 영업부 전체 성별의 소계이다. 이런 보고서는 보통 다음 도표처럼 만든다. 
+
+
+부서		성별		월급 총합
+영업부		남		1,655
+영업부		여		780
+	영업부			2435
+
+
+질의 결과창의 그리드는 셀 병합이 안되고 항상 도표 형식이어서 전체라는 표현을 NULL로 대신한다. 인사과도 마찬가지 방식으로 출력하며 총무부는 여직원이 없어 남자의 월급 총합과 전체 총합이 같다. 제일 마지막의 NULL, NULL은 모든 부서, 모든 성별의 총합이며 결국 회사전체의 월급 총합이다
+
+기준 필드가 2개일 때 ROLLUP은 1차 기준 필드에 대한 소계를 계산한다. 이 경우 1차 부서의 월급 소계만 구하며 성별 소계는 없다. 그룹핑 순서를 바꾸면 소계를 구하는 기준 필드가 달라진다. 이번에는 성별, 부서별로 그룹핑하여 소계를 구해 보자. 
+
+
+SELECT gender, depart, SUM(salary) FROM tStaff GROUP BY ROLLUP(gender, depart);
+
+
+남직원의 각 부서별 월급 총합과 남직원 전체의 소계를 출력하고 이어서 여직원 부서별 월급 총합과 여직원 전체 소계를 출력한다. 성별 소계만 있고 부서별 소계는 없다. 이 두 경우의 차이를 잘 구분해야 한다. 모두 마지막 행에는 모든 성별, 모든 부서의 월급 총합을 출력한다. 
+
+
+그룹핑 기준 필드를 모두 ROLLUP 에 포함할 필요는 없으며 소계가 필요한 필드만 포함한다. 롤업 대상이 아닌 기준 필드는 GROUP BY 다음에 적고 롤업 대상 필드만 ROLLUP 괄호 안에 적는다. 
+
+
+SELECT depart, gender, SUM(salary) FROM tStaff GROUP BY depart, ROLLUP(gender);
+
+SELECT gender, depart, SUM(salary) FROM tStaff GROUP BY gender, ROLLUP(depart);
+
+
+성별만 ROLLUP하면 성별 소계만 구하고 부서만 ROLLUP 하면 부서별 소계만 구한다. 두 기준 필드 모두에 대한 소계인 전체 총합은 구하지 않는다. 앞의 예와 비교해보면 마지막 행의 NULL NULL이 없다. 
+
+
+
+
+2. CUBE
+
+ROLLUP은 1차 그룹핑 기준 필드에 대해서만 소계를 구한다. 그룹핑 순서에 따라 결과셋이 달라지며 소계를 구할 필드를 먼저 그룹핑해야 한다. 이에 비해 CUBE 함수는 모든 기준 필드에 대한 소계를 다 구한다. 
+
+
+
+SELECT depart, gender, SUM(salary) FROM tStaff GROUP BY CUBE(depart, gender);
+
+
+부서별, 성별로 그룹핑하며 둘 다 CUBE 함수로 감쌌다. 각 부서별 월급 소계, 각 성별 월급 소계를 모두 구하며 회사 전체의 월급 총합도 구한다. 그룹핑 기준의 모든 값에 대해 반대쪽이 NULL인 행을 다 생성한다. 
+
+CUBE는 기준 필드를 바꿔 가며 ROLLUP한 결과셋의 합집합이며 내부적으로도 두 결과셋의 중복을 제거한 합집합을 구하는 방식으로 구현되어 있다. 앞 명령의 실제 구현은 다음과 같되 합집합을 구하려면 필드 목록의 순서를 일치시켜야 한다. 
+
+
+SELECT depart, gender, SUM(salary) FROM tStaff GROUP BY ROLLUP(depart, gender) 
+UNION
+SELECT depart, gender, SUM(salary) FROM tStaff GROUP BY ROLLUP(gender, depart);
+
+
+여러 단계를 거쳐 조합한 결과셋을 생성하기 때문에 대량의 데이터에 대한 소계를 구할 때는 CUBE가 ROLLUP보다 느리다. CUBE는 모든 기준 필드의 소계를 다 계산하므로 그룹핑 순서를 바꾸어도 같은 결과셋을 만든다. 레코드 순서가 약간 다르지만 결국 같은 결과셋이다. 
+
+
+SELECT depart, gender, SUM(salary) FROM tStaff GROUP BY CUBE(gender, depart);
+
+
+GROUPOING SETS 함수는 개별 그룹에 대한 집계는 생략하고, 그룹별 소계만 계산한다. CUBE의 결과셋에서 부서와 성별이 모두 있는 행과 전체 합계는 빼고 성별, 부서별 중간 소계만 출력한다. 한쪽 필드가 NULL인 것만 요약적으로 출력한다고 보면 된다. 
+
+
+SELECT depart, gender, SUM(salary) FROM tStaff GROUP BY GROUPING SETS(depart, gender);
+
+
+그룹핑 기준의 개수에 따라 각 함수가 출력하는 결과셋이 다르다. 기준이 하나뿐일 때 GROUPING SETS은 쓰나 마나이며 ROLLUP, CUBE의 출력 결과가 같다. 결국 이 함수들은 그룹핑 기준이 2개이상일 때 실용적이다. 이때 각 함수가 구하는 소계 목록은 다음과 같다. 
+
+
+ROLLUP(a, b) : (a, b)의 소계 > (a)의 소계 > 전체 소계
+
+CUBE(a, b) : (a, b)의 소계 > (a)의 소계, (b)의 소계 > 전체 소계
+
+GROUPING SETS (a, b) : (a)의 소계, (b)의 소계
+
+ROLLUP은 뒤에서부터 하나씩 생략하며 소계를 내지만 CUBE는 모든 조합의 소계를 다 구하고 GROUPING SETS는 그룹별 소계만 계산한다. 그룹핑 기준이 세 개 이상이더라도 좀 복잡해질뿐 방식은 똑같다. 
+
+
+
+3. 소계의 캡션
+
+ROLLUP, CUBE의 동작은 어렵지 않지만 결과셋이 비직관적이다. NULL로 표시한 행은 소계라는 뜻인데 쿼리를 모르는 사람은 의미를 바로 알아보기 어렵다. 사장님께 이런 보고서를 인쇄하여 올리면 "으음... 이게 뭔가? 이럴 것이다.
+
+결과셋을 품위 있게 출력하려면 인위적으로 추가한 열에 설명적인 이름을 붙여야 한다. GROUPING 함수는 소계행이면 1을 리턴하며 그렇지 않으면 0을 리턴한다. 부서별 소계에서 이 함수가 무엇을 리턴하는지 출력해 보자. 
+
+
+SELECT GROUPING(depart), depart, SUM(salary) FROM tStaff GROUP BY ROLLUP(depart);
+
+
+첫 열에 GROUPING(depart)열을 추가했다. 영업부, 인사과, 총무부 등 테이블에 존재하는 부서일 때는 0을 리턴하며 전체 합계행은 1을 리턴한다. 이렇게 써 놓는다고 해서 의미를 명확히 알 수는 없으므로 이 값을 참조하여 제목을 원하는대로 변경해야 한다. 이때 CASE 문을 사용한다. 
+
+
+SELECT CASE GROUPING(depart) WHEN 1 THEN '전체부서' ELSE depart END AS depart, SUM(salary) FROM tStaff GROUP BY ROLLUP(depart);
+
+GROUPING(depart)가 1이면 "전체부서"를 출력하고 0이면 depart 필드값을 그대로 출력한다. NULL 대신 "전체부서"라고 나오니 훨씬 보기 좋고 직관적이다. 오라클에서는 CASE 문대신 DECODE(GROUPING(depart), 1, '전체부서', depart)함수가 더 간편하다. 
+
+기준 필드가 2개일 때도 마찬가지 방식으로 캡션을 붙인다. 이번에는 CUBE 로 상세 보고서를 뽑고 정렬 순서도 잘 조정해 보자. NULL을 가급적 뒤에 출력하여 소계와 총계를 뒤쪽에 출력했다. GROUPING 함수를 ORDER BY 절에 쓸 수 없지만 SQL Server는 가능하다. 
+
+
+SELECT CASE GROUPING(depart) WHEN 1 THEN '전체부서' ELSE depart END AS depart, CASE GROUPING(gender) WHEN 1 THEN '전체성별' ELSE gender END AS gender, SUM(salary) FROM tStaff GROUP BY CUBE(depart, gender) ORDER BY /* GROUPING(depart), GROUPING(gender),*/
+depart, gender;
+
+
+한결 더 읽기 쉽고 분명한 보고서가 되며 이 정도면 경영진이나 사장님도 금방 이해할수 있다. 응용 프로그램은 이 정보를 받아 셀을 병합 표현함으로써 더 예쁘게 꾸밀 수 있다. GROUPING 함수는 통계를 내는 방식과는 상관없고 다만 결과셋을 읽기 쉽게 표현하는 데 도움을 준다. 
+
+GROUPING 함수는 하나의 컬럼에 대해 소계인지 평가하는데 비해 GROUPING_ID 함수는 여러 개의 컬럼을 인수로 전달받아 비트마스크로 리턴한다. 첫 번째 컬럼이 제일 하위 비트에 연결되어 소계이면 이 비트가 1이 된다. GROUPING_ID(a, b)는 a, b의 소계 여부에 따라 0, 1,2,3중 하나를 리턴한다.
+
+과거에는 이런 보고서를 만들기 위해 여러 쿼리를 UNION으로 연결한 후 정렬하거나 아니면 아예 프로그래밍 언어로 결과셋을 조합하는 번거로운 과정을 거쳐야 했다. 그런 복잡한 동작을 한 번에 해주는 함수가 바로 ROLLUP, CUBE이다. 
+
+
+
+
+※ 호환성 체크
+오라클은 ROLLUP 의 괄호 안에 기준 필드를 적고 MariaDB는 기준필드 뒤에 WITH ROLLUP을 붙인다. SQL Server는 두 방식을 다 지원한다. 
+
+* 오라클, SQL Server : SELECT depart, SUM(salary) FROM tStaff GROUP BY ROLLUP(depart)
+
+* SQL Server, MariaDB : SELECT depart, SUM(salary) FROM tStaff GROUP BY depart WITH ROLLUP;
+
+MariaDB는 ROLLUP만 지원하며 CUBE나 GROUPING SETS는 아직 지원하지 않는다. 
+
+
+
+
+13-2 순위
+
+1. OVER
+
+SUM, AVG, MIN, MAX 집계 함수는 주로 GROUP BY 와 함께 사용하며 은근히 제약이 많아 복잡한 집계를 내는데 한계가 있다. OVER는 집계 함수를 보조하여 섬세한 그룹핑을 지원하면서도 구문은 더 간단한 축약형이다. 
+
+
+집계함수() OVER(PARTITION BY 그룹핑기준 ORDER BY 정렬기준 ROWS | RANGE)
+
+OVER안에 상세 옵션이 들어가며 필요 없으면 생략 가능하다. PARTITION BY 절은 GROUP BY와 유사한 그룹핑을 수행하며 ORDER BY절은 통계를 낼 정렬 순서를 지정한다. 대개의 경우 이 두절만으로도 집계 대상을 정밀하게 지정할 수 있다. 
+
+구문이 길고 쿼리문 본체가 아닌 OVER 의 괄호 안에 들어가는 특이한 형태여서 처음 보면 굉장히 난해해 보인다. 문법을 배우기 전에 이런 구문이 왜 필요한지부터 연구해 보자. 기존 집계 구문의 한계를 이해하면 OVER가 왜 도입되었는지 자연스럽게 이해할수 있다. 다음 쿼리문을 보자. 
+
+
+SELECT name, depart, salary, SUM(salary) FROM tStaff;
+
+직원의 이름, 부서, 월급 그리고 전직원의 월급 합계를 구하는 명령이지만 딱 봐도 에러이다. SUM 함수는 그룹에 대해 총합을 구하는데 GROUP BY가 없다. 설사 부서별로 그룹핑 하더라도 필드 목록에는 기준 필드와 집계 함수만 올 수 있어 name, salary 필드는 출력할수 없다. 다음 문장은 가능하다. 
+
+
+SELECT depart, SUM(salary) FROM tStaff GROUP BY depart;
+
+
+집계 함수와 GROUP BY를 사용하는 규칙이 까탈스럽다. 일반적인 경우에는 직원 개개인의 목록을 조회하면서 월급 총합을 같이 출력할 일이 별로 없다. 하지만 통계를 내는 방식이 워낙 다양한데다 직원과 월급 총합이 전혀 무관한 값이 아니어서 꼭 원한다면 서브쿼리로 같이 조사할 수는 있다. 
+
+
+SELECT name, depart, salary, (SELECT SUM(salary) FROM tStaff) AS 월급총합 FROM tStaff;
+
+필드 목록의 서브쿼리에서 전직원의 월급 총합을 구했다. 서브쿼리에 GROUP BY가 없어도 전체 테이블을 대상으로, 즉 전직원을 그룹핑하여 월급 총합값 하나를 리턴한다. 모든 직원에 대해 똑같은 월급 총합이 반복된다. 이 구문을 OVER절로 더 간단히 바꿀 수 있다. 
+
+
+SELECT name, depart, salary, SUM(salary) OVER() AS 월급총합 FROM tStaff;
+
+
+OVER 절은 집계 함수가 참고할 그룹과 순서를 지정한다. 아무 옵션 없이 빈 괄호만 적으면 전체행을 대상으로 집계하라는 뜻이며 그래서 전체 월급 총합을 구한다. 구문의 길이가 약간 짧아졌을 뿐 서브쿼리를 사용한 명령과 출력 결과는 같다. 
+
+똑같은 값을 매 행마다 반복 출력하는 것은 아무짝에도 쓸모없어 보이지만 이 값을 연산하면 그럴듯한 통계를 만들수 있다. 다음 명령은 월급 총합에서 직원 월급의 비율을 계산한다. 
+
+
+SELECT name, depart, salary, ROUND(salary * 100.0 / SUM(salary) OVER(), 2) AS 월급비율 FROM tStaff;
+
+백분율을 구하기 위해 월급에 100.0을 곱해 총월급으로 나눈다. 100을 곱해도 되지만 SQL Server의 정수 나눗셈이 소수부를 잘라버리기 때문에 실수를 곱하고 ROUND 함수로 감싸 소수점 이하 2자리로 잘랐다. 이 통계를 보면 직원간의 상대적 월급을 파악할 수 있다. 
+
+직원이 20명이니 5%를 넘으면 많이 받는 것이고 5%이하면 적게 받는 것이다. 이 통계는 꽤 실용적이며 중간 계산을 위해 각 직원에 대해서도 총월급이 필요하다. 백분율에 반올림까지 들어가 안 그래도 복잡한데 이 안에 서브쿼리까지 넣으면 어떻게 되겠는가?
+
+그래서 OVER 같은 더 간편한 구문을 도입했다. 위 명령도 서브쿼리로 충분히 짤 수 있지만 더 길고 복잡해진다. 다음은 지금까지 배운 문법을 총동원하여 전체 월급 총합이 아닌 소속 부서에 대한 월급 총합을 구해 보자. 서브쿼리에서 부서로 그룹핑하여 월급을 구하면 될 거 같다. 
+
+
+SELECT name, depart, salary, (SELECT SUM(salary) FROM tStaff GROUP BY depart) AS 부서월급총합 FROM tStaff;
+
+
+그러나 이 문장은 서브쿼리의 결과행이 2행 이상이어서 에러이다. 세 부서를 그룹핑했으니 결과셋도 3행일 수밖에 없다. 필드 목록에는 단일값만 와야 한다. 전체 부서에 대한 월급 총합이 아니라 직원이 속한 부서에 대해서만 월급 총합을 구해야하며 이때 필요한 명령은 연관 서브쿼리이다. 
+
+
+SELECT name, depart, salary, (SELECT SUM(salary) FROM tStaff WHERE depart = A.depart) AS 부서월급총합 FROM tStaff A ORDER BY depart;
+
+
+
+
+영업부 월급 총합은 2435이고 인사과 총합은 2291이다. 앞에서 다 배운 것이고 이해 가능한 문장이지만 서브쿼리 때문에 구문이 길고 장황하다. 이걸 한방에 뽑아 주는게 OVER 절이며 다음 명령으로 똑같은 결과셋을 만든다. 
+
+
+SELECT name, depart, salary, SUM(salary) OVER(PARTITION BY depart) AS 부서월급총합 FROM tStaff;
+
+
+OVER(PARTITION BY depart) 에 의해 부서별로 그룹을 나누어 집계를 수행한다. 그룹핑 기준으로 자동 정렬하므로 뒤의 ORDER BY는 빼도 상관없다. 우리가 이해할 수 있는 쿼리문과 OVER로 간단하게 쓴 쿼리문을 비교해 보면 OVER가 어떤 역할을 하는지 감을 잡을수 있다. 
+
+통계는 정렬 순서에 영향을 받으며 어떤 값을 먼저 계산하는가에 따라 결과가 달라진다. OVER안에 ORDER BY 절을 사용하면 정렬을 수행하면서 집게를 계산한다. 다음 명령은 직원 목록을 출력하면서 앞쪽 직원의 월급을 다 더한 누적 월급을 계산한다. 
+
+
+SELECT name, depart, salary, SUM(salary) OVER(ORDER BY name) AS 누적월급 FROM tStaff;
+
+
+
+강감찬은 앞에 아무도 없으니 자기 월급과 같다. 김유신은 자신의 월급과 앞 직원인 강감찬의 월급을 더해 누적월급을 계산하고 논개는 자신과 앞쪽 2 직원의 월급 총합을 누적한다. 아래로 내려갈수록 누적 월급은 점점 증가한다. 
+
+이 통계를 내려면 누가 더 앞인지 순서를 결정해야 하니 OVER 안에 ORDER BY가 필요하다. OVER 구문이 정렬을 수행하므로 같은 순서로 출력한다면 전체 쿼리의 ORDER BY는 생략해도 상관없다. 다음은 부서별 월급 누적 합계를 구해보자. PARTITION BY의 ORDER BY가 모두 필요하다. 
+
+
+SELECT name, depart, salary, SUM(salary) OVER(PARTITION BY depart ORDER BY name) AS 부서누적월급 FROM tStaff;
+
+
+부서별로 그룹핑하고 부서내에서는 이름으로 정렬하여 SUM 집계를 수행한다. 구문은 길지만 결국은 행마다 하나의 값을 계산해 낸다. 
+
+		1:부서별로 그룹핑하고, 2:부서내에서는 이름으로 정렬하여	
+SUM(salary) 	OVER(PARTITION BY depart ORDER BY name)		AS 부서누적월급
+3: 누적월급을 계산하고						4 : 별명을 붙여라
+
+영업부 직원의 누적 월급을 계산한 후 인사과는 처음부터 다시 누적을 시작한다. 일반적인 쿼리문으로도 누적 월급 정도는 구할 수 있다. 전체 누적 월급과 부서별 누적 월급을 구하는 두 명령을 OVER 절 없이 작성하면 다음과 같다. 
+
+
+SELECT name, depart, salary, (SELECT SUM(salary) FROM tStaff WHERE name <= A.name) AS 누적월급 FROM tStaff A ORDER BY name;
+SELECT name, depart, salary, (SELECT SUM(salary) FROM tStaff WHERE name <= A.name AND depart = A.depart) AS 부서누적월급
+FROM tStaff A ORDER BY depart, name;
+
+
+보다시피 쿼리문이 더 길고 복잡하다. 안쪽의 서브쿼리도 그다지 간단한 문장은 아니어서 풀고자 하는 문제에 집중하기 어렵다. 쿼리문 전체의 ORDER BY 구문도 필요하다. 이런 긴 구문을 짧고 간략하게 표현하는 방법이 OVER이다. 
+
+SUM 함수만으로 실습을 해 봤는데, AVG나 MIN, MAX 등의 집계 함수도 물론 사용할수 있다. 구하는 값이 다를 뿐 방식은 같다. AVG(salary) OVER(ORDER BY name)을 구하면 한명이 추가될 때마다 평균이 조금씩 달라진다.
