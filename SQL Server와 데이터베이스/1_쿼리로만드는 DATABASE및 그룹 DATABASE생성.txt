@@ -1,0 +1,199 @@
+1.5.4 CREATE DATABASE 문으로 만들기
+
+이전의 과정에서 이름만 주고 만들었던 FirstDB01 데이터베이스처럼 CREATE DATABASE 문으로 FirstDB02 데이터베이스를 만드는 쿼리문은 소스 1-1과 같다. 그림 1-74처럼 툴 바에서 <새 쿼리>를 눌러 쿼리 창을 표시한 후 소스 1-1의 쿼리문을 입력하고 <실행> 을 눌러 실행한다. 쿼리문 실행이 완료된 후 개체 탐색기에서 [데이터베이스] 폴더를 선택하고 단축 메뉴에서 [새로고침]을 선택해 새로 만든 데이터베이스를 확인한다. 
+
+
+소스1-1 이름만 주고 데이터베이스 만들기
+
+USE master;
+GO
+
+CREATE DATABASE firstDB02
+GO
+
+
+
+요구 사항에 맞게 만들었던 SeconDB01 데이터베이스와 같이 SeconDB02 데이터베이스를 만드는 쿼리문은 소스 1-2와 같다. 입력할 정보가 많으니 당연히 쿼리문이 복잡해질 수 밖에 없다. 
+
+
+소스 1-2 요구사항에 맞는 데이터베이스 만들기
+
+USE master;
+GO
+
+CREATE DATABASE SeconDB02
+ON PRIMARY(
+NAME = 'SeconDB02',
+FILENAME = 'C:\SQL\SQLData\SeconDB02.mdf',
+SIZE = 1024MB,
+MAXSIZE = UNLIMITED,
+FILEGROWTH = 256MB
+)
+LOG ON(
+NAME = 'SeconDB02_log',
+FILENAME = 'C:\SQL\SQLLog\SeconDB02_log.ldf',
+SIZE = 256MB,
+MAXSIZE = UNLIMITED,
+FILEGROWTH = 128MB
+)
+GO
+
+
+참고 GO
+쿼리문 뒤에 붙은 GO는 한 번에 처리되는 쿼리문의 묶음을 일컫는 배치의 끝을 알리는 구문이다. 마우스로 한 번에 처리할 쿼리 문을 블록으로 지정해 실행하니 대부분의 GO 구문은 생략해도 된다. 이 책에서 GO를 굳이 표시한 것은 독자가 한 번에 선택에서 수행할 쿼리문을 명시하기 위함이다. 그러니 Go 문을 구분으로 해서 마우스로 블록을 지정해 쿼리문을 수행하기 바란다. 
+
+
+
+
+
+1.6
+파일 그룹(File Groups) 활용
+
+1.6.1 파일 그룹이란?
+
+D: 주 데이터 파일(.mdf)
+	↑PRIMARY 파일 그룹
+시스템 테이블
+
+E: 보조 데이터 파일(.ndf)
+	↑ UGF01 파일 그룹
+변경용 테이블
+
+F: 보조 데이터 파일(.ndf)
+	↑ UGF02 파일 그룹
+분석용 테이블
+
+
+G : 로그 파일(.ldf)
+
+
+
+
+데이터베이스에 포함된 테이블을 그 역할에 따라 일부는 D: 디스크, 일부는 E:디스크, 일부는 F: 디스크에 저장하면 디스크 사용이 분산되어 데이터 접근 성능이 좋아질 것이다. 사용자 정의 파일 그룹을 사용하면 테이블을 서로 다른 위치에 저장할 수 있다. 테이블은 D: 디스크와, E: 디스크에, 인덱스는 F: 디스크에 저장할 수도 있다. 
+
+이전 과정에서 만든 데이터베이스는 기본적으로 존재하는 PRIMARY 파일 그룹만 사용하므로, 테이블을 구분해서 다른 곳에 저장할 수 없다. 물론 요즘은 디스크 성능이 워낙 좋아서 사용자 정의 파일 그룹을 성능 개선을 목적으로 사용하지는 않는다. 하지만 백업과 복원이 파일과 파일 그룹 단위로 이루어지므로 운영상의 이점을 위해 사용하는 경우가 종종 있다. 
+
+
+
+1.6.2 파일 그룹 종류
+
+주 파일 그룹(Primary File Group)
+주 파일 그룹 즉 PRIMARY 파일 그룹은 주 데이터 파일(mdf 확장자를 가진 파일)을 포함한다. 물론 보조 데이터 파일(ndf 확장자를 가진 파일)도 PRIMARY 파일 그룹에 추가할 수 있다. PRIMARY 파일 그룹만 사용하는 경우에는 어떤 테이블은 주 데이터 파일에 저장하고, 어떤 테이블은 보조 데이터 파일에 저장하는 형태를 갖출 수는 없다. 테이블을 구분해서 저장하려면 파일 그룹이 두 개 이상은 되어야 한다. 
+
+
+
+사용자 정의 파일 그룹(User-defined File Groups)
+PRIMARY 파일 그룹 외에 사용자가 만든 파일 그룹이 사용자 정의 파일 그룹이며, 여러 개 만들수 있다. 사용자 정의 파일 그룹을 사용하면 테이블을 역할별로 구분하여 서로 다른 위치에 저장할 수 있다. PRIMARY 파일 그룹은 하나만 존재할 수 있지만 사용자 정의 파일 그룹은 여러 개 존재할 수 있다. 
+
+
+
+
+기본 파일 그룹(Default File Group)
+테이블과 인덱스를 만들 때 어느 파일 그룹에 만들기 (정확히 이야기하면, 어느 파일 그룹에 포함된 파일에 만들지) 지정할수 있다. 만일 파일 그룹을 지정하지 않으면 테이블과 인덱스는 기본 파일 그룹에 만들어진다. 기본적으로 PRIMARY 파일 그룹이 기본 파일 그룹이다. 원한다면 언제든 사용자 정의 파일 그룹중 하나를 기본 파일 그룹으로 지정할 수 있다. 
+
+
+
+1.6.3 파일 그룹 만들기
+
+개체 탐색기를 사용해서 데이터베이스를 만들때 사용자 정의 파일 그룹을 만들 수 있고, 기존 데이터베이스에 사용자 정의 파일 그룹을 추가할 수도 있다. 쿼리문을 사용한다면 CREATE DATABASE 문으로 데이터베이스를 만들 때 사용자 정의 파일 그룹을 만들 수 있고, ALTER DATABASE문으로 기존 데이터베이스에 사용자 정의 파일 그룹을 추가할 수도 있다. 
+
+
+그림 1-76에서는 FirstDB01 데이터베이스 속성 창에서 [파일 그룹] 페이지를 선택하고 <파일 그룹 추가>를 눌러 "UFG01"과 "UFG02"라는 이름의 파일 그룹 두개를 만든 후 "UFG01"파일 그룹을 기본 파일 그룹으로 설정하였다(UFG01의 기본값에 체크)
+
+
+그림1-77에서는 [파일] 페이지를 선택하고 <추가>를 눌러 "FirstDB01_02"와 "FirstDB01_03" 데이터 파일을 만든후 파일 그룹을 각각 "UFG01"과 "UFG02"로 지정하였다. 그리고 처음 크기와 자동증가/최대 크기 옵션을 적절히 설정했다. 로그 파일은 파일 그룹과는 상관이 없다. 
+
+FirstDB01_02	행 데이터		UFG01	512	128MB
+FirstDB01_03	행 데이터		UFG02	512	128MB
+
+
+
+앞에서 쿼리문을 사용해서 만든 FirstDB02 데이터베이스에 FirstDB01 데이터베이스와 같은 구조의 파일 그룹과 파일을 쿼리문을 사용해 추가한다면 소스 1-3과 같다. 소스 1-3은 FirstDB02 데이터베이스에 ALTER DATABASE 문으로 "UFG01", "UFG02"파일 그룹을 추가하고 각 파일 그룹에 데이터파일을 하나씩 추가하는 쿼리문이다. 마지막에 기본 파일 그룹을 "UFG01"로 설정했다. 
+
+
+소스 1-3 쿼리문으로 파일 그룹과 파일 추가
+
+USE master
+GO
+
+-- UFG01 파일그룹 추가
+ALTER DATABASE FirstDB02
+	ADD FILEGROUP UFG01
+GO
+
+-- UFG01 파일 그룹에 파일 추가
+ALTER DATABASE FirstDB02
+ADD FILE(
+NAME = 'FirstDB02_02',
+FILENAME = 'C:\SQL\SQLData\FirstDB02_02.ndf',
+SIZE = 512MB,
+FILEGROWTH = 128MB
+)TO FILEGROUP UFG01
+GO
+
+--UFG02 파일그룹 
+ALTER DATABASE FirstDB02
+	ADD FILEGROUP UFG02
+GO
+
+-- UFG02 파일 그룹에 파일 추가
+ALTER DATABASE FirstDB02
+ADD FILE(
+NAME = 'FirstDB02_03',
+FILENAME = 'C:\SQL\SQLData\FirstDB02_03.ndf',
+SIZE = 512MB,
+FILEGROWTH = 128MB
+) TO FILEGROUP UFG02
+GO
+
+USE FirstDB02
+GO
+
+-- UFG01 파일 그룹을 기본 파일 그룹으로 변경
+ALTER DATABASE FirstDB02
+	MODIFY FILEGROUP UFG01 DEFAULT
+GO
+
+
+
+
+1.6.4 파일 그룹에 테이블 만들기
+
+아직 테이블 만드는 방법을 배우지는 않았지만 테이블을 만들 때 파일 그룹을 지정하는 방법을 간단히 살펴보자. 소스 1-4는 네 개의 테이블을 만들면서 파일 그룹을 지정한 쿼리문이다. CREATE TABLE 문에 ON 절을 사용해 파일 그룹을 지정한다. 
+
+단 PRIMARY는 키워드이므로 [PRIMARY]와 같이 대괄호 []으로 감싸야하며, TD 테이블을 만드는 경우와 같이 ON 절을 생략하면 기본 파일 그룹에 테이블이 만들어진다. FirstDB02 데이터베이스 기본 파일 그룹은 UFG01 이므로, TD 테이블은 UFG01 파일 그룹에 만들어진다. 
+
+
+
+소스 1-4 파일 그룹에 테이블 만들기
+
+USE FirstDB02
+GO
+
+--PRIMARY 파일 그룹에 TA 테이블 만들기
+CREATE TABLE TA(
+col1 int,
+col2 int
+) ON [PRIMARY]
+GO
+
+-- UFG01 파일 그룹에 TB 테이블 만들기
+CREATE TABLE TB(
+col1 int,
+col2 int
+) ON UFG01
+GO
+
+--UFG02 파일 그룹에 TC 테이블 만들기
+CREATE TABLE TC(
+col1 int,
+col2 int
+)ON UFG02
+GO
+
+-- 기본 파일 그룹에 TD 테이블 만들기
+CREATE TABLE TD(
+col1 int,
+col2 int
+)
+GO
